@@ -17,7 +17,7 @@
   <view class="case-list">
     <view class="case-card" wx:for="{{cases}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
       <view class="case-header">
-        <image class="case-photo" src="{{item.photos[0]?.url || '/assets/default-avatar.png'}}" mode="aspectFill" />
+        <image class="case-photo" src="{{item.photos[0].url}}" mode="aspectFill" />
         <view class="case-info">
           <view class="case-title">
             <text class="case-name">{{item.name}}</text>

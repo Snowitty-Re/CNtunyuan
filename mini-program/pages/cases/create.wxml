@@ -12,7 +12,7 @@
       <text class="required">*</text>
       <text class="label">性别</text>
       <picker mode="selector" range="{{genderOptions}}" range-key="label" bindchange="onGenderChange">
-        <view class="picker-value">{{genderOptions[form.genderIndex]?.label || '请选择'}}</view>
+        <view class="picker-value">{{genderOptions[form.genderIndex].label}}</view>
       </picker>
     </view>
 
@@ -30,7 +30,7 @@
       <text class="required">*</text>
       <text class="label">案件类型</text>
       <picker mode="selector" range="{{caseTypeOptions}}" range-key="label" bindchange="onCaseTypeChange">
-        <view class="picker-value">{{caseTypeOptions[form.caseTypeIndex]?.label || '请选择'}}</view>
+        <view class="picker-value">{{caseTypeOptions[form.caseTypeIndex].label}}</view>
       </picker>
     </view>
   </view>

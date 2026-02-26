@@ -2,7 +2,7 @@
   <!-- 基本信息 -->
   <view class="card">
     <view class="info-header">
-      <image class="person-photo" src="{{caseData.photos[0]?.url || '/assets/default-avatar.png'}}" mode="aspectFill" />
+      <image class="person-photo" src="{{caseData.photos[0].url}}" mode="aspectFill" />
       <view class="person-info">
         <view class="person-name">{{caseData.name}} <text class="person-age">{{caseData.age}}岁</text></view>
         <view class="person-tags">

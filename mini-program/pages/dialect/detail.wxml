@@ -35,8 +35,8 @@
     <view class="info-item">
       <text class="info-label">采集人</text>
       <view class="collector-info">
-        <image class="avatar" src="{{dialect.collector?.avatar || '/assets/default-avatar.png'}}" />
-        <text>{{dialect.collector?.nickname || '未知'}}</text>
+        <image class="avatar" src="{{dialect.collector.avatar}}" />
+        <text>{{dialect.collector.nickname}}</text>
       </view>
     </view>
     <view class="info-item">
