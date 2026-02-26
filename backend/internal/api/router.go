@@ -6,6 +6,8 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/pkg/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // Router API路由
@@ -58,6 +60,9 @@ func (r *Router) setupRoutes() {
 	r.router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+
+	// Swagger 文档
+	r.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API v1
 	v1 := r.router.Group("/api/v1")

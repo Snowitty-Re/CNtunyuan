@@ -54,6 +54,11 @@ func main() {
 		if err := model.InitRootOrg(db); err != nil {
 			log.Fatalf("初始化根组织失败: %v", err)
 		}
+
+		// 初始化超级管理员
+		if err := model.InitSuperAdmin(db); err != nil {
+			log.Fatalf("初始化超级管理员失败: %v", err)
+		}
 	}
 
 	// 初始化Redis（可选）

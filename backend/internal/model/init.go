@@ -110,3 +110,38 @@ func InitRootOrg(db *gorm.DB) error {
 	log.Println("根组织创建成功")
 	return nil
 }
+
+// InitSuperAdmin 初始化超级管理员
+func InitSuperAdmin(db *gorm.DB) error {
+	var count int64
+	if err := db.Model(&User{}).Where("role = ?", RoleSuperAdmin).Count(&count).Error; err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return nil
+	}
+
+	// 获取根组织ID
+	var rootOrg Organization
+	if err := db.Where("type = ?", OrgTypeRoot).First(&rootOrg).Error; err != nil {
+		return fmt.Errorf("获取根组织失败: %w", err)
+	}
+
+	superAdmin := User{
+		Nickname: "超级管理员",
+		RealName: "系统管理员",
+		Phone:    "13800138000",
+		Email:    "admin@cntunyuan.com",
+		Role:     RoleSuperAdmin,
+		Status:   UserStatusActive,
+		OrgID:    &rootOrg.ID,
+	}
+
+	if err := db.Create(&superAdmin).Error; err != nil {
+		return fmt.Errorf("创建超级管理员失败: %w", err)
+	}
+
+	log.Printf("超级管理员创建成功，ID: %s", superAdmin.ID)
+	return nil
+}
