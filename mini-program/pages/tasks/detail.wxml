@@ -37,7 +37,7 @@
       <text class="card-action" bindtap="goToCase">查看 ></text>
     </view>
     <view class="case-info">
-      <image class="case-photo" src="{{task.missing_person.photos[0]?.url || '/assets/default-avatar.png'}}" />
+      <image class="case-photo" src="{{task.missing_person.photos[0].url}}" />
       <view class="case-detail">
         <view class="case-name">{{task.missing_person.name}} <text class="case-age">{{task.missing_person.age}}岁</text></view>
         <view class="case-location">{{task.missing_person.missing_location}}</view>

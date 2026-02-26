@@ -10,7 +10,7 @@
       <text class="required">*</text>
       <text class="label">任务类型</text>
       <picker mode="selector" range="{{typeOptions}}" range-key="label" bindchange="onTypeChange">
-        <view class="picker-value">{{typeOptions[form.typeIndex]?.label || '请选择'}}</view>
+        <view class="picker-value">{{typeOptions[form.typeIndex].label}}</view>
       </picker>
     </view>
 
@@ -18,21 +18,21 @@
       <text class="required">*</text>
       <text class="label">优先级</text>
       <picker mode="selector" range="{{priorityOptions}}" range-key="label" bindchange="onPriorityChange">
-        <view class="picker-value">{{priorityOptions[form.priorityIndex]?.label || '请选择'}}</view>
+        <view class="picker-value">{{priorityOptions[form.priorityIndex].label}}</view>
       </picker>
     </view>
 
     <view class="form-item">
       <text class="label">关联案件</text>
       <picker mode="selector" range="{{caseOptions}}" range-key="name" bindchange="onCaseChange">
-        <view class="picker-value">{{selectedCase?.name || '选择关联案件（可选）'}}</view>
+        <view class="picker-value">{{selectedCase.name}}</view>
       </picker>
     </view>
 
     <view class="form-item">
       <text class="label">执行人</text>
       <picker mode="selector" range="{{userOptions}}" range-key="nickname" bindchange="onUserChange">
-        <view class="picker-value">{{selectedUser?.nickname || '选择执行人（可选）'}}</view>
+        <view class="picker-value">{{selectedUser.nickname}}</view>
       </picker>
     </view>
   </view>
