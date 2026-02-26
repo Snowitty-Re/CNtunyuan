@@ -1,0 +1,61 @@
+<view class="container">
+  <!-- 搜索和筛选 -->
+  <view class="filter-bar">
+    <view class="search-box">
+      <text class="icon-search">🔍</text>
+      <input type="text" placeholder="搜索姓名、地点..." value="{{keyword}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="onSearch" />
+    </view>
+    <view class="filter-tabs">
+      <view class="filter-tab {{currentStatus === '' ? 'active' : ''}}" bindtap="switchStatus" data-status="">全部</view>
+      <view class="filter-tab {{currentStatus === 'missing' ? 'active' : ''}}" bindtap="switchStatus" data-status="missing">失踪中</view>
+      <view class="filter-tab {{currentStatus === 'searching' ? 'active' : ''}}" bindtap="switchStatus" data-status="searching">寻找中</view>
+      <view class="filter-tab {{currentStatus === 'found' ? 'active' : ''}}" bindtap="switchStatus" data-status="found">已找到</view>
+    </view>
+  </view>
+
+  <!-- 案件列表 -->
+  <view class="case-list">
+    <view class="case-card" wx:for="{{cases}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
+      <view class="case-header">
+        <image class="case-photo" src="{{item.photos[0]?.url || '/assets/default-avatar.png'}}" mode="aspectFill" />
+        <view class="case-info">
+          <view class="case-title">
+            <text class="case-name">{{item.name}}</text>
+            <text class="case-age">{{item.age}}岁</text>
+          </view>
+          <view class="case-type">
+            <text class="type-tag {{item.case_type}}">{{caseTypeMap[item.case_type]}}</text>
+            <text class="status-tag {{item.status}}">{{statusMap[item.status]}}</text>
+          </view>
+          <view class="case-location">📍 {{item.missing_location}}</view>
+          <view class="case-time">{{item.missing_time}}</view>
+        </view>
+      </view>
+      <view class="case-footer">
+        <view class="case-stats">
+          <text class="stat-item">👁 {{item.view_count}}</text>
+          <text class="stat-item">↗️ {{item.share_count}}</text>
+        </view>
+        <view class="case-no">{{item.case_no}}</view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{cases.length === 0 && !loading}}">
+      <image class="empty-icon" src="/assets/empty.png" mode="aspectFit" />
+      <text class="empty-text">暂无相关案件</text>
+    </view>
+  </view>
+
+  <!-- 加载更多 -->
+  <view class="load-more" wx:if="{{cases.length > 0}}">
+    <text wx:if="{{loading}}">加载中...</text>
+    <text wx:elif="{{noMore}}">没有更多了</text>
+    <text wx:else bindtap="loadMore">点击加载更多</text>
+  </view>
+
+  <!-- 新增按钮 -->
+  <view class="fab-btn" bindtap="goToCreate">
+    <text class="fab-icon">+</text>
+  </view>
+</view>

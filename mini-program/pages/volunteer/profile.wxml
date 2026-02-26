@@ -1,0 +1,93 @@
+<view class="container">
+  <!-- 用户信息 -->
+  <view class="profile-card">
+    <view class="user-main">
+      <image class="avatar" src="{{userInfo.avatar || '/assets/default-avatar.png'}}" bindtap="changeAvatar" />
+      <view class="user-detail">
+        <view class="user-name">{{userInfo.nickname || '志愿者'}}</view>
+        <view class="user-org" wx:if="{{userInfo.org}}">{{userInfo.org.name}}</view>
+        <view class="user-id">ID: {{userInfo.id}}</view>
+      </view>
+    </view>
+    <view class="user-contact">
+      <view class="contact-item">
+        <text class="contact-label">手机</text>
+        <text class="contact-value">{{userInfo.phone || '未绑定'}}</text>
+      </view>
+      <view class="contact-item">
+        <text class="contact-label">邮箱</text>
+        <text class="contact-value">{{userInfo.email || '未绑定'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 我的数据 -->
+  <view class="data-card">
+    <view class="data-title">我的数据</view>
+    <view class="data-grid">
+      <view class="data-item">
+        <text class="data-num">{{stats.taskCount}}</text>
+        <text class="data-label">完成任务</text>
+      </view>
+      <view class="data-item">
+        <text class="data-num">{{stats.caseCount}}</text>
+        <text class="data-label">参与案件</text>
+      </view>
+      <view class="data-item">
+        <text class="data-num">{{stats.dialectCount}}</text>
+        <text class="data-label">方言录音</text>
+      </view>
+      <view class="data-item">
+        <text class="data-num">{{stats.score}}</text>
+        <text class="data-label">积分</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 菜单列表 -->
+  <view class="menu-card">
+    <view class="menu-item" bindtap="goToMyCases">
+      <text class="menu-icon">📋</text>
+      <text class="menu-name">我的案件</text>
+      <text class="menu-arrow">></text>
+    </view>
+    <view class="menu-item" bindtap="goToMyTasks">
+      <text class="menu-icon">📌</text>
+      <text class="menu-name">我的任务</text>
+      <text class="menu-arrow">></text>
+    </view>
+    <view class="menu-item" bindtap="goToMyDialects">
+      <text class="menu-icon">🎵</text>
+      <text class="menu-name">我的方言</text>
+      <text class="menu-arrow">></text>
+    </view>
+    <view class="menu-item" bindtap="goToCertificates">
+      <text class="menu-icon">🏆</text>
+      <text class="menu-name">荣誉证书</text>
+      <text class="menu-arrow">></text>
+    </view>
+  </view>
+
+  <view class="menu-card">
+    <view class="menu-item" bindtap="goToSettings">
+      <text class="menu-icon">⚙️</text>
+      <text class="menu-name">设置</text>
+      <text class="menu-arrow">></text>
+    </view>
+    <view class="menu-item" bindtap="goToHelp">
+      <text class="menu-icon">❓</text>
+      <text class="menu-name">帮助与反馈</text>
+      <text class="menu-arrow">></text>
+    </view>
+    <view class="menu-item" bindtap="goToAbout">
+      <text class="menu-icon">ℹ️</text>
+      <text class="menu-name">关于我们</text>
+      <text class="menu-arrow">></text>
+    </view>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-section">
+    <button class="btn-logout" bindtap="logout">退出登录</button>
+  </view>
+</view>

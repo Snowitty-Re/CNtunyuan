@@ -1,0 +1,106 @@
+<view class="container">
+  <view class="task-header">
+    <view class="header-bg"></view>
+    <view class="header-content">
+      <view class="task-status status-{{task.status}}">{{statusMap[task.status]}}</view>
+      <view class="task-title">{{task.title}}</view>
+      <view class="task-no">{{task.task_no}}</view>
+    </view>
+  </view>
+
+  <view class="info-card">
+    <view class="info-row">
+      <text class="info-label">任务类型</text>
+      <text class="info-value">{{taskTypeMap[task.type]}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">优先级</text>
+      <text class="info-value priority-{{task.priority}}">{{priorityMap[task.priority]}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">截止时间</text>
+      <text class="info-value">{{task.deadline || '未设置'}}</text>
+    </view>
+    <view class="info-row" wx:if="{{task.assignee}}">
+      <text class="info-label">执行人</text>
+      <view class="assignee-info">
+        <image class="avatar" src="{{task.assignee.avatar || '/assets/default-avatar.png'}}" />
+        <text>{{task.assignee.nickname}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 关联案件 -->
+  <view class="card" wx:if="{{task.missing_person}}">
+    <view class="card-header">
+      <text class="card-title">关联案件</text>
+      <text class="card-action" bindtap="goToCase">查看 ></text>
+    </view>
+    <view class="case-info">
+      <image class="case-photo" src="{{task.missing_person.photos[0]?.url || '/assets/default-avatar.png'}}" />
+      <view class="case-detail">
+        <view class="case-name">{{task.missing_person.name}} <text class="case-age">{{task.missing_person.age}}岁</text></view>
+        <view class="case-location">{{task.missing_person.missing_location}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 任务描述 -->
+  <view class="card">
+    <view class="card-title">任务描述</view>
+    <view class="card-content">{{task.description || '暂无描述'}}</view>
+  </view>
+
+  <!-- 任务要求 -->
+  <view class="card" wx:if="{{task.requirements}}">
+    <view class="card-title">任务要求</view>
+    <view class="card-content">{{task.requirements}}</view>
+  </view>
+
+  <!-- 任务地点 -->
+  <view class="card" wx:if="{{task.location}}">
+    <view class="card-title">任务地点</view>
+    <view class="location-info">
+      <text class="location-address">📍 {{task.location}}</text>
+      <map wx:if="{{task.latitude}}" class="task-map" latitude="{{task.latitude}}" longitude="{{task.longitude}}" markers="{{markers}}" scale="15" show-location />
+    </view>
+  </view>
+
+  <!-- 进度 -->
+  <view class="card" wx:if="{{task.status === 'processing'}}">
+    <view class="card-title">任务进度</view>
+    <view class="progress-section">
+      <progress percent="{{task.progress}}" stroke-width="12" activeColor="#1890ff" />
+      <text class="progress-value">{{task.progress}}%</text>
+    </view>
+  </view>
+
+  <!-- 反馈记录 -->
+  <view class="card">
+    <view class="card-header">
+      <view class="card-title">反馈记录</view>
+      <text class="add-btn" bindtap="addFeedback">+ 添加反馈</text>
+    </view>
+    <view class="feedback-list">
+      <view class="feedback-item" wx:for="{{feedbacks}}" wx:key="id">
+        <view class="feedback-header">
+          <image class="avatar" src="{{item.user.avatar || '/assets/default-avatar.png'}}" />
+          <text class="user-name">{{item.user.nickname}}</text>
+          <text class="feedback-time">{{item.created_at}}</text>
+        </view>
+        <view class="feedback-content">{{item.content}}</view>
+        <view class="feedback-images" wx:if="{{item.images.length > 0}}">
+          <image wx:for="{{item.images}}" wx:for-item="img" wx:key="*this" src="{{img}}" mode="aspectFill" bindtap="previewImage" data-url="{{img}}" data-urls="{{item.images}}" />
+        </view>
+      </view>
+      <view class="empty-tip" wx:if="{{feedbacks.length === 0}}">暂无反馈记录</view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="action-bar">
+    <button class="btn-action {{task.status === 'pending' ? 'primary' : 'secondary'}}" bindtap="handleAction">
+      {{actionText[task.status]}}
+    </button>
+  </view>
+</view>

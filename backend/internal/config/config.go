@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/viper"
 )
@@ -93,30 +92,14 @@ func LoadConfig(configPath string) (*Config, error) {
 	// 设置默认值
 	setDefaults()
 
-	// 读取环境变量
-	viper.AutomaticEnv()
-
 	// 读取配置文件
 	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf("读取配置文件失败: %w", err)
-		}
+		return nil, fmt.Errorf("读取配置文件失败: %w", err)
 	}
 
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("解析配置失败: %w", err)
-	}
-
-	// 从环境变量覆盖敏感信息
-	if dbPass := os.Getenv("DB_PASSWORD"); dbPass != "" {
-		config.Database.Password = dbPass
-	}
-	if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
-		config.JWT.Secret = jwtSecret
-	}
-	if wxSecret := os.Getenv("WECHAT_APP_SECRET"); wxSecret != "" {
-		config.WeChat.AppSecret = wxSecret
 	}
 
 	globalConfig = &config

@@ -1,0 +1,170 @@
+.container {
+  height: 100vh;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+/* 搜索栏 */
+.search-bar {
+  position: absolute;
+  top: 20rpx;
+  left: 20rpx;
+  right: 20rpx;
+}
+
+.search-input {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 44rpx;
+  padding: 16rpx 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+
+.search-icon {
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+.search-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 底部面板 */
+.case-panel {
+  position: absolute;
+  bottom: 40rpx;
+  left: 20rpx;
+  right: 20rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 24rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.15);
+  max-height: 600rpx;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.panel-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.panel-close {
+  font-size: 32rpx;
+  color: #999;
+  padding: 8rpx;
+}
+
+.case-scroll {
+  max-height: 400rpx;
+}
+
+.case-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.case-item:last-child {
+  border-bottom: none;
+}
+
+.case-photo {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 12rpx;
+  margin-right: 20rpx;
+  background: #f0f0f0;
+}
+
+.case-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.case-name {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4rpx;
+}
+
+.case-distance {
+  font-size: 24rpx;
+  color: #1890ff;
+  margin-bottom: 4rpx;
+}
+
+.case-location {
+  font-size: 24rpx;
+  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.case-status {
+  padding: 6rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  margin-left: 16rpx;
+}
+
+.case-status.missing { background: #fff1f0; color: #ff4d4f; }
+.case-status.searching { background: #e6f7ff; color: #1890ff; }
+.case-status.found { background: #f6ffed; color: #52c41a; }
+
+/* 定位按钮 */
+.locate-btn {
+  position: absolute;
+  right: 20rpx;
+  bottom: 660rpx;
+  width: 80rpx;
+  height: 80rpx;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
+}
+
+.locate-icon {
+  font-size: 36rpx;
+}
+
+/* 模式切换 */
+.mode-switch {
+  position: absolute;
+  right: 20rpx;
+  bottom: 760rpx;
+  background: #fff;
+  border-radius: 32rpx;
+  padding: 8rpx;
+  display: flex;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.15);
+}
+
+.mode-item {
+  padding: 16rpx 24rpx;
+  font-size: 26rpx;
+  color: #666;
+  border-radius: 24rpx;
+}
+
+.mode-item.active {
+  background: #1890ff;
+  color: #fff;
+}

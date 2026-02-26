@@ -1,0 +1,80 @@
+<view class="container">
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <view class="filter-tabs">
+      <view class="filter-tab {{currentStatus === '' ? 'active' : ''}}" bindtap="switchStatus" data-status="">全部</view>
+      <view class="filter-tab {{currentStatus === 'pending' ? 'active' : ''}}" bindtap="switchStatus" data-status="pending">待处理</view>
+      <view class="filter-tab {{currentStatus === 'processing' ? 'active' : ''}}" bindtap="switchStatus" data-status="processing">进行中</view>
+      <view class="filter-tab {{currentStatus === 'completed' ? 'active' : ''}}" bindtap="switchStatus" data-status="completed">已完成</view>
+    </view>
+  </view>
+
+  <!-- 统计卡片 -->
+  <view class="stats-card">
+    <view class="stat-item">
+      <text class="stat-value">{{stats.total}}</text>
+      <text class="stat-label">总任务</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-value text-primary">{{stats.pending}}</text>
+      <text class="stat-label">待处理</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-value text-success">{{stats.completed}}</text>
+      <text class="stat-label">已完成</text>
+    </view>
+  </view>
+
+  <!-- 任务列表 -->
+  <view class="task-list">
+    <view class="task-card {{item.status}}" wx:for="{{tasks}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
+      <view class="task-header">
+        <view class="task-title">{{item.title}}</view>
+        <view class="task-priority priority-{{item.priority}}">{{priorityMap[item.priority]}}</view>
+      </view>
+      
+      <view class="task-tags">
+        <text class="tag type">{{taskTypeMap[item.type]}}</text>
+        <text class="tag status {{item.status}}">{{statusMap[item.status]}}</text>
+      </view>
+
+      <view class="task-info" wx:if="{{item.missing_person}}">
+        <text class="info-label">关联案件：</text>
+        <text class="info-value">{{item.missing_person.name}}</text>
+      </view>
+
+      <view class="task-info">
+        <text class="info-label">任务地点：</text>
+        <text class="info-value">{{item.location || '未指定'}}</text>
+      </view>
+
+      <view class="task-progress" wx:if="{{item.status === 'processing'}}">
+        <progress percent="{{item.progress}}" stroke-width="6" activeColor="#1890ff" />
+        <text class="progress-text">{{item.progress}}%</text>
+      </view>
+
+      <view class="task-footer">
+        <view class="task-assignee" wx:if="{{item.assignee}}">
+          <image class="avatar" src="{{item.assignee.avatar || '/assets/default-avatar.png'}}" />
+          <text>{{item.assignee.nickname}}</text>
+        </view>
+        <view class="task-deadline" wx:if="{{item.deadline}}">
+          <text class="{{item.isOverdue ? 'overdue' : ''}}">⏰ {{item.deadline}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{tasks.length === 0 && !loading}}">
+      <image class="empty-icon" src="/assets/empty.png" mode="aspectFit" />
+      <text class="empty-text">暂无任务</text>
+    </view>
+  </view>
+
+  <!-- 加载更多 -->
+  <view class="load-more" wx:if="{{tasks.length > 0}}">
+    <text wx:if="{{loading}}">加载中...</text>
+    <text wx:elif="{{noMore}}">没有更多了</text>
+    <text wx:else bindtap="loadMore">点击加载更多</text>
+  </view>
+</view>

@@ -1,0 +1,41 @@
+<view class="container">
+  <map class="map" latitude="{{latitude}}" longitude="{{longitude}}" scale="{{scale}}" markers="{{markers}}" bindmarkertap="onMarkerTap" show-location>
+    <!-- 搜索栏 -->
+    <cover-view class="search-bar">
+      <cover-view class="search-input">
+        <cover-view class="search-icon">🔍</cover-view>
+        <cover-view class="search-text">搜索地点</cover-view>
+      </cover-view>
+    </cover-view>
+
+    <!-- 底部案件列表 -->
+    <cover-view class="case-panel" wx:if="{{showPanel}}">
+      <cover-view class="panel-header">
+        <cover-view class="panel-title">附近案件 ({{nearbyCases.length}})</cover-view>
+        <cover-view class="panel-close" bindtap="closePanel">✕</cover-view>
+      </cover-view>
+      <scroll-view scroll-y class="case-scroll">
+        <cover-view class="case-item" wx:for="{{nearbyCases}}" wx:key="id" bindtap="goToCaseDetail" data-id="{{item.id}}">
+          <cover-image class="case-photo" src="{{item.photos[0]?.url || '/assets/default-avatar.png'}}" />
+          <cover-view class="case-info">
+            <cover-view class="case-name">{{item.name}} {{item.age}}岁</cover-view>
+            <cover-view class="case-distance">距离 {{item.distance}}km</cover-view>
+            <cover-view class="case-location">{{item.missing_location}}</cover-view>
+          </cover-view>
+          <cover-view class="case-status {{item.status}}">{{statusMap[item.status]}}</cover-view>
+        </cover-view>
+      </scroll-view>
+    </cover-view>
+
+    <!-- 定位按钮 -->
+    <cover-view class="locate-btn" bindtap="locate">
+      <cover-view class="locate-icon">📍</cover-view>
+    </cover-view>
+
+    <!-- 模式切换 -->
+    <cover-view class="mode-switch">
+      <cover-view class="mode-item {{mode === 'case' ? 'active' : ''}}" bindtap="switchMode" data-mode="case">案件</cover-view>
+      <cover-view class="mode-item {{mode === 'dialect' ? 'active' : ''}}" bindtap="switchMode" data-mode="dialect">方言</cover-view>
+    </cover-view>
+  </map>
+</view>

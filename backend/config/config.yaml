@@ -8,7 +8,7 @@ database:
   host: localhost
   port: 5432
   user: postgres
-  password: ${DB_PASSWORD}
+  password: postgres123
   database: cntunyuan
   ssl_mode: disable
   max_idle_conns: 10
@@ -21,12 +21,12 @@ redis:
   db: 0
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: your-jwt-secret-key-change-in-production
   expire_time: 604800  # 7天，单位秒
 
 wechat:
-  app_id: ${WECHAT_APP_ID}
-  app_secret: ${WECHAT_APP_SECRET}
+  app_id: wx1234567890abcdef
+  app_secret: your-wechat-app-secret
 
 storage:
   type: local  # local/oss

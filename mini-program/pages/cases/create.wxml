@@ -1,0 +1,126 @@
+<view class="container">
+  <view class="form-section">
+    <view class="section-title">基本信息</view>
+    
+    <view class="form-item">
+      <text class="required">*</text>
+      <text class="label">姓名</text>
+      <input placeholder="请输入走失人员姓名" value="{{form.name}}" bindinput="onInput" data-field="name" />
+    </view>
+
+    <view class="form-item">
+      <text class="required">*</text>
+      <text class="label">性别</text>
+      <picker mode="selector" range="{{genderOptions}}" range-key="label" bindchange="onGenderChange">
+        <view class="picker-value">{{genderOptions[form.genderIndex]?.label || '请选择'}}</view>
+      </picker>
+    </view>
+
+    <view class="form-item">
+      <text class="label">年龄</text>
+      <input type="number" placeholder="请输入年龄" value="{{form.age}}" bindinput="onInput" data-field="age" />
+    </view>
+
+    <view class="form-item">
+      <text class="label">身高(cm)</text>
+      <input type="number" placeholder="请输入身高" value="{{form.height}}" bindinput="onInput" data-field="height" />
+    </view>
+
+    <view class="form-item">
+      <text class="required">*</text>
+      <text class="label">案件类型</text>
+      <picker mode="selector" range="{{caseTypeOptions}}" range-key="label" bindchange="onCaseTypeChange">
+        <view class="picker-value">{{caseTypeOptions[form.caseTypeIndex]?.label || '请选择'}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="form-section">
+    <view class="section-title">走失信息</view>
+    
+    <view class="form-item">
+      <text class="required">*</text>
+      <text class="label">走失时间</text>
+      <picker mode="multiSelector" range="{{dateTimeArray}}" value="{{dateTime}}" bindchange="onDateTimeChange" bindcolumnchange="onDateTimeColumnChange">
+        <view class="picker-value">{{form.missingTime || '请选择时间'}}</view>
+      </picker>
+    </view>
+
+    <view class="form-item">
+      <text class="required">*</text>
+      <text class="label">走失地点</text>
+      <input placeholder="请输入走失地点" value="{{form.missingLocation}}" bindinput="onInput" data-field="missingLocation" />
+    </view>
+
+    <view class="form-item">
+      <text class="label">详细位置</text>
+      <view class="location-picker" bindtap="chooseLocation">
+        <text class="location-text">{{form.address || '点击选择地图位置'}}</text>
+        <text class="location-icon">📍</text>
+      </view>
+    </view>
+
+    <view class="form-item vertical">
+      <text class="label">外貌特征</text>
+      <textarea placeholder="请描述走失人员的外貌特征，如脸型、发型、肤色等" value="{{form.appearance}}" bindinput="onInput" data-field="appearance" maxlength="500" />
+    </view>
+
+    <view class="form-item vertical">
+      <text class="label">衣着描述</text>
+      <textarea placeholder="请描述走失时的穿着" value="{{form.clothing}}" bindinput="onInput" data-field="clothing" maxlength="500" />
+    </view>
+
+    <view class="form-item vertical">
+      <text class="label">特殊特征</text>
+      <textarea placeholder="如胎记、疤痕、残疾等特殊情况" value="{{form.specialFeatures}}" bindinput="onInput" data-field="specialFeatures" maxlength="500" />
+    </view>
+
+    <view class="form-item vertical">
+      <text class="label">走失详情</text>
+      <textarea placeholder="请详细描述走失经过" value="{{form.missingDetail}}" bindinput="onInput" data-field="missingDetail" maxlength="1000" />
+    </view>
+  </view>
+
+  <view class="form-section">
+    <view class="section-title">家属信息</view>
+    
+    <view class="form-item">
+      <text class="label">联系人</text>
+      <input placeholder="请输入联系人姓名" value="{{form.contactName}}" bindinput="onInput" data-field="contactName" />
+    </view>
+
+    <view class="form-item">
+      <text class="label">关系</text>
+      <input placeholder="如：父亲、母亲、儿子等" value="{{form.contactRelation}}" bindinput="onInput" data-field="contactRelation" />
+    </view>
+
+    <view class="form-item">
+      <text class="required">*</text>
+      <text class="label">联系电话</text>
+      <input type="number" placeholder="请输入联系电话" value="{{form.contactPhone}}" bindinput="onInput" data-field="contactPhone" />
+    </view>
+
+    <view class="form-item vertical">
+      <text class="label">联系地址</text>
+      <textarea placeholder="请输入联系地址" value="{{form.contactAddress}}" bindinput="onInput" data-field="contactAddress" maxlength="200" />
+    </view>
+  </view>
+
+  <view class="form-section">
+    <view class="section-title">照片上传</view>
+    <view class="photo-upload">
+      <view class="photo-item" wx:for="{{photos}}" wx:key="index">
+        <image src="{{item}}" mode="aspectFill" />
+        <text class="delete-icon" bindtap="deletePhoto" data-index="{{index}}">×</text>
+      </view>
+      <view class="upload-btn" bindtap="choosePhoto" wx:if="{{photos.length < 9}}">
+        <text class="upload-icon">+</text>
+        <text class="upload-text">添加照片</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="form-actions">
+    <button class="btn-submit" bindtap="submit" loading="{{submitting}}">提交登记</button>
+  </view>
+</view>

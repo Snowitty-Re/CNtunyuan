@@ -1,0 +1,101 @@
+<view class="container">
+  <!-- 用户信息卡片 -->
+  <view class="user-card">
+    <image class="user-bg" src="/assets/workbench-bg.png" mode="aspectFill" />
+    <view class="user-content">
+      <image class="user-avatar" src="{{userInfo.avatar || '/assets/default-avatar.png'}}" />
+      <view class="user-info">
+        <view class="user-name">{{userInfo.nickname || '志愿者'}}</view>
+        <view class="user-org" wx:if="{{userInfo.org}}">{{userInfo.org.name}}</view>
+        <view class="user-role">{{roleMap[userInfo.role]}}</view>
+      </view>
+    </view>
+    <view class="user-stats">
+      <view class="stat-item">
+        <text class="stat-num">{{stats.taskCount}}</text>
+        <text class="stat-text">我的任务</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.caseCount}}</text>
+        <text class="stat-text">参与案件</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.dialectCount}}</text>
+        <text class="stat-text">方言录音</text>
+      </view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.score}}</text>
+        <text class="stat-text">积分</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 快捷功能 -->
+  <view class="feature-card">
+    <view class="feature-title">快捷功能</view>
+    <view class="feature-grid">
+      <view class="feature-item" bindtap="goToMyTasks">
+        <view class="feature-icon icon-task">📋</view>
+        <text class="feature-name">我的任务</text>
+      </view>
+      <view class="feature-item" bindtap="goToCreateCase">
+        <view class="feature-icon icon-case">📝</view>
+        <text class="feature-name">登记案件</text>
+      </view>
+      <view class="feature-item" bindtap="goToCreateDialect">
+        <view class="feature-icon icon-dialect">🎤</view>
+        <text class="feature-name">录制方言</text>
+      </view>
+      <view class="feature-item" bindtap="goToMap">
+        <view class="feature-icon icon-map">🗺️</view>
+        <text class="feature-name">附近案件</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 待办任务 -->
+  <view class="todo-card">
+    <view class="card-header">
+      <view class="card-title">待办任务</view>
+      <text class="card-more" bindtap="goToMyTasks">查看更多 ></text>
+    </view>
+    <view class="todo-list" wx:if="{{todos.length > 0}}">
+      <view class="todo-item" wx:for="{{todos}}" wx:key="id" bindtap="goToTaskDetail" data-id="{{item.id}}">
+        <view class="todo-tag priority-{{item.priority}}">{{priorityMap[item.priority]}}</view>
+        <view class="todo-content">
+          <view class="todo-title">{{item.title}}</view>
+          <view class="todo-meta">
+            <text class="todo-type">{{taskTypeMap[item.type]}}</text>
+            <text class="todo-deadline" wx:if="{{item.deadline}}">截止：{{item.deadline}}</text>
+          </view>
+        </view>
+        <view class="todo-action">
+          <text class="btn-do" catchtap="startTask" data-id="{{item.id}}">去做</text>
+        </view>
+      </view>
+    </view>
+    <view class="empty-state" wx:else>
+      <image class="empty-icon" src="/assets/empty.png" mode="aspectFit" />
+      <text class="empty-text">暂无待办任务</text>
+    </view>
+  </view>
+
+  <!-- 最近动态 -->
+  <view class="activity-card">
+    <view class="card-header">
+      <view class="card-title">最近动态</view>
+    </view>
+    <view class="activity-list" wx:if="{{activities.length > 0}}">
+      <view class="activity-item" wx:for="{{activities}}" wx:key="id">
+        <view class="activity-dot"></view>
+        <view class="activity-content">
+          <view class="activity-text">{{item.content}}</view>
+          <view class="activity-time">{{item.time}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="empty-state" wx:else>
+      <text class="empty-text">暂无动态</text>
+    </view>
+  </view>
+</view>

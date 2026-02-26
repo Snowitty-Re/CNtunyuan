@@ -1,0 +1,125 @@
+<view class="container">
+  <!-- 基本信息 -->
+  <view class="card">
+    <view class="info-header">
+      <image class="person-photo" src="{{caseData.photos[0]?.url || '/assets/default-avatar.png'}}" mode="aspectFill" />
+      <view class="person-info">
+        <view class="person-name">{{caseData.name}} <text class="person-age">{{caseData.age}}岁</text></view>
+        <view class="person-tags">
+          <text class="tag case-type">{{caseTypeMap[caseData.case_type]}}</text>
+          <text class="tag status {{caseData.status}}">{{statusMap[caseData.status]}}</text>
+        </view>
+        <view class="case-no">案件编号：{{caseData.case_no}}</view>
+      </view>
+    </view>
+
+    <!-- 照片列表 -->
+    <view class="photo-section" wx:if="{{caseData.photos.length > 0}}">
+      <scroll-view scroll-x class="photo-scroll">
+        <image wx:for="{{caseData.photos}}" wx:key="id" class="photo-item" src="{{item.url}}" mode="aspectFill" bindtap="previewImage" data-url="{{item.url}}" />
+      </scroll-view>
+    </view>
+  </view>
+
+  <!-- 走失信息 -->
+  <view class="card">
+    <view class="section-title">走失信息</view>
+    <view class="info-list">
+      <view class="info-item">
+        <text class="info-label">走失时间</text>
+        <text class="info-value">{{caseData.missing_time}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">走失地点</text>
+        <text class="info-value">{{caseData.missing_location}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">性别</text>
+        <text class="info-value">{{genderMap[caseData.gender]}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">身高</text>
+        <text class="info-value">{{caseData.height ? caseData.height + 'cm' : '未知'}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">可能去向</text>
+        <text class="info-value">{{caseData.possible_location || '未知'}}</text>
+      </view>
+    </view>
+
+    <view class="detail-section" wx:if="{{caseData.missing_detail}}">
+      <view class="detail-title">走失详情</view>
+      <view class="detail-content">{{caseData.missing_detail}}</view>
+    </view>
+  </view>
+
+  <!-- 外貌特征 -->
+  <view class="card">
+    <view class="section-title">外貌特征</view>
+    <view class="detail-content">{{caseData.appearance || '暂无描述'}}</view>
+    <view class="detail-section" wx:if="{{caseData.clothing}}">
+      <view class="detail-title">衣着描述</view>
+      <view class="detail-content">{{caseData.clothing}}</view>
+    </view>
+    <view class="detail-section" wx:if="{{caseData.special_features}}">
+      <view class="detail-title">特殊特征</view>
+      <view class="detail-content">{{caseData.special_features}}</view>
+    </view>
+  </view>
+
+  <!-- 家属信息 -->
+  <view class="card">
+    <view class="section-title">家属信息</view>
+    <view class="info-list">
+      <view class="info-item">
+        <text class="info-label">联系人</text>
+        <text class="info-value">{{caseData.contact_name}} {{caseData.contact_relation}}</text>
+      </view>
+      <view class="info-item">
+        <text class="info-label">联系电话</text>
+        <text class="info-value text-primary" bindtap="makePhoneCall">{{caseData.contact_phone}} 📞</text>
+      </view>
+      <view class="info-item" wx:if="{{caseData.contact_address}}">
+        <text class="info-label">联系地址</text>
+        <text class="info-value">{{caseData.contact_address}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 地图位置 -->
+  <view class="card" wx:if="{{caseData.missing_latitude}}">
+    <view class="section-title">走失地点位置</view>
+    <map class="case-map" latitude="{{caseData.missing_latitude}}" longitude="{{caseData.missing_longitude}}" markers="{{markers}}" scale="14" show-location />
+  </view>
+
+  <!-- 轨迹记录 -->
+  <view class="card">
+    <view class="section-header">
+      <view class="section-title">轨迹记录</view>
+      <text class="add-btn" bindtap="addTrack">+ 添加轨迹</text>
+    </view>
+    <view class="track-list" wx:if="{{tracks.length > 0}}">
+      <view class="track-item" wx:for="{{tracks}}" wx:key="id">
+        <view class="track-dot"></view>
+        <view class="track-content">
+          <view class="track-location">📍 {{item.location}}</view>
+          <view class="track-desc">{{item.description}}</view>
+          <view class="track-time">{{item.track_time}} · {{item.reporter.nickname}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="empty-tip" wx:else>暂无轨迹记录</view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-bar">
+    <button class="action-btn share" open-type="share">
+      <text class="btn-icon">↗️</text>
+      <text class="btn-text">分享</text>
+    </button>
+    <button class="action-btn primary" bindtap="createTask">
+      <text class="btn-icon">📋</text>
+      <text class="btn-text">创建任务</text>
+    </button>
+  </view>
+</view>
