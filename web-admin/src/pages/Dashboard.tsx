@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Row, Col, Card, Statistic, Table, Tag } from 'antd'
 import {
-  UserOutlined,
   TeamOutlined,
   SearchOutlined,
   CheckCircleOutlined,
   SoundOutlined,
-  FileTextOutlined,
 } from '@ant-design/icons'
 import { Pie, Column } from '@ant-design/charts'
 import { userApi } from '../services/user'

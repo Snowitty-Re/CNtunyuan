@@ -65,7 +65,7 @@ func main() {
 		log.Println("数据库迁移完成")
 
 		// 初始化根组织
-		if err := model.InitRootOrg(db); err != nil {
+		if err := model.InitRootOrganization(db); err != nil {
 			log.Fatalf("初始化根组织失败: %v", err)
 		}
 

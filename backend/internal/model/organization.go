@@ -16,6 +16,12 @@ const (
 	OrgTypeStreet   = "street"   // 街道
 )
 
+// 组织状态
+const (
+	OrgStatusActive   = "active"   // 正常
+	OrgStatusInactive = "inactive" // 停用
+)
+
 // Organization 组织架构模型
 type Organization struct {
 	ID          uuid.UUID       `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`

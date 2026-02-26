@@ -34,7 +34,7 @@ type User struct {
 	Email     string         `gorm:"size:100;comment:邮箱" json:"email"`
 	RealName  string         `gorm:"size:50;comment:真实姓名" json:"real_name"`
 	IDCard    string         `gorm:"size:18;comment:身份证号" json:"id_card"`
-	Password  string         `gorm:"size:100;comment:密码哈希" json:"-"` // 不返回给前端
+	Password  string         `gorm:"size:255;comment:密码哈希" json:"-"` // 不返回给前端
 	Role      string         `gorm:"size:20;default:volunteer;comment:角色" json:"role"`
 	Status    string         `gorm:"size:20;default:active;comment:状态" json:"status"`
 	OrgID     *uuid.UUID     `gorm:"type:uuid;index;comment:所属机构ID" json:"org_id"`

@@ -8,7 +8,6 @@ import { userApi } from '../services/user'
 const Login = () => {
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState('password')
-  const { setToken, setUser } = useAuthStore()
   const navigate = useNavigate()
   const [form] = Form.useForm()
 
@@ -17,14 +16,20 @@ const Login = () => {
     setLoading(true)
     try {
       const data = await userApi.adminLogin(values.username, values.password)
-      setToken(data.token, data.refresh_token)
+      
+      // 使用 store 的 setState 方法
+      useAuthStore.getState().setToken(data.token, data.refresh_token)
       
       // 获取用户信息
       const userInfo = await userApi.getCurrentUser()
-      setUser(userInfo)
+      useAuthStore.getState().setUser(userInfo)
       
       message.success('登录成功')
-      navigate('/')
+      
+      // 延迟跳转，确保状态更新
+      setTimeout(() => {
+        navigate('/', { replace: true })
+      }, 100)
     } catch (error: any) {
       message.error(error.message || '登录失败')
     } finally {
