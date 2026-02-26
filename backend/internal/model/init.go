@@ -19,11 +19,12 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	dsn := cfg.GetDSN()
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger:         logger.Default.LogMode(logger.Info),
 		NamingStrategy: schema.NamingStrategy{
 			TablePrefix:   "ty_", // 表前缀: tunyuan
 			SingularTable: false,
 		},
+		DisableForeignKeyConstraintWhenMigrating: true, // 禁用外键约束自动创建
 	})
 	if err != nil {
 		return nil, fmt.Errorf("连接数据库失败: %w", err)

@@ -9,7 +9,7 @@ database:
   port: 5432
   user: postgres
   password: 300133ys
-  database: cntunyuan
+  database: cntuanyuan
   ssl_mode: disable
   max_idle_conns: 10
   max_open_conns: 100
