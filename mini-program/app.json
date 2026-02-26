@@ -9,6 +9,7 @@
     "pages/dialect/detail",
     "pages/tasks/list",
     "pages/tasks/detail",
+    "pages/tasks/create",
     "pages/volunteer/profile",
     "pages/volunteer/workbench",
     "pages/map/index"
@@ -27,27 +28,19 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页",
-        "iconPath": "assets/icons/home.png",
-        "selectedIconPath": "assets/icons/home-active.png"
+        "text": "首页"
       },
       {
         "pagePath": "pages/cases/list",
-        "text": "案件",
-        "iconPath": "assets/icons/case.png",
-        "selectedIconPath": "assets/icons/case-active.png"
+        "text": "案件"
       },
       {
         "pagePath": "pages/volunteer/workbench",
-        "text": "工作台",
-        "iconPath": "assets/icons/work.png",
-        "selectedIconPath": "assets/icons/work-active.png"
+        "text": "工作台"
       },
       {
         "pagePath": "pages/volunteer/profile",
-        "text": "我的",
-        "iconPath": "assets/icons/my.png",
-        "selectedIconPath": "assets/icons/my-active.png"
+        "text": "我的"
       }
     ]
   },
