@@ -1,0 +1,41 @@
+{
+    "schemes": ["http"],
+    "swagger": "2.0",
+    "info": {
+        "description": "团圆寻亲志愿者系统后端 API 文档",
+        "title": "团圆寻亲志愿者系统 API",
+        "contact": {
+            "name": "CNtunyuan Team",
+            "url": "https://github.com/Snowitty-Re/CNtunyuan"
+        },
+        "license": {
+            "name": "MIT"
+        },
+        "version": "1.0.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/health": {
+            "get": {
+                "description": "健康检查",
+                "tags": ["健康检查"],
+                "summary": "健康检查",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "status": {
+                                    "type": "string",
+                                    "example": "ok"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

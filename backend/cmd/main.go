@@ -1,5 +1,18 @@
 package main
 
+// @title 团圆寻亲志愿者系统 API
+// @version 1.0.0
+// @description 团圆寻亲志愿者系统后端 API 文档
+// @termsOfService https://github.com/Snowitty-Re/CNtunyuan
+
+// @contact.name CNtunyuan Team
+// @contact.url https://github.com/Snowitty-Re/CNtunyuan
+
+// @license.name MIT
+
+// @host localhost:8080
+// @BasePath /api/v1
+
 import (
 	"context"
 	"flag"
@@ -11,6 +24,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/Snowitty-Re/CNtunyuan/docs"
 	"github.com/Snowitty-Re/CNtunyuan/internal/api"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/model"
