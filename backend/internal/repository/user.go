@@ -53,6 +53,16 @@ func (r *UserRepository) GetByUnionID(ctx context.Context, unionID string) (*mod
 	return &user, nil
 }
 
+// GetByPhone 根据手机号获取用户
+func (r *UserRepository) GetByPhone(ctx context.Context, phone string) (*model.User, error) {
+	var user model.User
+	err := r.db.WithContext(ctx).Where("phone = ?", phone).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 // Update 更新用户
 func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Save(user).Error

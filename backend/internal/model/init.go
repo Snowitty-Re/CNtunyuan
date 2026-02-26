@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -128,11 +129,18 @@ func InitSuperAdmin(db *gorm.DB) error {
 		return fmt.Errorf("获取根组织失败: %w", err)
 	}
 
+	// 生成密码哈希（默认密码: admin123）
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("密码加密失败: %w", err)
+	}
+
 	superAdmin := User{
 		Nickname: "超级管理员",
 		RealName: "系统管理员",
 		Phone:    "13800138000",
 		Email:    "admin@cntunyuan.com",
+		Password: string(passwordHash),
 		Role:     RoleSuperAdmin,
 		Status:   UserStatusActive,
 		OrgID:    &rootOrg.ID,
@@ -142,6 +150,6 @@ func InitSuperAdmin(db *gorm.DB) error {
 		return fmt.Errorf("创建超级管理员失败: %w", err)
 	}
 
-	log.Printf("超级管理员创建成功，ID: %s", superAdmin.ID)
+	log.Printf("超级管理员创建成功，ID: %s, 默认密码: admin123", superAdmin.ID)
 	return nil
 }

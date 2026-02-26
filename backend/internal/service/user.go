@@ -110,6 +110,11 @@ func (s *UserService) GetByID(ctx context.Context, id uuid.UUID) (*model.User, e
 	return s.userRepo.GetByID(ctx, id)
 }
 
+// GetByPhone 根据手机号获取用户
+func (s *UserService) GetByPhone(ctx context.Context, phone string) (*model.User, error) {
+	return s.userRepo.GetByPhone(ctx, phone)
+}
+
 // Update 更新用户
 func (s *UserService) Update(ctx context.Context, id uuid.UUID, req *UpdateUserRequest) (*model.User, error) {
 	user, err := s.userRepo.GetByID(ctx, id)

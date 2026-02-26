@@ -71,6 +71,7 @@ func (r *Router) setupRoutes() {
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/wechat-login", r.authHandler.WeChatLogin)
+			auth.POST("/admin-login", r.authHandler.AdminLogin)
 			auth.POST("/refresh", r.authHandler.RefreshToken)
 		}
 

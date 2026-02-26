@@ -179,6 +179,77 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	utils.Success(c, user)
 }
 
+// LoginRequest 账号密码登录请求
+type LoginRequest struct {
+	Phone    string `json:"phone" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+// AdminLogin 管理后台登录
+// @Summary 管理后台登录
+// @Description 使用手机号和密码登录（供Web管理后台使用）
+// @Tags 认证
+// @Accept json
+// @Produce json
+// @Param body body LoginRequest true "登录参数"
+// @Success 200 {object} utils.Response{data=WeChatLoginResponse}
+// @Failure 400 {object} utils.Response
+// @Router /auth/admin-login [post]
+func (h *AuthHandler) AdminLogin(c *gin.Context) {
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+
+	// 验证用户
+	user, err := h.userService.GetByPhone(c.Request.Context(), req.Phone)
+	if err != nil {
+		utils.Unauthorized(c, "手机号或密码错误")
+		return
+	}
+
+	// 验证密码
+	if !user.CheckPassword(req.Password) {
+		utils.Unauthorized(c, "手机号或密码错误")
+		return
+	}
+
+	// 检查是否为管理员
+	if !user.IsAdmin() {
+		utils.Forbidden(c, "权限不足")
+		return
+	}
+
+	// 更新最后登录时间
+	go h.userService.UpdateLastLogin(c.Request.Context(), user.ID, c.ClientIP())
+
+	// 生成Token
+	orgID := ""
+	if user.OrgID != nil {
+		orgID = user.OrgID.String()
+	}
+
+	token, err := h.jwtAuth.GenerateToken(user.ID.String(), user.OpenID, user.UnionID, user.Role, orgID)
+	if err != nil {
+		utils.ServerError(c, "生成Token失败")
+		return
+	}
+
+	refreshToken, err := h.jwtAuth.GenerateRefreshToken(user.ID.String(), user.OpenID, user.UnionID, user.Role, orgID)
+	if err != nil {
+		utils.ServerError(c, "生成RefreshToken失败")
+		return
+	}
+
+	utils.Success(c, WeChatLoginResponse{
+		Token:        token,
+		RefreshToken: refreshToken,
+		ExpiresIn:    604800,
+		IsNewUser:    false,
+	})
+}
+
 // Logout 登出
 // @Summary 用户登出
 // @Description 用户登出
