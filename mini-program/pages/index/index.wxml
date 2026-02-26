@@ -59,7 +59,7 @@
     </view>
     <view class="case-list">
       <view class="case-item" wx:for="{{recentCases}}" wx:key="id" bindtap="goToCaseDetail" data-id="{{item.id}}">
-        <image class="case-image" src="{{item.photos[0].url}}" mode="aspectFill" />
+        <image class="case-image" src="{{item.photoUrl}}" mode="aspectFill" />
         <view class="case-info">
           <view class="case-name">{{item.name}} <text class="case-age">{{item.age}}岁</text></view>
           <view class="case-location">📍 {{item.missing_location}}</view>

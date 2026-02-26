@@ -67,6 +67,8 @@ Page({
       const tasks = result.list.map(item => ({
         ...item,
         deadline: item.deadline ? formatDate(item.deadline) : null,
+        location: item.location || '未指定',
+        assigneeAvatar: item.assignee ? (item.assignee.avatar || '/assets/default-avatar.png') : '/assets/default-avatar.png',
         isOverdue: item.deadline && new Date(item.deadline) < new Date() && item.status !== 'completed'
       }))
 

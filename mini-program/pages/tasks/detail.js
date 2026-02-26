@@ -49,7 +49,14 @@ Page({
     showLoading()
     try {
       const data = await get(`/tasks/${id}`)
-      data.deadline = data.deadline ? formatDate(data.deadline) : null
+      data.deadline = data.deadline ? formatDate(data.deadline) : '未设置'
+      if (data.missing_person) {
+        data.missing_person.photoUrl = (data.missing_person.photos && data.missing_person.photos[0] && data.missing_person.photos[0].url) ? data.missing_person.photos[0].url : '/assets/default-avatar.png'
+      }
+      if (data.assignee) {
+        data.assignee.avatar = data.assignee.avatar || '/assets/default-avatar.png'
+      }
+      data.description = data.description || '暂无描述'
 
       const markers = []
       if (data.latitude && data.longitude) {

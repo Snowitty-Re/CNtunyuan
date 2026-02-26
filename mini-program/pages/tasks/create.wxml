@@ -41,7 +41,7 @@
     <view class="form-item">
       <text class="label">任务地点</text>
       <view class="location-picker" bindtap="chooseLocation">
-        <text class="location-text">{{form.location || '点击选择位置'}}</text>
+        <text class="location-text">{{form.location}}</text>
         <text class="location-icon">📍</text>
       </view>
     </view>
@@ -49,7 +49,7 @@
     <view class="form-item">
       <text class="label">截止时间</text>
       <picker mode="multiSelector" range="{{dateTimeArray}}" value="{{dateTime}}" bindchange="onDateTimeChange">
-        <view class="picker-value">{{form.deadline || '选择截止时间（可选）'}}</view>
+        <view class="picker-value">{{form.deadline}}</view>
       </picker>
     </view>
 

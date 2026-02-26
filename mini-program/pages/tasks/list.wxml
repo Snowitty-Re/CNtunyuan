@@ -45,7 +45,7 @@
 
       <view class="task-info">
         <text class="info-label">任务地点：</text>
-        <text class="info-value">{{item.location || '未指定'}}</text>
+        <text class="info-value">{{item.location}}</text>
       </view>
 
       <view class="task-progress" wx:if="{{item.status === 'processing'}}">
@@ -55,7 +55,7 @@
 
       <view class="task-footer">
         <view class="task-assignee" wx:if="{{item.assignee}}">
-          <image class="avatar" src="{{item.assignee.avatar || '/assets/default-avatar.png'}}" />
+          <image class="avatar" src="{{item.assigneeAvatar}}" />
           <text>{{item.assignee.nickname}}</text>
         </view>
         <view class="task-deadline" wx:if="{{item.deadline}}">

@@ -16,7 +16,7 @@
       </cover-view>
       <scroll-view scroll-y class="case-scroll">
         <cover-view class="case-item" wx:for="{{nearbyCases}}" wx:key="id" bindtap="goToCaseDetail" data-id="{{item.id}}">
-          <cover-image class="case-photo" src="{{item.photos[0].url || '/assets/default-avatar.png'}}" />
+          <cover-image class="case-photo" src="{{item.photoUrl}}" />
           <cover-view class="case-info">
             <cover-view class="case-name">{{item.name}} {{item.age}}岁</cover-view>
             <cover-view class="case-distance">距离 {{item.distance}}km</cover-view>

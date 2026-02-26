@@ -24,7 +24,11 @@ Page({
 
   async loadUserInfo() {
     try {
-      const userInfo = await app.getUserInfo()
+      let userInfo = await app.getUserInfo() || {}
+      userInfo.avatar = userInfo.avatar || '/assets/default-avatar.png'
+      userInfo.nickname = userInfo.nickname || '志愿者'
+      userInfo.phone = userInfo.phone || ''
+      userInfo.email = userInfo.email || ''
       this.setData({ userInfo })
     } catch (error) {
       console.error('加载用户信息失败:', error)

@@ -2,7 +2,7 @@
   <!-- 基本信息 -->
   <view class="card">
     <view class="info-header">
-      <image class="person-photo" src="{{caseData.photos[0].url}}" mode="aspectFill" />
+      <image class="person-photo" src="{{caseData.photoUrl}}" mode="aspectFill" />
       <view class="person-info">
         <view class="person-name">{{caseData.name}} <text class="person-age">{{caseData.age}}岁</text></view>
         <view class="person-tags">
@@ -43,7 +43,7 @@
       </view>
       <view class="info-item">
         <text class="info-label">可能去向</text>
-        <text class="info-value">{{caseData.possible_location || '未知'}}</text>
+        <text class="info-value">{{caseData.possible_location}}</text>
       </view>
     </view>
 
@@ -56,7 +56,7 @@
   <!-- 外貌特征 -->
   <view class="card">
     <view class="section-title">外貌特征</view>
-    <view class="detail-content">{{caseData.appearance || '暂无描述'}}</view>
+    <view class="detail-content">{{caseData.appearance}}</view>
     <view class="detail-section" wx:if="{{caseData.clothing}}">
       <view class="detail-title">衣着描述</view>
       <view class="detail-content">{{caseData.clothing}}</view>

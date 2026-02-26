@@ -3,9 +3,9 @@
   <view class="user-card">
     <image class="user-bg" src="/assets/workbench-bg.png" mode="aspectFill" />
     <view class="user-content">
-      <image class="user-avatar" src="{{userInfo.avatar || '/assets/default-avatar.png'}}" />
+      <image class="user-avatar" src="{{userInfo.avatar}}" />
       <view class="user-info">
-        <view class="user-name">{{userInfo.nickname || '志愿者'}}</view>
+        <view class="user-name">{{userInfo.nickname}}</view>
         <view class="user-org" wx:if="{{userInfo.org}}">{{userInfo.org.name}}</view>
         <view class="user-role">{{roleMap[userInfo.role]}}</view>
       </view>

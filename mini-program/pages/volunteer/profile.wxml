@@ -2,9 +2,9 @@
   <!-- 用户信息 -->
   <view class="profile-card">
     <view class="user-main">
-      <image class="avatar" src="{{userInfo.avatar || '/assets/default-avatar.png'}}" bindtap="changeAvatar" />
+      <image class="avatar" src="{{userInfo.avatar}}" bindtap="changeAvatar" />
       <view class="user-detail">
-        <view class="user-name">{{userInfo.nickname || '志愿者'}}</view>
+        <view class="user-name">{{userInfo.nickname}}</view>
         <view class="user-org" wx:if="{{userInfo.org}}">{{userInfo.org.name}}</view>
         <view class="user-id">ID: {{userInfo.id}}</view>
       </view>

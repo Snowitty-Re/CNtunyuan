@@ -70,7 +70,9 @@ Page({
     }
 
     this.setData({
-      dateTimeArray: [years, months, days, hours, minutes]
+      dateTimeArray: [years, months, days, hours, minutes],
+      'form.missingTime': '',
+      'form.address': ''
     })
   },
 

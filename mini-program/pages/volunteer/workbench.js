@@ -48,10 +48,10 @@ Page({
 
   async loadUserInfo() {
     try {
-      const userInfo = wx.getStorageSync('userInfo')
-      if (userInfo) {
-        this.setData({ userInfo })
-      }
+      let userInfo = wx.getStorageSync('userInfo') || {}
+      userInfo.avatar = userInfo.avatar || '/assets/default-avatar.png'
+      userInfo.nickname = userInfo.nickname || '志愿者'
+      this.setData({ userInfo })
     } catch (error) {
       console.error('加载用户信息失败:', error)
     }

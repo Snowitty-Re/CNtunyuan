@@ -40,6 +40,9 @@ Page({
     try {
       const data = await get(`/missing-persons/${id}`)
       data.missing_time = formatDate(data.missing_time)
+      data.photoUrl = (data.photos && data.photos[0] && data.photos[0].url) ? data.photos[0].url : '/assets/default-avatar.png'
+      data.possible_location = data.possible_location || '未知'
+      data.appearance = data.appearance || '暂无描述'
       
       const markers = []
       if (data.missing_latitude && data.missing_longitude) {

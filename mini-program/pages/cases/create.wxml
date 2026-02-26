@@ -42,7 +42,7 @@
       <text class="required">*</text>
       <text class="label">走失时间</text>
       <picker mode="multiSelector" range="{{dateTimeArray}}" value="{{dateTime}}" bindchange="onDateTimeChange" bindcolumnchange="onDateTimeColumnChange">
-        <view class="picker-value">{{form.missingTime || '请选择时间'}}</view>
+        <view class="picker-value">{{form.missingTime}}</view>
       </picker>
     </view>
 
@@ -55,7 +55,7 @@
     <view class="form-item">
       <text class="label">详细位置</text>
       <view class="location-picker" bindtap="chooseLocation">
-        <text class="location-text">{{form.address || '点击选择地图位置'}}</text>
+        <text class="location-text">{{form.address}}</text>
         <text class="location-icon">📍</text>
       </view>
     </view>

@@ -26,11 +26,11 @@
     </view>
     <view class="info-item">
       <text class="info-label">详细地址</text>
-      <text class="info-value">{{dialect.address || '暂无'}}</text>
+      <text class="info-value">{{dialect.address}}</text>
     </view>
     <view class="info-item">
       <text class="info-label">描述</text>
-      <text class="info-value">{{dialect.description || '暂无描述'}}</text>
+      <text class="info-value">{{dialect.description}}</text>
     </view>
     <view class="info-item">
       <text class="info-label">采集人</text>

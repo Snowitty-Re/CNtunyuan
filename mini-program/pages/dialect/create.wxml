@@ -18,7 +18,7 @@
     <view class="form-item">
       <text class="form-label">录制地点</text>
       <view class="location-picker" bindtap="chooseLocation">
-        <text class="location-text">{{form.address || '点击选择位置'}}</text>
+        <text class="location-text">{{form.address}}</text>
         <text class="location-icon">📍</text>
       </view>
     </view>
