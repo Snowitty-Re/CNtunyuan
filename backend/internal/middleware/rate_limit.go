@@ -31,6 +31,12 @@ func NewRateLimiter(redis *redis.Client, limit int, window time.Duration) *RateL
 // Limit 限流中间件
 func (r *RateLimiter) Limit() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 如果Redis未配置，直接放行
+		if r.redis == nil {
+			c.Next()
+			return
+		}
+		
 		key := r.keyPrefix + c.ClientIP()
 		ctx := context.Background()
 

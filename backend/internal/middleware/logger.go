@@ -40,14 +40,20 @@ func Logger() gin.HandlerFunc {
 
 		// 记录日志
 		userID := GetUserID(c)
-		if userID == "" {
-			userID = "anonymous"
-		}
-
+		
 		// 异步记录操作日志
 		go func() {
+			var userIDUUID uuid.UUID
+			if userID != "" {
+				var err error
+				userIDUUID, err = uuid.Parse(userID)
+				if err != nil {
+					userIDUUID = uuid.Nil
+				}
+			}
+			
 			log := model.OperationLog{
-				UserID:       uuid.MustParse(userID),
+				UserID:       userIDUUID,
 				Module:       getModule(path),
 				Action:       method,
 				Method:       method,

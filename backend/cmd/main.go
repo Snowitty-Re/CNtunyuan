@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,6 +22,12 @@ import (
 )
 
 func main() {
+	// 命令行参数
+	var (
+		migrate = flag.Bool("migrate", false, "执行数据库迁移")
+	)
+	flag.Parse()
+
 	// 加载配置
 	cfg, err := config.LoadConfig("")
 	if err != nil {
@@ -36,27 +43,35 @@ func main() {
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
 
-	// 自动迁移
-	if err := model.AutoMigrate(db); err != nil {
-		log.Fatalf("数据库迁移失败: %v", err)
+	// 自动迁移（仅当 -migrate 参数指定时）
+	if *migrate {
+		if err := model.AutoMigrate(db); err != nil {
+			log.Fatalf("数据库迁移失败: %v", err)
+		}
+		log.Println("数据库迁移完成")
+
+		// 初始化根组织
+		if err := model.InitRootOrg(db); err != nil {
+			log.Fatalf("初始化根组织失败: %v", err)
+		}
 	}
 
-	// 初始化根组织
-	if err := model.InitRootOrg(db); err != nil {
-		log.Fatalf("初始化根组织失败: %v", err)
-	}
+	// 初始化Redis（可选）
+	var rdb *redis.Client
+	if cfg.Redis.Host != "" {
+		rdb = redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
+			Password: cfg.Redis.Password,
+			DB:       cfg.Redis.DB,
+		})
 
-	// 初始化Redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
-	})
-
-	// 测试Redis连接
-	ctx := context.Background()
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Printf("Redis连接警告: %v", err)
+		// 测试Redis连接
+		ctx := context.Background()
+		if err := rdb.Ping(ctx).Err(); err != nil {
+			log.Printf("Redis连接警告: %v，将使用内存缓存", err)
+		}
+	} else {
+		log.Println("Redis未配置，将使用内存缓存")
 	}
 
 	// 初始化JWT
