@@ -1,0 +1,83 @@
+<view class="container">
+  <view class="tips-card">
+    <text class="tips-icon">💡</text>
+    <text class="tips-text">请录制15-20秒的方言语音，用于帮助识别走失人员口音</text>
+  </view>
+
+  <view class="form-card">
+    <view class="form-item">
+      <text class="form-label">标题</text>
+      <input class="form-input" placeholder="请输入方言标题" value="{{form.title}}" bindinput="onTitleInput" />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">描述</text>
+      <textarea class="form-textarea" placeholder="描述方言内容、背景等（选填）" value="{{form.description}}" bindinput="onDescInput" />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">录制地点</text>
+      <view class="location-picker" bindtap="chooseLocation">
+        <text class="location-text">{{form.address || '点击选择位置'}}</text>
+        <text class="location-icon">📍</text>
+      </view>
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">详细地址</text>
+      <input class="form-input" placeholder="省/市/区/街道" value="{{form.detailAddress}}" bindinput="onAddressInput" />
+    </view>
+  </view>
+
+  <!-- 录音区域 -->
+  <view class="record-card">
+    <view class="record-timer">{{recordTime}}s / 20s</view>
+    
+    <view class="record-area">
+      <!-- 录音动画 -->
+      <view class="record-waves" wx:if="{{isRecording}}">
+        <view class="wave-item" wx:for="{{5}}" wx:key="index" style="animation-delay: {{index * 0.1}}s"></view>
+      </view>
+
+      <!-- 播放进度 -->
+      <view class="play-progress" wx:if="{{hasRecorded && !isRecording}}">
+        <progress percent="{{playProgress}}" stroke-width="4" activeColor="#1890ff" />
+        <view class="time-display">{{currentTime}}s / {{recordDuration}}s</view>
+      </view>
+
+      <!-- 录音按钮 -->
+      <view class="record-btn-wrapper">
+        <view class="record-btn {{isRecording ? 'recording' : ''}} {{hasRecorded ? 'has-recorded' : ''}}" 
+              bindtap="toggleRecord"
+              bindlongpress="startRecord"
+              bindtouchend="stopRecord"
+              bindtouchcancel="stopRecord">
+          <text class="record-icon">{{isRecording ? '⏹' : (hasRecorded ? '▶️' : '🎤')}}</text>
+        </view>
+        <text class="record-hint">{{isRecording ? '松开结束录音' : (hasRecorded ? '点击播放/重录' : '长按开始录音')}}</text>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-btns" wx:if="{{hasRecorded}}">
+      <button class="btn-secondary" bindtap="reRecord">重新录制</button>
+      <button class="btn-primary" bindtap="uploadRecord" loading="{{uploading}}">上传录音</button>
+    </view>
+  </view>
+
+  <!-- 历史录音 -->
+  <view class="card" wx:if="{{myDialects.length > 0}}">
+    <view class="card-header">
+      <text class="card-title">我的录音</text>
+    </view>
+    <view class="dialect-list">
+      <view class="dialect-item" wx:for="{{myDialects}}" wx:key="id">
+        <view class="dialect-info">
+          <view class="dialect-title">{{item.title}}</view>
+          <view class="dialect-meta">{{item.province}} {{item.city}} · {{item.duration}}秒</view>
+        </view>
+        <view class="dialect-status {{item.status}}">{{item.status === 'active' ? '已通过' : '审核中'}}</view>
+      </view>
+    </view>
+  </view>
+</view>

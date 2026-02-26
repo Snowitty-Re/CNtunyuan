@@ -1,0 +1,44 @@
+server:
+  port: 8080
+  mode: debug  # debug/release
+  read_timeout: 30
+  write_timeout: 30
+
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: ${DB_PASSWORD}
+  database: cntunyuan
+  ssl_mode: disable
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: ${JWT_SECRET}
+  expire_time: 604800  # 7天，单位秒
+
+wechat:
+  app_id: ${WECHAT_APP_ID}
+  app_secret: ${WECHAT_APP_SECRET}
+
+storage:
+  type: local  # local/oss
+  local_path: ./uploads
+  base_url: http://localhost:8080/uploads
+  # OSS配置(如使用)
+  oss_access_key_id: ""
+  oss_access_key_secret: ""
+  oss_endpoint: ""
+  oss_bucket: ""
+
+log:
+  level: info  # debug/info/warn/error
+  format: json  # json/text
+  output_path: ./logs

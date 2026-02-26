@@ -1,0 +1,207 @@
+.search-bar {
+  padding: 20rpx 0;
+}
+
+.search-input {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 44rpx;
+  padding: 16rpx 24rpx;
+}
+
+.icon-search {
+  font-size: 32rpx;
+  margin-right: 16rpx;
+}
+
+.search-input input {
+  flex: 1;
+  font-size: 28rpx;
+}
+
+/* 功能入口 */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20rpx;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.feature-icon {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  margin-bottom: 16rpx;
+}
+
+.icon-case { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+.icon-dialect { background: linear-gradient(135deg, #a8edea, #fed6e3); }
+.icon-map { background: linear-gradient(135deg, #d299c2, #fef9d7); }
+.icon-task { background: linear-gradient(135deg, #89f7fe, #66a6ff); }
+
+.feature-text {
+  font-size: 26rpx;
+  color: #333;
+}
+
+/* 统计 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20rpx;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 20rpx 0;
+}
+
+.stat-number {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #1890ff;
+}
+
+.stat-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+
+/* 案件列表 */
+.case-list {
+  margin-top: 20rpx;
+}
+
+.case-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.case-item:last-child {
+  border-bottom: none;
+}
+
+.case-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+  margin-right: 20rpx;
+  background: #f0f0f0;
+}
+
+.case-info {
+  flex: 1;
+}
+
+.case-name {
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.case-age {
+  font-size: 26rpx;
+  color: #999;
+  font-weight: normal;
+}
+
+.case-location {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 4rpx;
+}
+
+.case-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.case-status {
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+}
+
+.case-status.missing {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+.case-status.searching {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.case-status.found, .case-status.reunited {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+/* 方言列表 */
+.dialect-list {
+  margin-top: 20rpx;
+}
+
+.dialect-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.dialect-item:last-child {
+  border-bottom: none;
+}
+
+.dialect-icon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  margin-right: 20rpx;
+}
+
+.dialect-info {
+  flex: 1;
+}
+
+.dialect-title {
+  font-size: 30rpx;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.dialect-location {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.dialect-stats {
+  text-align: right;
+}
+
+.dialect-plays, .dialect-likes {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 4rpx;
+}

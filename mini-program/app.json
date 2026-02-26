@@ -1,0 +1,61 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/cases/list",
+    "pages/cases/detail",
+    "pages/cases/create",
+    "pages/dialect/list",
+    "pages/dialect/create",
+    "pages/dialect/detail",
+    "pages/tasks/list",
+    "pages/tasks/detail",
+    "pages/volunteer/profile",
+    "pages/volunteer/workbench",
+    "pages/map/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#1890ff",
+    "navigationBarTitleText": "团圆寻亲",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1890ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/icons/home.png",
+        "selectedIconPath": "assets/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/cases/list",
+        "text": "案件",
+        "iconPath": "assets/icons/case.png",
+        "selectedIconPath": "assets/icons/case-active.png"
+      },
+      {
+        "pagePath": "pages/volunteer/workbench",
+        "text": "工作台",
+        "iconPath": "assets/icons/work.png",
+        "selectedIconPath": "assets/icons/work-active.png"
+      },
+      {
+        "pagePath": "pages/volunteer/profile",
+        "text": "我的",
+        "iconPath": "assets/icons/my.png",
+        "selectedIconPath": "assets/icons/my-active.png"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "您的位置信息将用于小程序位置接口的效果展示"
+    }
+  },
+  "requiredBackgroundModes": ["audio"],
+  "lazyCodeLoading": "requiredComponents"
+}

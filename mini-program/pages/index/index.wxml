@@ -1,0 +1,93 @@
+<view class="container">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input">
+      <text class="icon-search">🔍</text>
+      <input type="text" placeholder="搜索案件、方言..." bindinput="onSearchInput" />
+    </view>
+  </view>
+
+  <!-- 功能入口 -->
+  <view class="card">
+    <view class="feature-grid">
+      <view class="feature-item" bindtap="goToCreateCase">
+        <view class="feature-icon icon-case">📋</view>
+        <text class="feature-text">登记案件</text>
+      </view>
+      <view class="feature-item" bindtap="goToDialect">
+        <view class="feature-icon icon-dialect">🎤</view>
+        <text class="feature-text">录方言</text>
+      </view>
+      <view class="feature-item" bindtap="goToMap">
+        <view class="feature-icon icon-map">🗺️</view>
+        <text class="feature-text">附近案件</text>
+      </view>
+      <view class="feature-item" bindtap="goToTasks">
+        <view class="feature-icon icon-task">📋</view>
+        <text class="feature-text">我的任务</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 统计卡片 -->
+  <view class="card">
+    <view class="stats-grid">
+      <view class="stat-item">
+        <view class="stat-number">{{stats.totalCases}}</view>
+        <view class="stat-label">累计案件</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-number text-success">{{stats.resolvedCases}}</view>
+        <view class="stat-label">成功团圆</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-number text-primary">{{stats.volunteers}}</view>
+        <view class="stat-label">志愿者</view>
+      </view>
+      <view class="stat-item">
+        <view class="stat-number text-warning">{{stats.dialects}}</view>
+        <view class="stat-label">方言录音</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最新案件 -->
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">最新案件</text>
+      <text class="card-more" bindtap="goToCases">查看更多 ></text>
+    </view>
+    <view class="case-list">
+      <view class="case-item" wx:for="{{recentCases}}" wx:key="id" bindtap="goToCaseDetail" data-id="{{item.id}}">
+        <image class="case-image" src="{{item.photos[0]?.url || '/assets/default-avatar.png'}}" mode="aspectFill" />
+        <view class="case-info">
+          <view class="case-name">{{item.name}} <text class="case-age">{{item.age}}岁</text></view>
+          <view class="case-location">📍 {{item.missing_location}}</view>
+          <view class="case-time">{{item.missing_time}}</view>
+        </view>
+        <view class="case-status {{item.status}}">{{statusText[item.status]}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最近方言 -->
+  <view class="card">
+    <view class="card-header">
+      <text class="card-title">最近方言</text>
+      <text class="card-more" bindtap="goToDialectList">查看更多 ></text>
+    </view>
+    <view class="dialect-list">
+      <view class="dialect-item" wx:for="{{recentDialects}}" wx:key="id" bindtap="playDialect" data-id="{{item.id}}">
+        <view class="dialect-icon">🎵</view>
+        <view class="dialect-info">
+          <view class="dialect-title">{{item.title}}</view>
+          <view class="dialect-location">{{item.province}} {{item.city}}</view>
+        </view>
+        <view class="dialect-stats">
+          <text class="dialect-plays">▶ {{item.play_count}}</text>
+          <text class="dialect-likes">❤ {{item.like_count}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

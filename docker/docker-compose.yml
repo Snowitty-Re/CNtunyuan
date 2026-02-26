@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cntunyuan-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_DB: cntunyuan
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - cntunyuan-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: cntunyuan-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cntunyuan-network
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: cntunyuan-backend
+    environment:
+      DB_PASSWORD: postgres123
+      JWT_SECRET: your-jwt-secret-key-here
+      WECHAT_APP_ID: your-wechat-app-id
+      WECHAT_APP_SECRET: your-wechat-app-secret
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../backend/uploads:/app/uploads
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - cntunyuan-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  cntunyuan-network:
+    driver: bridge

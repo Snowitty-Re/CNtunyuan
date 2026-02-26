@@ -1,0 +1,63 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.work
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Config files with sensitive data
+backend/config/config.local.yaml
+backend/config/config.prod.yaml
+
+# Logs
+logs/
+*.log
+
+# Uploads
+backend/uploads/
+mini-program/uploads/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# WeChat Mini Program
+mini-program/project.config.json
+mini-program/project.private.config.json
+
+# Database
+*.db
+*.sqlite
+
+# Redis
+dump.rdb
+
+# Docker
+.dockerignore
