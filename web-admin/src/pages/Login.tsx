@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, Button, Input, message, Tabs } from 'antd'
+import { Card, Button, Input, message, Tabs, Form } from 'antd'
 import { WechatOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useAuthStore } from '../stores/auth'
 import { useNavigate } from 'react-router-dom'
@@ -10,9 +10,10 @@ const Login = () => {
   const [activeTab, setActiveTab] = useState('password')
   const { setToken, setUser } = useAuthStore()
   const navigate = useNavigate()
+  const [form] = Form.useForm()
 
   // 账号密码登录
-  const handlePasswordLogin = async (values: any) => {
+  const handlePasswordLogin = async (values: { username: string; password: string }) => {
     setLoading(true)
     try {
       const data = await userApi.adminLogin(values.username, values.password)
@@ -47,40 +48,43 @@ const Login = () => {
 
         <Tabs activeKey={activeTab} onChange={setActiveTab} centered>
           <Tabs.TabPane tab="账号密码" key="password">
-            <form onSubmit={(e) => {
-              e.preventDefault()
-              const formData = new FormData(e.currentTarget)
-              handlePasswordLogin({
-                username: formData.get('username'),
-                password: formData.get('password'),
-              })
-            }}>
-              <div style={{ marginBottom: 16 }}>
+            <Form
+              form={form}
+              onFinish={handlePasswordLogin}
+              autoComplete="off"
+            >
+              <Form.Item
+                name="username"
+                rules={[{ required: true, message: '请输入手机号或用户名' }]}
+              >
                 <Input 
-                  name="username"
                   prefix={<UserOutlined />} 
                   placeholder="手机号/用户名" 
                   size="large"
                 />
-              </div>
-              <div style={{ marginBottom: 24 }}>
+              </Form.Item>
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: '请输入密码' }]}
+              >
                 <Input.Password 
-                  name="password"
                   prefix={<LockOutlined />} 
                   placeholder="密码" 
                   size="large"
                 />
-              </div>
-              <Button 
-                type="primary" 
-                htmlType="submit"
-                size="large" 
-                loading={loading}
-                style={{ width: '100%' }}
-              >
-                登录
-              </Button>
-            </form>
+              </Form.Item>
+              <Form.Item>
+                <Button 
+                  type="primary" 
+                  htmlType="submit"
+                  size="large" 
+                  loading={loading}
+                  style={{ width: '100%' }}
+                >
+                  登录
+                </Button>
+              </Form.Item>
+            </Form>
             <p style={{ marginTop: 16, color: '#999', fontSize: 12, textAlign: 'center' }}>
               默认管理员账号: 13800138000 / admin123
             </p>
