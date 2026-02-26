@@ -1,2 +1,65 @@
-<!--pages/dialect/detail.wxml-->
-<text>pages/dialect/detail.wxml</text>
+<view class="container">
+  <view class="audio-section">
+    <view class="audio-visual">
+      <view class="audio-waves" wx:if="{{isPlaying}}">
+        <view class="wave-item" wx:for="{{8}}" wx:key="index" style="animation-delay: {{index * 0.1}}s"></view>
+      </view>
+      <view class="audio-static" wx:else>🎵</view>
+    </view>
+    <view class="audio-info">
+      <view class="audio-title">{{dialect.title}}</view>
+      <view class="audio-duration">{{currentTime}} / {{formatDuration(dialect.duration)}}</view>
+    </view>
+    <view class="audio-controls">
+      <view class="control-btn" bindtap="togglePlay">
+        <text class="control-icon">{{isPlaying ? '⏸' : '▶'}}</text>
+      </view>
+    </view>
+    <slider class="audio-progress" min="0" max="{{dialect.duration}}" value="{{currentSeconds}}" bindchange="seekAudio" block-size="12"/>
+  </view>
+
+  <view class="info-card">
+    <view class="info-title">方言信息</view>
+    <view class="info-item">
+      <text class="info-label">地区</text>
+      <text class="info-value">{{dialect.province}} {{dialect.city}} {{dialect.district}}</text>
+    </view>
+    <view class="info-item">
+      <text class="info-label">详细地址</text>
+      <text class="info-value">{{dialect.address || '暂无'}}</text>
+    </view>
+    <view class="info-item">
+      <text class="info-label">描述</text>
+      <text class="info-value">{{dialect.description || '暂无描述'}}</text>
+    </view>
+    <view class="info-item">
+      <text class="info-label">采集人</text>
+      <view class="collector-info">
+        <image class="avatar" src="{{dialect.collector?.avatar || '/assets/default-avatar.png'}}" />
+        <text>{{dialect.collector?.nickname || '未知'}}</text>
+      </view>
+    </view>
+    <view class="info-item">
+      <text class="info-label">采集时间</text>
+      <text class="info-value">{{dialect.created_at}}</text>
+    </view>
+  </view>
+
+  <view class="stats-card">
+    <view class="stat-item" bindtap="like">
+      <text class="stat-icon">❤</text>
+      <text class="stat-num">{{dialect.like_count}}</text>
+      <text class="stat-label">点赞</text>
+    </view>
+    <view class="stat-item">
+      <text class="stat-icon">▶</text>
+      <text class="stat-num">{{dialect.play_count}}</text>
+      <text class="stat-label">播放</text>
+    </view>
+  </view>
+
+  <view class="action-bar">
+    <button class="btn-primary" bindtap="share">分享</button>
+    <button class="btn-secondary" bindtap="goToCollector">查看采集人</button>
+  </view>
+</view>
