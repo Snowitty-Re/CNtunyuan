@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/Snowitty-Re/CNtunyuan/internal/model"
 	"github.com/Snowitty-Re/CNtunyuan/internal/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/utils"
 	"github.com/gin-gonic/gin"

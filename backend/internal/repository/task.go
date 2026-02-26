@@ -181,7 +181,7 @@ func (r *TaskRepository) GetComments(ctx context.Context, taskID uuid.UUID, page
 		return nil, 0, err
 	}
 
-	return comments, total, err
+	return comments, total, nil
 }
 
 // AddAttachment 添加附件

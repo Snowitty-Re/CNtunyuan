@@ -1,13 +1,12 @@
 package api
 
 import (
-	"net/http"
-
 	"github.com/Snowitty-Re/CNtunyuan/internal/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/internal/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/utils"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/auth"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // AuthHandler 认证处理器
@@ -165,7 +164,13 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetByID(c.Request.Context(), parseUUID(userID))
+	userIDUUID, err := uuid.Parse(userID)
+	if err != nil {
+		utils.BadRequest(c, "用户ID格式错误")
+		return
+	}
+
+	user, err := h.userService.GetByID(c.Request.Context(), userIDUUID)
 	if err != nil {
 		utils.NotFound(c, "用户不存在")
 		return
@@ -187,7 +192,4 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	utils.Success(c, nil)
 }
 
-// parseUUID 解析UUID(简化处理)
-func parseUUID(s string) interface{} {
-	return s
-}
+

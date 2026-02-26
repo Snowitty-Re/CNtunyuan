@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"time"
 
@@ -62,17 +63,18 @@ func Logger() gin.HandlerFunc {
 		}()
 
 		// 控制台输出
-		gin.LogFormatterParams{
-			TimeStamp:    time.Now(),
-			Latency:      latency,
-			ClientIP:     clientIP,
-			Method:       method,
-			StatusCode:   statusCode,
-			ErrorMessage: c.Errors.ByType(gin.ErrorTypePrivate).String(),
-			BodySize:     c.Writer.Size(),
-			Path:         path,
-			Query:        query,
+		fullPath := path
+		if query != "" {
+			fullPath = path + "?" + query
 		}
+		fmt.Printf("[GIN] %s | %3d | %13v | %15s | %-7s %s\n",
+			time.Now().Format("2006/01/02 - 15:04:05"),
+			statusCode,
+			latency,
+			clientIP,
+			method,
+			fullPath,
+		)
 	}
 }
 
