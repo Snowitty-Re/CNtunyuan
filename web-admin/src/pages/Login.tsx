@@ -3,47 +3,32 @@ import { Card, Button, Input, message, Tabs } from 'antd'
 import { WechatOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useAuthStore } from '../stores/auth'
 import { useNavigate } from 'react-router-dom'
+import { userApi } from '../services/user'
 
 const Login = () => {
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState('wechat')
+  const [activeTab, setActiveTab] = useState('password')
   const { setToken, setUser } = useAuthStore()
   const navigate = useNavigate()
 
-  // 模拟微信登录
-  const handleWechatLogin = () => {
+  // 账号密码登录
+  const handlePasswordLogin = async (values: any) => {
     setLoading(true)
-    // 这里应该调用微信登录API
-    setTimeout(() => {
-      // 模拟登录成功
-      setToken('mock-token', 'mock-refresh-token')
-      setUser({
-        id: '1',
-        nickname: '管理员',
-        avatar: '',
-        role: 'admin',
-      })
+    try {
+      const data = await userApi.adminLogin(values.username, values.password)
+      setToken(data.token, data.refresh_token)
+      
+      // 获取用户信息
+      const userInfo = await userApi.getCurrentUser()
+      setUser(userInfo)
+      
       message.success('登录成功')
       navigate('/')
+    } catch (error: any) {
+      message.error(error.message || '登录失败')
+    } finally {
       setLoading(false)
-    }, 1000)
-  }
-
-  // 模拟账号密码登录
-  const handlePasswordLogin = (values: any) => {
-    setLoading(true)
-    setTimeout(() => {
-      setToken('mock-token', 'mock-refresh-token')
-      setUser({
-        id: '1',
-        nickname: values.username,
-        avatar: '',
-        role: 'admin',
-      })
-      message.success('登录成功')
-      navigate('/')
-      setLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -61,36 +46,6 @@ const Login = () => {
         </div>
 
         <Tabs activeKey={activeTab} onChange={setActiveTab} centered>
-          <Tabs.TabPane tab="微信登录" key="wechat">
-            <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <div style={{ 
-                width: 200, 
-                height: 200, 
-                margin: '0 auto 24px',
-                background: '#f5f5f5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 8
-              }}>
-                <WechatOutlined style={{ fontSize: 80, color: '#52c41a' }} />
-              </div>
-              <Button 
-                type="primary" 
-                size="large" 
-                icon={<WechatOutlined />}
-                loading={loading}
-                onClick={handleWechatLogin}
-                style={{ width: '100%', background: '#52c41a', borderColor: '#52c41a' }}
-              >
-                微信一键登录
-              </Button>
-              <p style={{ marginTop: 16, color: '#888', fontSize: 12 }}>
-                请使用微信扫描二维码登录
-              </p>
-            </div>
-          </Tabs.TabPane>
-          
           <Tabs.TabPane tab="账号密码" key="password">
             <form onSubmit={(e) => {
               e.preventDefault()
@@ -104,7 +59,7 @@ const Login = () => {
                 <Input 
                   name="username"
                   prefix={<UserOutlined />} 
-                  placeholder="用户名" 
+                  placeholder="手机号/用户名" 
                   size="large"
                 />
               </div>
@@ -126,6 +81,29 @@ const Login = () => {
                 登录
               </Button>
             </form>
+            <p style={{ marginTop: 16, color: '#999', fontSize: 12, textAlign: 'center' }}>
+              默认管理员账号: 13800138000 / admin123
+            </p>
+          </Tabs.TabPane>
+          
+          <Tabs.TabPane tab="微信登录" key="wechat">
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div style={{ 
+                width: 200, 
+                height: 200, 
+                margin: '0 auto 24px',
+                background: '#f5f5f5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 8
+              }}>
+                <WechatOutlined style={{ fontSize: 80, color: '#52c41a' }} />
+              </div>
+              <p style={{ color: '#999' }}>
+                请使用微信小程序扫码登录
+              </p>
+            </div>
           </Tabs.TabPane>
         </Tabs>
       </Card>

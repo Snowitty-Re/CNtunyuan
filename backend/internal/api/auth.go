@@ -181,13 +181,13 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 
 // LoginRequest 账号密码登录请求
 type LoginRequest struct {
-	Phone    string `json:"phone" binding:"required"`
+	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
 // AdminLogin 管理后台登录
 // @Summary 管理后台登录
-// @Description 使用手机号和密码登录（供Web管理后台使用）
+// @Description 使用手机号/用户名和密码登录（供Web管理后台使用）
 // @Tags 认证
 // @Accept json
 // @Produce json
@@ -202,10 +202,10 @@ func (h *AuthHandler) AdminLogin(c *gin.Context) {
 		return
 	}
 
-	// 验证用户
-	user, err := h.userService.GetByPhone(c.Request.Context(), req.Phone)
+	// 验证用户（支持手机号或用户名）
+	user, err := h.userService.GetByPhoneOrNickname(c.Request.Context(), req.Username)
 	if err != nil {
-		utils.Unauthorized(c, "手机号或密码错误")
+		utils.Unauthorized(c, "账号或密码错误")
 		return
 	}
 

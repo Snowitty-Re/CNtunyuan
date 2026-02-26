@@ -8,6 +8,9 @@ export const userApi = {
   // 用户登录
   login: (code: string) => request.post('/auth/wechat-login', { code }),
 
+  // 管理后台登录
+  adminLogin: (phone: string, password: string) => request.post('/auth/admin-login', { phone, password }),
+
   // 刷新token
   refreshToken: (refreshToken: string) => request.post('/auth/refresh', { refresh_token: refreshToken }),
 
