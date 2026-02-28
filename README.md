@@ -28,16 +28,27 @@
 - 备注说明
 - 关联走失人员
 
-### OA功能
+### 任务管理
 - 任务创建与分配
+- 任务转派
+- 进度追踪
+- 批量分配
+- 自动分配（基于负载均衡）
+- 任务评论
+- 操作日志
+
+### 工作流管理
 - 工作流定义
-- 案件处理流程
-- 任务追踪与反馈
+- 步骤管理（审批节点）
+- 工作流实例管理
+- 审批流程（通过/驳回/转派）
+- 审批历史追踪
 
 ### 数据展示
 - 寻亲数据统计
 - 志愿者工作台
 - 管理者快速分配任务
+- 数据大屏展示
 
 ### Web后台管理
 - React + TypeScript + Ant Design
@@ -71,6 +82,8 @@
 CNtunyuan/
 ├── backend/              # Go 后端服务
 │   ├── cmd/              # 主程序入口
+│   │   ├── main.go       # 主程序
+│   │   └── initdata/     # 数据初始化工具
 │   ├── internal/         # 内部包
 │   │   ├── api/          # API 处理器
 │   │   ├── config/       # 配置
@@ -80,6 +93,7 @@ CNtunyuan/
 │   │   ├── service/      # 业务逻辑层
 │   │   └── utils/        # 工具函数
 │   ├── pkg/              # 公共包
+│   ├── sql/              # SQL初始化脚本
 │   ├── config/           # 配置文件
 │   └── Dockerfile
 ├── web-admin/            # Web 管理后台
@@ -104,8 +118,28 @@ CNtunyuan/
 - Go 1.23+
 - Node.js 18+
 - PostgreSQL 16
-- Redis 7
+- Redis 7 (可选)
 - 微信小程序开发者工具
+
+### 数据库初始化
+
+```bash
+cd backend
+
+# 1. 执行数据库迁移（创建表结构）
+go run cmd/main.go -migrate
+
+# 2. 初始化基础数据（根组织）
+go run cmd/main.go -init
+
+# 3. 创建超级管理员（可自定义参数）
+go run cmd/initdata/main.go -exec
+
+# 或使用自定义参数
+go run cmd/initdata/main.go -exec -phone="13800138000" -password="admin123" -email="admin@cntunyuan.com"
+```
+
+更多初始化方式请参考 [backend/sql/README.md](backend/sql/README.md)
 
 ### 后端启动
 
@@ -115,14 +149,14 @@ cd backend
 # 安装依赖
 go mod download
 
-# 配置环境变量
-export DB_PASSWORD=your_password
-export JWT_SECRET=your_secret
-export WECHAT_APP_ID=your_app_id
-export WECHAT_APP_SECRET=your_app_secret
+# 配置数据库（修改 config/config.yaml）
+# 或使用默认配置
 
 # 运行
 go run cmd/main.go
+
+# 或使用 air 热重载
+air
 ```
 
 ### Web 后台启动
@@ -131,10 +165,10 @@ go run cmd/main.go
 cd web-admin
 
 # 安装依赖
-npm install
+pnpm install
 
 # 启动开发服务器
-npm run dev
+pnpm dev
 ```
 
 ### Docker 部署
@@ -159,6 +193,7 @@ docker-compose up -d
 
 ### 认证
 - POST /api/v1/auth/wechat-login - 微信登录
+- POST /api/v1/auth/admin-login - 管理后台登录
 - POST /api/v1/auth/refresh - 刷新 Token
 - GET /api/v1/auth/me - 获取当前用户
 
@@ -189,6 +224,60 @@ docker-compose up -d
 - GET /api/v1/tasks - 任务列表
 - POST /api/v1/tasks - 创建任务
 - GET /api/v1/tasks/:id - 任务详情
+- POST /api/v1/tasks/:id/assign - 分配任务
+- POST /api/v1/tasks/:id/complete - 完成任务
+- POST /api/v1/tasks/:id/cancel - 取消任务
+- POST /api/v1/tasks/batch-assign - 批量分配
+- POST /api/v1/tasks/auto-assign - 自动分配
+
+### 工作流管理
+- GET /api/v1/workflows - 工作流列表
+- POST /api/v1/workflows - 创建工作流
+- GET /api/v1/workflows/:id - 工作流详情
+- POST /api/v1/workflows/:id/steps - 创建步骤
+- PUT /api/v1/workflows/:id/steps/:step_id - 更新步骤
+
+### 工作流实例
+- GET /api/v1/workflow-instances - 实例列表
+- POST /api/v1/workflow-instances - 启动实例
+- POST /api/v1/workflow-instances/:id/approve - 审批
+- GET /api/v1/workflow-instances/:id/history - 审批历史
+
+## 默认账号
+
+初始化后默认超级管理员账号：
+- 手机号: `13800138000`
+- 密码: `admin123`
+- 角色: super_admin
+
+## 开发指南
+
+### 后端开发
+
+```bash
+cd backend
+
+# 生成 Swagger 文档
+swag init -g cmd/main.go
+
+# 运行测试
+go test ./...
+
+# 格式化代码
+go fmt ./...
+```
+
+### 前端开发
+
+```bash
+cd web-admin
+
+# 代码检查
+pnpm lint
+
+# 构建生产版本
+pnpm build
+```
 
 ## 贡献
 
