@@ -33,12 +33,14 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/pkg/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 func main() {
 	// 命令行参数
 	var (
 		migrate = flag.Bool("migrate", false, "执行数据库迁移")
+		init    = flag.Bool("init", false, "初始化基础数据（根组织）")
 	)
 	flag.Parse()
 
@@ -63,17 +65,37 @@ func main() {
 			log.Fatalf("数据库迁移失败: %v", err)
 		}
 		log.Println("数据库迁移完成")
+		log.Println("")
+		log.Println("=======================================")
+		log.Println("提示: 数据库结构已更新")
+		log.Println("")
+		log.Println("如需初始化超级管理员，请使用以下命令:")
+		log.Println("  go run cmd/initdata/main.go -exec")
+		log.Println("")
+		log.Println("或生成SQL文件手动导入:")
+		log.Println("  go run cmd/initdata/main.go -gen")
+		log.Println("=======================================")
+		return
+	}
 
-		// 初始化根组织
+	// 仅初始化基础数据（根组织）
+	if *init {
 		if err := model.InitRootOrganization(db); err != nil {
 			log.Fatalf("初始化根组织失败: %v", err)
 		}
-
-		// 初始化超级管理员
-		if err := model.InitSuperAdmin(db); err != nil {
-			log.Fatalf("初始化超级管理员失败: %v", err)
-		}
+		log.Println("根组织初始化完成")
+		log.Println("")
+		log.Println("=======================================")
+		log.Println("提示: 根组织已创建")
+		log.Println("")
+		log.Println("如需创建超级管理员，请使用:")
+		log.Println("  go run cmd/initdata/main.go -exec")
+		log.Println("=======================================")
+		return
 	}
+
+	// 检查是否已有超级管理员（启动时检查，给出提示）
+	go checkSuperAdmin(db)
 
 	// 初始化Redis（可选）
 	var rdb *redis.Client
@@ -102,13 +124,15 @@ func main() {
 	mpRepo := repository.NewMissingPersonRepository(db)
 	dialectRepo := repository.NewDialectRepository(db)
 	taskRepo := repository.NewTaskRepository(db)
-	_ = taskRepo
+	workflowRepo := repository.NewWorkflowRepository(db)
 
 	// 初始化服务
 	userService := service.NewUserService(userRepo, orgRepo)
 	orgService := service.NewOrganizationService(orgRepo)
 	mpService := service.NewMissingPersonService(mpRepo, orgRepo)
 	dialectService := service.NewDialectService(dialectRepo)
+	taskService := service.NewTaskService(taskRepo, userRepo, mpRepo, orgRepo)
+	workflowService := service.NewWorkflowService(workflowRepo, userRepo)
 	wechatService := service.NewWeChatService(cfg.WeChat.AppID, cfg.WeChat.AppSecret)
 
 	// 创建路由
@@ -118,6 +142,8 @@ func main() {
 		orgService,
 		mpService,
 		dialectService,
+		taskService,
+		workflowService,
 		wechatService,
 		jwtAuth,
 		rdb,
@@ -153,4 +179,27 @@ func main() {
 	}
 
 	log.Println("服务器已退出")
+}
+
+// checkSuperAdmin 检查超级管理员是否存在
+func checkSuperAdmin(db *gorm.DB) {
+	var count int64
+	if err := db.Model(&model.User{}).Where("role = ?", model.RoleSuperAdmin).Count(&count).Error; err != nil {
+		log.Printf("检查超级管理员失败: %v", err)
+		return
+	}
+
+	if count == 0 {
+		log.Println("")
+		log.Println("=======================================")
+		log.Println("警告: 未检测到超级管理员账号")
+		log.Println("")
+		log.Println("请运行以下命令创建超级管理员:")
+		log.Println("  go run cmd/initdata/main.go -exec")
+		log.Println("")
+		log.Println("或使用自定义参数:")
+		log.Println("  go run cmd/initdata/main.go -exec -phone=13800138000 -password=admin123")
+		log.Println("=======================================")
+		log.Println("")
+	}
 }

@@ -9,6 +9,7 @@ import {
   SearchOutlined,
   SoundOutlined,
   FileTextOutlined,
+  NodeCollapseOutlined,
   LogoutOutlined,
   BellOutlined,
   UserOutlined,
@@ -31,6 +32,7 @@ const Layout = () => {
     { key: '/missing-persons', icon: <SearchOutlined />, label: '走失人员' },
     { key: '/dialects', icon: <SoundOutlined />, label: '方言管理' },
     { key: '/tasks', icon: <FileTextOutlined />, label: '任务管理' },
+    { key: '/workflows', icon: <NodeCollapseOutlined />, label: '工作流管理' },
   ]
 
   const userMenuItems = [

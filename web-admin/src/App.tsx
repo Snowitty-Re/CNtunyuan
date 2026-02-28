@@ -8,6 +8,7 @@ import Organizations from './pages/Organizations'
 import MissingPersons from './pages/MissingPersons'
 import Dialects from './pages/Dialects'
 import Tasks from './pages/Tasks'
+import Workflows from './pages/Workflows'
 import BigScreen from './pages/BigScreen'
 import { useAuthStore } from './stores/auth'
 
@@ -44,6 +45,7 @@ function App() {
           <Route path="missing-persons" element={<MissingPersons />} />
           <Route path="dialects" element={<Dialects />} />
           <Route path="tasks" element={<Tasks />} />
+          <Route path="workflows" element={<Workflows />} />
         </Route>
         
         {/* 数据大屏 */}

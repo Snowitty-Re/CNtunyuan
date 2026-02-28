@@ -18,6 +18,8 @@ type Router struct {
 	orgHandler       *OrgHandler
 	mpHandler        *MissingPersonHandler
 	dialectHandler   *DialectHandler
+	taskHandler      *TaskHandler
+	workflowHandler  *WorkflowHandler
 	jwtAuth          *auth.JWTAuth
 }
 
@@ -28,6 +30,8 @@ func NewRouter(
 	orgService *service.OrganizationService,
 	mpService *service.MissingPersonService,
 	dialectService *service.DialectService,
+	taskService *service.TaskService,
+	workflowService *service.WorkflowService,
 	wechatService *service.WeChatService,
 	jwtAuth *auth.JWTAuth,
 	redisClient *redis.Client,
@@ -47,6 +51,8 @@ func NewRouter(
 		orgHandler:     NewOrgHandler(orgService),
 		mpHandler:      NewMissingPersonHandler(mpService),
 		dialectHandler: NewDialectHandler(dialectService),
+		taskHandler:    NewTaskHandler(taskService),
+		workflowHandler: NewWorkflowHandler(workflowService),
 		jwtAuth:        jwtAuth,
 	}
 
@@ -134,6 +140,56 @@ func (r *Router) setupRoutes() {
 				dialects.POST("/:id/play", r.dialectHandler.Play)
 				dialects.POST("/:id/like", r.dialectHandler.Like)
 				dialects.POST("/:id/unlike", r.dialectHandler.Unlike)
+			}
+
+			// 任务管理
+			tasks := authorized.Group("/tasks")
+			{
+				tasks.GET("", r.taskHandler.ListTasks)
+				tasks.POST("", r.taskHandler.CreateTask)
+				tasks.GET("/my", r.taskHandler.GetMyTasks)
+				tasks.GET("/created", r.taskHandler.GetCreatedTasks)
+				tasks.GET("/statistics", r.taskHandler.GetTaskStatistics)
+				tasks.POST("/batch-assign", r.taskHandler.BatchAssign)
+				tasks.POST("/auto-assign", r.taskHandler.AutoAssign)
+				tasks.GET("/:id", r.taskHandler.GetTask)
+				tasks.PUT("/:id", r.taskHandler.UpdateTask)
+				tasks.DELETE("/:id", r.taskHandler.DeleteTask)
+				tasks.POST("/:id/assign", r.taskHandler.AssignTask)
+				tasks.POST("/:id/unassign", r.taskHandler.UnassignTask)
+				tasks.POST("/:id/transfer", r.taskHandler.TransferTask)
+				tasks.POST("/:id/complete", r.taskHandler.CompleteTask)
+				tasks.POST("/:id/cancel", r.taskHandler.CancelTask)
+				tasks.PUT("/:id/progress", r.taskHandler.UpdateProgress)
+				tasks.GET("/:id/logs", r.taskHandler.GetTaskLogs)
+				tasks.GET("/:id/comments", r.taskHandler.GetComments)
+				tasks.POST("/:id/comments", r.taskHandler.AddComment)
+			}
+
+			// 工作流管理
+			workflows := authorized.Group("/workflows")
+			{
+				workflows.GET("", r.workflowHandler.ListWorkflows)
+				workflows.POST("", r.workflowHandler.CreateWorkflow)
+				workflows.GET("/:id", r.workflowHandler.GetWorkflow)
+				workflows.PUT("/:id", r.workflowHandler.UpdateWorkflow)
+				workflows.DELETE("/:id", r.workflowHandler.DeleteWorkflow)
+				workflows.POST("/:id/steps", r.workflowHandler.CreateStep)
+				workflows.PUT("/:id/steps/:step_id", r.workflowHandler.UpdateStep)
+				workflows.DELETE("/:id/steps/:step_id", r.workflowHandler.DeleteStep)
+				workflows.POST("/:id/steps/reorder", r.workflowHandler.ReorderSteps)
+			}
+
+			// 工作流实例
+			instances := authorized.Group("/workflow-instances")
+			{
+				instances.GET("", r.workflowHandler.ListInstances)
+				instances.POST("", r.workflowHandler.StartInstance)
+				instances.GET("/my", r.workflowHandler.GetMyInstances)
+				instances.GET("/:id", r.workflowHandler.GetInstance)
+				instances.POST("/:id/approve", r.workflowHandler.Approve)
+				instances.POST("/:id/cancel", r.workflowHandler.CancelInstance)
+				instances.GET("/:id/history", r.workflowHandler.GetInstanceHistory)
 			}
 		}
 	}
