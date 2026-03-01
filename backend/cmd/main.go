@@ -134,6 +134,7 @@ func main() {
 	taskService := service.NewTaskService(taskRepo, userRepo, mpRepo, orgRepo)
 	workflowService := service.NewWorkflowService(workflowRepo, userRepo)
 	wechatService := service.NewWeChatService(cfg.WeChat.AppID, cfg.WeChat.AppSecret)
+	storageService := service.NewStorageService(&cfg.Storage)
 
 	// 创建路由
 	router := api.NewRouter(
@@ -145,6 +146,8 @@ func main() {
 		taskService,
 		workflowService,
 		wechatService,
+		storageService,
+		&cfg.Storage,
 		jwtAuth,
 		rdb,
 	)

@@ -11,8 +11,11 @@
     <view class="form-item">
       <text class="required">*</text>
       <text class="label">性别</text>
-      <picker mode="selector" range="{{genderOptions}}" range-key="label" bindchange="onGenderChange">
-        <view class="picker-value">{{genderOptions[form.genderIndex].label}}</view>
+      <picker mode="selector" range="{{genderOptions}}" range-key="label" value="{{form.genderIndex}}" bindchange="onGenderChange">
+        <view class="picker-value">
+          {{genderOptions[form.genderIndex].label}}
+          <text class="picker-arrow">▼</text>
+        </view>
       </picker>
     </view>
 
@@ -29,8 +32,11 @@
     <view class="form-item">
       <text class="required">*</text>
       <text class="label">案件类型</text>
-      <picker mode="selector" range="{{caseTypeOptions}}" range-key="label" bindchange="onCaseTypeChange">
-        <view class="picker-value">{{caseTypeOptions[form.caseTypeIndex].label}}</view>
+      <picker mode="selector" range="{{caseTypeOptions}}" range-key="label" value="{{form.caseTypeIndex}}" bindchange="onCaseTypeChange">
+        <view class="picker-value">
+          {{caseTypeOptions[form.caseTypeIndex].label}}
+          <text class="picker-arrow">▼</text>
+        </view>
       </picker>
     </view>
   </view>

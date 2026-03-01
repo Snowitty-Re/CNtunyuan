@@ -45,7 +45,7 @@ Page({
     try {
       const data = await get(`/dialects/${id}`)
       data.created_at = formatDate(data.created_at)
-      data.collector = data.collector || { nickname: '未知', avatar: '/assets/default-avatar.png' }
+      data.collector = data.collector || { nickname: '未知', avatar: 'https://picsum.photos/100/100' }
       data.address = data.address || '暂无'
       data.description = data.description || '暂无描述'
       this.setData({ dialect: data })

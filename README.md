@@ -28,6 +28,12 @@
 - 备注说明
 - 关联走失人员
 
+### 文件存储
+- 支持本地存储、阿里云 OSS、腾讯云 COS
+- 单文件/批量上传
+- 文件类型检查（图片/音频/视频/文档）
+- 自动按日期目录组织
+
 ### 任务管理
 - 任务创建与分配
 - 任务转派
@@ -95,6 +101,7 @@ CNtunyuan/
 │   ├── pkg/              # 公共包
 │   ├── sql/              # SQL初始化脚本
 │   ├── config/           # 配置文件
+│   ├── uploads/          # 本地文件存储目录
 │   └── Dockerfile
 ├── web-admin/            # Web 管理后台
 │   ├── src/
@@ -236,6 +243,11 @@ docker-compose up -d
 - GET /api/v1/workflows/:id - 工作流详情
 - POST /api/v1/workflows/:id/steps - 创建步骤
 - PUT /api/v1/workflows/:id/steps/:step_id - 更新步骤
+
+### 文件上传
+- POST /api/v1/upload - 单文件上传
+- POST /api/v1/upload/batch - 批量上传
+- DELETE /api/v1/upload - 删除文件
 
 ### 工作流实例
 - GET /api/v1/workflow-instances - 实例列表

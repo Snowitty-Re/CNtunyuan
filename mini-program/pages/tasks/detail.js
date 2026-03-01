@@ -1,11 +1,13 @@
-const { get, post } = require('../../utils/request')
-const { formatDate, showLoading, hideLoading, showSuccess, showConfirm } = require('../../utils/util')
+const { get, post, put } = require('../../utils/request')
+const { formatDate, showSuccess, showToast } = require('../../utils/util')
 
 Page({
   data: {
-    task: {},
-    feedbacks: [],
-    markers: [],
+    taskId: '',
+    task: null,
+    comments: [],
+    loading: false,
+    actionLoading: false,
     statusMap: {
       draft: '草稿',
       pending: '待分配',
@@ -20,6 +22,12 @@ Page({
       normal: '普通',
       low: '低'
     },
+    priorityColorMap: {
+      urgent: '#ff4d4f',
+      high: '#faad14',
+      normal: '#1890ff',
+      low: '#52c41a'
+    },
     taskTypeMap: {
       search: '实地寻访',
       call: '电话核实',
@@ -28,145 +36,220 @@ Page({
       coordination: '协调沟通',
       other: '其他'
     },
-    actionText: {
-      draft: '编辑任务',
-      pending: '领取任务',
-      assigned: '开始执行',
-      processing: '更新进度',
-      completed: '已完成',
-      cancelled: '重新激活'
-    }
+    currentUserId: '',
+    progressInput: 50
   },
 
   onLoad(options) {
-    const { id } = options
-    if (id) {
-      this.loadTaskDetail(id)
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    this.setData({ 
+      taskId: options.id,
+      currentUserId: String(userInfo.id || '')
+    })
+    if (options.id) {
+      this.loadTaskDetail()
     }
   },
 
-  async loadTaskDetail(id) {
-    showLoading()
+  onShow() {
+    if (this.data.taskId) {
+      this.loadTaskDetail()
+    }
+  },
+
+  async loadTaskDetail() {
+    this.setData({ loading: true })
     try {
-      const data = await get(`/tasks/${id}`)
-      data.deadline = data.deadline ? formatDate(data.deadline) : '未设置'
-      if (data.missing_person) {
-        data.missing_person.photoUrl = (data.missing_person.photos && data.missing_person.photos[0] && data.missing_person.photos[0].url) ? data.missing_person.photos[0].url : '/assets/default-avatar.png'
-      }
-      if (data.assignee) {
-        data.assignee.avatar = data.assignee.avatar || '/assets/default-avatar.png'
-      }
-      data.description = data.description || '暂无描述'
-
-      const markers = []
-      if (data.latitude && data.longitude) {
-        markers.push({
-          id: 1,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          title: '任务地点'
-        })
-      }
-
-      this.setData({
-        task: data,
-        markers
-      })
-
-      this.loadFeedbacks(id)
+      const task = await get(`/tasks/${this.data.taskId}`)
+      task.deadline = task.deadline ? formatDate(task.deadline) : null
+      task.created_at = task.created_at ? formatDate(task.created_at) : null
+      
+      // 更新页面标题
+      wx.setNavigationBarTitle({ title: task.title || '任务详情' })
+      
+      this.setData({ task, loading: false })
     } catch (error) {
       console.error('加载任务详情失败:', error)
-    } finally {
-      hideLoading()
+      showToast('加载失败')
+      this.setData({ loading: false })
     }
   },
 
-  async loadFeedbacks(taskId) {
-    try {
-      // 这里应该调用反馈列表接口
-      this.setData({
-        feedbacks: [
-          {
-            id: 1,
-            user: { nickname: '志愿者A', avatar: '' },
-            content: '已经联系到家属，正在核实信息',
-            images: [],
-            created_at: '2024-02-26 10:30'
-          }
-        ]
-      })
-    } catch (error) {
-      console.error('加载反馈失败:', error)
-    }
-  },
-
-  goToCase() {
-    const id = this.data.task.missing_person?.id
-    if (id) {
-      wx.navigateTo({ url: `/pages/cases/detail?id=${id}` })
-    }
-  },
-
+  // 执行操作
   async handleAction() {
-    const { task } = this.data
+    const { task, currentUserId } = this.data
+    if (!task) return
+
     const statusActions = {
-      pending: async () => {
-        await post(`/tasks/${task.id}/assign`, { assignee_id: 'current_user_id' })
-        showSuccess('领取成功')
-        this.loadTaskDetail(task.id)
-      },
-      assigned: async () => {
-        await post(`/tasks/${task.id}/start`)
-        showSuccess('开始执行')
-        this.loadTaskDetail(task.id)
-      },
-      processing: () => {
-        wx.showModal({
-          title: '更新进度',
-          editable: true,
-          placeholderText: '输入进度百分比(0-100)',
-          success: (res) => {
-            if (res.confirm && res.content) {
-              const progress = parseInt(res.content)
-              if (progress >= 0 && progress <= 100) {
-                post(`/tasks/${task.id}/progress`, { progress }).then(() => {
-                  showSuccess('进度更新成功')
-                  this.loadTaskDetail(task.id)
-                })
-              }
-            }
-          }
-        })
-      },
-      completed: () => {
-        showSuccess('任务已完成')
-      }
+      pending: () => this.claimTask(),
+      assigned: () => this.startTask(),
+      processing: () => this.showProgressModal()
     }
 
     const action = statusActions[task.status]
     if (action) {
-      action()
+      await action()
+    } else if (task.status === 'completed') {
+      showToast('任务已完成')
     }
   },
 
-  addFeedback() {
-    wx.showModal({
-      title: '添加反馈',
-      editable: true,
-      placeholderText: '请输入反馈内容',
-      success: (res) => {
-        if (res.confirm && res.content) {
-          showSuccess('反馈已添加')
-        }
-      }
+  // 领取任务
+  async claimTask() {
+    const { task, currentUserId } = this.data
+    this.setData({ actionLoading: true })
+    
+    try {
+      await post(`/tasks/${task.id}/assign`, {
+        assignee_id: currentUserId
+      })
+      showSuccess('领取成功')
+      this.loadTaskDetail()
+    } catch (error) {
+      console.error('领取任务失败:', error)
+      showToast('领取失败，请重试')
+    } finally {
+      this.setData({ actionLoading: false })
+    }
+  },
+
+  // 开始任务
+  async startTask() {
+    const { task } = this.data
+    this.setData({ actionLoading: true })
+    
+    try {
+      await post(`/tasks/${task.id}/progress`, { progress: 1 })
+      showSuccess('开始执行')
+      this.loadTaskDetail()
+    } catch (error) {
+      console.error('开始任务失败:', error)
+      showToast('操作失败')
+    } finally {
+      this.setData({ actionLoading: false })
+    }
+  },
+
+  // 显示进度更新弹窗
+  showProgressModal() {
+    this.setData({ showProgressModal: true, progressInput: 50 })
+  },
+
+  // 隐藏进度弹窗
+  hideProgressModal() {
+    this.setData({ showProgressModal: false })
+  },
+
+  // 进度滑块变化
+  onProgressChange(e) {
+    this.setData({ progressInput: e.detail.value })
+  },
+
+  // 提交进度
+  async submitProgress() {
+    const { task, progressInput } = this.data
+    this.setData({ actionLoading: true })
+    
+    try {
+      await post(`/tasks/${task.id}/progress`, { progress: progressInput })
+      showSuccess('进度更新成功')
+      this.setData({ showProgressModal: false })
+      this.loadTaskDetail()
+    } catch (error) {
+      console.error('更新进度失败:', error)
+      showToast('更新失败')
+    } finally {
+      this.setData({ actionLoading: false })
+    }
+  },
+
+  // 完成任务
+  completeTask() {
+    const { task } = this.data
+    wx.navigateTo({
+      url: `/pages/tasks/feedback?id=${task.id}&type=complete`
     })
   },
 
-  previewImage(e) {
-    const { url, urls } = e.currentTarget.dataset
-    wx.previewImage({
-      current: url,
-      urls
+  // 转派任务
+  transferTask() {
+    const { task } = this.data
+    // 跳转到转派页面，选择新负责人
+    wx.navigateTo({
+      url: `/pages/tasks/transfer?id=${task.id}`
+    })
+  },
+
+  // 查看位置
+  viewLocation() {
+    const { task } = this.data
+    if (!task.latitude || !task.longitude) {
+      showToast('暂无位置信息')
+      return
+    }
+    wx.openLocation({
+      latitude: parseFloat(task.latitude),
+      longitude: parseFloat(task.longitude),
+      name: task.address || '任务位置',
+      address: task.address
+    })
+  },
+
+  // 查看相关人员信息
+  viewAssignee() {
+    const { task } = this.data
+    if (task.assignee) {
+      wx.navigateTo({
+        url: `/pages/volunteer/profile?id=${task.assignee_id}`
+      })
+    }
+  },
+
+  // 导航到相关案件
+  goToCase() {
+    const { task } = this.data
+    if (task.missing_person_id) {
+      wx.navigateTo({
+        url: `/pages/cases/detail?id=${task.missing_person_id}`
+      })
+    }
+  },
+
+  // 下拉刷新
+  onPullDownRefresh() {
+    this.loadTaskDetail().finally(() => {
+      wx.stopPullDownRefresh()
+    })
+  },
+
+  // 阻止冒泡
+  stopPropagation() {},
+
+  // 显示操作菜单
+  showActionSheet() {
+    const { task, currentUserId } = this.data
+    const items = ['更新进度']
+    
+    if (task.assignee_id === currentUserId) {
+      items.push('标记完成')
+      items.push('申请转派')
+    }
+    
+    wx.showActionSheet({
+      itemList: items,
+      success: (res) => {
+        switch(res.tapIndex) {
+          case 0:
+            this.showProgressModal()
+            break
+          case 1:
+            this.completeTask()
+            break
+          case 2:
+            this.transferTask()
+            break
+        }
+      }
     })
   }
 })

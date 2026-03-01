@@ -59,7 +59,7 @@ Page({
       const cases = result.list.map(item => ({
         ...item,
         missing_time: formatDate(item.missing_time),
-        photoUrl: (item.photos && item.photos[0] && item.photos[0].url) ? item.photos[0].url : '/assets/default-avatar.png'
+        photoUrl: (item.photos && item.photos[0] && item.photos[0].url) ? item.photos[0].url : 'https://picsum.photos/100/100'
       }))
 
       this.setData({

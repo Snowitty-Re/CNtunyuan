@@ -38,7 +38,7 @@
 
     <!-- 空状态 -->
     <view class="empty-state" wx:if="{{dialects.length === 0 && !loading}}">
-      <image class="empty-icon" src="/assets/empty.png" mode="aspectFit" />
+      <image class="empty-icon" src="https://picsum.photos/200/200?random=empty" mode="aspectFit" />
       <text class="empty-text">暂无方言记录</text>
     </view>
   </view>

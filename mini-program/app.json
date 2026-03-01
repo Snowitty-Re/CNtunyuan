@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/login/index",
     "pages/cases/list",
     "pages/cases/detail",
     "pages/cases/create",
@@ -10,6 +11,8 @@
     "pages/tasks/list",
     "pages/tasks/detail",
     "pages/tasks/create",
+    "pages/tasks/my",
+    "pages/tasks/feedback",
     "pages/volunteer/profile",
     "pages/volunteer/workbench",
     "pages/map/index"

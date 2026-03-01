@@ -1,26 +1,31 @@
 package api
 
 import (
+	"net/http"
+
+	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/internal/service"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/swaggo/files"
 )
 
 // Router API路由
 type Router struct {
-	router           *gin.Engine
-	authHandler      *AuthHandler
-	userHandler      *UserHandler
-	orgHandler       *OrgHandler
-	mpHandler        *MissingPersonHandler
-	dialectHandler   *DialectHandler
-	taskHandler      *TaskHandler
-	workflowHandler  *WorkflowHandler
-	jwtAuth          *auth.JWTAuth
+	router          *gin.Engine
+	authHandler     *AuthHandler
+	userHandler     *UserHandler
+	orgHandler      *OrgHandler
+	mpHandler       *MissingPersonHandler
+	dialectHandler  *DialectHandler
+	taskHandler     *TaskHandler
+	workflowHandler *WorkflowHandler
+	uploadHandler   *UploadHandler
+	jwtAuth         *auth.JWTAuth
+	storageConfig   *config.StorageConfig
 }
 
 // NewRouter 创建路由
@@ -33,6 +38,8 @@ func NewRouter(
 	taskService *service.TaskService,
 	workflowService *service.WorkflowService,
 	wechatService *service.WeChatService,
+	storageService *service.StorageService,
+	storageConfig *config.StorageConfig,
 	jwtAuth *auth.JWTAuth,
 	redisClient *redis.Client,
 ) *Router {
@@ -45,15 +52,17 @@ func NewRouter(
 	r.Use(middleware.IPBasedRateLimit(redisClient))
 
 	router := &Router{
-		router:         r,
-		authHandler:    NewAuthHandler(authService, wechatService, jwtAuth),
-		userHandler:    NewUserHandler(userService),
-		orgHandler:     NewOrgHandler(orgService),
-		mpHandler:      NewMissingPersonHandler(mpService),
-		dialectHandler: NewDialectHandler(dialectService),
-		taskHandler:    NewTaskHandler(taskService),
+		router:          r,
+		authHandler:     NewAuthHandler(authService, wechatService, jwtAuth),
+		userHandler:     NewUserHandler(userService),
+		orgHandler:      NewOrgHandler(orgService),
+		mpHandler:       NewMissingPersonHandler(mpService),
+		dialectHandler:  NewDialectHandler(dialectService),
+		taskHandler:     NewTaskHandler(taskService),
 		workflowHandler: NewWorkflowHandler(workflowService),
-		jwtAuth:        jwtAuth,
+		uploadHandler:   NewUploadHandler(storageService),
+		jwtAuth:         jwtAuth,
+		storageConfig:   storageConfig,
 	}
 
 	router.setupRoutes()
@@ -69,6 +78,11 @@ func (r *Router) setupRoutes() {
 
 	// Swagger 文档
 	r.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// 静态文件服务 - 本地存储的文件
+	if r.storageConfig.Type == "local" {
+		r.router.Static("/uploads", r.storageConfig.LocalPath)
+	}
 
 	// API v1
 	v1 := r.router.Group("/api/v1")
@@ -90,6 +104,14 @@ func (r *Router) setupRoutes() {
 			{
 				auth.GET("/me", r.authHandler.GetCurrentUser)
 				auth.POST("/logout", r.authHandler.Logout)
+			}
+
+			// 文件上传
+			uploads := authorized.Group("/upload")
+			{
+				uploads.POST("", r.uploadHandler.Upload)
+				uploads.POST("/batch", r.uploadHandler.UploadMultiple)
+				uploads.DELETE("", r.uploadHandler.DeleteFile)
 			}
 
 			// 用户管理
@@ -193,6 +215,14 @@ func (r *Router) setupRoutes() {
 			}
 		}
 	}
+
+	// 404处理
+	r.router.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": "请求的资源不存在",
+		})
+	})
 }
 
 // GetEngine 获取gin引擎

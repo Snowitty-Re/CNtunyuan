@@ -1,0 +1,75 @@
+<view class="login-page">
+  <view class="login-header">
+    <image class="logo" src="https://picsum.photos/200/200" mode="aspectFit" />
+    <view class="title">团圆寻亲</view>
+    <view class="subtitle">志愿者服务平台</view>
+  </view>
+
+  <view class="login-form">
+    <!-- 微信登录 -->
+    <block wx:if="{{!isPasswordLogin}}">
+      <view class="login-tip">
+        <text class="iconfont icon-wechat"></text>
+        <text>微信一键登录，更安全便捷</text>
+      </view>
+      
+      <button 
+        class="login-btn wechat" 
+        type="primary" 
+        bindtap="wxLogin"
+        loading="{{loading}}"
+      >
+        <text class="iconfont icon-wechat"></text>
+        微信一键登录
+      </button>
+      
+      <view class="switch-type" bindtap="toggleLoginType">
+        使用账号密码登录
+      </view>
+    </block>
+
+    <!-- 密码登录 -->
+    <block wx:else>
+      <view class="form-item">
+        <text class="iconfont icon-phone"></text>
+        <input 
+          type="number" 
+          placeholder="请输入手机号" 
+          value="{{phone}}"
+          bindinput="onPhoneInput"
+          maxlength="11"
+        />
+      </view>
+      
+      <view class="form-item">
+        <text class="iconfont icon-lock"></text>
+        <input 
+          type="password" 
+          placeholder="请输入密码" 
+          value="{{password}}"
+          bindinput="onPasswordInput"
+        />
+      </view>
+      
+      <button 
+        class="login-btn primary" 
+        type="primary" 
+        bindtap="passwordLogin"
+        loading="{{loading}}"
+      >
+        登录
+      </button>
+      
+      <view class="switch-type" bindtap="toggleLoginType">
+        使用微信登录
+      </view>
+    </block>
+  </view>
+
+  <view class="login-footer">
+    <text>登录即表示同意</text>
+    <text class="link">《用户协议》</text>
+    <text>和</text>
+    <text class="link">《隐私政策》</text>
+  </view>
+</view>

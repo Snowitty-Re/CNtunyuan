@@ -54,7 +54,7 @@ Page({
       const cases = result.map(item => ({
         ...item,
         distance: this.calculateDistance(lat, lng, item.missing_latitude, item.missing_longitude).toFixed(1),
-        photoUrl: (item.photos && item.photos[0] && item.photos[0].url) ? item.photos[0].url : '/assets/default-avatar.png'
+        photoUrl: (item.photos && item.photos[0] && item.photos[0].url) ? item.photos[0].url : 'https://picsum.photos/100/100'
       }))
 
       const markers = cases.map((item, index) => ({

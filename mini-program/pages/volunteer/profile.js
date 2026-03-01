@@ -25,7 +25,7 @@ Page({
   async loadUserInfo() {
     try {
       let userInfo = await app.getUserInfo() || {}
-      userInfo.avatar = userInfo.avatar || '/assets/default-avatar.png'
+      userInfo.avatar = userInfo.avatar || 'https://picsum.photos/100/100'
       userInfo.nickname = userInfo.nickname || '志愿者'
       userInfo.phone = userInfo.phone || ''
       userInfo.email = userInfo.email || ''

@@ -3,6 +3,7 @@ server:
   mode: debug  # debug/release
   read_timeout: 30
   write_timeout: 30
+  max_header_bytes: 1048576  # 1MB
 
 database:
   host: localhost
@@ -13,32 +14,112 @@ database:
   ssl_mode: disable
   max_idle_conns: 10
   max_open_conns: 100
+  conn_max_lifetime: 3600  # 连接最大生命周期(秒)
 
 redis:
   host: localhost
   port: 6379
   password: ""
   db: 0
+  pool_size: 10
+  min_idle_conns: 2
 
 jwt:
   secret: your-jwt-secret-key-change-in-production
   expire_time: 604800  # 7天，单位秒
+  refresh_time: 2592000  # 30天，刷新令牌有效期
 
 wechat:
   app_id: wx1234567890abcdef
   app_secret: your-wechat-app-secret
+  mch_id: ""  # 商户号(支付用)
+  api_key: ""  # API密钥(支付用)
+  notify_url: ""  # 支付回调地址
 
 storage:
-  type: local  # local/oss
+  type: local  # local/oss/cos
   local_path: ./uploads
   base_url: http://localhost:8080/uploads
-  # OSS配置(如使用)
+  max_file_size: 52428800  # 50MB
+  allowed_types: "jpg,png,gif,mp4,mp3,wav"
+  
+  # 阿里云OSS配置
   oss_access_key_id: ""
   oss_access_key_secret: ""
   oss_endpoint: ""
   oss_bucket: ""
+  oss_region: ""
+  
+  # 腾讯云COS配置
+  cos_secret_id: ""
+  cos_secret_key: ""
+  cos_bucket: ""
+  cos_region: ""
+
+sms:
+  provider: aliyun  # aliyun/tencent
+  sign_name: "团圆寻亲"
+  
+  # 阿里云短信
+  aliyun_access_key_id: ""
+  aliyun_access_key_secret: ""
+  
+  # 腾讯云短信
+  tencent_secret_id: ""
+  tencent_secret_key: ""
+  tencent_app_id: ""
+
+email:
+  enabled: false
+  smtp_host: smtp.qq.com
+  smtp_port: 587
+  smtp_user: ""
+  smtp_password: ""  # 授权码
+  from_name: "团圆寻亲"
+  use_tls: true
+
+map:
+  provider: tencent  # tencent/amap/baidu
+  key: ""  # 地图API密钥
+  
+  # 腾讯地图
+  tencent_key: ""
+  
+  # 高德地图
+  amap_key: ""
+  
+  # 百度地图
+  baidu_key: ""
 
 log:
   level: info  # debug/info/warn/error
   format: json  # json/text
   output_path: ./logs
+  file_name: app.log
+  max_size: 100  # 单个文件最大MB
+  max_backups: 10  # 最多保留文件数
+  max_age: 30  # 文件保存天数
+  compress: true  # 是否压缩
+
+notification:
+  # 消息推送配置
+  push_enabled: false
+  
+  # 个推配置
+  getui_app_id: ""
+  getui_app_key: ""
+  getui_master_secret: ""
+  
+  # 极光推送配置
+  jpush_app_key: ""
+  jpush_master_secret: ""
+
+# 系统配置
+system:
+  default_org_name: "团圆寻亲志愿者协会"
+  default_org_code: "ROOT"
+  enable_register: true  # 是否开放注册
+  enable_wechat_login: true  # 是否启用微信登录
+  enable_sms_login: false  # 是否启用短信登录
+  admin_ips: ""  # 管理员后台允许访问的IP，多个用逗号分隔
+  rate_limit: 100  # 每分钟请求限制

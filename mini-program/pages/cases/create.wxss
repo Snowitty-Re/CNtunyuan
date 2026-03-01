@@ -67,6 +67,15 @@
   font-size: 28rpx;
   color: #333;
   text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.picker-arrow {
+  margin-left: 12rpx;
+  font-size: 24rpx;
+  color: #999;
 }
 
 .location-picker {

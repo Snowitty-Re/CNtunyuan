@@ -1,0 +1,52 @@
+<view class="my-tasks-page">
+  <!-- 标签栏 -->
+  <view class="tab-bar">
+    <view class="tab-item {{status === item.key ? 'active' : ''}}" wx:for="{{tabs}}" wx:key="key" bindtap="switchTab" data-key="{{item.key}}">
+      {{item.label}}
+    </view>
+  </view>
+
+  <!-- 任务列表 -->
+  <view class="task-list">
+    <view class="task-card" wx:for="{{tasks}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
+      <view class="task-header">
+        <view class="task-title">{{item.title}}</view>
+        <view class="task-status status-{{item.status}}">{{statusMap[item.status]}}</view>
+      </view>
+      
+      <view class="task-info">
+        <text class="task-type">{{taskTypeMap[item.task_type] || '其他'}}</text>
+        <text class="priority-tag priority-{{item.priority}}">{{priorityMap[item.priority]}}</text>
+      </view>
+      
+      <view class="task-desc" wx:if="{{item.description}}">{{item.description}}</view>
+      
+      <view class="task-footer">
+        <view class="task-progress" wx:if="{{item.progress !== undefined}}">
+          <view class="progress-bar">
+            <view class="progress-fill" style="width: {{item.progress}}%"></view>
+          </view>
+          <text class="progress-text">{{item.progress}}%</text>
+        </view>
+        <view class="task-deadline {{item.isOverdue ? 'overdue' : ''}}" wx:if="{{item.deadline}}">
+          截止: {{item.deadline}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!loading && tasks.length === 0}}">
+      <image src="https://picsum.photos/200/200?random=empty" mode="aspectFit" />
+      <text>暂无任务</text>
+    </view>
+
+    <!-- 加载更多 -->
+    <view class="load-more" wx:if="{{loadingMore}}">
+      <view class="spinner"></view>
+      <text>加载中...</text>
+    </view>
+    <view class="no-more" wx:if="{{!hasMore && tasks.length > 0}}">
+      没有更多了
+    </view>
+  </view>
+</view>

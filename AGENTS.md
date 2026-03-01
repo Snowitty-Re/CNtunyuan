@@ -134,6 +134,12 @@ DELETE /api/v1/resources/:id   # 删除
 - 功能: 流程定义、审批节点、实例管理
 - 状态: draft -> active/inactive
 
+### 7. 文件存储模块
+- 文件位置: `internal/service/storage.go`, `internal/api/upload.go`
+- 功能: 文件上传、存储管理、支持多种存储方式
+- 存储类型: local（本地）、oss（阿里云）、cos（腾讯云）
+- 支持文件类型: images（图片）、audio（音频）、video（视频）、document（文档）
+
 ## 常用命令
 
 ### 后端命令
@@ -230,6 +236,23 @@ jwt:
 wechat:
   app_id: "your-app-id"
   app_secret: "your-app-secret"
+
+storage:
+  type: local           # 存储类型: local/oss/cos
+  local_path: ./uploads # 本地存储路径
+  base_url: http://localhost:8080/uploads  # 文件访问基础URL
+  max_file_size: 52428800  # 最大文件大小(50MB)
+  allowed_types: "jpg,png,gif,mp4,mp3,wav"  # 允许的文件类型
+  # OSS配置(使用阿里云时填写)
+  oss_access_key_id: ""
+  oss_access_key_secret: ""
+  oss_endpoint: ""
+  oss_bucket: ""
+  # COS配置(使用腾讯云时填写)
+  cos_secret_id: ""
+  cos_secret_key: ""
+  cos_bucket: ""
+  cos_region: ""
 ```
 
 ### 前端配置 (.env)
@@ -245,6 +268,10 @@ VITE_API_BASE_URL=/api/v1
 3. **外键约束**: 迁移时禁用外键约束，生产环境建议启用
 4. **JWT 密钥**: 生产环境必须修改默认密钥
 5. **微信小程序**: 需要配置正确的 appid 和密钥
+6. **文件存储**: 
+   - 本地存储需要确保 `./uploads` 目录存在且有写入权限
+   - 生产环境建议使用 OSS 或 COS
+   - 文件上传大小限制默认为 50MB
 
 ## 常见问题
 
@@ -265,6 +292,14 @@ VITE_API_BASE_URL=/api/v1
 
 ## 更新日志
 
+### 2024-03-02
+- 完善小程序端任务管理功能（列表、详情、领取、完成）
+- 添加文件存储服务，支持本地/OSS/COS三种存储方式
+- 添加文件上传API（单文件、批量上传、删除）
+- 添加日志服务
+- 扩展配置文件，添加SMS、Email、Map、Notification等配置
+- 完善小程序端工作台页面
+
 ### 2024-02-27
 - 实现完整的任务管理功能（分配、转派、完成、取消）
 - 实现工作流管理功能（定义、步骤、审批）
@@ -273,8 +308,11 @@ VITE_API_BASE_URL=/api/v1
 
 ## 待办事项
 
-- [ ] 完善小程序端功能
+- [x] 完善小程序端功能
+- [x] 添加文件存储服务
 - [ ] 实现数据大屏页面
 - [ ] 添加更多测试数据
 - [ ] 完善权限控制
 - [ ] 添加操作日志审计
+- [ ] 实现消息推送服务
+- [ ] 添加短信服务

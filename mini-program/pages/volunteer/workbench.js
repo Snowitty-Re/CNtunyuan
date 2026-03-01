@@ -1,5 +1,5 @@
-const { get } = require('../../utils/request')
-const { formatDate } = require('../../utils/util')
+const { get, post } = require('../../utils/request')
+const { formatDate, showSuccess } = require('../../utils/util')
 
 Page({
   data: {
@@ -8,9 +8,10 @@ Page({
       taskCount: 0,
       caseCount: 0,
       dialectCount: 0,
-      score: 0
+      completedCount: 0
     },
     todos: [],
+    myTasks: [],
     activities: [],
     roleMap: {
       super_admin: '超级管理员',
@@ -36,20 +37,24 @@ Page({
 
   onLoad() {
     this.loadUserInfo()
-    this.loadStats()
-    this.loadTodos()
-    this.loadActivities()
   },
 
   onShow() {
     this.loadStats()
-    this.loadTodos()
+    this.loadMyTasks()
+    this.loadActivities()
   },
 
   async loadUserInfo() {
     try {
       let userInfo = wx.getStorageSync('userInfo') || {}
-      userInfo.avatar = userInfo.avatar || '/assets/default-avatar.png'
+      // 获取最新用户信息
+      const freshUserInfo = await get('/auth/me')
+      if (freshUserInfo) {
+        userInfo = { ...userInfo, ...freshUserInfo }
+        wx.setStorageSync('userInfo', userInfo)
+      }
+      userInfo.avatar = userInfo.avatar || 'https://picsum.photos/100/100'
       userInfo.nickname = userInfo.nickname || '志愿者'
       this.setData({ userInfo })
     } catch (error) {
@@ -59,13 +64,14 @@ Page({
 
   async loadStats() {
     try {
-      // 这里应该调用统计接口
+      // 获取任务统计
+      const taskStats = await get('/tasks/statistics')
       this.setData({
         stats: {
-          taskCount: 12,
-          caseCount: 8,
-          dialectCount: 5,
-          score: 1560
+          taskCount: taskStats.total || 0,
+          completedCount: taskStats.completed || 0,
+          pendingCount: taskStats.pending || 0,
+          processingCount: taskStats.processing || 0
         }
       })
     } catch (error) {
@@ -73,37 +79,59 @@ Page({
     }
   },
 
-  async loadTodos() {
+  async loadMyTasks() {
     try {
-      const result = await get('/tasks', { status: 'assigned', page: 1, page_size: 5 })
-      const todos = result.list.map(item => ({
+      const result = await get('/tasks/my', { status: 'assigned' })
+      const myTasks = result.slice(0, 5).map(item => ({
         ...item,
         deadline: item.deadline ? formatDate(item.deadline) : null
       }))
-      this.setData({ todos })
+      this.setData({ myTasks })
     } catch (error) {
-      console.error('加载待办失败:', error)
+      console.error('加载我的任务失败:', error)
     }
   },
 
   async loadActivities() {
     try {
-      // 模拟动态数据
-      this.setData({
-        activities: [
-          { id: 1, content: '完成了任务"实地寻访张大爷"', time: '2小时前' },
-          { id: 2, content: '领取了新任务"电话核实李奶奶信息"', time: '5小时前' },
-          { id: 3, content: '上传了方言录音"四川话-成都地区"', time: '1天前' },
-          { id: 4, content: '参与了案件"儿童走失-小明"的寻找', time: '2天前' }
-        ]
-      })
+      // 获取任务日志作为动态
+      const result = await get('/tasks/my', { status: 'completed' })
+      const activities = result.slice(0, 5).map(item => ({
+        id: item.id,
+        content: `完成了任务"${item.title}"`,
+        time: formatDate(item.completed_time || item.updated_at)
+      }))
+      this.setData({ activities })
     } catch (error) {
       console.error('加载动态失败:', error)
     }
   },
 
+  // 快速操作
+  quickAction(e) {
+    const type = e.currentTarget.dataset.type
+    switch(type) {
+      case 'task':
+        wx.navigateTo({ url: '/pages/tasks/list' })
+        break
+      case 'case':
+        wx.switchTab({ url: '/pages/cases/list' })
+        break
+      case 'dialect':
+        wx.navigateTo({ url: '/pages/dialect/create' })
+        break
+      case 'map':
+        wx.navigateTo({ url: '/pages/map/index' })
+        break
+    }
+  },
+
   goToMyTasks() {
-    wx.switchTab({ url: '/pages/tasks/list' })
+    wx.navigateTo({ url: '/pages/tasks/my' })
+  },
+
+  goToCreateTask() {
+    wx.navigateTo({ url: '/pages/tasks/create' })
   },
 
   goToCreateCase() {
@@ -123,9 +151,23 @@ Page({
     wx.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
   },
 
-  startTask(e) {
+  // 开始任务
+  async startTask(e) {
     e.stopPropagation()
     const id = e.currentTarget.dataset.id
-    wx.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
+    try {
+      await post(`/tasks/${id}/progress`, { progress: 1 })
+      showSuccess('开始执行')
+      this.loadMyTasks()
+    } catch (error) {
+      console.error('开始任务失败:', error)
+    }
+  },
+
+  // 完成任务
+  completeTask(e) {
+    e.stopPropagation()
+    const id = e.currentTarget.dataset.id
+    wx.navigateTo({ url: `/pages/tasks/feedback?id=${id}&type=complete` })
   }
 })

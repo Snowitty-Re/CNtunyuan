@@ -64,6 +64,11 @@ const showError = (title = '失败') => {
   wx.showToast({ title, icon: 'none' })
 }
 
+// 显示提示
+const showToast = (title, icon = 'none') => {
+  wx.showToast({ title, icon })
+}
+
 // 确认对话框
 const showConfirm = (title, content) => {
   return new Promise((resolve) => {
@@ -135,6 +140,7 @@ module.exports = {
   hideLoading,
   showSuccess,
   showError,
+  showToast,
   showConfirm,
   getLocation,
   chooseImage,
