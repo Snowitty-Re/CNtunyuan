@@ -139,6 +139,10 @@
   font-size: 32rpx;
   font-weight: 700;
   color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
 }
 
 /* 区块通用样式 */
@@ -258,6 +262,7 @@
 .todo-content {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .todo-title {
@@ -273,7 +278,8 @@
 .todo-meta {
   display: flex;
   align-items: center;
-  gap: 20rpx;
+  gap: 16rpx;
+  overflow: hidden;
 }
 
 .todo-type {
@@ -282,6 +288,8 @@
   background: rgba(255, 140, 66, 0.1);
   padding: 6rpx 16rpx;
   border-radius: 12rpx;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .todo-deadline {
@@ -290,6 +298,10 @@
   gap: 8rpx;
   font-size: 24rpx;
   color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200rpx;
 }
 
 .todo-deadline .iconfont {

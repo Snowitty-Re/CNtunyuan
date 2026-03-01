@@ -164,11 +164,17 @@
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .action-desc {
   font-size: 24rpx;
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 统计数据 */

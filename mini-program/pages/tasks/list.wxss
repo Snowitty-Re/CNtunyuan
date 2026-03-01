@@ -254,6 +254,11 @@
   color: var(--text-primary);
   margin-bottom: 12rpx;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .task-desc {
@@ -280,6 +285,14 @@
   gap: 8rpx;
   font-size: 24rpx;
   color: var(--text-tertiary);
+  overflow: hidden;
+  max-width: 300rpx;
+}
+
+.meta-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .meta-item .iconfont {
@@ -314,6 +327,10 @@
 .assignee-name {
   font-size: 26rpx;
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150rpx;
 }
 
 .priority-tag {
