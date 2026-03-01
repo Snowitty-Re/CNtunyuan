@@ -14,7 +14,10 @@
     "pages/tasks/my",
     "pages/tasks/feedback",
     "pages/volunteer/profile",
+    "pages/volunteer/edit-profile/index",
     "pages/volunteer/workbench",
+    "pages/notification/list",
+    "pages/settings/index",
     "pages/map/index"
   ],
   "window": {

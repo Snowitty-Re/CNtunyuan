@@ -1,0 +1,73 @@
+<view class="notification-page">
+  <!-- 头部统计 -->
+  <view class="header" wx:if="{{unreadCount > 0}}">
+    <view class="unread-info">
+      <text class="unread-count">{{unreadCount}}</text>
+      <text class="unread-text">条未读消息</text>
+    </view>
+    <view class="mark-all-btn" bindtap="markAllAsRead">
+      全部已读
+    </view>
+  </view>
+
+  <!-- 通知列表 -->
+  <view class="notification-list">
+    <view 
+      class="notification-item {{item.is_read ? 'read' : 'unread'}}" 
+      wx:for="{{notifications}}" 
+      wx:key="id"
+      bindtap="onNotificationTap"
+      data-id="{{item.id}}"
+      data-type="{{item.type}}"
+      data-businessid="{{item.business_id}}"
+    >
+      <!-- 未读标记 -->
+      <view class="unread-dot" wx:if="{{!item.is_read}}"></view>
+      
+      <!-- 图标 -->
+      <view class="icon-wrap type-{{item.type}}">
+        <text class="iconfont icon-{{item.type === 'task' ? 'task' : item.type === 'case' ? 'case' : 'notice'}}"></text>
+      </view>
+      
+      <!-- 内容 -->
+      <view class="content">
+        <view class="header-row">
+          <text class="type-tag">{{typeMap[item.type] || '系统通知'}}</text>
+          <text class="time">{{item.created_at}}</text>
+        </view>
+        <view class="title">{{item.title}}</view>
+        <view class="desc">{{item.content}}</view>
+      </view>
+      
+      <!-- 操作按钮 -->
+      <view class="actions" catchtap="stopPropagation">
+        <text 
+          class="action-btn" 
+          wx:if="{{!item.is_read}}"
+          bindtap="markAsRead"
+          data-id="{{item.id}}"
+        >标记已读</text>
+        <text 
+          class="action-btn delete"
+          bindtap="deleteNotification"
+          data-id="{{item.id}}"
+        >删除</text>
+      </view>
+    </view>
+    
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!loading && notifications.length === 0}}">
+      <image src="https://picsum.photos/200/200?random=empty" mode="aspectFit" />
+      <text>暂无消息通知</text>
+    </view>
+  </view>
+
+  <!-- 加载更多 -->
+  <view class="load-more" wx:if="{{loadingMore}}">
+    <view class="spinner"></view>
+    <text>加载中...</text>
+  </view>
+  <view class="no-more" wx:if="{{!hasMore && notifications.length > 0}}">
+    没有更多了
+  </view>
+</view>

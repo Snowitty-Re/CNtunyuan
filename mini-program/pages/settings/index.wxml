@@ -1,0 +1,80 @@
+<view class="settings-page">
+  <!-- 用户信息卡片 -->
+  <view class="user-card" bindtap="editProfile">
+    <image class="avatar" src="{{userInfo.avatar || 'https://picsum.photos/100/100'}}" />
+    <view class="user-info">
+      <view class="nickname">{{userInfo.nickname || '未设置昵称'}}</view>
+      <view class="phone">{{userInfo.phone || ''}}</view>
+    </view>
+    <text class="iconfont icon-arrow-right"></text>
+  </view>
+
+  <!-- 功能设置 -->
+  <view class="section">
+    <view class="section-title">功能设置</view>
+    <view class="menu-list">
+      <view class="menu-item">
+        <text class="iconfont icon-notification menu-icon"></text>
+        <text class="menu-text">消息通知</text>
+        <switch checked="{{settings.notification}}" bindchange="toggleNotification" />
+      </view>
+      <view class="menu-item">
+        <text class="iconfont icon-sound menu-icon"></text>
+        <text class="menu-text">声音提醒</text>
+        <switch checked="{{settings.sound}}" bindchange="toggleSound" />
+      </view>
+    </view>
+  </view>
+
+  <!-- 通用设置 -->
+  <view class="section">
+    <view class="section-title">通用</view>
+    <view class="menu-list">
+      <view class="menu-item" bindtap="viewNotifications">
+        <text class="iconfont icon-message menu-icon"></text>
+        <text class="menu-text">消息中心</text>
+        <text class="iconfont icon-arrow-right"></text>
+      </view>
+      <view class="menu-item" bindtap="clearCache">
+        <text class="iconfont icon-clear menu-icon"></text>
+        <text class="menu-text">清除缓存</text>
+        <text class="iconfont icon-arrow-right"></text>
+      </view>
+      <view class="menu-item" bindtap="checkUpdate">
+        <text class="iconfont icon-update menu-icon"></text>
+        <text class="menu-text">检查更新</text>
+        <view class="menu-extra">
+          <text class="version">v{{version}}</text>
+          <text class="iconfont icon-arrow-right"></text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 关于 -->
+  <view class="section">
+    <view class="section-title">关于</view>
+    <view class="menu-list">
+      <view class="menu-item" bindtap="goToAbout">
+        <text class="iconfont icon-about menu-icon"></text>
+        <text class="menu-text">关于我们</text>
+        <text class="iconfont icon-arrow-right"></text>
+      </view>
+      <view class="menu-item" bindtap="goToPrivacy">
+        <text class="iconfont icon-privacy menu-icon"></text>
+        <text class="menu-text">隐私政策</text>
+        <text class="iconfont icon-arrow-right"></text>
+      </view>
+      <view class="menu-item" bindtap="goToAgreement">
+        <text class="iconfont icon-file menu-icon"></text>
+        <text class="menu-text">用户协议</text>
+        <text class="iconfont icon-arrow-right"></text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-section">
+    <button class="logout-btn" bindtap="logout">退出登录</button>
+  </view>
+</view>

@@ -321,6 +321,13 @@ VITE_API_BASE_URL=/api/v1
   - 启用外键约束（DisableForeignKeyConstraintWhenMigrating: false）
   - 添加全文搜索索引支持
   - 优化连接池配置（支持最大生命周期）
+- **小程序完善**：
+  - 添加消息通知页面（notification/list）
+  - 添加设置页面（settings/index）
+  - 添加个人资料编辑页面（volunteer/edit-profile）
+  - 优化个人资料页面UI
+  - 添加公共组件（loading、empty）
+  - 完善用户信息和统计展示
 
 ### 2024-02-27
 - 实现完整的任务管理功能（分配、转派、完成、取消）

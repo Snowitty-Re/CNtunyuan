@@ -1,0 +1,135 @@
+<view class="edit-profile-page">
+  <view class="form-section">
+    <view class="form-item">
+      <text class="label required">昵称</text>
+      <input 
+        placeholder="请输入昵称" 
+        value="{{form.nickname}}"
+        data-field="nickname"
+        bindinput="onInput"
+        maxlength="20"
+      />
+    </view>
+    
+    <view class="form-item">
+      <text class="label required">真实姓名</text>
+      <input 
+        placeholder="请输入真实姓名" 
+        value="{{form.real_name}}"
+        data-field="real_name"
+        bindinput="onInput"
+        maxlength="20"
+      />
+    </view>
+    
+    <view class="form-item">
+      <text class="label required">手机号</text>
+      <input 
+        type="number"
+        placeholder="请输入手机号" 
+        value="{{form.phone}}"
+        data-field="phone"
+        bindinput="onInput"
+        maxlength="11"
+      />
+    </view>
+    
+    <view class="form-item">
+      <text class="label">邮箱</text>
+      <input 
+        placeholder="请输入邮箱" 
+        value="{{form.email}}"
+        data-field="email"
+        bindinput="onInput"
+        maxlength="100"
+      />
+    </view>
+    
+    <view class="form-item">
+      <text class="label">性别</text>
+      <picker bindchange="onGenderChange" range="{{genderOptions}}" range-key="label" value="{{genderIndex}}">
+        <view class="picker-value {{form.gender ? '' : 'placeholder'}}">
+          {{genderIndex >= 0 ? genderOptions[genderIndex].label : '请选择性别'}}
+        </view>
+      </picker>
+    </view>
+    
+    <view class="form-item">
+      <text class="label">出生日期</text>
+      <picker mode="date" bindchange="onDateChange" value="{{form.birth_date}}" end="{{maxDate}}">
+        <view class="picker-value {{form.birth_date ? '' : 'placeholder'}}">
+          {{form.birth_date || '请选择出生日期'}}
+        </view>
+      </picker>
+    </view>
+    
+    <view class="form-item">
+      <text class="label">地址</text>
+      <view class="location-picker" bindtap="chooseLocation">
+        <text class="location-text {{form.address ? '' : 'placeholder'}}">
+          {{form.address || '选择位置'}}
+        </text>
+        <text class="iconfont icon-location"></text>
+      </view>
+    </view>
+  </view>
+  
+  <view class="form-section">
+    <view class="section-title">紧急联系人</view>
+    
+    <view class="form-item">
+      <text class="label">联系人姓名</text>
+      <input 
+        placeholder="请输入紧急联系人姓名" 
+        value="{{form.emergency_contact}}"
+        data-field="emergency_contact"
+        bindinput="onInput"
+        maxlength="20"
+      />
+    </view>
+    
+    <view class="form-item">
+      <text class="label">联系人电话</text>
+      <input 
+        type="number"
+        placeholder="请输入紧急联系人电话" 
+        value="{{form.emergency_phone}}"
+        data-field="emergency_phone"
+        bindinput="onInput"
+        maxlength="20"
+      />
+    </view>
+  </view>
+  
+  <view class="form-section">
+    <view class="section-title">其他信息</view>
+    
+    <view class="form-item vertical">
+      <text class="label">技能特长</text>
+      <textarea 
+        placeholder="请描述您的技能特长，如方言、驾驶、医疗等" 
+        value="{{form.skills}}"
+        data-field="skills"
+        bindinput="onInput"
+        maxlength="500"
+      />
+    </view>
+    
+    <view class="form-item vertical">
+      <text class="label">志愿服务经历</text>
+      <textarea 
+        placeholder="请描述您的志愿服务经历" 
+        value="{{form.experience}}"
+        data-field="experience"
+        bindinput="onInput"
+        maxlength="1000"
+      />
+    </view>
+  </view>
+  
+  <view class="footer">
+    <button class="save-btn" type="primary" bindtap="saveProfile" loading="{{loading}}">
+      保存
+    </button>
+  </view>
+</view>

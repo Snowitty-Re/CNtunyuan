@@ -1,93 +1,89 @@
-<view class="container">
-  <!-- 用户信息 -->
-  <view class="profile-card">
-    <view class="user-main">
-      <image class="avatar" src="{{userInfo.avatar}}" bindtap="changeAvatar" />
-      <view class="user-detail">
-        <view class="user-name">{{userInfo.nickname}}</view>
-        <view class="user-org" wx:if="{{userInfo.org}}">{{userInfo.org.name}}</view>
-        <view class="user-id">ID: {{userInfo.id}}</view>
+<view class="profile-page">
+  <!-- 用户信息卡片 -->
+  <view class="user-card">
+    <view class="user-main" bindtap="editProfile">
+      <image class="avatar" src="{{userInfo.avatar || 'https://picsum.photos/100/100'}}" />
+      <view class="user-info">
+        <view class="nickname-row">
+          <text class="nickname">{{userInfo.nickname || '未设置昵称'}}</text>
+          <view class="role-tag">{{roleMap[userInfo.role] || '志愿者'}}</view>
+        </view>
+        <view class="org-name" wx:if="{{userInfo.org}}">{{userInfo.org.name}}</view>
+        <view class="user-id" bindtap="copyId">
+          ID: {{userInfo.id}}
+          <text class="copy-btn">复制</text>
+        </view>
       </view>
+      <text class="iconfont icon-arrow-right"></text>
     </view>
-    <view class="user-contact">
-      <view class="contact-item">
-        <text class="contact-label">手机</text>
-        <text class="contact-value">{{userInfo.phone || '未绑定'}}</text>
+    
+    <!-- 统计数据 -->
+    <view class="stats-bar">
+      <view class="stat-item">
+        <text class="stat-num">{{stats.taskCount}}</text>
+        <text class="stat-label">任务</text>
       </view>
-      <view class="contact-item">
-        <text class="contact-label">邮箱</text>
-        <text class="contact-value">{{userInfo.email || '未绑定'}}</text>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.caseCount}}</text>
+        <text class="stat-label">案件</text>
       </view>
-    </view>
-  </view>
-
-  <!-- 我的数据 -->
-  <view class="data-card">
-    <view class="data-title">我的数据</view>
-    <view class="data-grid">
-      <view class="data-item">
-        <text class="data-num">{{stats.taskCount}}</text>
-        <text class="data-label">完成任务</text>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.dialectCount}}</text>
+        <text class="stat-label">方言</text>
       </view>
-      <view class="data-item">
-        <text class="data-num">{{stats.caseCount}}</text>
-        <text class="data-label">参与案件</text>
-      </view>
-      <view class="data-item">
-        <text class="data-num">{{stats.dialectCount}}</text>
-        <text class="data-label">方言录音</text>
-      </view>
-      <view class="data-item">
-        <text class="data-num">{{stats.score}}</text>
-        <text class="data-label">积分</text>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.score}}</text>
+        <text class="stat-label">积分</text>
       </view>
     </view>
   </view>
 
-  <!-- 菜单列表 -->
-  <view class="menu-card">
-    <view class="menu-item" bindtap="goToMyCases">
-      <text class="menu-icon">📋</text>
-      <text class="menu-name">我的案件</text>
-      <text class="menu-arrow">></text>
-    </view>
-    <view class="menu-item" bindtap="goToMyTasks">
-      <text class="menu-icon">📌</text>
-      <text class="menu-name">我的任务</text>
-      <text class="menu-arrow">></text>
-    </view>
-    <view class="menu-item" bindtap="goToMyDialects">
-      <text class="menu-icon">🎵</text>
-      <text class="menu-name">我的方言</text>
-      <text class="menu-arrow">></text>
-    </view>
-    <view class="menu-item" bindtap="goToCertificates">
-      <text class="menu-icon">🏆</text>
-      <text class="menu-name">荣誉证书</text>
-      <text class="menu-arrow">></text>
+  <!-- 功能菜单 -->
+  <view class="section">
+    <view class="section-title">我的服务</view>
+    <view class="menu-grid">
+      <view class="menu-item" wx:for="{{menuList}}" wx:key="text" bindtap="onMenuTap" data-url="{{item.url}}">
+        <view class="menu-icon-wrap">
+          <text class="iconfont icon-{{item.icon}}"></text>
+          <view class="badge" wx:if="{{item.badge > 0}}">{{item.badge > 99 ? '99+' : item.badge}}</view>
+        </view>
+        <text class="menu-text">{{item.text}}</text>
+      </view>
     </view>
   </view>
 
-  <view class="menu-card">
-    <view class="menu-item" bindtap="goToSettings">
-      <text class="menu-icon">⚙️</text>
-      <text class="menu-name">设置</text>
-      <text class="menu-arrow">></text>
-    </view>
-    <view class="menu-item" bindtap="goToHelp">
-      <text class="menu-icon">❓</text>
-      <text class="menu-name">帮助与反馈</text>
-      <text class="menu-arrow">></text>
-    </view>
-    <view class="menu-item" bindtap="goToAbout">
-      <text class="menu-icon">ℹ️</text>
-      <text class="menu-name">关于我们</text>
-      <text class="menu-arrow">></text>
+  <!-- 通用功能 -->
+  <view class="section">
+    <view class="section-title">通用</view>
+    <view class="menu-list">
+      <view class="list-item" bindtap="onFunctionTap" data-type="notification">
+        <text class="iconfont icon-notification list-icon"></text>
+        <text class="list-text">消息通知</text>
+        <text class="iconfont icon-arrow-right list-arrow"></text>
+      </view>
+      <view class="list-item" bindtap="onFunctionTap" data-type="settings">
+        <text class="iconfont icon-settings list-icon"></text>
+        <text class="list-text">设置</text>
+        <text class="iconfont icon-arrow-right list-arrow"></text>
+      </view>
+      <view class="list-item" bindtap="onFunctionTap" data-type="help">
+        <text class="iconfont icon-help list-icon"></text>
+        <text class="list-text">帮助与反馈</text>
+        <text class="iconfont icon-arrow-right list-arrow"></text>
+      </view>
+      <view class="list-item" bindtap="onFunctionTap" data-type="about">
+        <text class="iconfont icon-about list-icon"></text>
+        <text class="list-text">关于我们</text>
+        <text class="iconfont icon-arrow-right list-arrow"></text>
+      </view>
     </view>
   </view>
 
   <!-- 退出登录 -->
   <view class="logout-section">
-    <button class="btn-logout" bindtap="logout">退出登录</button>
+    <button class="logout-btn" bindtap="logout">退出登录</button>
   </view>
 </view>

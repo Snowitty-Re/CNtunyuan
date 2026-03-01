@@ -1,0 +1,17 @@
+<view class="loading-wrapper {{fullScreen ? 'full-screen' : ''}} {{show ? 'show' : 'hide'}}">
+  <view class="loading-mask" wx:if="{{mask}}"></view>
+  <view class="loading-content type-{{type}}">
+    <view class="loading-spinner">
+      <view wx:if="{{type === 'circle'}}" class="spinner-circle">
+        <view class="circle-item" wx:for="{{12}}" wx:key="*this"></view>
+      </view>
+      <view wx:elif="{{type === 'bounce'}}" class="spinner-bounce">
+        <view class="bounce-item"></view>
+        <view class="bounce-item"></view>
+        <view class="bounce-item"></view>
+      </view>
+      <view wx:else class="spinner-default"></view>
+    </view>
+    <text class="loading-text" wx:if="{{text}}">{{text}}</text>
+  </view>
+</view>
