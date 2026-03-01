@@ -98,10 +98,11 @@
 
 .action-bg {
   height: 100%;
-  padding: 32rpx;
+  padding: 28rpx;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  box-sizing: border-box;
 }
 
 .quick-action-item.create-task .action-bg {
@@ -121,13 +122,14 @@
 }
 
 .action-icon {
-  width: 64rpx;
-  height: 64rpx;
+  width: 60rpx;
+  height: 60rpx;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 16rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .action-icon .iconfont {
