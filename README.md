@@ -57,8 +57,9 @@
 - 数据大屏展示
 
 ### Web后台管理
-- React + TypeScript + Ant Design
-- 大屏数据展示
+- React 18 + TypeScript + Ant Design 5
+- 简洁办公OA风格设计
+- 温馨的橙色主题
 - 完整的CRUD操作
 
 ## 技术栈
@@ -71,12 +72,13 @@
 - Redis 7
 - JWT 认证
 
-### Web管理端
+### Web管理端 (web-new)
 - React 18
-- TypeScript
+- TypeScript 5
 - Ant Design 5
-- Vite
+- Vite 5
 - Zustand 状态管理
+- Axios
 
 ### 微信小程序
 - 原生微信小程序
@@ -103,14 +105,17 @@ CNtunyuan/
 │   ├── config/           # 配置文件
 │   ├── uploads/          # 本地文件存储目录
 │   └── Dockerfile
-├── web-admin/            # Web 管理后台
+├── web-new/              # Web 管理后台（新版）
 │   ├── src/
 │   │   ├── components/   # 组件
 │   │   ├── pages/        # 页面
+│   │   ├── router/       # 路由配置
 │   │   ├── services/     # API 服务
 │   │   ├── stores/       # 状态管理
-│   │   └── utils/        # 工具函数
-│   └── package.json
+│   │   ├── utils/        # 工具函数
+│   │   └── types/        # TypeScript 类型
+│   ├── package.json
+│   └── vite.config.ts
 ├── mini-program/         # 微信小程序
 │   ├── pages/            # 页面
 │   ├── components/       # 组件
@@ -144,6 +149,9 @@ go run cmd/initdata/main.go -exec
 
 # 或使用自定义参数
 go run cmd/initdata/main.go -exec -phone="13800138000" -password="admin123" -email="admin@cntunyuan.com"
+
+# 4. 生成测试数据（可选）
+go run cmd/seed/main.go -all
 ```
 
 更多初始化方式请参考 [backend/sql/README.md](backend/sql/README.md)
@@ -166,16 +174,18 @@ go run cmd/main.go
 air
 ```
 
-### Web 后台启动
+### Web 后台启动（新版）
 
 ```bash
-cd web-admin
+cd web-new
 
 # 安装依赖
 pnpm install
 
 # 启动开发服务器
 pnpm dev
+
+# 访问 http://localhost:3000
 ```
 
 ### Docker 部署
@@ -282,14 +292,31 @@ go fmt ./...
 ### 前端开发
 
 ```bash
-cd web-admin
+cd web-new
 
 # 代码检查
 pnpm lint
 
 # 构建生产版本
 pnpm build
+
+# 预览生产版本
+pnpm preview
 ```
+
+### Web 前端设计规范
+
+Web 前端采用简洁办公OA风格，温馨配色：
+
+| 用途 | 色值 |
+|------|------|
+| 主色 | `#e67e22` |
+| 背景色 | `#f5f7fa` |
+| 主文字 | `#1f2329` |
+| 次要文字 | `#646a73` |
+| 边框色 | `#e8e9eb` |
+
+详见 [web-new/README.md](web-new/README.md)
 
 ## 贡献
 

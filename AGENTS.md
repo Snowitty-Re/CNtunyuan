@@ -50,11 +50,41 @@
 - 接口命名使用动词+名词，如 `CreateUser`
 - 错误处理必须返回具体错误信息
 
-#### React 前端
+#### React 前端 (web-new)
 - 使用 TypeScript 严格模式
 - 组件命名使用大驼峰式
 - Props 必须定义类型
 - 使用 hooks 进行状态管理
+- **样式规范**: 不使用 Tailwind className，使用 Ant Design 组件默认样式 + 内联 style
+- **颜色规范**: 使用温馨橙色主题 (`#e67e22`)，背景 `#f5f7fa`，主文字 `#1f2329`
+- **设计原则**: 简洁办公OA风格，去除多余装饰，注重信息层级
+
+### 前端项目结构 (web-new)
+```
+web-new/
+├── src/
+│   ├── components/
+│   │   ├── layout/         # 布局组件
+│   │   │   ├── MainLayout.tsx
+│   │   │   └── Sidebar.tsx
+│   │   ├── common/         # 通用组件
+│   │   └── ui/             # UI 组件
+│   ├── pages/              # 页面
+│   │   ├── login/
+│   │   ├── dashboard/      # 工作台
+│   │   ├── cases/          # 寻人案件
+│   │   ├── tasks/          # 任务管理
+│   │   ├── volunteers/     # 志愿者管理
+│   │   ├── organizations/  # 组织架构
+│   │   └── dialects/       # 方言管理
+│   ├── router/             # 路由配置
+│   ├── services/           # API 服务
+│   ├── stores/             # 状态管理 (Zustand)
+│   ├── utils/              # 工具函数
+│   └── types/              # TypeScript 类型
+├── package.json
+└── vite.config.ts
+```
 
 ### 数据库规范
 
@@ -181,16 +211,16 @@ cd backend && swag init -g cmd/main.go
 
 ```bash
 # 安装依赖
-cd web-admin && pnpm install
+cd web-new && pnpm install
 
 # 开发模式
-cd web-admin && pnpm dev
+cd web-new && pnpm dev
 
 # 构建
-cd web-admin && pnpm build
+cd web-new && pnpm build
 
 # 预览
-cd web-admin && pnpm preview
+cd web-new && pnpm preview
 ```
 
 ## 数据初始化
@@ -400,6 +430,18 @@ VITE_API_BASE_URL=/api/v1
 - 检查端口号是否正确
 
 ## 更新日志
+
+### 2026-03-02
+- **Web 平台全面重构**:
+  - 删除旧版 `web-admin`，使用新版 `web-new`
+  - 全新简洁办公OA风格设计
+  - 温馨橙色主题 (`#e67e22`)
+  - 去除 Tailwind CSS，使用 Ant Design 5 + 内联样式
+  - 优化侧边栏、顶部导航、工作台布局
+  - 统一所有列表页面的表格样式
+  - 优化移动端适配
+  - 添加 Framer Motion 页面切换动画
+  - 完善权限控制的前端展示
 
 ### 2024-03-02
 - **完善权限控制系统**：
