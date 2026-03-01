@@ -14,17 +14,18 @@
     "pages/tasks/my",
     "pages/tasks/feedback",
     "pages/volunteer/profile",
-    "pages/volunteer/edit-profile/index",
+    "pages/volunteer/edit-profile",
     "pages/volunteer/workbench",
     "pages/notification/list",
     "pages/settings/index",
     "pages/map/index"
   ],
   "window": {
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#1890ff",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#FF8C42",
     "navigationBarTitleText": "团圆寻亲",
-    "navigationBarTextStyle": "white"
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#FDF8F3"
   },
   "tabBar": {
     "color": "#999999",

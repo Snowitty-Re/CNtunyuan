@@ -1,89 +1,147 @@
 <view class="profile-page">
-  <!-- 用户信息卡片 -->
-  <view class="user-card">
-    <view class="user-main" bindtap="editProfile">
-      <image class="avatar" src="{{userInfo.avatar || 'https://picsum.photos/100/100'}}" />
-      <view class="user-info">
-        <view class="nickname-row">
-          <text class="nickname">{{userInfo.nickname || '未设置昵称'}}</text>
-          <view class="role-tag">{{roleMap[userInfo.role] || '志愿者'}}</view>
-        </view>
-        <view class="org-name" wx:if="{{userInfo.org}}">{{userInfo.org.name}}</view>
-        <view class="user-id" bindtap="copyId">
-          ID: {{userInfo.id}}
-          <text class="copy-btn">复制</text>
-        </view>
+  <!-- 顶部背景 -->
+  <view class="profile-header">
+    <view class="header-bg">
+      <view class="gradient-orb orb-1"></view>
+      <view class="gradient-orb orb-2"></view>
+      <view class="wave-decoration">
+        <view class="wave"></view>
       </view>
-      <text class="iconfont icon-arrow-right"></text>
     </view>
     
-    <!-- 统计数据 -->
-    <view class="stats-bar">
+    <!-- 用户信息卡 -->
+    <view class="user-card">
+      <view class="user-avatar-wrapper" bindtap="editProfile">
+        <image class="user-avatar" src="{{userInfo.avatar || 'https://picsum.photos/100/100'}}" />
+        <view class="avatar-edit">
+          <text class="iconfont icon-camera"></text>
+        </view>
+      </view>
+      
+      <view class="user-info">
+        <view class="user-name-row">
+          <text class="user-name">{{userInfo.nickname || '志愿者'}}</text>
+          <view class="role-badge role-{{userInfo.role}}">
+            {{roleMap[userInfo.role] || '志愿者'}}
+          </view>
+        </view>
+        <view class="user-org" wx:if="{{userInfo.org}}">
+          <text class="iconfont icon-org"></text>
+          {{userInfo.org.name}}
+        </view>
+        <view class="user-id" bindtap="copyId">
+          <text>ID: {{userInfo.id || '--'}}</text>
+          <text class="copy-icon">复制</text>
+        </view>
+      </view>
+      
+      <view class="edit-btn" bindtap="editProfile">
+        <text class="iconfont icon-edit"></text>
+      </view>
+    </view>
+
+    <!-- 数据统计 -->
+    <view class="stats-card">
       <view class="stat-item">
-        <text class="stat-num">{{stats.taskCount}}</text>
-        <text class="stat-label">任务</text>
+        <view class="stat-icon-bg">
+          <text class="iconfont icon-task"></text>
+        </view>
+        <view class="stat-info">
+          <text class="stat-value">{{stats.taskCount}}</text>
+          <text class="stat-label">任务</text>
+        </view>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
-        <text class="stat-num">{{stats.caseCount}}</text>
-        <text class="stat-label">案件</text>
+        <view class="stat-icon-bg bg-green">
+          <text class="iconfont icon-case"></text>
+        </view>
+        <view class="stat-info">
+          <text class="stat-value">{{stats.caseCount}}</text>
+          <text class="stat-label">案件</text>
+        </view>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
-        <text class="stat-num">{{stats.dialectCount}}</text>
-        <text class="stat-label">方言</text>
+        <view class="stat-icon-bg bg-purple">
+          <text class="iconfont icon-mic"></text>
+        </view>
+        <view class="stat-info">
+          <text class="stat-value">{{stats.dialectCount}}</text>
+          <text class="stat-label">方言</text>
+        </view>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
-        <text class="stat-num">{{stats.score}}</text>
-        <text class="stat-label">积分</text>
+        <view class="stat-icon-bg bg-orange">
+          <text class="iconfont icon-star"></text>
+        </view>
+        <view class="stat-info">
+          <text class="stat-value">{{stats.score}}</text>
+          <text class="stat-label">积分</text>
+        </view>
       </view>
     </view>
   </view>
 
   <!-- 功能菜单 -->
-  <view class="section">
+  <view class="menu-section">
     <view class="section-title">我的服务</view>
     <view class="menu-grid">
       <view class="menu-item" wx:for="{{menuList}}" wx:key="text" bindtap="onMenuTap" data-url="{{item.url}}">
-        <view class="menu-icon-wrap">
+        <view class="menu-icon-wrapper icon-{{item.icon}}">
           <text class="iconfont icon-{{item.icon}}"></text>
-          <view class="badge" wx:if="{{item.badge > 0}}">{{item.badge > 99 ? '99+' : item.badge}}</view>
         </view>
         <text class="menu-text">{{item.text}}</text>
+        <view class="menu-badge" wx:if="{{item.badge > 0}}">{{item.badge > 99 ? '99+' : item.badge}}</view>
       </view>
     </view>
   </view>
 
-  <!-- 通用功能 -->
-  <view class="section">
+  <!-- 通用设置 -->
+  <view class="menu-section">
     <view class="section-title">通用</view>
-    <view class="menu-list">
-      <view class="list-item" bindtap="onFunctionTap" data-type="notification">
-        <text class="iconfont icon-notification list-icon"></text>
-        <text class="list-text">消息通知</text>
-        <text class="iconfont icon-arrow-right list-arrow"></text>
+    <view class="settings-list">
+      <view class="settings-item" bindtap="onFunctionTap" data-type="notification">
+        <view class="item-icon-wrapper">
+          <text class="iconfont icon-notification"></text>
+        </view>
+        <text class="item-text">消息通知</text>
+        <view class="item-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}</view>
+        <text class="iconfont icon-arrow-right item-arrow"></text>
       </view>
-      <view class="list-item" bindtap="onFunctionTap" data-type="settings">
-        <text class="iconfont icon-settings list-icon"></text>
-        <text class="list-text">设置</text>
-        <text class="iconfont icon-arrow-right list-arrow"></text>
+      <view class="settings-item" bindtap="onFunctionTap" data-type="settings">
+        <view class="item-icon-wrapper">
+          <text class="iconfont icon-settings"></text>
+        </view>
+        <text class="item-text">设置</text>
+        <text class="iconfont icon-arrow-right item-arrow"></text>
       </view>
-      <view class="list-item" bindtap="onFunctionTap" data-type="help">
-        <text class="iconfont icon-help list-icon"></text>
-        <text class="list-text">帮助与反馈</text>
-        <text class="iconfont icon-arrow-right list-arrow"></text>
+      <view class="settings-item" bindtap="onFunctionTap" data-type="help">
+        <view class="item-icon-wrapper">
+          <text class="iconfont icon-help"></text>
+        </view>
+        <text class="item-text">帮助与反馈</text>
+        <text class="iconfont icon-arrow-right item-arrow"></text>
       </view>
-      <view class="list-item" bindtap="onFunctionTap" data-type="about">
-        <text class="iconfont icon-about list-icon"></text>
-        <text class="list-text">关于我们</text>
-        <text class="iconfont icon-arrow-right list-arrow"></text>
+      <view class="settings-item" bindtap="onFunctionTap" data-type="about">
+        <view class="item-icon-wrapper">
+          <text class="iconfont icon-about"></text>
+        </view>
+        <text class="item-text">关于我们</text>
+        <text class="iconfont icon-arrow-right item-arrow"></text>
       </view>
     </view>
   </view>
 
   <!-- 退出登录 -->
   <view class="logout-section">
-    <button class="logout-btn" bindtap="logout">退出登录</button>
+    <view class="logout-btn" bindtap="logout">
+      <text class="iconfont icon-logout"></text>
+      <text>退出登录</text>
+    </view>
   </view>
+
+  <!-- 底部安全区 -->
+  <view class="safe-bottom"></view>
 </view>

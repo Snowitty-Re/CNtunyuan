@@ -3,6 +3,7 @@ const { formatDate, showSuccess } = require('../../utils/util')
 
 Page({
   data: {
+    currentDate: '',
     userInfo: {},
     stats: {
       taskCount: 0,
@@ -36,7 +37,19 @@ Page({
   },
 
   onLoad() {
+    this.setCurrentDate()
     this.loadUserInfo()
+  },
+
+  setCurrentDate() {
+    const date = new Date()
+    const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const weekDay = weekDays[date.getDay()]
+    this.setData({
+      currentDate: `${month}月${day}日 ${weekDay}`
+    })
   },
 
   onShow() {

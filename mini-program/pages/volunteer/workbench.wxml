@@ -1,92 +1,121 @@
 <view class="workbench-page">
-  <!-- 用户信息卡片 -->
-  <view class="user-card">
-    <view class="user-info">
-      <image class="avatar" src="{{userInfo.avatar || 'https://picsum.photos/100/100'}}" />
-      <view class="user-meta">
-        <view class="nickname">{{userInfo.nickname || '志愿者'}}</view>
-        <view class="role">{{roleMap[userInfo.role] || '志愿者'}}</view>
-      </view>
+  <!-- 顶部欢迎区 -->
+  <view class="welcome-section">
+    <view class="welcome-bg">
+      <view class="gradient-blob blob-1"></view>
+      <view class="gradient-blob blob-2"></view>
     </view>
-    <view class="user-stats">
-      <view class="user-stat">
-        <text class="num">{{stats.completedCount}}</text>
-        <text class="label">已完成</text>
+    <view class="welcome-content">
+      <view class="date-text">{{currentDate}}</view>
+      <view class="welcome-title">
+        <text>早安，</text>
+        <text class="user-name">{{userInfo.nickname || '志愿者'}}</text>
       </view>
-      <view class="user-stat">
-        <text class="num">{{stats.pendingCount}}</text>
-        <text class="label">待处理</text>
+      <view class="welcome-subtitle">今天也要加油哦 💪</view>
+    </view>
+  </view>
+
+  <!-- 快捷操作网格 -->
+  <view class="quick-actions-section">
+    <view class="quick-actions-grid">
+      <view class="quick-action-item create-task" bindtap="goToCreateTask">
+        <view class="action-bg">
+          <view class="action-icon">
+            <text class="iconfont icon-task"></text>
+          </view>
+          <text class="action-label">新建任务</text>
+        </view>
       </view>
-      <view class="user-stat">
-        <text class="num">{{stats.processingCount}}</text>
-        <text class="label">进行中</text>
+      <view class="quick-action-item report-case" bindtap="goToCreateCase">
+        <view class="action-bg">
+          <view class="action-icon">
+            <text class="iconfont icon-case"></text>
+          </view>
+          <text class="action-label">上报案件</text>
+        </view>
+      </view>
+      <view class="quick-action-item record-dialect" bindtap="goToCreateDialect">
+        <view class="action-bg">
+          <view class="action-icon">
+            <text class="iconfont icon-mic"></text>
+          </view>
+          <text class="action-label">录制方言</text>
+        </view>
+      </view>
+      <view class="quick-action-item nearby-clue" bindtap="goToMap">
+        <view class="action-bg">
+          <view class="action-icon">
+            <text class="iconfont icon-location"></text>
+          </view>
+          <text class="action-label">附近线索</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 快捷操作 -->
-  <view class="section">
-    <view class="section-title">快捷操作</view>
-    <view class="quick-actions">
-      <view class="action-item" bindtap="goToCreateTask">
-        <view class="action-icon task">
-          <text class="iconfont icon-task"></text>
-        </view>
-        <text class="action-name">新建任务</text>
-      </view>
-      <view class="action-item" bindtap="goToCreateCase">
-        <view class="action-icon case">
-          <text class="iconfont icon-case"></text>
-        </view>
-        <text class="action-name">上报案件</text>
-      </view>
-      <view class="action-item" bindtap="goToCreateDialect">
-        <view class="action-icon dialect">
-          <text class="iconfont icon-mic"></text>
-        </view>
-        <text class="action-name">录制方言</text>
-      </view>
-      <view class="action-item" bindtap="goToMap">
-        <view class="action-icon map">
-          <text class="iconfont icon-map"></text>
-        </view>
-        <text class="action-name">附近线索</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 我的待办 -->
-  <view class="section">
+  <!-- 今日待办 -->
+  <view class="todo-section" wx:if="{{myTasks.length > 0}}">
     <view class="section-header">
-      <view class="section-title">我的待办</view>
-      <view class="section-more" bindtap="goToMyTasks">
-        查看全部 <text class="iconfont icon-arrow-right"></text>
+      <view class="section-title-wrapper">
+        <view class="title-icon">
+          <text class="iconfont icon-todo"></text>
+        </view>
+        <text class="section-title">今日待办</text>
+        <view class="todo-count">{{myTasks.length}}</view>
+      </view>
+      <view class="more-link" bindtap="goToMyTasks">
+        <text>查看全部</text>
+        <text class="iconfont icon-arrow-right"></text>
       </view>
     </view>
+    
     <view class="todo-list">
-      <view class="todo-item" wx:for="{{myTasks}}" wx:key="id" bindtap="goToTaskDetail" data-id="{{item.id}}">
-        <view class="todo-main">
+      <view class="todo-item {{item.isOverdue ? 'overdue' : ''}}" wx:for="{{myTasks}}" wx:key="id" bindtap="goToTaskDetail" data-id="{{item.id}}">
+        <view class="todo-priority priority-{{item.priority}}"></view>
+        <view class="todo-content">
           <view class="todo-title">{{item.title}}</view>
           <view class="todo-meta">
-            <text class="todo-type">{{taskTypeMap[item.task_type] || '其他'}}</text>
-            <text class="todo-priority priority-{{item.priority}}">{{priorityMap[item.priority]}}</text>
+            <view class="todo-type">{{taskTypeMap[item.task_type] || '其他'}}</view>
+            <view class="todo-deadline">
+              <text class="iconfont icon-time"></text>
+              <text>{{item.deadline || '无截止'}}</text>
+            </view>
           </view>
         </view>
-        <view class="todo-side">
-          <view class="todo-deadline {{item.isOverdue ? 'overdue' : ''}}">{{item.deadline || '无截止'}}</view>
-          <button class="todo-btn" size="mini" catchtap="completeTask" data-id="{{item.id}}">完成</button>
+        <view class="todo-action" catchtap="completeTask" data-id="{{item.id}}">
+          <view class="complete-btn">
+            <text class="iconfont icon-check"></text>
+          </view>
         </view>
       </view>
-      <view class="empty-todo" wx:if="{{myTasks.length === 0}}">
-        <text>暂无待办任务</text>
-        <navigator url="/pages/tasks/list" class="link">去领取任务</navigator>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-todo-section" wx:else>
+    <view class="empty-illustration">
+      <view class="empty-icon-wrapper">
+        <text class="iconfont icon-relax"></text>
+      </view>
+      <text class="empty-title">今日暂无待办</text>
+      <text class="empty-desc">好好休息一下吧</text>
+      <view class="empty-action" bindtap="goToTaskList">
+        <text>去领取任务</text>
+        <text class="iconfont icon-arrow-right"></text>
       </view>
     </view>
   </view>
 
   <!-- 最近动态 -->
-  <view class="section">
-    <view class="section-title">最近动态</view>
+  <view class="activity-section">
+    <view class="section-header">
+      <view class="section-title-wrapper">
+        <view class="title-icon bg-green">
+          <text class="iconfont icon-activity"></text>
+        </view>
+        <text class="section-title">最近动态</text>
+      </view>
+    </view>
     <view class="activity-list">
       <view class="activity-item" wx:for="{{activities}}" wx:key="id">
         <view class="activity-dot"></view>
@@ -96,8 +125,11 @@
         </view>
       </view>
       <view class="empty-activity" wx:if="{{activities.length === 0}}">
-        暂无动态
+        <text>暂无动态</text>
       </view>
     </view>
   </view>
+
+  <!-- 底部安全区 -->
+  <view class="safe-bottom"></view>
 </view>
