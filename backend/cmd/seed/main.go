@@ -2,14 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/model"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -319,37 +316,33 @@ func seedMissingPersons(db *gorm.DB) error {
 			Gender:       "male",
 			Age:          8,
 			Height:       130,
-			CaseType:     "lost_child",
+			CaseType:     "child",
 			Status:       "searching",
 			MissingTime:  time.Now().AddDate(0, -1, 0),
-			Province:     org.Province,
-			City:         org.City,
-			MissingLocation: "某某公园",
+			MissingLocation: org.Province + "某某公园",
 			Appearance:   "身穿蓝色外套，黑色裤子",
 			Clothing:     "蓝色外套，黑色裤子，运动鞋",
-			ReporterName: user.RealName,
-			ReporterPhone: user.Phone,
-			ReporterID:   &user.ID,
-			OrgID:        user.OrgID,
+			ContactName:  user.RealName,
+			ContactPhone: user.Phone,
+			ReporterID:   user.ID,
+			OrgID:        *user.OrgID,
 		},
 		{
 			Name:         "测试走失人员2",
 			Gender:       "female",
 			Age:          75,
 			Height:       160,
-			CaseType:     "lost_elderly",
+			CaseType:     "elderly",
 			Status:       "searching",
 			MissingTime:  time.Now().AddDate(0, 0, -15),
-			Province:     org.Province,
-			City:         org.City,
-			MissingLocation: "某某小区",
+			MissingLocation: org.Province + "某某小区",
 			Appearance:   "白发，戴眼镜，穿灰色毛衣",
 			Clothing:     "灰色毛衣，深色裤子",
 			SpecialFeatures: "患有阿尔茨海默病",
-			ReporterName: user.RealName,
-			ReporterPhone: user.Phone,
-			ReporterID:   &user.ID,
-			OrgID:        user.OrgID,
+			ContactName:  user.RealName,
+			ContactPhone: user.Phone,
+			ReporterID:   user.ID,
+			OrgID:        *user.OrgID,
 		},
 	}
 
@@ -391,8 +384,8 @@ func seedDialects(db *gorm.DB) error {
 			Address:     "北京市朝阳区",
 			AudioURL:    "https://example.com/audio1.mp3",
 			Duration:    18,
-			CollectorID: &user.ID,
-			OrgID:       user.OrgID,
+			CollectorID: user.ID,
+			OrgID:       *user.OrgID,
 			Status:      "active",
 		},
 		{
@@ -402,8 +395,8 @@ func seedDialects(db *gorm.DB) error {
 			Address:     "上海市浦东新区",
 			AudioURL:    "https://example.com/audio2.mp3",
 			Duration:    20,
-			CollectorID: &user.ID,
-			OrgID:       user.OrgID,
+			CollectorID: user.ID,
+			OrgID:       *user.OrgID,
 			Status:      "active",
 		},
 		{
@@ -414,8 +407,8 @@ func seedDialects(db *gorm.DB) error {
 			Address:     "广州市天河区",
 			AudioURL:    "https://example.com/audio3.mp3",
 			Duration:    15,
-			CollectorID: &user.ID,
-			OrgID:       user.OrgID,
+			CollectorID: user.ID,
+			OrgID:       *user.OrgID,
 			Status:      "active",
 		},
 	}
@@ -457,6 +450,7 @@ func seedTasks(db *gorm.DB) error {
 		return nil
 	}
 
+	deadline := time.Now().AddDate(0, 0, 7)
 	tasks := []model.Task{
 		{
 			Title:           "寻找" + mp.Name,
@@ -467,7 +461,7 @@ func seedTasks(db *gorm.DB) error {
 			MissingPersonID: &mp.ID,
 			CreatorID:       user.ID,
 			OrgID:           *user.OrgID,
-			Deadline:        time.Now().AddDate(0, 0, 7),
+			Deadline:        &deadline,
 		},
 	}
 

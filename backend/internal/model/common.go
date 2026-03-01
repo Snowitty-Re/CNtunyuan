@@ -30,9 +30,9 @@ type Notification struct {
 
 	// 关联
 	SenderID   uuid.UUID      `gorm:"type:uuid;index:idx_notif_sender;comment:发送人ID" json:"sender_id"`
-	Sender     User           `gorm:"foreignKey:SenderID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"sender,omitempty"`
+	Sender     User           `gorm:"foreignKey:SenderID;references:ID;" json:"sender,omitempty"`
 	ReceiverID uuid.UUID      `gorm:"type:uuid;index:idx_notif_receiver;comment:接收人ID" json:"receiver_id"`
-	Receiver   User           `gorm:"foreignKey:ReceiverID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"receiver,omitempty"`
+	Receiver   User           `gorm:"foreignKey:ReceiverID;references:ID;" json:"receiver,omitempty"`
 
 	// 业务关联
 	BusinessID   *uuid.UUID `gorm:"type:uuid;index:idx_notif_business;comment:业务ID" json:"business_id"`
@@ -55,7 +55,7 @@ type Notification struct {
 type OperationLog struct {
 	ID           uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	UserID       uuid.UUID `gorm:"type:uuid;index:idx_oplog_user;comment:用户ID" json:"user_id"`
-	User         User      `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"user,omitempty"`
+	User         User      `gorm:"foreignKey:UserID;references:ID;" json:"user,omitempty"`
 	Username     string    `gorm:"size:50;index:idx_oplog_username;comment:用户名" json:"username"`
 	Module       string    `gorm:"size:50;index:idx_oplog_module;comment:模块" json:"module"`
 	Action       string    `gorm:"size:50;index:idx_oplog_action;comment:操作" json:"action"`

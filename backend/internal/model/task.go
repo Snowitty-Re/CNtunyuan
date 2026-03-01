@@ -48,15 +48,15 @@ type Task struct {
 
 	// 关联案件
 	MissingPersonID *uuid.UUID     `gorm:"type:uuid;index:idx_task_mp;comment:关联走失人员ID" json:"missing_person_id"`
-	MissingPerson   *MissingPerson `gorm:"foreignKey:MissingPersonID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"missing_person,omitempty"`
+	MissingPerson   *MissingPerson `gorm:"foreignKey:MissingPersonID;references:ID;" json:"missing_person,omitempty"`
 
 	// 创建人/负责人
 	CreatorID  uuid.UUID    `gorm:"type:uuid;index:idx_task_creator;not null" json:"creator_id"`
-	Creator    User         `gorm:"foreignKey:CreatorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"creator,omitempty"`
+	Creator    User         `gorm:"foreignKey:CreatorID;references:ID;" json:"creator,omitempty"`
 	AssigneeID *uuid.UUID   `gorm:"type:uuid;index:idx_task_assignee;comment:执行人ID" json:"assignee_id"`
-	Assignee   *User        `gorm:"foreignKey:AssigneeID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"assignee,omitempty"`
+	Assignee   *User        `gorm:"foreignKey:AssigneeID;references:ID;" json:"assignee,omitempty"`
 	OrgID      uuid.UUID    `gorm:"type:uuid;index:idx_task_org;comment:所属组织ID" json:"org_id"`
-	Org        Organization `gorm:"foreignKey:OrgID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"org,omitempty"`
+	Org        Organization `gorm:"foreignKey:OrgID;references:ID;" json:"org,omitempty"`
 
 	// 时间
 	StartTime      *time.Time `gorm:"index:idx_task_start;comment:开始时间" json:"start_time"`
@@ -78,13 +78,13 @@ type Task struct {
 
 	// 工作流
 	WorkflowID  *uuid.UUID `gorm:"type:uuid;index:idx_task_workflow;comment:工作流ID" json:"workflow_id"`
-	Workflow    *Workflow  `gorm:"foreignKey:WorkflowID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"workflow,omitempty"`
+	Workflow    *Workflow  `gorm:"foreignKey:WorkflowID;references:ID;" json:"workflow,omitempty"`
 	CurrentStep int        `gorm:"default:0;comment:当前步骤" json:"current_step"`
 
 	// 反馈
 	Feedback    string           `gorm:"type:text;comment:反馈内容" json:"feedback"`
 	Result      string           `gorm:"type:text;comment:任务结果" json:"result"`
-	Attachments []TaskAttachment `gorm:"foreignKey:TaskID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"attachments,omitempty"`
+	Attachments []TaskAttachment `gorm:"foreignKey:TaskID;references:ID;" json:"attachments,omitempty"`
 
 	// 统计
 	Progress     int `gorm:"default:0;comment:进度百分比" json:"progress"`
@@ -100,7 +100,7 @@ type Task struct {
 type TaskAttachment struct {
 	ID         uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	TaskID     uuid.UUID      `gorm:"type:uuid;index:idx_taskatt_task;not null" json:"task_id"`
-	Task       Task           `gorm:"foreignKey:TaskID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Task       Task           `gorm:"foreignKey:TaskID;references:ID;" json:"-"`
 	Name       string         `gorm:"size:100;comment:文件名" json:"name"`
 	URL        string         `gorm:"size:500;not null;comment:文件URL" json:"url"`
 	Type       string         `gorm:"size:50;comment:文件类型" json:"type"`
@@ -114,9 +114,9 @@ type TaskAttachment struct {
 type TaskLog struct {
 	ID        uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	TaskID    uuid.UUID      `gorm:"type:uuid;index:idx_tasklog_task;not null" json:"task_id"`
-	Task      Task           `gorm:"foreignKey:TaskID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Task      Task           `gorm:"foreignKey:TaskID;references:ID;" json:"-"`
 	UserID    uuid.UUID      `gorm:"type:uuid;index:idx_tasklog_user;not null" json:"user_id"`
-	User      User           `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"user,omitempty"`
+	User      User           `gorm:"foreignKey:UserID;references:ID;" json:"user,omitempty"`
 	Action    string         `gorm:"size:50;not null;index:idx_tasklog_action;comment:操作类型" json:"action"`
 	OldStatus string         `gorm:"size:20;comment:原状态" json:"old_status"`
 	NewStatus string         `gorm:"size:20;comment:新状态" json:"new_status"`
@@ -129,9 +129,9 @@ type TaskLog struct {
 type TaskComment struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	TaskID      uuid.UUID      `gorm:"type:uuid;index:idx_taskcmt_task;not null" json:"task_id"`
-	Task        Task           `gorm:"foreignKey:TaskID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Task        Task           `gorm:"foreignKey:TaskID;references:ID;" json:"-"`
 	UserID      uuid.UUID      `gorm:"type:uuid;index:idx_taskcmt_user;not null" json:"user_id"`
-	User        User           `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"user,omitempty"`
+	User        User           `gorm:"foreignKey:UserID;references:ID;" json:"user,omitempty"`
 	Content     string         `gorm:"type:text;not null;comment:内容" json:"content"`
 	Attachments []string       `gorm:"type:jsonb;comment:附件" json:"attachments"`
 	ParentID    *uuid.UUID     `gorm:"type:uuid;index:idx_taskcmt_parent;comment:父评论ID" json:"parent_id"`

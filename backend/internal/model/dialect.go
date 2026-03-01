@@ -34,9 +34,9 @@ type Dialect struct {
 
 	// 采集人信息
 	CollectorID uuid.UUID    `gorm:"type:uuid;index:idx_dialect_collector;comment:采集人ID" json:"collector_id"`
-	Collector   User         `gorm:"foreignKey:CollectorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"collector,omitempty"`
+	Collector   User         `gorm:"foreignKey:CollectorID;references:ID;" json:"collector,omitempty"`
 	OrgID       uuid.UUID    `gorm:"type:uuid;index:idx_dialect_org;comment:所属组织ID" json:"org_id"`
-	Org         Organization `gorm:"foreignKey:OrgID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"org,omitempty"`
+	Org         Organization `gorm:"foreignKey:OrgID;references:ID;" json:"org,omitempty"`
 
 	// 采集信息
 	RecordTime *time.Time `gorm:"comment:录音时间" json:"record_time"`
@@ -60,9 +60,9 @@ type Dialect struct {
 type DialectComment struct {
 	ID         uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	DialectID  uuid.UUID      `gorm:"type:uuid;index:idx_dialectcmt_dialect;not null" json:"dialect_id"`
-	Dialect    Dialect        `gorm:"foreignKey:DialectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Dialect    Dialect        `gorm:"foreignKey:DialectID;references:ID;" json:"-"`
 	UserID     uuid.UUID      `gorm:"type:uuid;index:idx_dialectcmt_user;not null" json:"user_id"`
-	User       User           `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"user,omitempty"`
+	User       User           `gorm:"foreignKey:UserID;references:ID;" json:"user,omitempty"`
 	Content    string         `gorm:"type:text;not null;comment:内容" json:"content"`
 	ParentID   *uuid.UUID     `gorm:"type:uuid;index:idx_dialectcmt_parent;comment:父评论ID" json:"parent_id"`
 	ReplyCount int            `gorm:"default:0;comment:回复数" json:"reply_count"`
@@ -74,9 +74,9 @@ type DialectComment struct {
 type DialectLike struct {
 	ID        uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	DialectID uuid.UUID `gorm:"type:uuid;uniqueIndex:idx_dialectlike_unique;not null" json:"dialect_id"`
-	Dialect   Dialect   `gorm:"foreignKey:DialectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Dialect   Dialect   `gorm:"foreignKey:DialectID;references:ID;" json:"-"`
 	UserID    uuid.UUID `gorm:"type:uuid;uniqueIndex:idx_dialectlike_unique;not null" json:"user_id"`
-	User      User      `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	User      User      `gorm:"foreignKey:UserID;references:ID;" json:"-"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -84,9 +84,9 @@ type DialectLike struct {
 type DialectPlayLog struct {
 	ID        uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	DialectID uuid.UUID `gorm:"type:uuid;index:idx_dialectplay_dialect;not null" json:"dialect_id"`
-	Dialect   Dialect   `gorm:"foreignKey:DialectID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Dialect   Dialect   `gorm:"foreignKey:DialectID;references:ID;" json:"-"`
 	UserID    uuid.UUID `gorm:"type:uuid;index:idx_dialectplay_user;not null" json:"user_id"`
-	User      User      `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	User      User      `gorm:"foreignKey:UserID;references:ID;" json:"-"`
 	IP        string    `gorm:"size:50;comment:IP地址" json:"ip"`
 	Duration  int       `gorm:"comment:播放时长" json:"duration"`
 	CreatedAt time.Time `gorm:"index:idx_dialectplay_created" json:"created_at"`

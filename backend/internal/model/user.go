@@ -38,7 +38,7 @@ type User struct {
 	Role      string         `gorm:"size:20;default:volunteer;index:idx_user_role;comment:角色" json:"role"`
 	Status    string         `gorm:"size:20;default:active;index:idx_user_status;comment:状态" json:"status"`
 	OrgID     *uuid.UUID     `gorm:"type:uuid;index:idx_user_org;comment:所属机构ID" json:"org_id"`
-	Org       *Organization  `gorm:"foreignKey:OrgID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"org,omitempty"`
+	Org       *Organization  `gorm:"foreignKey:OrgID;references:ID;" json:"org,omitempty"`
 	LastLogin *time.Time     `gorm:"comment:最后登录时间" json:"last_login"`
 	LoginIP   string         `gorm:"size:50;comment:登录IP" json:"login_ip"`
 	CreatedAt time.Time      `gorm:"index:idx_user_created" json:"created_at"`
@@ -50,7 +50,7 @@ type User struct {
 type UserProfile struct {
 	ID               uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	UserID           uuid.UUID  `gorm:"type:uuid;uniqueIndex:idx_profile_user;not null" json:"user_id"`
-	User             User       `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	User             User       `gorm:"foreignKey:UserID;references:ID;" json:"-"`
 	Gender           string     `gorm:"size:10;comment:性别" json:"gender"`
 	BirthDate        *time.Time `gorm:"comment:出生日期" json:"birth_date"`
 	Address          string     `gorm:"size:200;comment:地址" json:"address"`

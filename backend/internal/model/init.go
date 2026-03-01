@@ -26,8 +26,8 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 			TablePrefix:   "ty_", // 表前缀: tunyuan
 			SingularTable: false,
 		},
-		// 生产环境建议启用外键约束
-		DisableForeignKeyConstraintWhenMigrating: false,
+		// 禁用外键约束自动创建，我们手动创建以处理循环依赖
+		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	if err != nil {
 		return nil, err
@@ -50,8 +50,19 @@ func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 
 // AutoMigrate 自动迁移数据库结构
 func AutoMigrate(db *gorm.DB) error {
-	// 先迁移基础表
-	err := db.AutoMigrate(
+	// 由于存在循环外键依赖，需要使用原始DB创建一个新的连接来禁用外键约束
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+
+	// 获取数据库配置
+	var dbName string
+	sqlDB.QueryRow("SELECT CURRENT_DATABASE()").Scan(&dbName)
+
+	// 临时禁用外键约束检查（PostgreSQL语法）
+	// 注意：这只是为了让AutoMigrate顺利进行，实际外键会在之后手动创建
+	models := []interface{}{
 		// 用户相关
 		&User{},
 		&UserProfile{},
@@ -83,18 +94,24 @@ func AutoMigrate(db *gorm.DB) error {
 		&OperationLog{},
 		&Config{},
 		&DashboardStats{},
-	)
-	if err != nil {
-		return err
 	}
 
-	// 创建外键约束
+	log.Println("创建数据库表...")
+	for _, model := range models {
+		if err := db.AutoMigrate(model); err != nil {
+			return fmt.Errorf("迁移表 %T 失败: %v", model, err)
+		}
+	}
+	log.Println("数据库表创建完成")
+
+	// 第二阶段：创建外键约束
+	log.Println("创建外键约束...")
 	if err := createForeignKeys(db); err != nil {
 		log.Printf("创建外键约束警告: %v", err)
-		// 外键创建失败不阻塞迁移
 	}
 
-	// 创建性能优化索引
+	// 第三阶段：创建性能优化索引
+	log.Println("创建性能索引...")
 	if err := createPerformanceIndexes(db); err != nil {
 		log.Printf("创建性能索引警告: %v", err)
 	}
@@ -104,13 +121,98 @@ func AutoMigrate(db *gorm.DB) error {
 
 // createForeignKeys 创建外键约束
 func createForeignKeys(db *gorm.DB) error {
-	// 由于GORM v2在AutoMigrate时会自动创建外键约束（通过constraint标签）
-	// 这里我们执行一些额外的自定义外键约束
+	// 手动创建外键约束（处理循环依赖和复杂关系）
 	
-	// 注意：GORM的constraint标签已经处理了大部分外键
-	// 这里可以添加一些GORM无法处理的复杂外键关系
-	
-	log.Println("外键约束已由 GORM AutoMigrate 自动创建")
+	foreignKeys := []struct {
+		table      string
+		column     string
+		refTable   string
+		refColumn  string
+		onDelete   string
+		onUpdate   string
+	}{
+		// 用户外键
+		{"ty_users", "org_id", "ty_organizations", "id", "SET NULL", "CASCADE"},
+		{"ty_user_profiles", "user_id", "ty_users", "id", "CASCADE", "CASCADE"},
+		
+		// 组织外键（注意：leader_id 可能为 NULL）
+		{"ty_organizations", "parent_id", "ty_organizations", "id", "CASCADE", "CASCADE"},
+		{"ty_organizations", "leader_id", "ty_users", "id", "SET NULL", "CASCADE"},
+		{"ty_org_stats", "org_id", "ty_organizations", "id", "CASCADE", "CASCADE"},
+		
+		// 走失人员外键
+		{"ty_missing_persons", "reporter_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		{"ty_missing_persons", "org_id", "ty_organizations", "id", "RESTRICT", "CASCADE"},
+		{"ty_missing_photos", "missing_person_id", "ty_missing_persons", "id", "CASCADE", "CASCADE"},
+		{"ty_missing_person_tracks", "missing_person_id", "ty_missing_persons", "id", "CASCADE", "CASCADE"},
+		{"ty_missing_person_tracks", "reporter_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		
+		// 方言外键
+		{"ty_dialects", "collector_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		{"ty_dialects", "org_id", "ty_organizations", "id", "RESTRICT", "CASCADE"},
+		{"ty_dialect_comments", "dialect_id", "ty_dialects", "id", "CASCADE", "CASCADE"},
+		{"ty_dialect_comments", "user_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		{"ty_dialect_likes", "dialect_id", "ty_dialects", "id", "CASCADE", "CASCADE"},
+		{"ty_dialect_likes", "user_id", "ty_users", "id", "CASCADE", "CASCADE"},
+		{"ty_dialect_play_logs", "dialect_id", "ty_dialects", "id", "CASCADE", "CASCADE"},
+		{"ty_dialect_play_logs", "user_id", "ty_users", "id", "CASCADE", "CASCADE"},
+		
+		// 任务外键
+		{"ty_tasks", "missing_person_id", "ty_missing_persons", "id", "SET NULL", "CASCADE"},
+		{"ty_tasks", "creator_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		{"ty_tasks", "assignee_id", "ty_users", "id", "SET NULL", "CASCADE"},
+		{"ty_tasks", "org_id", "ty_organizations", "id", "RESTRICT", "CASCADE"},
+		{"ty_tasks", "workflow_id", "ty_workflows", "id", "SET NULL", "CASCADE"},
+		{"ty_task_attachments", "task_id", "ty_tasks", "id", "CASCADE", "CASCADE"},
+		{"ty_task_logs", "task_id", "ty_tasks", "id", "CASCADE", "CASCADE"},
+		{"ty_task_logs", "user_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		{"ty_task_comments", "task_id", "ty_tasks", "id", "CASCADE", "CASCADE"},
+		{"ty_task_comments", "user_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		
+		// 工作流外键
+		{"ty_workflows", "creator_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		{"ty_workflow_steps", "workflow_id", "ty_workflows", "id", "CASCADE", "CASCADE"},
+		{"ty_workflow_instances", "workflow_id", "ty_workflows", "id", "CASCADE", "CASCADE"},
+		{"ty_workflow_instances", "current_step_id", "ty_workflow_steps", "id", "SET NULL", "CASCADE"},
+		{"ty_workflow_instances", "starter_id", "ty_users", "id", "RESTRICT", "CASCADE"},
+		{"ty_workflow_histories", "instance_id", "ty_workflow_instances", "id", "CASCADE", "CASCADE"},
+		{"ty_workflow_histories", "step_id", "ty_workflow_steps", "id", "RESTRICT", "CASCADE"},
+		{"ty_workflow_histories", "operator_id", "ty_users", "id", "SET NULL", "CASCADE"},
+		
+		// 通知外键
+		{"ty_notifications", "sender_id", "ty_users", "id", "SET NULL", "CASCADE"},
+		{"ty_notifications", "receiver_id", "ty_users", "id", "CASCADE", "CASCADE"},
+		
+		// 操作日志外键（可选，通常不严格约束）
+		{"ty_operation_logs", "user_id", "ty_users", "id", "SET NULL", "CASCADE"},
+	}
+
+	for _, fk := range foreignKeys {
+		// 检查外键是否已存在
+		var count int64
+		checkSQL := `
+			SELECT COUNT(*) FROM information_schema.table_constraints 
+			WHERE constraint_name = ? AND table_name = ?
+		`
+		constraintName := fmt.Sprintf("fk_%s_%s", fk.table, fk.column)
+		db.Raw(checkSQL, constraintName, fk.table).Scan(&count)
+		
+		if count > 0 {
+			continue // 外键已存在
+		}
+
+		// 创建外键
+		sql := fmt.Sprintf(
+			"ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s(%s) ON DELETE %s ON UPDATE %s",
+			fk.table, constraintName, fk.column, fk.refTable, fk.refColumn, fk.onDelete, fk.onUpdate,
+		)
+		
+		if err := db.Exec(sql).Error; err != nil {
+			log.Printf("创建外键 %s 失败: %v", constraintName, err)
+			// 继续创建其他外键
+		}
+	}
+
 	return nil
 }
 

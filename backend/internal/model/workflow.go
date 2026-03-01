@@ -33,8 +33,8 @@ type Workflow struct {
 	Version     int            `gorm:"default:1;comment:版本" json:"version"`
 	IsDefault   bool           `gorm:"default:false;comment:是否默认" json:"is_default"`
 	CreatorID   uuid.UUID      `gorm:"type:uuid;index:idx_workflow_creator;comment:创建人ID" json:"creator_id"`
-	Creator     User           `gorm:"foreignKey:CreatorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"creator,omitempty"`
-	Steps       []WorkflowStep `gorm:"foreignKey:WorkflowID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"steps,omitempty"`
+	Creator     User           `gorm:"foreignKey:CreatorID;references:ID;" json:"creator,omitempty"`
+	Steps       []WorkflowStep `gorm:"foreignKey:WorkflowID;references:ID;" json:"steps,omitempty"`
 	CreatedAt   time.Time      `gorm:"index:idx_workflow_created" json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
@@ -44,7 +44,7 @@ type Workflow struct {
 type WorkflowStep struct {
 	ID            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	WorkflowID    uuid.UUID `gorm:"type:uuid;index:idx_wfstep_workflow;not null" json:"workflow_id"`
-	Workflow      Workflow  `gorm:"foreignKey:WorkflowID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Workflow      Workflow  `gorm:"foreignKey:WorkflowID;references:ID;" json:"-"`
 	Name          string    `gorm:"size:100;not null;comment:步骤名称" json:"name"`
 	Description   string    `gorm:"type:text;comment:描述" json:"description"`
 	StepOrder     int       `gorm:"not null;index:idx_wfstep_order;comment:步骤顺序" json:"step_order"`
@@ -79,16 +79,16 @@ type WorkflowStep struct {
 type WorkflowInstance struct {
 	ID            uuid.UUID         `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	WorkflowID    uuid.UUID         `gorm:"type:uuid;index:idx_wfi_workflow;not null" json:"workflow_id"`
-	Workflow      Workflow          `gorm:"foreignKey:WorkflowID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"workflow,omitempty"`
+	Workflow      Workflow          `gorm:"foreignKey:WorkflowID;references:ID;" json:"workflow,omitempty"`
 	BusinessID    uuid.UUID         `gorm:"type:uuid;index:idx_wfi_business;not null;comment:业务ID" json:"business_id"`
 	BusinessType  string            `gorm:"size:30;index:idx_wfi_business_type;comment:业务类型" json:"business_type"`
 	Title         string            `gorm:"size:200;comment:标题" json:"title"`
 	Status        string            `gorm:"size:20;default:running;index:idx_wfi_status;comment:状态" json:"status"`
 	CurrentStepID *uuid.UUID        `gorm:"comment:当前步骤ID" json:"current_step_id"`
-	CurrentStep   *WorkflowStep     `gorm:"foreignKey:CurrentStepID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"current_step,omitempty"`
+	CurrentStep   *WorkflowStep     `gorm:"foreignKey:CurrentStepID;references:ID;" json:"current_step,omitempty"`
 	StarterID     uuid.UUID         `gorm:"type:uuid;index:idx_wfi_starter;comment:发起人ID" json:"starter_id"`
-	Starter       User              `gorm:"foreignKey:StarterID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"starter,omitempty"`
-	History       []WorkflowHistory `gorm:"foreignKey:InstanceID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"history,omitempty"`
+	Starter       User              `gorm:"foreignKey:StarterID;references:ID;" json:"starter,omitempty"`
+	History       []WorkflowHistory `gorm:"foreignKey:InstanceID;references:ID;" json:"history,omitempty"`
 	StartTime     time.Time         `json:"start_time"`
 	EndTime       *time.Time        `json:"end_time"`
 	CreatedAt     time.Time         `gorm:"index:idx_wfi_created" json:"created_at"`
@@ -99,12 +99,12 @@ type WorkflowInstance struct {
 type WorkflowHistory struct {
 	ID         uuid.UUID     `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	InstanceID uuid.UUID     `gorm:"type:uuid;index:idx_wfh_instance;not null" json:"instance_id"`
-	Instance   WorkflowInstance `gorm:"foreignKey:InstanceID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	Instance   WorkflowInstance `gorm:"foreignKey:InstanceID;references:ID;" json:"-"`
 	StepID     uuid.UUID     `gorm:"type:uuid;index:idx_wfh_step;not null" json:"step_id"`
-	Step       WorkflowStep  `gorm:"foreignKey:StepID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
+	Step       WorkflowStep  `gorm:"foreignKey:StepID;references:ID;" json:"-"`
 	StepName   string        `gorm:"size:100;comment:步骤名称" json:"step_name"`
 	OperatorID uuid.UUID     `gorm:"type:uuid;index:idx_wfh_operator;comment:操作人ID" json:"operator_id"`
-	Operator   User          `gorm:"foreignKey:OperatorID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"operator,omitempty"`
+	Operator   User          `gorm:"foreignKey:OperatorID;references:ID;" json:"operator,omitempty"`
 	Action     string        `gorm:"size:50;index:idx_wfh_action;comment:操作" json:"action"`
 	Comment    string        `gorm:"type:text;comment:意见" json:"comment"`
 	FormData   string        `gorm:"type:jsonb;comment:表单数据" json:"form_data"`

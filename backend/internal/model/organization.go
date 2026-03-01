@@ -30,10 +30,10 @@ type Organization struct {
 	Type           string          `gorm:"size:20;not null;index:idx_org_type;comment:组织类型" json:"type"`
 	Level          int             `gorm:"not null;index:idx_org_level;comment:层级(1-5)" json:"level"`
 	ParentID       *uuid.UUID      `gorm:"type:uuid;index:idx_org_parent;comment:父级ID" json:"parent_id"`
-	Parent         *Organization   `gorm:"foreignKey:ParentID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"parent,omitempty"`
+	Parent         *Organization   `gorm:"foreignKey:ParentID;references:ID;" json:"parent,omitempty"`
 	Children       []Organization  `gorm:"foreignKey:ParentID;references:ID;" json:"children,omitempty"`
 	LeaderID       *uuid.UUID      `gorm:"type:uuid;index:idx_org_leader;comment:负责人ID" json:"leader_id"`
-	Leader         *User           `gorm:"foreignKey:LeaderID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"leader,omitempty"`
+	Leader         *User           `gorm:"foreignKey:LeaderID;references:ID;" json:"leader,omitempty"`
 	Province       string          `gorm:"size:50;index:idx_org_province;comment:省" json:"province"`
 	City           string          `gorm:"size:50;index:idx_org_city;comment:市" json:"city"`
 	District       string          `gorm:"size:50;index:idx_org_district;comment:区" json:"district"`
@@ -54,9 +54,10 @@ type Organization struct {
 
 // OrgStats 组织统计
 type OrgStats struct {
-	ID               uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	OrgID            uuid.UUID `gorm:"type:uuid;uniqueIndex:idx_orgstats_org;not null" json:"org_id"`
-	Org              Organization `gorm:"foreignKey:OrgID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	ID               uuid.UUID    `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	OrgID            uuid.UUID    `gorm:"type:uuid;uniqueIndex:idx_orgstats_org;not null" json:"org_id"`
+	Org              Organization `gorm:"foreignKey:OrgID;references:ID;" json:"-"`
+
 	TotalCases       int       `gorm:"default:0;comment:总案件数" json:"total_cases"`
 	ResolvedCases    int       `gorm:"default:0;comment:已解决案件数" json:"resolved_cases"`
 	PendingCases     int       `gorm:"default:0;comment:待处理案件数" json:"pending_cases"`

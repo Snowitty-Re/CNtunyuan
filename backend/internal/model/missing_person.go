@@ -65,7 +65,7 @@ type MissingPerson struct {
 	PossibleLocation string    `gorm:"size:200;comment:可能去向" json:"possible_location"`
 
 	// 照片
-	Photos []MissingPhoto `gorm:"foreignKey:MissingPersonID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"photos,omitempty"`
+	Photos []MissingPhoto `gorm:"foreignKey:MissingPersonID;references:ID;" json:"photos,omitempty"`
 
 	// 家属信息
 	ContactName       string `gorm:"size:50;comment:联系人姓名" json:"contact_name"`
@@ -80,9 +80,9 @@ type MissingPerson struct {
 
 	// 组织关联
 	ReporterID uuid.UUID    `gorm:"type:uuid;index:idx_mp_reporter;comment:报案人ID" json:"reporter_id"`
-	Reporter   User         `gorm:"foreignKey:ReporterID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"reporter,omitempty"`
+	Reporter   User         `gorm:"foreignKey:ReporterID;references:ID;" json:"reporter,omitempty"`
 	OrgID      uuid.UUID    `gorm:"type:uuid;index:idx_mp_org;comment:所属组织ID" json:"org_id"`
-	Org        Organization `gorm:"foreignKey:OrgID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"org,omitempty"`
+	Org        Organization `gorm:"foreignKey:OrgID;references:ID;" json:"org,omitempty"`
 
 	// 结果信息
 	FoundTime     *time.Time `gorm:"comment:找到时间" json:"found_time"`
@@ -106,7 +106,7 @@ type MissingPerson struct {
 type MissingPhoto struct {
 	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	MissingPersonID uuid.UUID      `gorm:"type:uuid;index:idx_mpphoto_mp;not null" json:"missing_person_id"`
-	MissingPerson   MissingPerson  `gorm:"foreignKey:MissingPersonID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	MissingPerson   MissingPerson  `gorm:"foreignKey:MissingPersonID;references:ID;" json:"-"`
 	URL             string         `gorm:"size:500;not null;comment:图片URL" json:"url"`
 	ThumbnailURL    string         `gorm:"size:500;comment:缩略图URL" json:"thumbnail_url"`
 	Type            string         `gorm:"size:20;default:normal;index:idx_mpphoto_type;comment:图片类型(normal/reunion)" json:"type"`
@@ -120,9 +120,9 @@ type MissingPhoto struct {
 type MissingPersonTrack struct {
 	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	MissingPersonID uuid.UUID      `gorm:"type:uuid;index:idx_mptrack_mp;not null" json:"missing_person_id"`
-	MissingPerson   MissingPerson  `gorm:"foreignKey:MissingPersonID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
+	MissingPerson   MissingPerson  `gorm:"foreignKey:MissingPersonID;references:ID;" json:"-"`
 	ReporterID      uuid.UUID      `gorm:"type:uuid;index:idx_mptrack_reporter;not null" json:"reporter_id"`
-	Reporter        User           `gorm:"foreignKey:ReporterID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"reporter,omitempty"`
+	Reporter        User           `gorm:"foreignKey:ReporterID;references:ID;" json:"reporter,omitempty"`
 	TrackTime       time.Time      `gorm:"not null;index:idx_mptrack_time;comment:发现时间" json:"track_time"`
 	Location        string         `gorm:"size:200;comment:地点" json:"location"`
 	Longitude       float64        `gorm:"comment:经度" json:"longitude"`
