@@ -150,6 +150,7 @@ func main() {
 		&cfg.Storage,
 		jwtAuth,
 		rdb,
+		db,
 	)
 
 	// 创建HTTP服务器

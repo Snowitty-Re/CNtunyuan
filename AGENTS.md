@@ -309,6 +309,18 @@ VITE_API_BASE_URL=/api/v1
 ## 更新日志
 
 ### 2024-03-02
+- **完善权限控制系统**：
+  - 后端RBAC权限中间件（RequireRole/RequireAdmin/RequireManager/RequireSuperAdmin）
+  - API路由精细化权限控制
+  - 前端usePermission Hooks和PermissionGuard组件
+  - 侧边栏菜单根据角色动态显示
+  - 新增操作日志页面（仅超级管理员可见）
+  - 新增系统设置页面（仅管理员可见）
+- **操作日志审计**：
+  - 自动记录所有API请求
+  - 支持按用户、模块、操作、时间筛选
+  - 统计报表和可视化
+  - 旧日志自动清理功能
 - 完善小程序端任务管理功能（列表、详情、领取、完成）
 - 添加文件存储服务，支持本地/OSS/COS三种存储方式
 - 添加文件上传API（单文件、批量上传、删除）
@@ -335,13 +347,72 @@ VITE_API_BASE_URL=/api/v1
 - 重构数据初始化方式，支持SQL导入
 - 完善前端任务管理和工作流页面
 
+## 权限控制
+
+### 后端权限控制
+
+#### 角色层级
+- `super_admin`: 超级管理员 - 拥有所有权限
+- `admin`: 管理员 - 管理用户、组织、工作流定义
+- `manager`: 管理者 - 分配任务、审批工作流
+- `volunteer`: 志愿者 - 基本操作
+
+#### 权限中间件
+- `RequireRole(minRole)`: 需要指定角色及以上
+- `RequireAdmin()`: 需要管理员权限
+- `RequireManager()`: 需要管理者权限
+- `RequireSuperAdmin()`: 需要超级管理员权限
+
+#### API权限配置
+| 路由 | 所需权限 |
+|------|---------|
+| /api/v1/users/* | Admin |
+| /api/v1/organizations (写操作) | Admin |
+| /api/v1/missing-persons (创建/更新) | Manager |
+| /api/v1/tasks/* | 根据操作不同 |
+| /api/v1/workflows (写操作) | Admin |
+| /api/v1/operation-logs/* | SuperAdmin |
+
+### 前端权限控制
+
+#### React Hooks
+- `usePermission()`: 获取当前用户权限信息
+- `PermissionGuard`: 权限包装组件
+- `AdminOnly`: 仅管理员可见
+- `ManagerOnly`: 仅管理者可见
+- `SuperAdminOnly`: 仅超级管理员可见
+
+#### 路由权限
+- `/users`: Admin+
+- `/settings`: Admin+
+- `/logs`: SuperAdmin
+- 其他页面: 所有登录用户
+
+#### 侧边栏菜单
+根据用户角色动态显示菜单项。
+
+### 操作日志审计
+
+#### 功能
+- 自动记录所有API请求
+- 支持按用户、模块、操作、时间筛选
+- 统计报表（仅超级管理员可见）
+- 自动清理旧日志
+
+#### 字段
+- 用户ID、角色
+- 模块、操作类型
+- 请求方法、路径、参数
+- 响应状态、耗时
+- IP地址、User-Agent
+
 ## 待办事项
 
 - [x] 完善小程序端功能
 - [x] 添加文件存储服务
+- [x] 完善权限控制
+- [x] 添加操作日志审计
 - [ ] 实现数据大屏页面
 - [ ] 添加更多测试数据
-- [ ] 完善权限控制
-- [ ] 添加操作日志审计
 - [ ] 实现消息推送服务
 - [ ] 添加短信服务
