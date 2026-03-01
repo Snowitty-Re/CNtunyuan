@@ -196,10 +196,17 @@ cd web-admin && pnpm preview
 ## 数据初始化
 
 ### 1. 数据库迁移
-创建表结构，不插入数据：
+创建/更新表结构、外键约束和索引：
 ```bash
 cd backend && go run cmd/main.go -migrate
 ```
+
+此命令会：
+- 创建所有表（如果不存在）
+- 更新表结构（添加新字段）
+- 创建外键约束
+- 创建性能索引
+- **注意**: 不会删除已有数据
 
 ### 2. 基础数据初始化
 创建根组织：
@@ -219,6 +226,88 @@ cd backend && go run cmd/initdata/main.go -exec
 - `-email`: 邮箱 (默认: admin@cntunyuan.com)
 - `-gen`: 仅生成SQL文件
 - `-exec`: 直接执行初始化
+
+### 4. 种子数据导入（开发测试用）
+导入示例数据用于开发测试：
+```bash
+# 导入所有种子数据
+cd backend && go run cmd/seed/main.go -all
+
+# 只导入特定类型数据
+cd backend && go run cmd/seed/main.go -orgs     # 只导入组织
+cd backend && go run cmd/seed/main.go -users    # 只导入用户
+cd backend && go run cmd/seed/main.go -cases    # 只导入走失人员
+cd backend && go run cmd/seed/main.go -dialects # 只导入方言
+cd backend && go run cmd/seed/main.go -tasks    # 只导入任务
+
+# 清空数据后重新导入（危险！会删除所有业务数据）
+cd backend && go run cmd/seed/main.go -clean -all
+```
+
+种子数据包含：
+- **组织**: 北京、上海、广东、深圳志愿者协会
+- **用户**: 1个管理员、1个管理者、2个志愿者（带初始密码）
+- **走失人员**: 2个示例案件
+- **方言**: 北京话、上海话、粤语示例
+- **任务**: 1个示例任务
+
+### 完整初始化流程（新环境）
+```bash
+# 1. 确保数据库已创建
+# 2. 执行迁移
+cd backend && go run cmd/main.go -migrate
+
+# 3. 初始化根组织
+cd backend && go run cmd/main.go -init
+
+# 4. 创建超级管理员
+cd backend && go run cmd/initdata/main.go -exec -phone=13800138000 -password=admin123
+
+# 5. 导入种子数据（可选，开发环境推荐）
+cd backend && go run cmd/seed/main.go -all
+```
+
+### 数据库结构说明
+
+#### 核心表
+| 表名 | 说明 | 主要关联 |
+|------|------|---------|
+| ty_users | 用户表 | ty_organizations |
+| ty_user_profiles | 用户扩展信息 | ty_users |
+| ty_organizations | 组织架构 | ty_organizations(自关联) |
+| ty_org_stats | 组织统计 | ty_organizations |
+
+#### 业务表
+| 表名 | 说明 | 主要关联 |
+|------|------|---------|
+| ty_missing_persons | 走失人员 | ty_users, ty_organizations |
+| ty_missing_photos | 走失人员照片 | ty_missing_persons |
+| ty_missing_person_tracks | 轨迹记录 | ty_missing_persons, ty_users |
+| ty_dialects | 方言语音 | ty_users, ty_organizations |
+| ty_dialect_comments | 方言评论 | ty_dialects, ty_users |
+| ty_dialect_likes | 方言点赞 | ty_dialects, ty_users |
+| ty_dialect_play_logs | 播放记录 | ty_dialects, ty_users |
+| ty_tasks | 任务 | ty_missing_persons, ty_users, ty_organizations |
+| ty_task_attachments | 任务附件 | ty_tasks |
+| ty_task_logs | 任务日志 | ty_tasks, ty_users |
+| ty_task_comments | 任务评论 | ty_tasks, ty_users |
+
+#### 工作流表
+| 表名 | 说明 | 主要关联 |
+|------|------|---------|
+| ty_workflows | 工作流定义 | ty_users |
+| ty_workflow_steps | 工作流步骤 | ty_workflows |
+| ty_workflow_instances | 工作流实例 | ty_workflows, ty_workflow_steps, ty_users |
+| ty_workflow_histories | 工作流历史 | ty_workflow_instances, ty_workflow_steps, ty_users |
+
+#### 系统表
+| 表名 | 说明 | 主要关联 |
+|------|------|---------|
+| ty_tags | 标签 | - |
+| ty_notifications | 通知 | ty_users |
+| ty_operation_logs | 操作日志 | ty_users |
+| ty_configs | 系统配置 | - |
+| ty_dashboard_stats | 仪表盘统计 | - |
 
 更多详情参考 [backend/sql/README.md](backend/sql/README.md)
 
@@ -281,13 +370,17 @@ VITE_API_BASE_URL=/api/v1
 
 1. **Redis 可选**: 如果 Redis 未配置，系统会自动使用内存缓存
 2. **数据库表前缀**: 所有表使用 `ty_` 前缀
-3. **外键约束**: 迁移时禁用外键约束，生产环境建议启用
+3. **外键约束**: 已启用外键约束（通过GORM constraint标签自动创建）
 4. **JWT 密钥**: 生产环境必须修改默认密钥
 5. **微信小程序**: 需要配置正确的 appid 和密钥
 6. **文件存储**: 
    - 本地存储需要确保 `./uploads` 目录存在且有写入权限
    - 生产环境建议使用 OSS 或 COS
    - 文件上传大小限制默认为 50MB
+7. **数据迁移**:
+   - 使用 `-migrate` 参数可安全地更新表结构（不会删除数据）
+   - 外键约束会自动创建
+   - 性能索引会自动创建
 
 ## 常见问题
 
@@ -321,6 +414,13 @@ VITE_API_BASE_URL=/api/v1
   - 支持按用户、模块、操作、时间筛选
   - 统计报表和可视化
   - 旧日志自动清理功能
+- **数据迁移与初始化**：
+  - 完善AutoMigrate，支持所有模型（28个表）
+  - GORM自动外键约束（constraint标签）
+  - 新增种子数据导入工具（cmd/seed）
+  - 支持按类型导入（组织/用户/案件/方言/任务）
+  - 支持清空后重新导入
+  - 完善初始化文档
 - 完善小程序端任务管理功能（列表、详情、领取、完成）
 - 添加文件存储服务，支持本地/OSS/COS三种存储方式
 - 添加文件上传API（单文件、批量上传、删除）

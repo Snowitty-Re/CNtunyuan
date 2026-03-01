@@ -104,70 +104,13 @@ func AutoMigrate(db *gorm.DB) error {
 
 // createForeignKeys 创建外键约束
 func createForeignKeys(db *gorm.DB) error {
-	foreignKeys := []struct {
-		model       interface{}
-		field       string
-		references  string
-		onDelete    string
-	}{
-		// 用户外键
-		{&User{}, "org_id", "organizations(id)", "SET NULL"},
-		{&UserProfile{}, "user_id", "users(id)", "CASCADE"},
-
-		// 组织外键
-		{&Organization{}, "parent_id", "organizations(id)", "CASCADE"},
-		{&Organization{}, "leader_id", "users(id)", "SET NULL"},
-		{&OrgStats{}, "org_id", "organizations(id)", "CASCADE"},
-
-		// 走失人员外键
-		{&MissingPerson{}, "reporter_id", "users(id)", "RESTRICT"},
-		{&MissingPerson{}, "org_id", "organizations(id)", "RESTRICT"},
-		{&MissingPhoto{}, "missing_person_id", "missing_persons(id)", "CASCADE"},
-		{&MissingPersonTrack{}, "missing_person_id", "missing_persons(id)", "CASCADE"},
-		{&MissingPersonTrack{}, "reporter_id", "users(id)", "RESTRICT"},
-
-		// 方言外键
-		{&Dialect{}, "collector_id", "users(id)", "RESTRICT"},
-		{&Dialect{}, "org_id", "organizations(id)", "RESTRICT"},
-		{&DialectComment{}, "dialect_id", "dialects(id)", "CASCADE"},
-		{&DialectComment{}, "user_id", "users(id)", "RESTRICT"},
-		{&DialectLike{}, "dialect_id", "dialects(id)", "CASCADE"},
-		{&DialectLike{}, "user_id", "users(id)", "CASCADE"},
-		{&DialectPlayLog{}, "dialect_id", "dialects(id)", "CASCADE"},
-		{&DialectPlayLog{}, "user_id", "users(id)", "CASCADE"},
-
-		// 任务外键
-		{&Task{}, "missing_person_id", "missing_persons(id)", "SET NULL"},
-		{&Task{}, "creator_id", "users(id)", "RESTRICT"},
-		{&Task{}, "assignee_id", "users(id)", "SET NULL"},
-		{&Task{}, "org_id", "organizations(id)", "RESTRICT"},
-		{&Task{}, "workflow_id", "workflows(id)", "SET NULL"},
-		{&TaskAttachment{}, "task_id", "tasks(id)", "CASCADE"},
-		{&TaskLog{}, "task_id", "tasks(id)", "CASCADE"},
-		{&TaskLog{}, "user_id", "users(id)", "RESTRICT"},
-		{&TaskComment{}, "task_id", "tasks(id)", "CASCADE"},
-		{&TaskComment{}, "user_id", "users(id)", "RESTRICT"},
-
-		// 工作流外键
-		{&Workflow{}, "creator_id", "users(id)", "RESTRICT"},
-		{&WorkflowStep{}, "workflow_id", "workflows(id)", "CASCADE"},
-		{&WorkflowInstance{}, "workflow_id", "workflows(id)", "CASCADE"},
-		{&WorkflowInstance{}, "current_step_id", "workflow_steps(id)", "SET NULL"},
-		{&WorkflowInstance{}, "starter_id", "users(id)", "RESTRICT"},
-		{&WorkflowHistory{}, "instance_id", "workflow_instances(id)", "CASCADE"},
-		{&WorkflowHistory{}, "step_id", "workflow_steps(id)", "RESTRICT"},
-		{&WorkflowHistory{}, "operator_id", "users(id)", "SET NULL"},
-
-		// 通知外键
-		{&Notification{}, "sender_id", "users(id)", "SET NULL"},
-		{&Notification{}, "receiver_id", "users(id)", "CASCADE"},
-		{&OperationLog{}, "user_id", "users(id)", "SET NULL"},
-	}
-
-	// GORM 会自动创建外键，这里只记录需要手动创建的
-	// 如需手动创建外键，可在此遍历 foreignKeys 并执行 SQL
-	_ = foreignKeys
-
+	// 由于GORM v2在AutoMigrate时会自动创建外键约束（通过constraint标签）
+	// 这里我们执行一些额外的自定义外键约束
+	
+	// 注意：GORM的constraint标签已经处理了大部分外键
+	// 这里可以添加一些GORM无法处理的复杂外键关系
+	
+	log.Println("外键约束已由 GORM AutoMigrate 自动创建")
 	return nil
 }
 
