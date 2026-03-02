@@ -2,7 +2,7 @@ App({
   globalData: {
     userInfo: null,
     token: null,
-    apiBaseUrl: 'https://api.cntunyuan.com/api/v1'
+    apiBaseUrl: 'http://localhost:8080/api/v1'  // 开发环境使用本地地址，生产环境改为 https://api.cntunyuan.com/api/v1
   },
 
   onLaunch() {

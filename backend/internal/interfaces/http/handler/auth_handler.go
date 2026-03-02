@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"net/http"
+
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/valueobject"
+	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	"github.com/gin-gonic/gin"
@@ -11,12 +14,21 @@ import (
 
 // AuthHandler auth handler
 type AuthHandler struct {
-	authService *service.AuthService
+	authService    *service.AuthService
+	authMiddleware *middleware.AuthMiddleware
 }
 
 // NewAuthHandler create auth handler
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService *service.AuthService, authMiddleware *middleware.AuthMiddleware) *AuthHandler {
+	return &AuthHandler{
+		authService:    authService,
+		authMiddleware: authMiddleware,
+	}
+}
+
+// WechatLoginRequest WeChat mini-program login request
+type WechatLoginRequest struct {
+	Code string `json:"code" binding:"required"`
 }
 
 // RegisterRoutes register routes
@@ -27,6 +39,10 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 		auth.POST("/admin-login", h.AdminLogin)
 		auth.POST("/refresh", h.RefreshToken)
 		auth.POST("/logout", h.Logout)
+		auth.POST("/wechat-login", h.WechatLogin)
+
+		// Protected routes
+		auth.GET("/me", h.authMiddleware.Required(), h.GetCurrentUser)
 	}
 }
 
@@ -116,4 +132,56 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	response.Success(c, nil)
+}
+
+// GetCurrentUser get current user info
+func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	if userID == "" {
+		response.Unauthorized(c, "please login first")
+		return
+	}
+
+	user, err := h.authService.GetCurrentUser(c.Request.Context(), userID)
+	if err != nil {
+		logger.Warn("Get current user failed", logger.String("user_id", userID), logger.Err(err))
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	response.Success(c, dto.ToUserResponse(user))
+}
+
+// WechatLogin WeChat mini-program login (stub)
+func (h *AuthHandler) WechatLogin(c *gin.Context) {
+	var req WechatLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	// TODO: Implement real WeChat login with app credentials
+	// This is a stub that returns a mock token for development
+	logger.Info("WeChat login stub called", logger.String("code", req.Code))
+
+	// Return mock response for development
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "WeChat login stub - implement with real WeChat API",
+		"data": gin.H{
+			"access_token":  "mock_access_token_for_wechat_login",
+			"refresh_token": "mock_refresh_token_for_wechat_login",
+			"expires_in":    7200,
+			"token_type":    "Bearer",
+			"user": gin.H{
+				"id":        "wechat_user_001",
+				"nickname":  "微信用户",
+				"phone":     "",
+				"role":      "volunteer",
+				"status":    "active",
+				"avatar":    "",
+				"created_at": "2024-01-01T00:00:00Z",
+			},
+		},
+	})
 }

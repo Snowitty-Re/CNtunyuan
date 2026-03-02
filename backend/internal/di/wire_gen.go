@@ -109,8 +109,11 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		fileRepo,
 	)
 
+	// 创建 Middleware
+	authMiddleware := middleware.NewAuthMiddleware(authService)
+
 	// 创建 HTTP Handler
-	authHandler := handler.NewAuthHandler(authService)
+	authHandler := handler.NewAuthHandler(authService, authMiddleware)
 	userHandler := handler.NewUserHandler(userService)
 	orgHandler := handler.NewOrganizationHandler(orgService)
 	mpHandler := handler.NewMissingPersonHandler(mpService)
@@ -118,7 +121,6 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	taskHandler := handler.NewTaskHandler(taskService)
 	uploadHandler := handler.NewUploadHandler(fileService)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
-	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	// 创建路由
 	r := router.NewRouter(
