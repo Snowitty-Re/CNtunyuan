@@ -60,6 +60,11 @@ func main() {
 
 // runMigration 执行数据库迁移
 func runMigration(cfg *config.Config) error {
+	// 首先尝试创建数据库（如果不存在）
+	if err := database.CreateDatabaseIfNotExists(&cfg.Database); err != nil {
+		logger.Warn("Failed to create database, will try to connect directly", logger.Err(err))
+	}
+
 	db, err := database.NewDatabase(&cfg.Database)
 	if err != nil {
 		return fmt.Errorf("failed to connect database: %w", err)

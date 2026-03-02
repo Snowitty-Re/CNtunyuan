@@ -14,6 +14,46 @@ import (
 	"gorm.io/gorm/schema"
 )
 
+// CreateDatabaseIfNotExists 如果数据库不存在则创建
+func CreateDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
+	// 连接到 postgres 数据库（不指定具体数据库）
+	dsn := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s client_encoding=UTF8",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.SSLMode,
+	)
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: &gormLogger{},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to connect to postgres: %w", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get sql.DB: %w", err)
+	}
+	defer sqlDB.Close()
+
+	// 检查数据库是否存在
+	var exists bool
+	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '%s')", cfg.Database)
+	if err := db.Raw(query).Scan(&exists).Error; err != nil {
+		return fmt.Errorf("failed to check database exists: %w", err)
+	}
+
+	if !exists {
+		logger.Info("Database does not exist, creating...", logger.String("database", cfg.Database))
+		createSQL := fmt.Sprintf("CREATE DATABASE \"%s\" WITH ENCODING = 'UTF8'", cfg.Database)
+		if err := db.Exec(createSQL).Error; err != nil {
+			return fmt.Errorf("failed to create database: %w", err)
+		}
+		logger.Info("Database created successfully", logger.String("database", cfg.Database))
+	}
+
+	return nil
+}
+
 // DB 数据库连接管理器
 type DB struct {
 	*gorm.DB

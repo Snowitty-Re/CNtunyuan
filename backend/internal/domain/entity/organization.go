@@ -45,7 +45,7 @@ type Organization struct {
 	SortOrder   int        `gorm:"default:0" json:"sort_order"`
 	Parent      *Organization `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
 	Children    []Organization `gorm:"foreignKey:ParentID" json:"children,omitempty"`
-	Stats       *OrgStats      `json:"stats,omitempty"`
+	Stats       *OrgStats      `gorm:"-" json:"stats,omitempty"`
 }
 
 // TableName 表名
