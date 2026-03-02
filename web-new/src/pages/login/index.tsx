@@ -40,11 +40,16 @@ export default function LoginPage() {
         password: values.password,
       });
 
-      if (res.token) {
+      console.log('登录响应:', res); // 调试日志
+
+      if (res && res.token) {
         setToken(res.token, res.refresh_token || '');
         setUser(res.user);
         message.success('登录成功');
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
+      } else {
+        console.error('登录响应缺少token:', res);
+        message.error('登录响应数据异常');
       }
     } catch (error) {
       console.error('登录失败:', error);
