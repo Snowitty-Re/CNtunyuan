@@ -6,47 +6,45 @@ import (
 	"log"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
-	"github.com/Snowitty-Re/CNtunyuan/internal/model"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
+	infraRepo "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func main() {
 	var (
-		phone    = flag.String("phone", "13800138000", "用户手机号")
-		password = flag.String("password", "admin123", "新密码")
+		phone    = flag.String("phone", "13800138000", "user phone")
+		password = flag.String("password", "admin123", "new password")
 	)
 	flag.Parse()
 
-	// 加载配置
 	cfg, err := config.LoadConfig("config/config.yaml")
 	if err != nil {
-		log.Fatalf("加载配置失败: %v", err)
+		log.Fatalf("Load config failed: %v", err)
 	}
 
-	// 连接数据库
-	db, err := model.InitDB(&cfg.Database)
+	db, err := database.NewDatabase(&cfg.Database)
 	if err != nil {
-		log.Fatalf("连接数据库失败: %v", err)
+		log.Fatalf("Connect database failed: %v", err)
 	}
 
-	// 查找用户
-	var user model.User
-	if err := db.Where("phone = ?", *phone).First(&user).Error; err != nil {
-		log.Fatalf("用户不存在: %v", err)
+	userRepo := infraRepo.NewUserRepository(db)
+
+	user, err := userRepo.FindByPhone(nil, *phone)
+	if err != nil {
+		log.Fatalf("User not found: %v", err)
 	}
 
-	// 生成密码哈希
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(*password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Fatalf("密码加密失败: %v", err)
+		log.Fatalf("Hash password failed: %v", err)
 	}
 
-	// 更新密码
-	if err := db.Model(&user).Update("password", string(passwordHash)).Error; err != nil {
-		log.Fatalf("更新密码失败: %v", err)
+	if err := userRepo.UpdatePassword(nil, user.ID, string(passwordHash)); err != nil {
+		log.Fatalf("Update password failed: %v", err)
 	}
 
-	fmt.Printf("密码重置成功！\n")
-	fmt.Printf("手机号: %s\n", user.Phone)
-	fmt.Printf("新密码: %s\n", *password)
+	fmt.Printf("Password reset success!\n")
+	fmt.Printf("Phone: %s\n", user.Phone)
+	fmt.Printf("New Password: %s\n", *password)
 }
