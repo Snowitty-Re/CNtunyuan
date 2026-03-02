@@ -8,16 +8,24 @@ import (
 
 // Router 路由管理器
 type Router struct {
-	engine         *gin.Engine
-	authHandler    *handler.AuthHandler
-	userHandler    *handler.UserHandler
-	authMiddleware *middleware.AuthMiddleware
+	engine              *gin.Engine
+	authHandler         *handler.AuthHandler
+	userHandler         *handler.UserHandler
+	organizationHandler *handler.OrganizationHandler
+	missingPersonHandler *handler.MissingPersonHandler
+	dialectHandler      *handler.DialectHandler
+	taskHandler         *handler.TaskHandler
+	authMiddleware      *middleware.AuthMiddleware
 }
 
 // NewRouter 创建路由管理器
 func NewRouter(
 	authHandler *handler.AuthHandler,
 	userHandler *handler.UserHandler,
+	organizationHandler *handler.OrganizationHandler,
+	missingPersonHandler *handler.MissingPersonHandler,
+	dialectHandler *handler.DialectHandler,
+	taskHandler *handler.TaskHandler,
 	authMiddleware *middleware.AuthMiddleware,
 ) *Router {
 	engine := gin.New()
@@ -28,10 +36,14 @@ func NewRouter(
 	engine.Use(middleware.RequestLoggerMiddleware())
 
 	return &Router{
-		engine:         engine,
-		authHandler:    authHandler,
-		userHandler:    userHandler,
-		authMiddleware: authMiddleware,
+		engine:              engine,
+		authHandler:         authHandler,
+		userHandler:         userHandler,
+		organizationHandler: organizationHandler,
+		missingPersonHandler: missingPersonHandler,
+		dialectHandler:      dialectHandler,
+		taskHandler:         taskHandler,
+		authMiddleware:      authMiddleware,
 	}
 }
 
@@ -46,10 +58,14 @@ func (r *Router) Setup() {
 	// 注册各个模块路由
 	r.authHandler.RegisterRoutes(api)
 	r.userHandler.RegisterRoutes(api, r.authMiddleware)
+	r.organizationHandler.RegisterRoutes(api, r.authMiddleware)
+	r.missingPersonHandler.RegisterRoutes(api, r.authMiddleware)
+	r.dialectHandler.RegisterRoutes(api, r.authMiddleware)
+	r.taskHandler.RegisterRoutes(api, r.authMiddleware)
 
 	// 404 处理
 	r.engine.NoRoute(func(c *gin.Context) {
-		c.JSON(404, gin.H{"code": 404, "message": "路由不存在"})
+		c.JSON(404, gin.H{"code": 404, "message": "route not found"})
 	})
 }
 

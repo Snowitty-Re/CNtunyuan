@@ -7,7 +7,6 @@ import (
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/di"
-	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/router"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 )
 
@@ -47,17 +46,10 @@ func main() {
 		return
 	}
 
-	r := router.NewRouter(
-		container.AuthHandler,
-		container.UserHandler,
-		container.AuthMiddleware,
-	)
-	r.Setup()
-
 	addr := fmt.Sprintf(":%s", cfg.Server.Port)
 	logger.Info("Server starting", logger.String("address", addr))
 
-	if err := r.GetEngine().Run(addr); err != nil {
+	if err := container.Router.GetEngine().Run(addr); err != nil {
 		logger.Fatal("Server start failed", logger.Err(err))
 	}
 }

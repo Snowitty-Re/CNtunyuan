@@ -123,6 +123,11 @@ func (t *Task) CanStart() bool {
 	return t.Status == TaskStatusAssigned
 }
 
+// CanUpdate 是否可以更新
+func (t *Task) CanUpdate() bool {
+	return t.Status != TaskStatusCompleted && t.Status != TaskStatusCancelled
+}
+
 // CanComplete 是否可以完成
 func (t *Task) CanComplete() bool {
 	return t.Status == TaskStatusProcessing || t.Status == TaskStatusAssigned

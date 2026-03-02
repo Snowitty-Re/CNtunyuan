@@ -15,22 +15,32 @@ import (
 	infraRepo "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/repository"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
+	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/router"
 	"gorm.io/gorm"
 )
 
 // Container dependency container
 type Container struct {
-	Config         *config.Config
-	DB             *gorm.DB
-	Cache          cache.Cache
-	AuthService    *domainService.AuthService
-	UserService    *service.UserAppService
-	UserHandler    *handler.UserHandler
-	AuthHandler    *handler.AuthHandler
-	AuthMiddleware *middleware.AuthMiddleware
+	Config               *config.Config
+	DB                   *gorm.DB
+	Cache                cache.Cache
+	AuthService          *domainService.AuthService
+	UserService          *service.UserAppService
+	OrganizationService  *service.OrganizationAppService
+	MissingPersonService *service.MissingPersonAppService
+	DialectService       *service.DialectAppService
+	TaskService          *service.TaskAppService
+	AuthHandler          *handler.AuthHandler
+	UserHandler          *handler.UserHandler
+	OrganizationHandler  *handler.OrganizationHandler
+	MissingPersonHandler *handler.MissingPersonHandler
+	DialectHandler       *handler.DialectHandler
+	TaskHandler          *handler.TaskHandler
+	AuthMiddleware       *middleware.AuthMiddleware
+	Router               *router.Router
 }
 
-// NewContainer 手动创建依赖容器（在没有 Wire 生成代码时使用）
+// NewContainer 手动创建依赖容器
 func NewContainer(cfg *config.Config) (*Container, error) {
 	// 创建数据库连接
 	db, err := database.NewDatabase(&cfg.Database)
@@ -41,7 +51,6 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	// 创建缓存
 	redisCache, err := cache.NewRedis(&cfg.Redis)
 	if err != nil {
-		// 缓存失败不阻止服务启动
 		redisCache = nil
 	}
 
@@ -50,26 +59,59 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 
 	// 创建仓储
 	userRepo := infraRepo.NewUserRepository(db)
+	orgRepo := infraRepo.NewOrganizationRepository(db)
+	mpRepo := infraRepo.NewMissingPersonRepository(db)
+	dialectRepo := infraRepo.NewDialectRepository(db)
+	taskRepo := infraRepo.NewTaskRepository(db)
 
 	// 创建领域服务
 	authService := domainService.NewAuthService(userRepo, tokenService, redisCache)
 
 	// 创建应用服务
-	userAppService := service.NewUserAppService(userRepo)
+	userService := service.NewUserAppService(userRepo)
+	orgService := service.NewOrganizationAppService(orgRepo)
+	mpService := service.NewMissingPersonAppService(mpRepo)
+	dialectService := service.NewDialectAppService(dialectRepo)
+	taskService := service.NewTaskAppService(taskRepo)
 
 	// 创建 HTTP Handler
 	authHandler := handler.NewAuthHandler(authService)
-	userHandler := handler.NewUserHandler(userAppService)
+	userHandler := handler.NewUserHandler(userService)
+	orgHandler := handler.NewOrganizationHandler(orgService)
+	mpHandler := handler.NewMissingPersonHandler(mpService)
+	dialectHandler := handler.NewDialectHandler(dialectService)
+	taskHandler := handler.NewTaskHandler(taskService)
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
+	// 创建路由
+	r := router.NewRouter(
+		authHandler,
+		userHandler,
+		orgHandler,
+		mpHandler,
+		dialectHandler,
+		taskHandler,
+		authMiddleware,
+	)
+	r.Setup()
+
 	return &Container{
-		Config:         cfg,
-		DB:             db,
-		Cache:          redisCache,
-		AuthService:    authService,
-		UserService:    userAppService,
-		UserHandler:    userHandler,
-		AuthHandler:    authHandler,
-		AuthMiddleware: authMiddleware,
+		Config:               cfg,
+		DB:                   db,
+		Cache:                redisCache,
+		AuthService:          authService,
+		UserService:          userService,
+		OrganizationService:  orgService,
+		MissingPersonService: mpService,
+		DialectService:       dialectService,
+		TaskService:          taskService,
+		AuthHandler:          authHandler,
+		UserHandler:          userHandler,
+		OrganizationHandler:  orgHandler,
+		MissingPersonHandler: mpHandler,
+		DialectHandler:       dialectHandler,
+		TaskHandler:          taskHandler,
+		AuthMiddleware:       authMiddleware,
+		Router:               r,
 	}, nil
 }

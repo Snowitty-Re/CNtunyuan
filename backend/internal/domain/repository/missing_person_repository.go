@@ -42,6 +42,9 @@ type MissingPersonRepository interface {
 
 	// CountByDateRange 按日期范围统计
 	CountByDateRange(ctx context.Context, start, end string) (int64, error)
+
+	// IncrementViews 增加浏览次数
+	IncrementViews(ctx context.Context, id string) error
 }
 
 // MissingPersonQuery 走失人员查询参数
