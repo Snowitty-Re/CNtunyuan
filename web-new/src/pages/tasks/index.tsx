@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Card, Button, Tag, Dropdown, Modal, Progress, message } from 'antd';
+import { Table, Card, Button, Tag, Dropdown, Modal, Progress, message, Select, Space } from 'antd';
 import { PlusOutlined, MoreOutlined, EyeOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import type { Task } from '@/types';
 import { http } from '@/utils/request';
 import { usePermission } from '@/utils/permission';
+import dayjs from 'dayjs';
 
 export default function TasksPage() {
   const navigate = useNavigate();
   const { isManager } = usePermission();
   const [data, setData] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -19,7 +22,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.current, pagination.pageSize]);
+  }, [pagination.current, pagination.pageSize, statusFilter, priorityFilter]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -28,6 +31,8 @@ export default function TasksPage() {
         params: {
           page: pagination.current,
           page_size: pagination.pageSize,
+          status: statusFilter || undefined,
+          priority: priorityFilter || undefined,
         },
       });
       setData(res.list || []);
@@ -85,7 +90,7 @@ export default function TasksPage() {
       render: (text: string, record: Task) => (
         <div>
           <div style={{ fontWeight: 500, color: '#1f2329' }}>{text}</div>
-          <div style={{ color: '#8f959e', fontSize: 13 }}>{record.task_no}</div>
+          <div style={{ color: '#8f959e', fontSize: 12 }}>{record.task_no}</div>
         </div>
       ),
     },
@@ -104,7 +109,7 @@ export default function TasksPage() {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 90,
+      width: 100,
       render: (status: string) => (
         <Tag color={getStatusColor(status)} style={{ fontSize: 13 }}>
           {getStatusLabel(status)}
@@ -122,7 +127,7 @@ export default function TasksPage() {
       title: '进度',
       dataIndex: 'progress',
       key: 'progress',
-      width: 120,
+      width: 150,
       render: (progress: number) => (
         <Progress percent={progress} size="small" strokeColor="#e67e22" trailColor="#f0f0f0" />
       ),
@@ -134,8 +139,8 @@ export default function TasksPage() {
       width: 160,
       render: (deadline: string) =>
         deadline ? (
-          <span style={{ color: '#646a73' }}>
-            {new Date(deadline).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+          <span style={{ color: dayjs(deadline).isBefore(dayjs()) ? '#f5222d' : '#646a73' }}>
+            {dayjs(deadline).format('MM-DD HH:mm')}
           </span>
         ) : '无',
     },
@@ -203,6 +208,33 @@ export default function TasksPage() {
       }
       bordered={false}
     >
+      <Space style={{ marginBottom: 16 }}>
+        <Select
+          placeholder="筛选状态"
+          value={statusFilter || undefined}
+          onChange={setStatusFilter}
+          style={{ width: 140 }}
+          allowClear
+        >
+          <Select.Option value="pending">待分配</Select.Option>
+          <Select.Option value="assigned">已分配</Select.Option>
+          <Select.Option value="processing">进行中</Select.Option>
+          <Select.Option value="completed">已完成</Select.Option>
+        </Select>
+        <Select
+          placeholder="筛选优先级"
+          value={priorityFilter || undefined}
+          onChange={setPriorityFilter}
+          style={{ width: 140 }}
+          allowClear
+        >
+          <Select.Option value="urgent">紧急</Select.Option>
+          <Select.Option value="high">高</Select.Option>
+          <Select.Option value="normal">普通</Select.Option>
+          <Select.Option value="low">低</Select.Option>
+        </Select>
+      </Space>
+
       <Table
         columns={columns}
         dataSource={data}

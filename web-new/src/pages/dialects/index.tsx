@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Card, Button, Input, Tag, Space, Avatar, Dropdown, Modal, message } from 'antd';
-import { PlusOutlined, MoreOutlined, EyeOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, SoundOutlined } from '@ant-design/icons';
+import { PlusOutlined, MoreOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, SoundOutlined } from '@ant-design/icons';
 import type { Dialect } from '@/types';
 import { http } from '@/utils/request';
 import { usePermission } from '@/utils/permission';
@@ -158,12 +158,6 @@ export default function DialectsPage() {
                 icon: <PlayCircleOutlined />,
                 label: '播放',
                 onClick: () => window.open(record.audio_url, '_blank'),
-              },
-              {
-                key: 'view',
-                icon: <EyeOutlined />,
-                label: '查看详情',
-                onClick: () => navigate(`/dialects/${record.id}`),
               },
               ...(isManager
                 ? [

@@ -12,6 +12,7 @@ export interface User {
   org?: Organization;
   last_login?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface UserProfile {

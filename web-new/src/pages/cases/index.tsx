@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Card, Button, Input, Tag, Space, Avatar, Dropdown, Modal, message } from 'antd';
+import { Table, Card, Button, Input, Tag, Space, Avatar, Dropdown, Modal, message, Select } from 'antd';
 import { PlusOutlined, MoreOutlined, EyeOutlined, EditOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
 import type { MissingPerson } from '@/types';
 import { http } from '@/utils/request';
 import { usePermission } from '@/utils/permission';
+import dayjs from 'dayjs';
 
 export default function CasesPage() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export default function CasesPage() {
   const [data, setData] = useState<MissingPerson[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -20,7 +22,7 @@ export default function CasesPage() {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.current, pagination.pageSize]);
+  }, [pagination.current, pagination.pageSize, statusFilter]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -30,6 +32,7 @@ export default function CasesPage() {
           page: pagination.current,
           page_size: pagination.pageSize,
           keyword: searchText || undefined,
+          status: statusFilter || undefined,
         },
       });
       setData(res.list || []);
@@ -80,7 +83,7 @@ export default function CasesPage() {
           />
           <div>
             <div style={{ fontWeight: 500, color: '#1f2329' }}>{record.name}</div>
-            <div style={{ color: '#8f959e', fontSize: 13 }}>{record.case_no}</div>
+            <div style={{ color: '#8f959e', fontSize: 12 }}>{record.case_no}</div>
           </div>
         </Space>
       ),
@@ -119,7 +122,7 @@ export default function CasesPage() {
       dataIndex: 'missing_time',
       key: 'missing_time',
       render: (time: string) =>
-        time ? new Date(time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-',
+        time ? dayjs(time).format('MM-DD HH:mm') : '-',
     },
     {
       title: '走失地点',
@@ -185,16 +188,29 @@ export default function CasesPage() {
       }
       bordered={false}
     >
-      <div style={{ marginBottom: 16 }}>
+      <Space style={{ marginBottom: 16 }}>
         <Input.Search
           placeholder="搜索姓名、案件编号"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           onSearch={handleSearch}
-          style={{ width: 300 }}
+          style={{ width: 280 }}
           allowClear
         />
-      </div>
+        <Select
+          placeholder="筛选状态"
+          value={statusFilter || undefined}
+          onChange={setStatusFilter}
+          style={{ width: 140 }}
+          allowClear
+        >
+          <Select.Option value="missing">失踪中</Select.Option>
+          <Select.Option value="searching">寻找中</Select.Option>
+          <Select.Option value="found">已找到</Select.Option>
+          <Select.Option value="reunited">已团圆</Select.Option>
+          <Select.Option value="closed">已结案</Select.Option>
+        </Select>
+      </Space>
 
       <Table
         columns={columns}

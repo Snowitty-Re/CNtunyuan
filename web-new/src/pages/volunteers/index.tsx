@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Card, Button, Input, Tag, Space, Avatar, Dropdown, Modal, message } from 'antd';
+import { Table, Card, Button, Input, Tag, Space, Avatar, Dropdown, Modal, message, Select } from 'antd';
 import { PlusOutlined, MoreOutlined, EyeOutlined, EditOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
 import type { User } from '@/types';
 import { http } from '@/utils/request';
 import { usePermission } from '@/utils/permission';
+import dayjs from 'dayjs';
 
 export default function VolunteersPage() {
   const navigate = useNavigate();
@@ -12,6 +13,8 @@ export default function VolunteersPage() {
   const [data, setData] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -20,7 +23,7 @@ export default function VolunteersPage() {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.current, pagination.pageSize]);
+  }, [pagination.current, pagination.pageSize, roleFilter, statusFilter]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -30,6 +33,8 @@ export default function VolunteersPage() {
           page: pagination.current,
           page_size: pagination.pageSize,
           keyword: searchText || undefined,
+          role: roleFilter || undefined,
+          status: statusFilter || undefined,
         },
       });
       setData(res.list || []);
@@ -80,7 +85,7 @@ export default function VolunteersPage() {
           />
           <div>
             <div style={{ fontWeight: 500, color: '#1f2329' }}>{record.nickname}</div>
-            <div style={{ color: '#8f959e', fontSize: 13 }}>{record.real_name || '-'}</div>
+            <div style={{ color: '#8f959e', fontSize: 12 }}>{record.real_name || '-'}</div>
           </div>
         </Space>
       ),
@@ -124,11 +129,7 @@ export default function VolunteersPage() {
       dataIndex: 'last_login',
       key: 'last_login',
       render: (time: string) =>
-        time ? (
-          <span style={{ color: '#646a73' }}>
-            {new Date(time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-          </span>
-        ) : '从未登录',
+        time ? dayjs(time).format('MM-DD HH:mm') : '从未登录',
     },
     {
       title: '操作',
@@ -187,16 +188,38 @@ export default function VolunteersPage() {
       }
       bordered={false}
     >
-      <div style={{ marginBottom: 16 }}>
+      <Space style={{ marginBottom: 16 }}>
         <Input.Search
           placeholder="搜索姓名、手机号"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           onSearch={handleSearch}
-          style={{ width: 300 }}
+          style={{ width: 280 }}
           allowClear
         />
-      </div>
+        <Select
+          placeholder="筛选角色"
+          value={roleFilter || undefined}
+          onChange={setRoleFilter}
+          style={{ width: 140 }}
+          allowClear
+        >
+          <Select.Option value="super_admin">超级管理员</Select.Option>
+          <Select.Option value="admin">管理员</Select.Option>
+          <Select.Option value="manager">组织者</Select.Option>
+          <Select.Option value="volunteer">志愿者</Select.Option>
+        </Select>
+        <Select
+          placeholder="筛选状态"
+          value={statusFilter || undefined}
+          onChange={setStatusFilter}
+          style={{ width: 120 }}
+          allowClear
+        >
+          <Select.Option value="active">正常</Select.Option>
+          <Select.Option value="inactive">禁用</Select.Option>
+        </Select>
+      </Space>
 
       <Table
         columns={columns}
