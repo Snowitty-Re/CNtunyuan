@@ -4,25 +4,39 @@
 
 | 文件名 | 说明 |
 |--------|------|
-| `init_database.sql` | 数据库初始化脚本（创建数据库、扩展） |
+| `create_database.sql` | 创建数据库脚本（需在 postgres 数据库执行） |
+| `init_database.sql` | 初始化扩展脚本（需在 cntunyuan 数据库执行） |
 | `create_tables.sql` | 表结构创建脚本 |
 
 ## 使用说明
 
 ### 1. 创建数据库（首次安装）
 
+**方式一：使用脚本创建**
+
+```bash
+# 创建数据库（在 postgres 数据库中执行）
+psql -U postgres -f backend/sql/create_database.sql
+
+# 初始化扩展（在 cntunyuan 数据库中执行）
+psql -U postgres -d cntunyuan -f backend/sql/init_database.sql
+```
+
+**方式二：手动执行**
+
 ```bash
 # 连接到 postgres 数据库
 psql -U postgres
 
-# 执行初始化脚本（创建数据库和扩展）
-\i backend/sql/init_database.sql
+# 创建数据库
+CREATE DATABASE cntunyuan WITH ENCODING = 'UTF8';
 
-# 或者手动创建数据库
-CREATE DATABASE cntunyuan WITH 
-    ENCODING = 'UTF8' 
-    LC_COLLATE = 'zh_CN.UTF-8' 
-    LC_CTYPE = 'zh_CN.UTF-8';
+# 连接到新数据库
+\c cntunyuan
+
+# 启用扩展
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 ```
 
 ### 2. 创建表结构
