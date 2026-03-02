@@ -39,6 +39,7 @@ type DatabaseConfig struct {
 	Password        string `mapstructure:"password"`
 	Database        string `mapstructure:"database"`
 	SSLMode         string `mapstructure:"ssl_mode"`
+	Charset         string `mapstructure:"charset"` // 字符集，默认 UTF8
 	MaxIdleConns    int    `mapstructure:"max_idle_conns"`
 	MaxOpenConns    int    `mapstructure:"max_open_conns"`
 	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime"`
@@ -191,8 +192,12 @@ func GetConfig() *Config {
 
 // GetDSN 获取数据库连接字符串
 func (c *DatabaseConfig) GetDSN() string {
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		c.Host, c.Port, c.User, c.Password, c.Database, c.SSLMode)
+	charset := c.Charset
+	if charset == "" {
+		charset = "UTF8"
+	}
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s client_encoding=%s",
+		c.Host, c.Port, c.User, c.Password, c.Database, c.SSLMode, charset)
 }
 
 func setDefaults() {
@@ -208,6 +213,7 @@ func setDefaults() {
 	viper.SetDefault("database.port", 5432)
 	viper.SetDefault("database.database", "cntunyuan")
 	viper.SetDefault("database.ssl_mode", "disable")
+	viper.SetDefault("database.charset", "UTF8")
 	viper.SetDefault("database.max_idle_conns", 10)
 	viper.SetDefault("database.max_open_conns", 100)
 	viper.SetDefault("database.conn_max_lifetime", 3600)

@@ -1,63 +1,153 @@
-# 数据库初始化指南
+# 数据库脚本说明
 
-## 概述
+## 文件列表
 
-团圆寻亲志愿者系统使用 GORM AutoMigrate 自动管理数据库结构，使用种子工具初始化数据。
+| 文件名 | 说明 |
+|--------|------|
+| `init_database.sql` | 数据库初始化脚本（创建数据库、扩展） |
+| `create_tables.sql` | 表结构创建脚本 |
 
-## 数据初始化
+## 使用说明
 
-### 使用种子工具（推荐）
+### 1. 创建数据库（首次安装）
+
+```bash
+# 连接到 postgres 数据库
+psql -U postgres
+
+# 执行初始化脚本（创建数据库和扩展）
+\i backend/sql/init_database.sql
+
+# 或者手动创建数据库
+CREATE DATABASE cntunyuan WITH 
+    ENCODING = 'UTF8' 
+    LC_COLLATE = 'zh_CN.UTF-8' 
+    LC_CTYPE = 'zh_CN.UTF-8';
+```
+
+### 2. 创建表结构
+
+**方式一：使用 GORM AutoMigrate（推荐）**
 
 ```bash
 cd backend
-
-# 导入所有种子数据（组织和用户）
-go run cmd/seed/main.go -all
-
-# 只导入组织
-go run cmd/seed/main.go -orgs
-
-# 只导入用户
-go run cmd/seed/main.go -users
+go run cmd/app/main.go -migrate
 ```
 
-### 清空数据重新导入
+**方式二：使用 SQL 脚本**
 
 ```bash
-# 警告：这会删除所有数据！
-go run cmd/seed/main.go -clean -all
+psql -U postgres -d cntunyuan -f backend/sql/create_tables.sql
 ```
 
-## 默认账号
+### 3. 检查数据库编码
 
-种子数据导入后会创建默认超级管理员：
-- 手机号: `13800138000`
-- 密码: `admin123`
-- 角色: super_admin
+```sql
+-- 检查数据库编码
+SELECT datname, pg_encoding_to_char(encoding) 
+FROM pg_database 
+WHERE datname = 'cntunyuan';
 
-## 修改密码
+-- 应该返回 UTF8
+
+-- 检查客户端编码
+SHOW client_encoding;
+
+-- 应该返回 UTF8
+```
+
+## 字符集配置
+
+### 后端配置 (config.yaml)
+
+```yaml
+database:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: yourpassword
+  database: cntunyuan
+  ssl_mode: disable
+  charset: UTF8  # 数据库字符集
+```
+
+### PostgreSQL 服务器配置
+
+确保 PostgreSQL 服务器配置使用 UTF-8：
 
 ```bash
-# 使用密码重置工具
-go run cmd/resetpassword/main.go -phone="13800138000" -password="newpassword"
+# 查看服务器编码
+psql -U postgres -c "SHOW server_encoding;"
+
+# 查看客户端编码
+psql -U postgres -c "SHOW client_encoding;"
 ```
+
+如果服务器编码不是 UTF8，需要在 `postgresql.conf` 中修改：
+
+```conf
+# 在 postgresql.conf 中
+client_encoding = utf8
+```
+
+## 表结构说明
+
+### 核心表
+
+| 表名 | 说明 | 主要字段 |
+|------|------|----------|
+| `ty_users` | 用户表 | id, nickname, phone, email, role, status |
+| `ty_organizations` | 组织表 | id, name, code, type, parent_id |
+| `ty_missing_persons` | 走失人员表 | id, name, status, missing_time |
+| `ty_dialects` | 方言表 | id, title, region, audio_url |
+| `ty_tasks` | 任务表 | id, title, status, assignee_id |
+| `ty_files` | 文件表 | id, file_name, file_type, url |
+
+### 关联表
+
+| 表名 | 说明 | 关联 |
+|------|------|------|
+| `ty_user_permissions` | 用户权限关联 | users <-> permissions |
+| `ty_dialect_comments` | 方言评论 | dialects <- users |
+| `ty_dialect_likes` | 方言点赞 | dialects <- users |
+| `ty_task_attachments` | 任务附件 | tasks |
+| `ty_task_logs` | 任务日志 | tasks <- users |
+| `ty_missing_person_tracks` | 轨迹记录 | missing_persons <- users |
+
+## 索引说明
+
+所有表都包含以下标准索引：
+- 主键索引（UUID）
+- 外键索引
+- 状态字段索引
+- 创建时间索引
+
+## 软删除
+
+支持软删除的表包含 `deleted_at` 字段，使用 GORM 的软删除功能。
+
+## 编码注意事项
+
+1. **UTF-8 支持**：所有文本字段都支持完整的 UTF-8 编码，包括中文和 Emoji
+2. **字符串长度**：VARCHAR 长度按字符计算，不是字节
+3. **TEXT 类型**：大文本内容使用 TEXT 类型，无长度限制
 
 ## 常见问题
 
-### Q: 数据库连接失败？
+### Q: 数据库连接出现编码错误？
+A: 确保 `config.yaml` 中的 `charset` 设置为 `UTF8`
 
-1. 检查数据库是否启动
-2. 检查 `config/config.yaml` 中的数据库配置
-3. 确保数据库 `cntuanyuan` 已创建
+### Q: 如何修改现有数据库的编码？
+A: 需要导出数据，重新创建数据库，再导入数据：
 
-### Q: 如何添加其他管理员？
+```bash
+# 导出数据
+pg_dump -U postgres cntunyuan > backup.sql
 
-通过 Web 管理后台的"志愿者管理"功能添加，角色选择：
-- `admin` - 普通管理员
-- `manager` - 管理者
+# 删除并重新创建数据库
+psql -U postgres -c "DROP DATABASE cntunyuan;"
+psql -U postgres -c "CREATE DATABASE cntunyuan WITH ENCODING = 'UTF8';"
 
-## 生产环境建议
-
-1. **修改默认密码**：首次部署后务必修改超级管理员默认密码
-2. **使用环境变量**：生产环境建议通过环境变量传递敏感配置
-3. **定期备份**：定期备份数据库
+# 导入数据
+psql -U postgres cntunyuan < backup.sql
+```

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
+	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -21,10 +22,8 @@ type DB struct {
 
 // NewDatabase 创建数据库连接
 func NewDatabase(cfg *config.DatabaseConfig) (*gorm.DB, error) {
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database, cfg.SSLMode,
-	)
+	// 使用配置中的 DSN 方法，确保使用 UTF-8 编码
+	dsn := cfg.GetDSN()
 
 	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
@@ -104,3 +103,46 @@ func (l *gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 
 // Ensure gormLogger implements gormlogger.Interface
 var _ gormlogger.Interface = (*gormLogger)(nil)
+
+// AutoMigrate 自动迁移数据库结构
+func AutoMigrate(db *gorm.DB) error {
+	logger.Info("Starting database auto-migration...")
+
+	// 自动迁移所有实体模型
+	err := db.AutoMigrate(
+		// 用户相关
+		&entity.User{},
+		&entity.Permission{},
+		&entity.UserPermission{},
+
+		// 组织相关
+		&entity.Organization{},
+		&entity.OrgStats{},
+
+		// 走失人员相关
+		&entity.MissingPerson{},
+		&entity.MissingPersonTrack{},
+
+		// 方言相关
+		&entity.Dialect{},
+		&entity.DialectComment{},
+		&entity.DialectLike{},
+		&entity.DialectPlayLog{},
+
+		// 任务相关
+		&entity.Task{},
+		&entity.TaskAttachment{},
+		&entity.TaskLog{},
+		&entity.TaskComment{},
+
+		// 文件相关
+		&entity.File{},
+	)
+
+	if err != nil {
+		return fmt.Errorf("auto migration failed: %w", err)
+	}
+
+	logger.Info("Database auto-migration completed successfully")
+	return nil
+}

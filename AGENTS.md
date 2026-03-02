@@ -170,13 +170,16 @@ DELETE /api/v1/resources/:id   # 删除
 cd backend
 
 # 开发模式启动
-go run cmd/server/main.go
+go run cmd/app/main.go
+
+# 数据库迁移（自动创建表结构）
+go run cmd/app/main.go -migrate
 
 # 数据填充
 go run cmd/seed/main.go -all
 
-# 重置密码
-go run cmd/resetpassword/main.go -phone=13800138000 -password=newpassword
+# 重置密码（TODO）
+# go run cmd/resetpassword/main.go -phone=13800138000 -password=newpassword
 
 # 格式化代码
 go fmt ./...
@@ -218,11 +221,14 @@ cd backend && go run cmd/seed/main.go -users    # 只导入用户
 ### 完整初始化流程（新环境）
 ```bash
 # 1. 确保数据库已创建
-# 2. 执行数据填充
+# 2. 执行数据库迁移
+cd backend && go run cmd/app/main.go -migrate
+
+# 3. 执行数据填充（可选）
 cd backend && go run cmd/seed/main.go -all
 
-# 3. 启动服务器
-cd backend && go run cmd/server/main.go
+# 4. 启动服务器
+cd backend && go run cmd/app/main.go
 ```
 
 ## 配置说明
@@ -298,6 +304,18 @@ VITE_API_BASE_URL=/api/v1
 - 检查端口号是否正确
 
 ## 更新日志
+
+### 2026-03-03
+- **数据库编码优化**:
+  - 统一使用 UTF-8 编码，支持中文和 Emoji
+  - 数据库连接字符串添加 `client_encoding=UTF8`
+  - 配置文件中添加 `charset` 选项
+  - 创建完整的数据库初始化 SQL 脚本
+  - 创建表结构 SQL 脚本（支持 GORM AutoMigrate）
+- **完善后端功能**:
+  - 文件存储服务（本地/OSS/COS）
+  - 仪表盘统计服务
+  - 应用入口和种子数据工具
 
 ### 2026-03-02
 - **后端架构重构为 Clean Architecture**:

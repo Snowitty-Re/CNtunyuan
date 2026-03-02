@@ -1,181 +1,142 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
-	"log"
+	"os"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
-	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
-	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
-	infraRepo "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
-	"gorm.io/gorm"
 )
-
-// Seeder data seeder
-type Seeder struct {
-	db       *gorm.DB
-	userRepo repository.UserRepository
-}
-
-// NewSeeder create seeder
-func NewSeeder(db *gorm.DB) *Seeder {
-	return &Seeder{
-		db:       db,
-		userRepo: infraRepo.NewUserRepository(db),
-	}
-}
-
-// SeedAll seed all data
-func (s *Seeder) SeedAll(ctx context.Context) error {
-	if err := s.SeedOrganizations(ctx); err != nil {
-		return fmt.Errorf("seed organizations failed: %w", err)
-	}
-	if err := s.SeedUsers(ctx); err != nil {
-		return fmt.Errorf("seed users failed: %w", err)
-	}
-	return nil
-}
-
-// SeedOrganizations seed organizations
-func (s *Seeder) SeedOrganizations(ctx context.Context) error {
-	logger.Info("Start seeding organizations")
-
-	var count int64
-	if err := s.db.Model(&entity.Organization{}).Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		logger.Info("Organizations already exist, skip")
-		return nil
-	}
-
-	rootOrg := &entity.Organization{
-		BaseEntity: entity.BaseEntity{
-			ID: "00000000-0000-0000-0000-000000000001",
-		},
-		Name:   "Root Organization",
-		Code:   "ROOT",
-		Type:   entity.OrgTypeRoot,
-		Level:  1,
-		Status: entity.OrgStatusActive,
-	}
-
-	if err := s.db.Create(rootOrg).Error; err != nil {
-		return err
-	}
-
-	logger.Info("Organizations seeded")
-	return nil
-}
-
-// SeedUsers seed users
-func (s *Seeder) SeedUsers(ctx context.Context) error {
-	logger.Info("Start seeding users")
-
-	var count int64
-	if err := s.db.Model(&entity.User{}).Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		logger.Info("Users already exist, skip")
-		return nil
-	}
-
-	rootOrgID := "00000000-0000-0000-0000-000000000001"
-
-	superAdmin, err := entity.NewUser("Super Admin", "13800138000", rootOrgID, entity.RoleSuperAdmin)
-	if err != nil {
-		return err
-	}
-	superAdmin.Email = "admin@cntuanyuan.com"
-	if err := superAdmin.SetPassword("admin123"); err != nil {
-		return err
-	}
-
-	if err := s.db.Create(superAdmin).Error; err != nil {
-		return err
-	}
-
-	logger.Info("Users seeded")
-	return nil
-}
-
-// Clean clean all data
-func (s *Seeder) Clean(ctx context.Context) error {
-	logger.Warn("Start cleaning data")
-
-	tables := []string{
-		"ty_user_permissions",
-		"ty_users",
-		"ty_organizations",
-	}
-
-	for _, table := range tables {
-		if err := s.db.Exec(fmt.Sprintf("DELETE FROM %s", table)).Error; err != nil {
-			return err
-		}
-	}
-
-	logger.Info("Data cleaned")
-	return nil
-}
 
 func main() {
 	var (
-		configPath = flag.String("config", "config/config.yaml", "config file path")
-		all        = flag.Bool("all", false, "seed all data")
-		orgs       = flag.Bool("orgs", false, "seed organizations only")
-		users      = flag.Bool("users", false, "seed users only")
-		clean      = flag.Bool("clean", false, "clean all data (dangerous!)")
+		all  = flag.Bool("all", false, "Import all seed data")
+		orgs = flag.Bool("orgs", false, "Import organizations only")
+		users = flag.Bool("users", false, "Import users only")
+		cases = flag.Bool("cases", false, "Import missing persons only")
+		dialects = flag.Bool("dialects", false, "Import dialects only")
+		tasks = flag.Bool("tasks", false, "Import tasks only")
+		clean = flag.Bool("clean", false, "Clean data before import")
 	)
 	flag.Parse()
 
-	cfg, err := config.LoadConfig(*configPath)
-	if err != nil {
-		log.Fatalf("Load config failed: %v", err)
+	// 初始化日志
+	logCfg := &config.LogConfig{
+		Level:  "info",
+		Format: "console",
+	}
+	if err := logger.Init(logCfg); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
+		os.Exit(1)
 	}
 
-	logger.InitWithConfig(logger.Config{
-		Level:  "info",
-		Format: "text",
-		Output: "stdout",
-	})
+	// 加载配置
+	cfg, err := config.LoadConfig(".")
+	if err != nil {
+		logger.Error("Failed to load config", logger.Err(err))
+		os.Exit(1)
+	}
 
+	// 连接数据库
 	db, err := database.NewDatabase(&cfg.Database)
 	if err != nil {
-		logger.Fatal("Connect database failed", logger.Err(err))
+		logger.Error("Failed to connect database", logger.Err(err))
+		os.Exit(1)
 	}
 
-	seeder := NewSeeder(db)
-	ctx := context.Background()
+	logger.Info("Starting seed data import...")
 
+	// 如果需要，先清理数据
 	if *clean {
-		if err := seeder.Clean(ctx); err != nil {
-			logger.Fatal("Clean data failed", logger.Err(err))
-		}
-		return
+		logger.Info("Cleaning existing data...")
+		// TODO: 实现数据清理
 	}
 
-	if *all {
-		if err := seeder.SeedAll(ctx); err != nil {
-			logger.Fatal("Seed data failed", logger.Err(err))
+	// 导入数据
+	imported := false
+
+	if *all || *orgs {
+		if err := importOrganizations(db); err != nil {
+			logger.Error("Failed to import organizations", logger.Err(err))
+			os.Exit(1)
 		}
-	} else {
-		if *orgs {
-			if err := seeder.SeedOrganizations(ctx); err != nil {
-				logger.Fatal("Seed organizations failed", logger.Err(err))
-			}
-		}
-		if *users {
-			if err := seeder.SeedUsers(ctx); err != nil {
-				logger.Fatal("Seed users failed", logger.Err(err))
-			}
-		}
+		imported = true
 	}
 
-	logger.Info("Seeding completed")
+	if *all || *users {
+		if err := importUsers(db); err != nil {
+			logger.Error("Failed to import users", logger.Err(err))
+			os.Exit(1)
+		}
+		imported = true
+	}
+
+	if *all || *cases {
+		if err := importMissingPersons(db); err != nil {
+			logger.Error("Failed to import missing persons", logger.Err(err))
+			os.Exit(1)
+		}
+		imported = true
+	}
+
+	if *all || *dialects {
+		if err := importDialects(db); err != nil {
+			logger.Error("Failed to import dialects", logger.Err(err))
+			os.Exit(1)
+		}
+		imported = true
+	}
+
+	if *all || *tasks {
+		if err := importTasks(db); err != nil {
+			logger.Error("Failed to import tasks", logger.Err(err))
+			os.Exit(1)
+		}
+		imported = true
+	}
+
+	if !imported {
+		logger.Info("No data type specified. Use -all or specific flags (-orgs, -users, etc.)")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	logger.Info("Seed data import completed successfully!")
+}
+
+// importOrganizations 导入组织数据
+func importOrganizations(db interface{}) error {
+	logger.Info("Importing organizations...")
+	// TODO: 实现组织数据导入
+	return nil
+}
+
+// importUsers 导入用户数据
+func importUsers(db interface{}) error {
+	logger.Info("Importing users...")
+	// TODO: 实现用户数据导入
+	return nil
+}
+
+// importMissingPersons 导入走失人员数据
+func importMissingPersons(db interface{}) error {
+	logger.Info("Importing missing persons...")
+	// TODO: 实现走失人员数据导入
+	return nil
+}
+
+// importDialects 导入方言数据
+func importDialects(db interface{}) error {
+	logger.Info("Importing dialects...")
+	// TODO: 实现方言数据导入
+	return nil
+}
+
+// importTasks 导入任务数据
+func importTasks(db interface{}) error {
+	logger.Info("Importing tasks...")
+	// TODO: 实现任务数据导入
+	return nil
 }

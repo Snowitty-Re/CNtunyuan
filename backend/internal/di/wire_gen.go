@@ -6,6 +6,8 @@
 package di
 
 import (
+	"strings"
+
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
@@ -13,6 +15,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
 	infraRepo "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/repository"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/storage"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/router"
@@ -30,12 +33,16 @@ type Container struct {
 	MissingPersonService *service.MissingPersonAppService
 	DialectService       *service.DialectAppService
 	TaskService          *service.TaskAppService
+	FileService          *service.FileAppService
+	DashboardService     *service.DashboardService
 	AuthHandler          *handler.AuthHandler
 	UserHandler          *handler.UserHandler
 	OrganizationHandler  *handler.OrganizationHandler
 	MissingPersonHandler *handler.MissingPersonHandler
 	DialectHandler       *handler.DialectHandler
 	TaskHandler          *handler.TaskHandler
+	UploadHandler        *handler.UploadHandler
+	DashboardHandler     *handler.DashboardHandler
 	AuthMiddleware       *middleware.AuthMiddleware
 	Router               *router.Router
 }
@@ -57,12 +64,26 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	// 创建 Token 服务
 	tokenService := auth.NewJWTService(&cfg.JWT, redisCache)
 
+	// 创建存储服务
+	var storageService domainService.StorageService
+	switch cfg.Storage.Type {
+	case "oss":
+		// TODO: 实现 OSS 存储
+		storageService = storage.NewLocalStorage(&cfg.Storage)
+	case "cos":
+		// TODO: 实现 COS 存储
+		storageService = storage.NewLocalStorage(&cfg.Storage)
+	default:
+		storageService = storage.NewLocalStorage(&cfg.Storage)
+	}
+
 	// 创建仓储
 	userRepo := infraRepo.NewUserRepository(db)
 	orgRepo := infraRepo.NewOrganizationRepository(db)
 	mpRepo := infraRepo.NewMissingPersonRepository(db)
 	dialectRepo := infraRepo.NewDialectRepository(db)
 	taskRepo := infraRepo.NewTaskRepository(db)
+	fileRepo := infraRepo.NewFileRepository(db)
 
 	// 创建领域服务
 	authService := domainService.NewAuthService(userRepo, tokenService, redisCache)
@@ -73,6 +94,20 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	mpService := service.NewMissingPersonAppService(mpRepo)
 	dialectService := service.NewDialectAppService(dialectRepo)
 	taskService := service.NewTaskAppService(taskRepo)
+	fileService := service.NewFileAppService(
+		fileRepo,
+		storageService,
+		cfg.Storage.MaxFileSize,
+		strings.Split(cfg.Storage.AllowedTypes, ","),
+	)
+	dashboardService := service.NewDashboardService(
+		userRepo,
+		orgRepo,
+		mpRepo,
+		taskRepo,
+		dialectRepo,
+		fileRepo,
+	)
 
 	// 创建 HTTP Handler
 	authHandler := handler.NewAuthHandler(authService)
@@ -81,6 +116,8 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	mpHandler := handler.NewMissingPersonHandler(mpService)
 	dialectHandler := handler.NewDialectHandler(dialectService)
 	taskHandler := handler.NewTaskHandler(taskService)
+	uploadHandler := handler.NewUploadHandler(fileService)
+	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
 	// 创建路由
@@ -91,6 +128,8 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		mpHandler,
 		dialectHandler,
 		taskHandler,
+		uploadHandler,
+		dashboardHandler,
 		authMiddleware,
 	)
 	r.Setup()
@@ -105,12 +144,16 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		MissingPersonService: mpService,
 		DialectService:       dialectService,
 		TaskService:          taskService,
+		FileService:          fileService,
+		DashboardService:     dashboardService,
 		AuthHandler:          authHandler,
 		UserHandler:          userHandler,
 		OrganizationHandler:  orgHandler,
 		MissingPersonHandler: mpHandler,
 		DialectHandler:       dialectHandler,
 		TaskHandler:          taskHandler,
+		UploadHandler:        uploadHandler,
+		DashboardHandler:     dashboardHandler,
 		AuthMiddleware:       authMiddleware,
 		Router:               r,
 	}, nil

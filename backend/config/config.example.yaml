@@ -1,0 +1,111 @@
+# 团圆寻亲系统 - 示例配置文件
+# 复制此文件为 config.yaml 并根据实际情况修改
+
+server:
+  port: "8080"
+  mode: "debug"  # debug/release
+  read_timeout: 30
+  write_timeout: 30
+  max_header_bytes: 1048576
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "postgres"
+  database: "cntunyuan"
+  ssl_mode: "disable"
+  charset: "UTF8"  # 字符集，默认 UTF8，支持中文和 Emoji
+  max_idle_conns: 10
+  max_open_conns: 100
+  conn_max_lifetime: 3600
+
+redis:
+  host: ""       # 空表示不使用Redis
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+  min_idle_conns: 2
+
+jwt:
+  secret: "your-secret-key-here-change-in-production"
+  expire_time: 604800  # 7天
+  refresh_time: 2592000  # 30天
+
+wechat:
+  app_id: "your-app-id"
+  app_secret: "your-app-secret"
+  mch_id: ""
+  api_key: ""
+  notify_url: ""
+
+storage:
+  type: local           # 存储类型: local/oss/cos
+  local_path: ./uploads # 本地存储路径
+  base_url: http://localhost:8080/uploads
+  max_file_size: 52428800  # 50MB
+  allowed_types: "jpg,png,gif,mp4,mp3,wav,pdf,doc,docx"
+  # OSS配置(使用阿里云时填写)
+  oss_access_key_id: ""
+  oss_access_key_secret: ""
+  oss_endpoint: ""
+  oss_bucket: ""
+  oss_region: ""
+  # COS配置(使用腾讯云时填写)
+  cos_secret_id: ""
+  cos_secret_key: ""
+  cos_bucket: ""
+  cos_region: ""
+
+sms:
+  provider: "aliyun"    # aliyun/tencent
+  sign_name: "团圆寻亲"
+  aliyun_access_key_id: ""
+  aliyun_access_secret: ""
+  tencent_secret_id: ""
+  tencent_secret_key: ""
+  tencent_app_id: ""
+
+email:
+  enabled: false
+  smtp_host: "smtp.qq.com"
+  smtp_port: 587
+  smtp_user: ""
+  smtp_password: ""
+  from_name: "团圆寻亲"
+  use_tls: true
+
+map:
+  provider: "tencent"   # tencent/amap/baidu
+  key: ""
+  tencent_key: ""
+  amap_key: ""
+  baidu_key: ""
+
+log:
+  level: "info"         # debug/info/warn/error
+  format: "json"        # json/console
+  output_path: "./logs"
+  file_name: "app.log"
+  max_size: 100         # MB
+  max_backups: 10
+  max_age: 30           # days
+  compress: true
+
+notification:
+  push_enabled: false
+  getui_app_id: ""
+  getui_app_key: ""
+  getui_master_secret: ""
+  jpush_app_key: ""
+  jpush_master_secret: ""
+
+system:
+  default_org_name: "团圆寻亲志愿者协会"
+  default_org_code: "ROOT"
+  enable_register: true
+  enable_wechat_login: true
+  enable_sms_login: false
+  admin_ips: ""
+  rate_limit: 100
