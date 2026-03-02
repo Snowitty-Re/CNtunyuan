@@ -25,8 +25,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 加载配置
-	cfg, err := config.LoadConfig(".")
+	// 加载配置（从 ./config 目录加载 config.yaml）
+	cfg, err := config.LoadConfig("")
 	if err != nil {
 		logger.Error("Failed to load config", logger.Err(err))
 		os.Exit(1)

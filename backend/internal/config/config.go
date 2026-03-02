@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -162,7 +163,20 @@ func LoadConfig(configPath string) (*Config, error) {
 	viper.SetConfigType("yaml")
 
 	if configPath != "" {
-		viper.SetConfigFile(configPath)
+		// 检查是否是文件路径
+		info, err := os.Stat(configPath)
+		if err == nil && info.IsDir() {
+			// 是目录，在该目录下查找 config.yaml
+			viper.AddConfigPath(configPath)
+			viper.SetConfigName("config")
+		} else if err == nil {
+			// 是文件
+			viper.SetConfigFile(configPath)
+		} else {
+			// 路径不存在，尝试作为目录处理
+			viper.AddConfigPath(configPath)
+			viper.SetConfigName("config")
+		}
 	} else {
 		viper.AddConfigPath("./config")
 		viper.SetConfigName("config")
