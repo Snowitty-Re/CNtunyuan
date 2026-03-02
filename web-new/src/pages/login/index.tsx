@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth';
-import request from '@/utils/request';
+import axios from 'axios';
 import './style.css';
 
 interface LoginForm {
@@ -35,29 +35,36 @@ export default function LoginPage() {
   const handlePasswordLogin = async (values: LoginForm) => {
     setLoading(true);
     try {
-      // 使用原始 axios 实例以查看完整响应
-      const response: any = await request.post('/auth/admin-login', {
+      // 使用原始 axios 查看真实响应
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+      const response: any = await axios.post(`${apiUrl}/auth/admin-login`, {
         username: values.username,
         password: values.password,
       });
 
-      console.log('原始响应:', response); // 调试日志
+      console.log('Axios 原始响应:', response);
+      console.log('response.data:', response.data);
       
-      // 响应拦截器返回的是 response.data.data
-      const res = response;
-
-      if (res && res.token) {
-        setToken(res.token, res.refresh_token || '');
-        setUser(res.user);
-        message.success('登录成功');
-        navigate('/dashboard', { replace: true });
+      // 后端返回格式: { code: 0, message: "success", data: { token, user } }
+      const resData = response.data;
+      
+      if (resData.code === 0 || resData.code === 200) {
+        const loginData = resData.data;
+        if (loginData && loginData.token) {
+          setToken(loginData.token, loginData.refresh_token || '');
+          setUser(loginData.user);
+          message.success('登录成功');
+          navigate('/dashboard', { replace: true });
+        } else {
+          console.error('登录 data 字段缺少 token:', loginData);
+          message.error('登录数据格式错误');
+        }
       } else {
-        console.error('登录响应缺少token:', res);
-        message.error('登录响应数据异常');
+        message.error(resData.message || '登录失败');
       }
     } catch (error: any) {
       console.error('登录失败:', error);
-      message.error(error?.message || '登录失败');
+      message.error(error?.response?.data?.message || error?.message || '登录失败');
     } finally {
       setLoading(false);
     }
