@@ -216,6 +216,7 @@ function Breadcrumb() {
     '/organizations': '组织架构',
     '/dialects': '方言管理',
     '/profile': '个人中心',
+    '/settings': '系统设置',
   };
 
   const title = pathMap[location.pathname] || '页面';

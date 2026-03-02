@@ -26,6 +26,12 @@ import OrganizationFormPage from '@/pages/organizations/form';
 import DialectsPage from '@/pages/dialects';
 import DialectFormPage from '@/pages/dialects/form';
 
+// 个人中心
+import ProfilePage from '@/pages/profile';
+
+// 系统设置
+import SettingsPage from '@/pages/settings';
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -119,6 +125,16 @@ export const router = createBrowserRouter([
       {
         path: '/dialects/:id/edit',
         element: <DialectFormPage />,
+      },
+      // 个人中心
+      {
+        path: '/profile',
+        element: <ProfilePage />,
+      },
+      // 系统设置
+      {
+        path: '/settings',
+        element: <SettingsPage />,
       },
     ],
   },
