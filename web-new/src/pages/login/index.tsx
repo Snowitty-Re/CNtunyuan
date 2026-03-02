@@ -20,7 +20,7 @@ import { http } from '@/utils/request';
 import './style.css';
 
 interface LoginForm {
-  phone: string;
+  username: string;
   password: string;
   remember: boolean;
 }
@@ -36,7 +36,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res: any = await http.post('/auth/admin-login', {
-        phone: values.phone,
+        username: values.username,
         password: values.password,
       });
 
@@ -44,7 +44,7 @@ export default function LoginPage() {
         setToken(res.token, res.refresh_token || '');
         setUser(res.user);
         message.success('登录成功');
-        navigate('/');
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('登录失败:', error);
@@ -80,20 +80,17 @@ export default function LoginPage() {
             <h1 className="logo-text">团圆寻亲</h1>
           </div>
           <p className="brand-desc">
-            用爱心点亮希望，让失散家庭重聚
+            用科技连接爱心<br />
+            让团圆不再遥远
           </p>
           <div className="brand-stats">
             <div className="stat-item">
               <div className="stat-value">10,000+</div>
-              <div className="stat-label">注册志愿者</div>
+              <div className="stat-label">志愿者</div>
             </div>
             <div className="stat-item">
               <div className="stat-value">5,000+</div>
-              <div className="stat-label">成功寻回</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value">98%</div>
-              <div className="stat-label">好评率</div>
+              <div className="stat-label">成功案例</div>
             </div>
           </div>
         </div>
@@ -108,109 +105,97 @@ export default function LoginPage() {
       >
         <Card className="login-card" bordered={false}>
           <div className="login-header">
-            <h2 className="login-title">欢迎回来</h2>
-            <p className="login-subtitle">请登录您的账号</p>
+            <h2 className="login-title">欢迎登录</h2>
+            <p className="login-subtitle">团圆寻亲志愿者系统</p>
           </div>
 
           <Tabs
             activeKey={activeTab}
             onChange={setActiveTab}
-            centered
             className="login-tabs"
-            items={[
-              {
-                key: 'password',
-                label: '账号密码',
-                children: (
-                  <Form
-                    name="login"
-                    onFinish={handlePasswordLogin}
-                    autoComplete="off"
+            centered
+          >
+            <Tabs.TabPane tab="账号登录" key="password">
+              <Form
+                name="login"
+                initialValues={{ remember: true }}
+                onFinish={handlePasswordLogin}
+                autoComplete="off"
+                layout="vertical"
+              >
+                <Form.Item
+                  name="username"
+                  rules={[{ required: true, message: '请输入手机号或用户名' }]}
+                >
+                  <Input
+                    prefix={<UserOutlined />}
+                    placeholder="请输入手机号或用户名"
                     size="large"
-                  >
-                    <Form.Item
-                      name="phone"
-                      rules={[
-                        { required: true, message: '请输入手机号' },
-                        { pattern: /^1[3-9]\d{9}$/, message: '手机号格式错误' },
-                      ]}
-                    >
-                      <Input
-                        prefix={<UserOutlined className="text-gray-400" />}
-                        placeholder="请输入手机号"
-                        maxLength={11}
-                      />
-                    </Form.Item>
+                  />
+                </Form.Item>
 
-                    <Form.Item
-                      name="password"
-                      rules={[{ required: true, message: '请输入密码' }]}
-                    >
-                      <Input.Password
-                        prefix={<LockOutlined className="text-gray-400" />}
-                        placeholder="请输入密码"
-                      />
-                    </Form.Item>
+                <Form.Item
+                  name="password"
+                  rules={[{ required: true, message: '请输入密码' }]}
+                >
+                  <Input.Password
+                    prefix={<LockOutlined />}
+                    placeholder="请输入密码"
+                    size="large"
+                  />
+                </Form.Item>
 
-                    <Form.Item>
-                      <div className="flex items-center justify-between">
-                        <Form.Item name="remember" valuePropName="checked" noStyle>
-                          <Checkbox>记住我</Checkbox>
-                        </Form.Item>
-                        <a href="#" className="text-orange-500 hover:text-orange-600">
-                          忘记密码？
-                        </a>
-                      </div>
+                <Form.Item>
+                  <div className="flex justify-between items-center">
+                    <Form.Item name="remember" valuePropName="checked" noStyle>
+                      <Checkbox>记住我</Checkbox>
                     </Form.Item>
-
-                    <Form.Item>
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={loading}
-                        block
-                        size="large"
-                        className="login-btn"
-                      >
-                        登 录
-                      </Button>
-                    </Form.Item>
-                  </Form>
-                ),
-              },
-              {
-                key: 'wechat',
-                label: '微信登录',
-                children: (
-                  <div className="wechat-login">
-                    <div className="qr-code">
-                      <div className="qr-placeholder">
-                        <WechatOutlined className="text-6xl text-green-500" />
-                      </div>
-                      <p className="qr-tip">请使用微信扫一扫登录</p>
-                    </div>
-                    <Button
-                      type="primary"
-                      block
-                      size="large"
-                      icon={<WechatOutlined />}
-                      onClick={handleWechatLogin}
-                      style={{ backgroundColor: '#07c160' }}
-                    >
-                      微信授权登录
-                    </Button>
+                    <a className="text-orange-500 hover:text-orange-600">
+                      忘记密码？
+                    </a>
                   </div>
-                ),
-              },
-            ]}
-          />
+                </Form.Item>
+
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    size="large"
+                    block
+                    loading={loading}
+                    className="login-btn"
+                  >
+                    登录
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Tabs.TabPane>
+
+            <Tabs.TabPane tab="微信登录" key="wechat">
+              <div className="wechat-login">
+                <div className="qr-code">
+                  <div className="qr-placeholder">
+                    <WechatOutlined style={{ fontSize: 64, color: '#07C160' }} />
+                  </div>
+                  <p className="qr-tip">请使用微信扫一扫登录</p>
+                </div>
+                <Button
+                  type="primary"
+                  block
+                  size="large"
+                  icon={<WechatOutlined />}
+                  onClick={handleWechatLogin}
+                  style={{ backgroundColor: '#07C160', borderColor: '#07C160' }}
+                >
+                  唤起微信登录
+                </Button>
+              </div>
+            </Tabs.TabPane>
+          </Tabs>
 
           <div className="login-footer">
             <p className="text-gray-400 text-sm">
-              还没有账号？
-              <a href="#" className="text-orange-500 hover:text-orange-600 ml-1">
-                联系管理员
-              </a>
+              默认账号：13800138000 / admin123
             </p>
           </div>
         </Card>
