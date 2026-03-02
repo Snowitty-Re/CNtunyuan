@@ -232,36 +232,20 @@ var (
 
 ---
 
-## 迁移指南
+## 迁移状态
 
-### 步骤 1: 保持现有代码运行
+### 已完成 ✅
 
-现有代码保留在 `internal/model`, `internal/service`, `internal/api` 等目录。
+旧代码已完全迁移到 Clean Architecture，原 `internal/model`, `internal/service`, `internal/api` 等目录已删除。
 
-### 步骤 2: 逐步迁移模块
+### 迁移步骤（用于未来新模块）
 
-按以下顺序迁移：
+按以下顺序实现新模块：
 
 1. **Domain 层** - 创建实体和仓储接口
 2. **Infrastructure 层** - 实现仓储
 3. **Application 层** - 创建应用服务
 4. **Interfaces 层** - 创建新 handler
-
-### 步骤 3: 双轨运行
-
-新旧系统可以并行运行，逐步切换：
-
-```go
-// 旧 handler
-router.GET("/users", oldHandler.GetUsers)
-
-// 新 handler  
-router.GET("/v2/users", newHandler.List)
-```
-
-### 步骤 4: 完全切换
-
-所有模块迁移完成后，删除旧代码。
 
 ---
 

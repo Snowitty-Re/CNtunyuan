@@ -71,6 +71,7 @@
 - PostgreSQL 16
 - Redis 7
 - JWT 认证
+- Clean Architecture
 
 ### Web管理端 (web-new)
 - React 18
@@ -88,21 +89,20 @@
 
 ```
 CNtunyuan/
-├── backend/              # Go 后端服务
-│   ├── cmd/              # 主程序入口
-│   │   ├── main.go       # 主程序
-│   │   └── initdata/     # 数据初始化工具
+├── backend/              # Go 后端服务 (Clean Architecture)
+│   ├── cmd/              # 应用程序入口
+│   │   ├── server/       # HTTP 服务器
+│   │   ├── seed/         # 数据填充工具
+│   │   └── resetpassword/# 密码重置工具
 │   ├── internal/         # 内部包
-│   │   ├── api/          # API 处理器
-│   │   ├── config/       # 配置
-│   │   ├── middleware/   # 中间件
-│   │   ├── model/        # 数据模型
-│   │   ├── repository/   # 数据访问层
-│   │   ├── service/      # 业务逻辑层
-│   │   └── utils/        # 工具函数
+│   │   ├── domain/       # 领域层 (实体、仓储接口、领域服务)
+│   │   ├── application/  # 应用层 (DTO、应用服务)
+│   │   ├── infrastructure/# 基础设施层 (DB、缓存、仓储实现)
+│   │   ├── interfaces/   # 接口层 (HTTP处理器、中间件)
+│   │   ├── di/           # 依赖注入
+│   │   └── config/       # 配置
 │   ├── pkg/              # 公共包
 │   ├── sql/              # SQL初始化脚本
-│   ├── config/           # 配置文件
 │   ├── uploads/          # 本地文件存储目录
 │   └── Dockerfile
 ├── web-new/              # Web 管理后台（新版）
@@ -138,23 +138,11 @@ CNtunyuan/
 ```bash
 cd backend
 
-# 1. 执行数据库迁移（创建表结构）
-go run cmd/main.go -migrate
-
-# 2. 初始化基础数据（根组织）
-go run cmd/main.go -init
-
-# 3. 创建超级管理员（可自定义参数）
-go run cmd/initdata/main.go -exec
-
-# 或使用自定义参数
-go run cmd/initdata/main.go -exec -phone="13800138000" -password="admin123" -email="admin@cntunyuan.com"
-
-# 4. 生成测试数据（可选）
+# 数据填充（包含组织和用户）
 go run cmd/seed/main.go -all
 ```
 
-更多初始化方式请参考 [backend/sql/README.md](backend/sql/README.md)
+更多初始化方式请参考 [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md)
 
 ### 后端启动
 
@@ -168,7 +156,7 @@ go mod download
 # 或使用默认配置
 
 # 运行
-go run cmd/main.go
+go run cmd/server/main.go
 
 # 或使用 air 热重载
 air
@@ -206,65 +194,6 @@ docker-compose up -d
 
 启动后端服务后，访问 `http://localhost:8080/swagger/index.html` 查看 Swagger API 文档。
 
-## 主要接口
-
-### 认证
-- POST /api/v1/auth/wechat-login - 微信登录
-- POST /api/v1/auth/admin-login - 管理后台登录
-- POST /api/v1/auth/refresh - 刷新 Token
-- GET /api/v1/auth/me - 获取当前用户
-
-### 用户管理
-- GET /api/v1/users - 用户列表
-- GET /api/v1/users/:id - 用户详情
-- PUT /api/v1/users/:id - 更新用户
-- DELETE /api/v1/users/:id - 删除用户
-
-### 组织架构
-- GET /api/v1/organizations - 组织列表
-- GET /api/v1/organizations/tree - 组织树
-- POST /api/v1/organizations - 创建组织
-
-### 走失人员
-- GET /api/v1/missing-persons - 案件列表
-- POST /api/v1/missing-persons - 创建案件
-- GET /api/v1/missing-persons/:id - 案件详情
-- PUT /api/v1/missing-persons/:id/status - 更新状态
-
-### 方言管理
-- GET /api/v1/dialects - 方言列表
-- POST /api/v1/dialects - 创建方言
-- GET /api/v1/dialects/:id - 方言详情
-- POST /api/v1/dialects/:id/play - 播放记录
-
-### 任务管理
-- GET /api/v1/tasks - 任务列表
-- POST /api/v1/tasks - 创建任务
-- GET /api/v1/tasks/:id - 任务详情
-- POST /api/v1/tasks/:id/assign - 分配任务
-- POST /api/v1/tasks/:id/complete - 完成任务
-- POST /api/v1/tasks/:id/cancel - 取消任务
-- POST /api/v1/tasks/batch-assign - 批量分配
-- POST /api/v1/tasks/auto-assign - 自动分配
-
-### 工作流管理
-- GET /api/v1/workflows - 工作流列表
-- POST /api/v1/workflows - 创建工作流
-- GET /api/v1/workflows/:id - 工作流详情
-- POST /api/v1/workflows/:id/steps - 创建步骤
-- PUT /api/v1/workflows/:id/steps/:step_id - 更新步骤
-
-### 文件上传
-- POST /api/v1/upload - 单文件上传
-- POST /api/v1/upload/batch - 批量上传
-- DELETE /api/v1/upload - 删除文件
-
-### 工作流实例
-- GET /api/v1/workflow-instances - 实例列表
-- POST /api/v1/workflow-instances - 启动实例
-- POST /api/v1/workflow-instances/:id/approve - 审批
-- GET /api/v1/workflow-instances/:id/history - 审批历史
-
 ## 默认账号
 
 初始化后默认超级管理员账号：
@@ -279,14 +208,11 @@ docker-compose up -d
 ```bash
 cd backend
 
-# 生成 Swagger 文档
-swag init -g cmd/main.go
+# 格式化代码
+go fmt ./...
 
 # 运行测试
 go test ./...
-
-# 格式化代码
-go fmt ./...
 ```
 
 ### 前端开发
@@ -317,6 +243,12 @@ Web 前端采用简洁办公OA风格，温馨配色：
 | 边框色 | `#e8e9eb` |
 
 详见 [web-new/README.md](web-new/README.md)
+
+## 架构文档
+
+- [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md) - 后端 Clean Architecture 架构说明
+- [backend/REFACTORING.md](backend/REFACTORING.md) - 架构重构详细指南
+- [AGENTS.md](AGENTS.md) - AI 助手和开发者指南
 
 ## 贡献
 
