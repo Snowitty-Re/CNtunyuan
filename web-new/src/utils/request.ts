@@ -31,8 +31,9 @@ request.interceptors.response.use(
     const { data } = response;
     
     // 如果响应中有code字段，按照统一格式处理
+    // 后端返回 code: 0 表示成功，code: 200 也表示成功（兼容旧接口）
     if (data.code !== undefined) {
-      if (data.code === 200) {
+      if (data.code === 0 || data.code === 200) {
         return data.data;
       } else {
         message.error(data.message || '请求失败');
