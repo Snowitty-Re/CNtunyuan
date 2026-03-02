@@ -50,8 +50,10 @@ export default function LoginPage() {
       
       if (resData.code === 0 || resData.code === 200) {
         const loginData = resData.data;
-        if (loginData && loginData.token) {
-          setToken(loginData.token, loginData.refresh_token || '');
+        // 后端返回 access_token，前端使用 token
+        const token = loginData.access_token || loginData.token;
+        if (loginData && token) {
+          setToken(token, loginData.refresh_token || '');
           setUser(loginData.user);
           message.success('登录成功');
           navigate('/dashboard', { replace: true });
