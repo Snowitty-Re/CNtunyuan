@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
+import RouteGuard from '@/components/layout/RouteGuard';
 import LoginPage from '@/pages/login';
 import DashboardPage from '@/pages/dashboard';
 
@@ -35,11 +36,19 @@ import SettingsPage from '@/pages/settings';
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
+    element: (
+      <RouteGuard>
+        <LoginPage />
+      </RouteGuard>
+    ),
   },
   {
     path: '/',
-    element: <MainLayout />,
+    element: (
+      <RouteGuard>
+        <MainLayout />
+      </RouteGuard>
+    ),
     children: [
       {
         path: '/',
