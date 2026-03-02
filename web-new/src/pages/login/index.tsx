@@ -16,7 +16,7 @@ import {
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth';
-import { http } from '@/utils/request';
+import request from '@/utils/request';
 import './style.css';
 
 interface LoginForm {
@@ -35,12 +35,16 @@ export default function LoginPage() {
   const handlePasswordLogin = async (values: LoginForm) => {
     setLoading(true);
     try {
-      const res: any = await http.post('/auth/admin-login', {
+      // 使用原始 axios 实例以查看完整响应
+      const response: any = await request.post('/auth/admin-login', {
         username: values.username,
         password: values.password,
       });
 
-      console.log('登录响应:', res); // 调试日志
+      console.log('原始响应:', response); // 调试日志
+      
+      // 响应拦截器返回的是 response.data.data
+      const res = response;
 
       if (res && res.token) {
         setToken(res.token, res.refresh_token || '');
@@ -51,8 +55,9 @@ export default function LoginPage() {
         console.error('登录响应缺少token:', res);
         message.error('登录响应数据异常');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('登录失败:', error);
+      message.error(error?.message || '登录失败');
     } finally {
       setLoading(false);
     }
