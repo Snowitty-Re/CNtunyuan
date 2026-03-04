@@ -181,6 +181,8 @@ export default function SetupPage() {
                   db_host: 'localhost',
                   db_port: 5432,
                   db_name: 'cntuanyuan',
+                  db_ssl_mode: 'disable',
+                  db_charset: 'utf8mb4',
                 }}
               >
                 <Alert
