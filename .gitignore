@@ -33,8 +33,12 @@ build/
 .env.*.local
 
 # Config files with sensitive data
+backend/config/config.yaml
 backend/config/config.local.yaml
 backend/config/config.prod.yaml
+backend/config/config.yaml.bak
+*.pem
+*.key
 
 # Logs
 logs/
