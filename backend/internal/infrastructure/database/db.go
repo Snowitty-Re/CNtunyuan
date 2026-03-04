@@ -8,6 +8,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
@@ -16,6 +17,18 @@ import (
 
 // CreateDatabaseIfNotExists 如果数据库不存在则创建
 func CreateDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
+	switch cfg.Type {
+	case config.DatabaseTypeMySQL:
+		return createMySQLDatabaseIfNotExists(cfg)
+	case config.DatabaseTypePostgres:
+		return createPostgresDatabaseIfNotExists(cfg)
+	default:
+		return fmt.Errorf("unsupported database type: %s", cfg.Type)
+	}
+}
+
+// createPostgresDatabaseIfNotExists 创建 PostgreSQL 数据库
+func createPostgresDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
 	// 连接到 postgres 数据库（不指定具体数据库）
 	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s client_encoding=UTF8",
@@ -54,6 +67,49 @@ func CreateDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
 	return nil
 }
 
+// createMySQLDatabaseIfNotExists 创建 MySQL 数据库
+func createMySQLDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
+	// 连接到 MySQL（不指定具体数据库）
+	charset := cfg.Charset
+	if charset == "" {
+		charset = "utf8mb4"
+	}
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=%s&parseTime=True&loc=Local",
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, charset)
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+		Logger: &gormLogger{},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to connect to mysql: %w", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("failed to get sql.DB: %w", err)
+	}
+	defer sqlDB.Close()
+
+	// 检查数据库是否存在
+	var exists bool
+	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = '%s')", cfg.Database)
+	if err := db.Raw(query).Scan(&exists).Error; err != nil {
+		return fmt.Errorf("failed to check database exists: %w", err)
+	}
+
+	if !exists {
+		logger.Info("Database does not exist, creating...", logger.String("database", cfg.Database))
+		createSQL := fmt.Sprintf("CREATE DATABASE `%s` CHARACTER SET %s COLLATE %s_unicode_ci",
+			cfg.Database, charset, charset)
+		if err := db.Exec(createSQL).Error; err != nil {
+			return fmt.Errorf("failed to create database: %w", err)
+		}
+		logger.Info("Database created successfully", logger.String("database", cfg.Database))
+	}
+
+	return nil
+}
+
 // DB 数据库连接管理器
 type DB struct {
 	*gorm.DB
@@ -62,10 +118,26 @@ type DB struct {
 
 // NewDatabase 创建数据库连接
 func NewDatabase(cfg *config.DatabaseConfig) (*gorm.DB, error) {
-	// 使用配置中的 DSN 方法，确保使用 UTF-8 编码
-	dsn := cfg.GetDSN()
+	if !cfg.IsValid() {
+		return nil, fmt.Errorf("invalid database configuration")
+	}
 
-	gormDB, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+	dsn := cfg.GetDSN()
+	if dsn == "" {
+		return nil, fmt.Errorf("unsupported database type: %s", cfg.Type)
+	}
+
+	var dialector gorm.Dialector
+	switch cfg.Type {
+	case config.DatabaseTypeMySQL:
+		dialector = mysql.Open(dsn)
+	case config.DatabaseTypePostgres:
+		dialector = postgres.Open(dsn)
+	default:
+		return nil, fmt.Errorf("unsupported database type: %s", cfg.Type)
+	}
+
+	gormDB, err := gorm.Open(dialector, &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			TablePrefix:   "ty_",
 			SingularTable: false,
@@ -88,12 +160,29 @@ func NewDatabase(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(time.Duration(cfg.ConnMaxLifetime) * time.Second)
 
 	logger.Info("Database connected successfully",
+		logger.String("type", string(cfg.Type)),
 		logger.String("host", cfg.Host),
 		logger.Int("port", cfg.Port),
 		logger.String("database", cfg.Database),
 	)
 
 	return gormDB, nil
+}
+
+// TestConnection 测试数据库连接
+func TestConnection(cfg *config.DatabaseConfig) error {
+	db, err := NewDatabase(cfg)
+	if err != nil {
+		return err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	defer sqlDB.Close()
+
+	return sqlDB.Ping()
 }
 
 // gormLogger GORM 日志适配器

@@ -10,6 +10,7 @@ import (
 type Router struct {
 	engine               *gin.Engine
 	authHandler          *handler.AuthHandler
+	setupHandler         *handler.SetupHandler
 	userHandler          *handler.UserHandler
 	organizationHandler  *handler.OrganizationHandler
 	missingPersonHandler *handler.MissingPersonHandler
@@ -23,6 +24,7 @@ type Router struct {
 // NewRouter 创建路由管理器
 func NewRouter(
 	authHandler *handler.AuthHandler,
+	setupHandler *handler.SetupHandler,
 	userHandler *handler.UserHandler,
 	organizationHandler *handler.OrganizationHandler,
 	missingPersonHandler *handler.MissingPersonHandler,
@@ -42,6 +44,7 @@ func NewRouter(
 	return &Router{
 		engine:               engine,
 		authHandler:          authHandler,
+		setupHandler:         setupHandler,
 		userHandler:          userHandler,
 		organizationHandler:  organizationHandler,
 		missingPersonHandler: missingPersonHandler,
@@ -60,6 +63,9 @@ func (r *Router) Setup() {
 
 	// 健康检查
 	api.GET("/health", r.healthCheck)
+
+	// 注册初始化路由（不需要认证）
+	r.setupHandler.RegisterRoutes(api)
 
 	// 注册各个模块路由
 	r.authHandler.RegisterRoutes(api)

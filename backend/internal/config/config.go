@@ -32,18 +32,57 @@ type ServerConfig struct {
 	MaxHeaderBytes int    `mapstructure:"max_header_bytes"`
 }
 
+// DatabaseType 数据库类型
+type DatabaseType string
+
+const (
+	DatabaseTypePostgres DatabaseType = "postgres"
+	DatabaseTypeMySQL    DatabaseType = "mysql"
+)
+
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	Host            string `mapstructure:"host"`
-	Port            int    `mapstructure:"port"`
-	User            string `mapstructure:"user"`
-	Password        string `mapstructure:"password"`
-	Database        string `mapstructure:"database"`
-	SSLMode         string `mapstructure:"ssl_mode"`
-	Charset         string `mapstructure:"charset"` // 字符集，默认 UTF8
-	MaxIdleConns    int    `mapstructure:"max_idle_conns"`
-	MaxOpenConns    int    `mapstructure:"max_open_conns"`
-	ConnMaxLifetime int    `mapstructure:"conn_max_lifetime"`
+	Type            DatabaseType `mapstructure:"type"` // 数据库类型: postgres/mysql
+	Host            string       `mapstructure:"host"`
+	Port            int          `mapstructure:"port"`
+	User            string       `mapstructure:"user"`
+	Password        string       `mapstructure:"password"`
+	Database        string       `mapstructure:"database"`
+	SSLMode         string       `mapstructure:"ssl_mode"`   // PostgreSQL 使用
+	Charset         string       `mapstructure:"charset"`  // MySQL 使用，默认 utf8mb4
+	MaxIdleConns    int          `mapstructure:"max_idle_conns"`
+	MaxOpenConns    int          `mapstructure:"max_open_conns"`
+	ConnMaxLifetime int          `mapstructure:"conn_max_lifetime"`
+}
+
+// IsValid 检查数据库配置是否有效
+func (c *DatabaseConfig) IsValid() bool {
+	return c.Type != "" && c.Host != "" && c.Port > 0 && 
+	       c.User != "" && c.Database != ""
+}
+
+// GetDSN 获取数据库连接字符串
+func (c *DatabaseConfig) GetDSN() string {
+	switch c.Type {
+	case DatabaseTypeMySQL:
+		charset := c.Charset
+		if charset == "" {
+			charset = "utf8mb4"
+		}
+		// MySQL DSN: user:password@tcp(host:port)/dbname?charset=utf8mb4&parseTime=True&loc=Local
+		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
+			c.User, c.Password, c.Host, c.Port, c.Database, charset)
+	case DatabaseTypePostgres:
+		// PostgreSQL DSN
+		sslMode := c.SSLMode
+		if sslMode == "" {
+			sslMode = "disable"
+		}
+		return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s client_encoding=UTF8",
+			c.Host, c.Port, c.User, c.Password, c.Database, sslMode)
+	default:
+		return ""
+	}
 }
 
 // RedisConfig Redis配置
@@ -202,16 +241,6 @@ func LoadConfig(configPath string) (*Config, error) {
 // GetConfig 获取全局配置
 func GetConfig() *Config {
 	return globalConfig
-}
-
-// GetDSN 获取数据库连接字符串
-func (c *DatabaseConfig) GetDSN() string {
-	charset := c.Charset
-	if charset == "" {
-		charset = "UTF8"
-	}
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s client_encoding=%s",
-		c.Host, c.Port, c.User, c.Password, c.Database, c.SSLMode, charset)
 }
 
 func setDefaults() {

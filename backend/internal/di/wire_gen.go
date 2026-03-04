@@ -36,6 +36,7 @@ type Container struct {
 	FileService          *service.FileAppService
 	DashboardService     *service.DashboardService
 	AuthHandler          *handler.AuthHandler
+	SetupHandler         *handler.SetupHandler
 	UserHandler          *handler.UserHandler
 	OrganizationHandler  *handler.OrganizationHandler
 	MissingPersonHandler *handler.MissingPersonHandler
@@ -49,11 +50,9 @@ type Container struct {
 
 // NewContainer 手动创建依赖容器
 func NewContainer(cfg *config.Config) (*Container, error) {
-	// 创建数据库连接
-	db, err := database.NewDatabase(&cfg.Database)
-	if err != nil {
-		return nil, err
-	}
+	// 创建数据库连接（如果失败，db 将为 nil，setup handler 会处理这种情况）
+	db, _ := database.NewDatabase(&cfg.Database)
+	// 注意：数据库连接失败不阻止容器创建，因为系统可能处于未初始化状态
 
 	// 创建缓存
 	redisCache, err := cache.NewRedis(&cfg.Redis)
@@ -114,6 +113,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 
 	// 创建 HTTP Handler
 	authHandler := handler.NewAuthHandler(authService, authMiddleware)
+	setupHandler := handler.NewSetupHandler(".")
 	userHandler := handler.NewUserHandler(userService)
 	orgHandler := handler.NewOrganizationHandler(orgService)
 	mpHandler := handler.NewMissingPersonHandler(mpService)
@@ -125,6 +125,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	// 创建路由
 	r := router.NewRouter(
 		authHandler,
+		setupHandler,
 		userHandler,
 		orgHandler,
 		mpHandler,
@@ -149,6 +150,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		FileService:          fileService,
 		DashboardService:     dashboardService,
 		AuthHandler:          authHandler,
+		SetupHandler:         setupHandler,
 		UserHandler:          userHandler,
 		OrganizationHandler:  orgHandler,
 		MissingPersonHandler: mpHandler,

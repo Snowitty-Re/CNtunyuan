@@ -65,11 +65,11 @@
 ## 技术栈
 
 ### 后端
-- Go 1.23+
+- Go 1.24+
 - Gin 框架
 - GORM
-- PostgreSQL 16
-- Redis 7
+- PostgreSQL 16 / MySQL 8.0
+- Redis 7 (可选)
 - JWT 认证
 - Clean Architecture
 
@@ -127,18 +127,33 @@ CNtunyuan/
 ## 快速开始
 
 ### 环境要求
-- Go 1.23+
+- Go 1.24+
 - Node.js 18+
-- PostgreSQL 16
+- PostgreSQL 16 或 MySQL 8.0
 - Redis 7 (可选)
 - 微信小程序开发者工具
 
-### 数据库初始化
+### 系统初始化（推荐）
+
+新环境首次启动时，系统会自动引导至初始化向导页面：
+
+1. 启动后端服务：`go run cmd/app/main.go`
+2. 启动前端服务：`pnpm dev` (在 web-new 目录)
+3. 访问 `http://localhost:3000`，自动跳转至 `/setup`
+4. 按向导完成：
+   - **数据库配置**：选择 PostgreSQL 或 MySQL，填写连接信息并测试
+   - **初始化数据库**：自动创建数据库和表结构
+   - **创建管理员**：设置第一个超级管理员账号
+
+### 命令行初始化（可选）
 
 ```bash
 cd backend
 
-# 数据填充（包含组织和用户）
+# 数据库迁移（自动创建表结构）
+go run cmd/app/main.go -migrate
+
+# 数据填充（可选，用于测试数据）
 go run cmd/seed/main.go -all
 ```
 
@@ -196,10 +211,7 @@ docker-compose up -d
 
 ## 默认账号
 
-初始化后默认超级管理员账号：
-- 手机号: `13800138000`
-- 密码: `admin123`
-- 角色: super_admin
+通过初始化向导创建第一个超级管理员账号。系统不再预置默认账号，所有管理员必须通过初始化页面或数据库迁移后手动创建。
 
 ## 开发指南
 

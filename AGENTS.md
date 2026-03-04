@@ -219,15 +219,26 @@ cd backend && go run cmd/seed/main.go -users    # 只导入用户
 ```
 
 ### 完整初始化流程（新环境）
+
+#### 方式一：Web 初始化向导（推荐）
 ```bash
-# 1. 确保数据库已创建
+# 1. 启动后端服务
+cd backend && go run cmd/app/main.go
+
+# 2. 启动前端服务（另一个终端）
+cd web-new && pnpm dev
+
+# 3. 访问 http://localhost:3000/setup
+# 4. 按向导完成：选择数据库类型 -> 测试连接 -> 初始化数据库 -> 创建管理员
+```
+
+#### 方式二：命令行初始化
+```bash
+# 1. 确保数据库已创建（或配置好数据库连接）
 # 2. 执行数据库迁移
 cd backend && go run cmd/app/main.go -migrate
 
-# 3. 执行数据填充（可选）
-cd backend && go run cmd/seed/main.go -all
-
-# 4. 启动服务器
+# 3. 启动服务器
 cd backend && go run cmd/app/main.go
 ```
 
@@ -241,12 +252,14 @@ server:
   mode: "debug"  # debug/release
 
 database:
+  type: "postgres"   # 数据库类型: postgres 或 mysql
   host: "localhost"
-  port: 5432
-  user: "postgres"
+  port: 5432         # MySQL 默认 3306
+  user: "postgres"   # MySQL 默认 root
   password: "postgres"
   database: "cntuanyuan"
-  ssl_mode: "disable"
+  ssl_mode: "disable"  # PostgreSQL 专用
+  charset: "UTF8"      # MySQL 默认 utf8mb4
   max_idle_conns: 10
   max_open_conns: 100
   conn_max_lifetime: 3600
@@ -279,31 +292,64 @@ VITE_API_BASE_URL=/api/v1
 
 1. **Redis 可选**: 如果 Redis 未配置，系统会自动使用内存缓存
 2. **数据库表前缀**: 所有表使用 `ty_` 前缀
-3. **JWT 密钥**: 生产环境必须修改默认密钥
-4. **微信小程序**: 需要配置正确的 appid 和密钥
-5. **文件存储**: 
+3. **数据库类型**: 支持 PostgreSQL 16+ 和 MySQL 8.0+，通过 `database.type` 配置切换
+4. **JWT 密钥**: 生产环境必须修改默认密钥
+5. **微信小程序**: 需要配置正确的 appid 和密钥
+6. **文件存储**: 
    - 本地存储需要确保 `./uploads` 目录存在且有写入权限
    - 生产环境建议使用 OSS 或 COS
    - 文件上传大小限制默认为 50MB
+7. **初始化**: 首次启动必须访问 `/setup` 完成系统初始化，创建第一个管理员账号
 
 ## 常见问题
 
 ### 1. 数据库连接失败
-- 检查 PostgreSQL 是否启动
-- 检查 config.yaml 中的数据库配置
-- 确认数据库 `cntuanyuan` 已创建
+- 检查数据库服务是否启动（PostgreSQL/MySQL）
+- 检查 config.yaml 中的数据库配置（类型、主机、端口、用户名、密码）
+- 确认数据库 `cntuanyuan` 已创建，或运行初始化向导自动创建
+- 检查防火墙设置是否允许连接
 
-### 2. 登录失败
-- 确认已执行种子数据导入创建超级管理员
+### 2. 首次启动如何初始化系统
+- 启动后端和前端服务后，访问 `http://localhost:3000`
+- 系统会自动跳转至 `/setup` 初始化页面
+- 选择数据库类型（PostgreSQL/MySQL）并填写连接信息
+- 测试连接成功后，点击初始化按钮
+- 创建第一个超级管理员账号
+- 初始化完成后使用创建的账号登录
+
+### 3. 登录失败
+- 确认系统已完成初始化（访问 `/setup` 查看状态）
 - 检查密码是否正确
 - 查看后端日志确认错误信息
 
-### 3. 前端代理问题
+### 4. 前端代理问题
 - 检查 vite.config.ts 中的代理配置
 - 确认后端服务已启动
 - 检查端口号是否正确
 
+### 5. MySQL 连接问题
+- 确保 MySQL 8.0+ 版本
+- 检查字符集设置为 `utf8mb4`
+- 如果使用 `caching_sha2_password` 认证，确保驱动版本兼容
+
 ## 更新日志
+
+### 2026-03-04
+- **MySQL 8.0 支持**:
+  - 新增 MySQL 驱动支持 (`gorm.io/driver/mysql`)
+  - 数据库配置新增 `type` 字段，支持 `postgres` 和 `mysql`
+  - 自动检测数据库类型并创建相应连接
+  - MySQL 使用 `utf8mb4` 编码支持 Emoji
+  - 自动创建数据库（如果不存在）
+- **系统初始化向导**:
+  - 新增 `/setup` 页面用于首次初始化
+  - 支持在浏览器中配置数据库连接（PostgreSQL/MySQL）
+  - 支持测试数据库连接
+  - 支持创建第一个超级管理员账号
+  - 移除默认管理员账号（不再预置 13800138000/admin123）
+- **Bug 修复**:
+  - 修复登录接口 token 字段名不匹配问题
+  - 修复响应状态码处理（支持 code 0 和 200）
 
 ### 2026-03-03
 - **数据库编码优化**:
