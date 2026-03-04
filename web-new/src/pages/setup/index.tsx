@@ -135,7 +135,7 @@ export default function SetupPage() {
     },
   ];
 
-  const dbType = dbForm.watch('db_type');
+  const dbType = Form.useWatch('db_type', dbForm);
 
   if (checking) {
     return (
