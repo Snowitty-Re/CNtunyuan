@@ -37,7 +37,6 @@ type Container struct {
 	FileService          *service.FileAppService
 	DashboardService     *service.DashboardService
 	AuthHandler          *handler.AuthHandler
-	SetupHandler         *handler.SetupHandler
 	UserHandler          *handler.UserHandler
 	OrganizationHandler  *handler.OrganizationHandler
 	MissingPersonHandler *handler.MissingPersonHandler
@@ -120,7 +119,6 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 
 	// 创建 HTTP Handler
 	authHandler := handler.NewAuthHandler(authService, authMiddleware)
-	setupHandler := handler.NewSetupHandler(".")
 	userHandler := handler.NewUserHandler(userService)
 	orgHandler := handler.NewOrganizationHandler(orgService)
 	mpHandler := handler.NewMissingPersonHandler(mpService)
@@ -132,7 +130,6 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	// 创建路由
 	r := router.NewRouter(
 		authHandler,
-		setupHandler,
 		userHandler,
 		orgHandler,
 		mpHandler,
@@ -157,7 +154,6 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		FileService:          fileService,
 		DashboardService:     dashboardService,
 		AuthHandler:          authHandler,
-		SetupHandler:         setupHandler,
 		UserHandler:          userHandler,
 		OrganizationHandler:  orgHandler,
 		MissingPersonHandler: mpHandler,

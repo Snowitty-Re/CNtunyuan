@@ -2,7 +2,6 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import RouteGuard from '@/components/layout/RouteGuard';
 import LoginPage from '@/pages/login';
-import SetupPage from '@/pages/setup';
 import DashboardPage from '@/pages/dashboard';
 
 // 案件管理
@@ -36,16 +35,8 @@ import SettingsPage from '@/pages/settings';
 
 export const router = createBrowserRouter([
   {
-    path: '/setup',
-    element: <SetupPage />,
-  },
-  {
     path: '/login',
-    element: (
-      <RouteGuard>
-        <LoginPage />
-      </RouteGuard>
-    ),
+    element: <LoginPage />,
   },
   {
     path: '/',

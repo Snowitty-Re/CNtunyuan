@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth';
 import { Spin } from 'antd';
-import axios from 'axios';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -13,41 +12,18 @@ export default function RouteGuard({ children }: RouteGuardProps) {
   const location = useLocation();
   const { isAuthenticated } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
-  const [initialized, setInitialized] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // 检查系统初始化状态
-    const checkInitStatus = async () => {
-      try {
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
-        const res = await axios.get(`${apiUrl}/setup/status`);
-        setInitialized(res.data.data?.initialized || false);
-      } catch (error) {
-        console.error('检查初始化状态失败:', error);
-        // 如果请求失败，假设系统已初始化（避免无法访问）
-        setInitialized(true);
-      } finally {
-        setIsReady(true);
-      }
-    };
+    // 简单延迟确保状态已恢复
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 100);
 
-    checkInitStatus();
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    if (!isReady || initialized === null) return;
-
-    // 如果系统未初始化且不在初始化页面，跳转到初始化页面
-    if (!initialized && location.pathname !== '/setup') {
-      navigate('/setup', { replace: true });
-      return;
-    }
-
-    // 如果系统已初始化但在初始化页面，跳转到登录页
-    if (initialized && location.pathname === '/setup') {
-      navigate('/login', { replace: true });
-      return;
-    }
+    if (!isReady) return;
 
     // 如果未登录且不在登录页，跳转到登录页
     if (!isAuthenticated && location.pathname !== '/login') {
@@ -58,7 +34,7 @@ export default function RouteGuard({ children }: RouteGuardProps) {
     if (isAuthenticated && location.pathname === '/login') {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, location.pathname, navigate, isReady, initialized]);
+  }, [isAuthenticated, location.pathname, navigate, isReady]);
 
   if (!isReady) {
     return (

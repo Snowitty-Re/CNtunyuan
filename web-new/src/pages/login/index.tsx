@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -27,15 +27,21 @@ interface LoginForm {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setToken, setUser } = useAuthStore();
+  const { setToken, setUser, isAuthenticated } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('password');
+
+  // 如果已登录，跳转到工作台
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   // 账号密码登录
   const handlePasswordLogin = async (values: LoginForm) => {
     setLoading(true);
     try {
-      // 使用原始 axios 查看真实响应
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
       const response: any = await axios.post(`${apiUrl}/auth/admin-login`, {
         username: values.username,
