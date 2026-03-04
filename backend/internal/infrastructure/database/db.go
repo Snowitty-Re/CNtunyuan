@@ -30,8 +30,9 @@ func CreateDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
 // createPostgresDatabaseIfNotExists 创建 PostgreSQL 数据库
 func createPostgresDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
 	// 连接到 postgres 数据库（不指定具体数据库）
+	// 强制使用 disable 避免 TLS 连接问题
 	sslMode := cfg.SSLMode
-	if sslMode == "" {
+	if sslMode == "" || sslMode == "require" || sslMode == "prefer" {
 		sslMode = "disable"
 	}
 	dsn := fmt.Sprintf(
