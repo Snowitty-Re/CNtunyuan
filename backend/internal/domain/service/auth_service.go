@@ -201,6 +201,50 @@ type TokenClaims struct {
 	ExpiresAt time.Time   `json:"exp"`
 }
 
+// WechatLogin WeChat mini-program login
+func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string) (*valueobject.LoginResult, *entity.User, bool, error) {
+	// TODO: Call WeChat API to get openid
+	// For now, simulate with code as openid for development
+	openid := "wx_" + code
+
+	// Find user by openid (phone field used as openid for wechat users)
+	user, err := s.userRepo.FindByPhone(ctx, openid)
+	if err != nil {
+		// User not found, need to create
+		return nil, nil, true, nil
+	}
+
+	// Check user status
+	if !user.IsActive() {
+		return nil, nil, false, ErrUserDisabled
+	}
+
+	// Record login
+	user.RecordLogin(ip)
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		logger.Error("Failed to record wechat login", logger.Err(err))
+	}
+
+	// Generate token
+	tokens, err := s.tokenService.GenerateTokenPair(ctx, user)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	logger.Info("Wechat login success",
+		logger.String("user_id", user.ID),
+		logger.String("role", string(user.Role)),
+		logger.String("ip", ip),
+	)
+
+	return &valueobject.LoginResult{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    tokens.ExpiresIn,
+		TokenType:    "Bearer",
+	}, user, false, nil
+}
+
 // cacheKeyUser user cache key
 func cacheKeyUser(userID string) string {
 	return cache.CacheKey("user", userID)

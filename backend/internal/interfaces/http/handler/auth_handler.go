@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"net/http"
-
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/valueobject"
@@ -152,7 +150,7 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	response.Success(c, dto.ToUserResponse(user))
 }
 
-// WechatLogin WeChat mini-program login (stub)
+// WechatLogin WeChat mini-program login
 func (h *AuthHandler) WechatLogin(c *gin.Context) {
 	var req WechatLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -160,28 +158,33 @@ func (h *AuthHandler) WechatLogin(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement real WeChat login with app credentials
-	// This is a stub that returns a mock token for development
-	logger.Info("WeChat login stub called", logger.String("code", req.Code))
+	result, user, needBind, err := h.authService.WechatLogin(c.Request.Context(), req.Code, c.ClientIP())
+	if err != nil {
+		logger.Error("Wechat login failed", logger.Err(err))
+		response.Unauthorized(c, "wechat login failed")
+		return
+	}
 
-	// Return mock response for development
-	c.JSON(http.StatusOK, gin.H{
-		"code":    200,
-		"message": "WeChat login stub - implement with real WeChat API",
-		"data": gin.H{
-			"access_token":  "mock_access_token_for_wechat_login",
-			"refresh_token": "mock_refresh_token_for_wechat_login",
-			"expires_in":    7200,
-			"token_type":    "Bearer",
+	// Need to bind phone
+	if needBind {
+		response.Success(c, gin.H{
+			"need_bind_phone": true,
 			"user": gin.H{
-				"id":        "wechat_user_001",
-				"nickname":  "微信用户",
-				"phone":     "",
-				"role":      "volunteer",
-				"status":    "active",
-				"avatar":    "",
-				"created_at": "2024-01-01T00:00:00Z",
+				"id":       "",
+				"nickname": "微信用户",
+				"phone":    "",
+				"role":     "volunteer",
+				"status":   "active",
 			},
-		},
+		})
+		return
+	}
+
+	response.Success(c, dto.LoginResponse{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresIn:    result.ExpiresIn,
+		TokenType:    result.TokenType,
+		User:         dto.ToUserResponse(user),
 	})
 }
