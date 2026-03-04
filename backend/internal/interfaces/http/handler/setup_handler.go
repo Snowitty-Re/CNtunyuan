@@ -85,6 +85,7 @@ type TestDBRequest struct {
 func (h *SetupHandler) TestDatabase(c *gin.Context) {
 	var req TestDBRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Error("TestDatabase bind error", logger.Err(err))
 		response.BadRequest(c, err.Error())
 		return
 	}
@@ -95,7 +96,7 @@ func (h *SetupHandler) TestDatabase(c *gin.Context) {
 		logger.String("host", req.Host),
 		logger.Int("port", req.Port),
 		logger.String("database", req.Database),
-		logger.String("ssl_mode", req.SSLMode),
+		logger.String("ssl_mode_received", req.SSLMode),
 	)
 
 	// 设置 SSLMode 默认值 - 强制使用 disable 避免 TLS 连接问题

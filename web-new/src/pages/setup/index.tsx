@@ -75,6 +75,7 @@ export default function SetupPage() {
       setLoading(true);
       
       // 转换字段名以匹配后端期望
+      const sslMode = values.db_ssl_mode === 'require' ? 'disable' : (values.db_ssl_mode || 'disable');
       const payload = {
         type: values.db_type,
         host: values.db_host,
@@ -82,9 +83,10 @@ export default function SetupPage() {
         user: values.db_user,
         password: values.db_password,
         database: values.db_name,
-        ssl_mode: values.db_ssl_mode || 'disable',
+        ssl_mode: sslMode,
         charset: values.db_charset || 'utf8mb4',
       };
+      console.log('[Setup] Payload:', payload);
       
       const res = await axios.post(`${apiUrl}/setup/test-db`, payload);
       
