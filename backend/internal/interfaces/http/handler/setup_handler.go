@@ -98,9 +98,9 @@ func (h *SetupHandler) TestDatabase(c *gin.Context) {
 		logger.String("ssl_mode", req.SSLMode),
 	)
 
-	// 设置 SSLMode 默认值
+	// 设置 SSLMode 默认值 - 强制使用 disable 避免 TLS 连接问题
 	sslMode := req.SSLMode
-	if sslMode == "" {
+	if sslMode == "" || sslMode == "require" {
 		sslMode = "disable"
 	}
 

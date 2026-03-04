@@ -76,13 +76,12 @@ func (c *DatabaseConfig) GetDSN() string {
 	case DatabaseTypePostgres:
 		// PostgreSQL DSN
 		sslMode := c.SSLMode
-		if sslMode == "" {
+		// 强制使用 disable 避免 TLS 连接问题（开发环境）
+		if sslMode == "" || sslMode == "require" || sslMode == "prefer" {
 			sslMode = "disable"
 		}
 		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s client_encoding=UTF8",
 			c.Host, c.Port, c.User, c.Password, c.Database, sslMode)
-		// Debug log
-		fmt.Printf("[DEBUG] PostgreSQL DSN: host=%s port=%d dbname=%s sslmode=%s\n", c.Host, c.Port, c.Database, sslMode)
 		return dsn
 	default:
 		return ""
