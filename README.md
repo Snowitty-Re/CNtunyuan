@@ -91,7 +91,7 @@
 CNtunyuan/
 ├── backend/              # Go 后端服务 (Clean Architecture)
 │   ├── cmd/              # 应用程序入口
-│   │   ├── server/       # HTTP 服务器
+│   │   ├── app/          # HTTP 服务器（统一入口）
 │   │   ├── seed/         # 数据填充工具
 │   │   └── resetpassword/# 密码重置工具
 │   ├── internal/         # 内部包
@@ -170,19 +170,7 @@ VITE_API_BASE_URL=http://localhost:8080/api/v1
 VITE_APP_DOMAIN=http://localhost:8080
 ```
 
-### 系统初始化（推荐）
-
-新环境首次启动时，系统会自动引导至初始化向导页面：
-
-1. 启动后端服务：`go run cmd/app/main.go`
-2. 启动前端服务：`pnpm dev` (在 web-new 目录)
-3. 访问 `http://localhost:3000`，自动跳转至 `/setup`
-4. 按向导完成：
-   - **数据库配置**：选择 PostgreSQL 或 MySQL，填写连接信息并测试
-   - **初始化数据库**：自动创建数据库和表结构
-   - **创建管理员**：设置第一个超级管理员账号
-
-### 命令行初始化（可选）
+### 系统初始化
 
 ```bash
 cd backend

@@ -71,7 +71,7 @@
 ```
 backend/
 ├── cmd/                      # 应用程序入口
-│   ├── server/              # HTTP 服务器
+│   ├── app/                 # HTTP 服务器（统一入口）
 │   ├── seed/                # 数据填充工具
 │   └── resetpassword/       # 密码重置工具
 │
@@ -220,19 +220,7 @@ cd backend && go run cmd/seed/main.go -users    # 只导入用户
 
 ### 完整初始化流程（新环境）
 
-#### 方式一：Web 初始化向导（推荐）
-```bash
-# 1. 启动后端服务
-cd backend && go run cmd/app/main.go
-
-# 2. 启动前端服务（另一个终端）
-cd web-new && pnpm dev
-
-# 3. 访问 http://localhost:3000/setup
-# 4. 按向导完成：选择数据库类型 -> 测试连接 -> 初始化数据库 -> 创建管理员
-```
-
-#### 方式二：命令行初始化
+#### 命令行初始化
 ```bash
 # 1. 确保数据库已创建（或配置好数据库连接）
 # 2. 执行数据库迁移
@@ -340,7 +328,7 @@ VITE_API_BASE_URL=/api/v1
    - 本地存储需要确保 `./uploads` 目录存在且有写入权限
    - 生产环境建议使用 OSS 或 COS
    - 文件上传大小限制默认为 50MB
-7. **初始化**: 首次启动必须访问 `/setup` 完成系统初始化，创建第一个管理员账号
+7. **初始化**: 首次启动前请确保已配置数据库并执行数据迁移
 
 ## 常见问题
 
@@ -351,12 +339,11 @@ VITE_API_BASE_URL=/api/v1
 - 检查防火墙设置是否允许连接
 
 ### 2. 首次启动如何初始化系统
-- 启动后端和前端服务后，访问 `http://localhost:3000`
-- 系统会自动跳转至 `/setup` 初始化页面
-- 选择数据库类型（PostgreSQL/MySQL）并填写连接信息
-- 测试连接成功后，点击初始化按钮
-- 创建第一个超级管理员账号
-- 初始化完成后使用创建的账号登录
+1. 配置 `backend/config/config.yaml` 中的数据库连接
+2. 执行数据库迁移：`cd backend && go run cmd/app/main.go -migrate`
+3. （可选）导入种子数据：`cd backend && go run cmd/seed/main.go -all`
+4. 启动后端服务：`cd backend && go run cmd/app/main.go`
+5. 访问 `http://localhost:3000`，使用种子数据的默认账号登录
 
 ### 3. 登录失败
 - 确认系统已完成初始化（访问 `/setup` 查看状态）
@@ -388,6 +375,12 @@ VITE_API_BASE_URL=/api/v1
 
 ## 更新日志
 
+### 2026-03-05
+- **移除系统初始化向导**:
+  - 删除 `/setup` 页面和相关后端接口
+  - 回归传统手动配置方式
+  - 简化部署流程，减少潜在问题
+
 ### 2026-03-04
 - **MySQL 8.0 支持**:
   - 新增 MySQL 驱动支持 (`gorm.io/driver/mysql`)
@@ -395,12 +388,9 @@ VITE_API_BASE_URL=/api/v1
   - 自动检测数据库类型并创建相应连接
   - MySQL 使用 `utf8mb4` 编码支持 Emoji
   - 自动创建数据库（如果不存在）
-- **系统初始化向导**:
-  - 新增 `/setup` 页面用于首次初始化
-  - 支持在浏览器中配置数据库连接（PostgreSQL/MySQL）
-  - 支持测试数据库连接
-  - 支持创建第一个超级管理员账号
-  - 移除默认管理员账号（不再预置 13800138000/admin123）
+- **系统初始化向导** (已移除):
+  - ~~新增 `/setup` 页面用于首次初始化~~
+  - ~~支持在浏览器中配置数据库连接（PostgreSQL/MySQL）~~
 - **Bug 修复**:
   - 修复登录接口 token 字段名不匹配问题
   - 修复响应状态码处理（支持 code 0 和 200）
