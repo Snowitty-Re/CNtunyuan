@@ -1,10 +1,11 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { message } from 'antd';
 import { useAuthStore } from '@/stores/auth';
+import config from '@/config';
 
 // 创建axios实例
 const request = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
+  baseURL: config.apiBaseUrl,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

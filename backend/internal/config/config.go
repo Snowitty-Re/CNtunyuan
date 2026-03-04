@@ -27,6 +27,7 @@ type Config struct {
 type ServerConfig struct {
 	Port           string `mapstructure:"port"`
 	Mode           string `mapstructure:"mode"`
+	Domain         string `mapstructure:"domain"`
 	ReadTimeout    int    `mapstructure:"read_timeout"`
 	WriteTimeout   int    `mapstructure:"write_timeout"`
 	MaxHeaderBytes int    `mapstructure:"max_header_bytes"`
@@ -247,6 +248,7 @@ func setDefaults() {
 	// Server defaults
 	viper.SetDefault("server.port", "8080")
 	viper.SetDefault("server.mode", "release")
+	viper.SetDefault("server.domain", "http://localhost:8080")
 	viper.SetDefault("server.read_timeout", 30)
 	viper.SetDefault("server.write_timeout", 30)
 	viper.SetDefault("server.max_header_bytes", 1048576)

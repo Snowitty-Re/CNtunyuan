@@ -1,6 +1,7 @@
 server:
   port: 8080
   mode: debug  # debug/release
+  domain: "http://localhost:8080"  # 后端域名，用于生成文件URL等
   read_timeout: 30
   write_timeout: 30
   max_header_bytes: 1048576  # 1MB
