@@ -1,4 +1,4 @@
-const services = require('../../services')
+const services = require('../../services/index')
 const { showSuccess, showError, showLoading, hideLoading } = require('../../utils/util')
 
 Page({

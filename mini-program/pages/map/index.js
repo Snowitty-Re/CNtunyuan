@@ -1,4 +1,4 @@
-const services = require('../../services')
+const services = require('../../services/index')
 const { showError, showToast } = require('../../utils/util')
 
 // 地图上下文
