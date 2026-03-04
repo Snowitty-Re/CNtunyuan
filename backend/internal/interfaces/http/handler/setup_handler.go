@@ -89,6 +89,15 @@ func (h *SetupHandler) TestDatabase(c *gin.Context) {
 		return
 	}
 
+	// Debug log
+	logger.Info("TestDatabase request",
+		logger.String("type", req.Type),
+		logger.String("host", req.Host),
+		logger.Int("port", req.Port),
+		logger.String("database", req.Database),
+		logger.String("ssl_mode", req.SSLMode),
+	)
+
 	// 设置 SSLMode 默认值
 	sslMode := req.SSLMode
 	if sslMode == "" {

@@ -253,8 +253,12 @@ export default function SetupPage() {
                 </Form.Item>
 
                 {dbType === 'postgres' && (
-                  <Form.Item name="db_ssl_mode" label="SSL 模式">
-                    <Radio.Group defaultValue="disable">
+                  <Form.Item 
+                    name="db_ssl_mode" 
+                    label="SSL 模式"
+                    initialValue="disable"
+                  >
+                    <Radio.Group>
                       <Radio value="disable">禁用</Radio>
                       <Radio value="require">需要</Radio>
                       <Radio value="prefer">优先</Radio>
@@ -263,8 +267,12 @@ export default function SetupPage() {
                 )}
 
                 {dbType === 'mysql' && (
-                  <Form.Item name="db_charset" label="字符集">
-                    <Radio.Group defaultValue="utf8mb4">
+                  <Form.Item 
+                    name="db_charset" 
+                    label="字符集"
+                    initialValue="utf8mb4"
+                  >
+                    <Radio.Group>
                       <Radio value="utf8mb4">utf8mb4（推荐）</Radio>
                       <Radio value="utf8">utf8</Radio>
                     </Radio.Group>
