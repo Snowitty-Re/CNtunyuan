@@ -30,9 +30,13 @@ func CreateDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
 // createPostgresDatabaseIfNotExists 创建 PostgreSQL 数据库
 func createPostgresDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
 	// 连接到 postgres 数据库（不指定具体数据库）
+	sslMode := cfg.SSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
 	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s client_encoding=UTF8",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.SSLMode,
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, sslMode,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{

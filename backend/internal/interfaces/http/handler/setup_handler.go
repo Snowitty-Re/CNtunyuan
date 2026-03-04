@@ -89,6 +89,12 @@ func (h *SetupHandler) TestDatabase(c *gin.Context) {
 		return
 	}
 
+	// 设置 SSLMode 默认值
+	sslMode := req.SSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
 	cfg := config.DatabaseConfig{
 		Type:     config.DatabaseType(req.Type),
 		Host:     req.Host,
@@ -96,7 +102,7 @@ func (h *SetupHandler) TestDatabase(c *gin.Context) {
 		User:     req.User,
 		Password: req.Password,
 		Database: req.Database,
-		SSLMode:  req.SSLMode,
+		SSLMode:  sslMode,
 		Charset:  req.Charset,
 	}
 
@@ -140,6 +146,12 @@ func (h *SetupHandler) Initialize(c *gin.Context) {
 		return
 	}
 
+	// 设置 SSLMode 默认值
+	sslMode := req.DBSSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
 	// 1. 构建数据库配置
 	cfg := config.DatabaseConfig{
 		Type:            config.DatabaseType(req.DBType),
@@ -148,7 +160,7 @@ func (h *SetupHandler) Initialize(c *gin.Context) {
 		User:            req.DBUser,
 		Password:        req.DBPassword,
 		Database:        req.DBName,
-		SSLMode:         req.DBSSLMode,
+		SSLMode:         sslMode,
 		Charset:         req.DBCharset,
 		MaxIdleConns:    10,
 		MaxOpenConns:    100,

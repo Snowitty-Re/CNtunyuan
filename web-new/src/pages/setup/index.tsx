@@ -82,8 +82,8 @@ export default function SetupPage() {
         user: values.db_user,
         password: values.db_password,
         database: values.db_name,
-        ssl_mode: values.db_ssl_mode,
-        charset: values.db_charset,
+        ssl_mode: values.db_ssl_mode || 'disable',
+        charset: values.db_charset || 'utf8mb4',
       };
       
       const res = await axios.post(`${apiUrl}/setup/test-db`, payload);
