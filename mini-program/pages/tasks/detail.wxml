@@ -110,9 +110,9 @@
         </view>
         <view class="case-card" bindtap="goToCase">
           <view class="case-info">
-            <image class="case-avatar" src="{{task.missing_person?.photo || '/assets/images/default-avatar.png'}}" mode="aspectFill" />
+            <image class="case-avatar" src="{{(task.missing_person && task.missing_person.photo) || '/assets/images/default-avatar.png'}}" mode="aspectFill" />
             <view class="case-detail">
-              <view class="case-name">{{task.missing_person?.name || '查看案件详情'}}</view>
+              <view class="case-name">{{(task.missing_person && task.missing_person.name) || '查看案件详情'}}</view>
               <view class="case-desc" wx:if="{{task.missing_person}}">
                 {{task.missing_person.age}}岁 · {{task.missing_person.last_seen_location}}
               </view>

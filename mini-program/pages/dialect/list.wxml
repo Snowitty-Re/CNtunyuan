@@ -67,8 +67,8 @@
           
           <view class="dialect-footer">
             <view class="collector-info">
-              <image class="collector-avatar" src="{{item.collector?.avatar || '/images/default-avatar.png'}}" mode="aspectFill"/>
-              <text class="collector-name">{{item.collector?.nickname || '志愿者'}}</text>
+              <image class="collector-avatar" src="{{(item.collector && item.collector.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
+              <text class="collector-name">{{(item.collector && item.collector.nickname) || '志愿者'}}</text>
             </view>
             <text class="create-time">{{formatTimeAgo(item.created_at)}}</text>
           </view>

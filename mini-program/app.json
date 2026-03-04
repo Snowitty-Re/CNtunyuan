@@ -65,12 +65,6 @@
   "permission": {
     "scope.userLocation": {
       "desc": "您的位置信息将用于小程序位置接口的效果展示"
-    },
-    "scope.record": {
-      "desc": "需要使用录音功能录制方言语音"
-    },
-    "scope.camera": {
-      "desc": "需要使用相机功能拍摄照片"
     }
   },
   "requiredBackgroundModes": ["audio", "location"],

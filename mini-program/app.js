@@ -48,13 +48,24 @@ App({
   // 获取系统信息
   getSystemInfo() {
     try {
-      const systemInfo = wx.getSystemInfoSync()
+      // 使用新的 API 替代废弃的 wx.getSystemInfoSync
+      const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : {}
+      const deviceInfo = wx.getDeviceInfo ? wx.getDeviceInfo() : {}
+      const appBaseInfo = wx.getAppBaseInfo ? wx.getAppBaseInfo() : {}
+      
+      // 合并信息保持兼容性
+      const systemInfo = {
+        ...windowInfo,
+        ...deviceInfo,
+        ...appBaseInfo
+      }
+      
       this.globalData.systemInfo = systemInfo
       
       // 设置导航栏适配
-      if (systemInfo.statusBarHeight) {
-        this.globalData.statusBarHeight = systemInfo.statusBarHeight
-        this.globalData.navBarHeight = systemInfo.statusBarHeight + 44
+      if (windowInfo.statusBarHeight) {
+        this.globalData.statusBarHeight = windowInfo.statusBarHeight
+        this.globalData.navBarHeight = windowInfo.statusBarHeight + 44
       }
     } catch (e) {
       console.error('[App] 获取系统信息失败:', e)

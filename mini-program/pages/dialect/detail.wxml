@@ -79,9 +79,9 @@
     <view class="collector-section" bindtap="goToCollectorProfile">
       <view class="section-title">采集者</view>
       <view class="collector-card">
-        <image class="collector-avatar" src="{{dialect.collector?.avatar || '/images/default-avatar.png'}}" mode="aspectFill"/>
+        <image class="collector-avatar" src="{{(dialect.collector && dialect.collector.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
         <view class="collector-info">
-          <text class="collector-name">{{dialect.collector?.nickname || '志愿者'}}</text>
+          <text class="collector-name">{{(dialect.collector && dialect.collector.nickname) || '志愿者'}}</text>
           <text class="collector-time">{{dialect.formatted_date}}</text>
         </view>
         <view class="collector-arrow">›</view>
@@ -117,10 +117,10 @@
       <!-- 评论列表 -->
       <view class="comments-list" wx:if="{{comments.length > 0}}">
         <view class="comment-item" wx:for="{{comments}}" wx:key="id">
-          <image class="comment-avatar" src="{{item.user?.avatar || '/images/default-avatar.png'}}" mode="aspectFill"/>
+          <image class="comment-avatar" src="{{(item.user && item.user.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
           <view class="comment-content">
             <view class="comment-header">
-              <text class="comment-name">{{item.user?.nickname || '用户'}}</text>
+              <text class="comment-name">{{(item.user && item.user.nickname) || '用户'}}</text>
               <text class="comment-time">{{item.time_text}}</text>
             </view>
             <text class="comment-text">{{item.content}}</text>

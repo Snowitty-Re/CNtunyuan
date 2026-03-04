@@ -2,7 +2,5 @@
   "usingComponents": {},
   "navigationBarTitleText": "案件详情",
   "navigationBarBackgroundColor": "#e67e22",
-  "navigationBarTextStyle": "white",
-  "enableShareAppMessage": true,
-  "enableShareTimeline": true
+  "navigationBarTextStyle": "white"
 }
