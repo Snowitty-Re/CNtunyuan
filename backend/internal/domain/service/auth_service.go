@@ -20,11 +20,24 @@ var (
 	ErrTokenInvalid       = errors.New("token invalid")
 )
 
+// WechatSession 微信会话信息
+type WechatSession struct {
+	OpenID     string
+	SessionKey string
+	UnionID    string
+}
+
+// WechatClient 微信客户端接口
+type WechatClient interface {
+	Code2Session(code string) (*WechatSession, error)
+}
+
 // AuthService auth service
 type AuthService struct {
 	userRepo     repository.UserRepository
 	tokenService TokenService
 	cache        cache.Cache
+	wechatClient WechatClient
 }
 
 // NewAuthService create auth service
@@ -32,11 +45,13 @@ func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenService TokenService,
 	cache cache.Cache,
+	wechatClient WechatClient,
 ) *AuthService {
 	return &AuthService{
 		userRepo:     userRepo,
 		tokenService: tokenService,
 		cache:        cache,
+		wechatClient: wechatClient,
 	}
 }
 
@@ -203,29 +218,46 @@ type TokenClaims struct {
 
 // WechatLogin WeChat mini-program login
 func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string) (*valueobject.LoginResult, *entity.User, bool, error) {
-	// TODO: Call WeChat API to get openid
-	// For now, simulate with code as openid for development
-	openid := "wx_" + code
+	// 检查微信客户端是否配置
+	if s.wechatClient == nil {
+		return nil, nil, false, errors.New("wechat login not configured")
+	}
 
-	// Find user by openid (phone field used as openid for wechat users)
+	// 调用微信API获取openid
+	session, err := s.wechatClient.Code2Session(code)
+	if err != nil {
+		logger.Error("Wechat code2session failed", logger.Err(err))
+		return nil, nil, false, err
+	}
+
+	openid := session.OpenID
+	if openid == "" {
+		return nil, nil, false, errors.New("failed to get openid from wechat")
+	}
+
+	logger.Info("Wechat login", logger.String("openid", openid))
+
+	// 根据openid查找用户（openid存储在phone字段，标记为微信用户）
+	// 实际生产环境应该有一个独立的wechat_openid字段
 	user, err := s.userRepo.FindByPhone(ctx, openid)
 	if err != nil {
-		// User not found, need to create
+		// 用户不存在，需要绑定手机号创建账号
+		logger.Info("Wechat user not found, need bind phone", logger.String("openid", openid))
 		return nil, nil, true, nil
 	}
 
-	// Check user status
+	// 检查用户状态
 	if !user.IsActive() {
 		return nil, nil, false, ErrUserDisabled
 	}
 
-	// Record login
+	// 记录登录
 	user.RecordLogin(ip)
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		logger.Error("Failed to record wechat login", logger.Err(err))
 	}
 
-	// Generate token
+	// 生成token
 	tokens, err := s.tokenService.GenerateTokenPair(ctx, user)
 	if err != nil {
 		return nil, nil, false, err

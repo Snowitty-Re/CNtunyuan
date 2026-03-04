@@ -16,6 +16,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
 	infraRepo "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/repository"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/storage"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/wechat"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/router"
@@ -63,6 +64,12 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	// 创建 Token 服务
 	tokenService := auth.NewJWTService(&cfg.JWT, redisCache)
 
+	// 创建微信客户端
+	var wechatClient *wechat.Client
+	if cfg.WeChat.AppID != "" && cfg.WeChat.AppSecret != "" {
+		wechatClient = wechat.NewClient(cfg.WeChat.AppID, cfg.WeChat.AppSecret)
+	}
+
 	// 创建存储服务
 	var storageService domainService.StorageService
 	switch cfg.Storage.Type {
@@ -85,7 +92,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	fileRepo := infraRepo.NewFileRepository(db)
 
 	// 创建领域服务
-	authService := domainService.NewAuthService(userRepo, tokenService, redisCache)
+	authService := domainService.NewAuthService(userRepo, tokenService, redisCache, wechatClient)
 
 	// 创建应用服务
 	userService := service.NewUserAppService(userRepo)

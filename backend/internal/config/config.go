@@ -105,11 +105,12 @@ type JWTConfig struct {
 
 // WeChatConfig 微信小程序配置
 type WeChatConfig struct {
-	AppID     string `mapstructure:"app_id"`
-	AppSecret string `mapstructure:"app_secret"`
-	MchID     string `mapstructure:"mch_id"`
-	APIKey    string `mapstructure:"api_key"`
-	NotifyURL string `mapstructure:"notify_url"`
+	AppID       string `mapstructure:"app_id"`
+	AppSecret   string `mapstructure:"app_secret"`
+	MchID       string `mapstructure:"mch_id"`
+	APIKey      string `mapstructure:"api_key"`
+	NotifyURL   string `mapstructure:"notify_url"`
+	EnableLogin bool   `mapstructure:"enable_login"` // 是否启用微信登录
 }
 
 // StorageConfig 存储配置
