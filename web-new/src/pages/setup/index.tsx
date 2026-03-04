@@ -74,7 +74,19 @@ export default function SetupPage() {
       const values = await dbForm.validateFields();
       setLoading(true);
       
-      const res = await axios.post(`${apiUrl}/setup/test-db`, values);
+      // 转换字段名以匹配后端期望
+      const payload = {
+        type: values.db_type,
+        host: values.db_host,
+        port: values.db_port,
+        user: values.db_user,
+        password: values.db_password,
+        database: values.db_name,
+        ssl_mode: values.db_ssl_mode,
+        charset: values.db_charset,
+      };
+      
+      const res = await axios.post(`${apiUrl}/setup/test-db`, payload);
       
       if (res.data.code === 0 || res.data.code === 200) {
         message.success('数据库连接成功');

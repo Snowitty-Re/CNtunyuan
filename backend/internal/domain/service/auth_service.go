@@ -218,6 +218,11 @@ type TokenClaims struct {
 
 // WechatLogin WeChat mini-program login
 func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string) (*valueobject.LoginResult, *entity.User, bool, error) {
+	// 检查数据库连接
+	if s.userRepo == nil {
+		return nil, nil, false, errors.New("database not initialized, please complete system setup first")
+	}
+
 	// 检查微信客户端是否配置
 	if s.wechatClient == nil {
 		return nil, nil, false, errors.New("wechat login not configured")
@@ -237,8 +242,8 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string) (
 
 	logger.Info("Wechat login", logger.String("openid", openid))
 
-	// 根据openid查找用户（openid存储在phone字段，标记为微信用户）
-	// 实际生产环境应该有一个独立的wechat_openid字段
+	// 根据openid查找用户
+	// TODO: 应该使用专门的 wechat_openid 字段
 	user, err := s.userRepo.FindByPhone(ctx, openid)
 	if err != nil {
 		// 用户不存在，需要绑定手机号创建账号
