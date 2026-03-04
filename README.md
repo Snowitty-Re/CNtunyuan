@@ -133,6 +133,43 @@ CNtunyuan/
 - Redis 7 (可选)
 - 微信小程序开发者工具
 
+### 配置说明
+
+#### 后端配置 (backend/config/config.yaml)
+```yaml
+# 服务器配置
+server:
+  port: 8080
+  mode: debug  # debug/release
+  domain: "http://localhost:8080"
+
+# 数据库配置（支持 PostgreSQL/MySQL）
+database:
+  type: "postgres"  # 或 mysql
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "your-password"
+  database: "cntuanyuan"
+
+# 微信小程序配置（用于小程序登录）
+wechat:
+  app_id: "your-wechat-app-id"
+  app_secret: "your-wechat-app-secret"
+  enable_login: true
+
+# JWT 配置（生产环境必须修改密钥）
+jwt:
+  secret: "your-jwt-secret-key"
+  expire_time: 604800  # 7天
+```
+
+#### 前端配置 (web-new/.env.development)
+```env
+VITE_API_BASE_URL=http://localhost:8080/api/v1
+VITE_APP_DOMAIN=http://localhost:8080
+```
+
 ### 系统初始化（推荐）
 
 新环境首次启动时，系统会自动引导至初始化向导页面：
@@ -167,11 +204,16 @@ cd backend
 # 安装依赖
 go mod download
 
-# 配置数据库（修改 config/config.yaml）
-# 或使用默认配置
+# 配置（修改 config/config.yaml）
+# - 数据库连接
+# - JWT 密钥（生产环境必须修改）
+# - 微信小程序 AppID 和 AppSecret（如使用微信登录）
 
-# 运行
-go run cmd/server/main.go
+# 运行（统一入口 cmd/app/main.go）
+go run cmd/app/main.go
+
+# 数据库迁移
+go run cmd/app/main.go -migrate
 
 # 或使用 air 热重载
 air

@@ -169,7 +169,7 @@ DELETE /api/v1/resources/:id   # 删除
 ```bash
 cd backend
 
-# 开发模式启动
+# 开发模式启动（统一入口：cmd/app/main.go）
 go run cmd/app/main.go
 
 # 数据库迁移（自动创建表结构）
@@ -178,8 +178,8 @@ go run cmd/app/main.go -migrate
 # 数据填充
 go run cmd/seed/main.go -all
 
-# 重置密码（TODO）
-# go run cmd/resetpassword/main.go -phone=13800138000 -password=newpassword
+# 重置密码
+go run cmd/resetpassword/main.go -phone=13800138000 -password=newpassword
 
 # 格式化代码
 go fmt ./...
@@ -250,6 +250,7 @@ cd backend && go run cmd/app/main.go
 server:
   port: "8080"
   mode: "debug"  # debug/release
+  domain: "http://localhost:8080"  # 后端域名，用于生成文件URL等
 
 database:
   type: "postgres"   # 数据库类型: postgres 或 mysql
@@ -271,8 +272,17 @@ redis:
   db: 0
 
 jwt:
-  secret: "your-secret-key"
+  secret: "your-secret-key"  # 生产环境必须修改
   expire_time: 604800  # 7天
+  refresh_time: 2592000  # 30天
+
+wechat:
+  app_id: "your-app-id"          # 微信小程序 AppID
+  app_secret: "your-app-secret"  # 微信小程序 AppSecret
+  enable_login: true             # 是否启用微信登录
+  mch_id: ""      # 商户号(支付用，可选)
+  api_key: ""     # API密钥(支付用，可选)
+  notify_url: ""  # 支付回调地址(可选)
 
 storage:
   type: local           # 存储类型: local/oss/cos
@@ -280,6 +290,37 @@ storage:
   base_url: http://localhost:8080/uploads
   max_file_size: 52428800  # 50MB
   allowed_types: "jpg,png,gif,mp4,mp3,wav"
+  
+  # 阿里云OSS配置（可选）
+  oss_access_key_id: ""
+  oss_access_key_secret: ""
+  oss_endpoint: ""
+  oss_bucket: ""
+  oss_region: ""
+  
+  # 腾讯云COS配置（可选）
+  cos_secret_id: ""
+  cos_secret_key: ""
+  cos_bucket: ""
+  cos_region: ""
+
+sms:
+  provider: aliyun  # aliyun/tencent
+  sign_name: "团圆寻亲"
+  # 阿里云短信
+  aliyun_access_key_id: ""
+  aliyun_access_key_secret: ""
+  # 腾讯云短信
+  tencent_secret_id: ""
+  tencent_secret_key: ""
+  tencent_app_id: ""
+
+system:
+  default_org_name: "团圆寻亲志愿者协会"
+  enable_register: true      # 是否开放注册
+  enable_wechat_login: true  # 是否启用微信登录
+  enable_sms_login: false    # 是否启用短信登录
+  rate_limit: 100            # 每分钟请求限制
 ```
 
 ### 前端配置 (.env)
@@ -321,6 +362,19 @@ VITE_API_BASE_URL=/api/v1
 - 确认系统已完成初始化（访问 `/setup` 查看状态）
 - 检查密码是否正确
 - 查看后端日志确认错误信息
+
+### 4. 微信小程序登录配置
+- 在 [微信小程序后台](https://mp.weixin.qq.com) 获取 AppID 和 AppSecret
+- 在 `config/config.yaml` 中配置 `wechat.app_id` 和 `wechat.app_secret`
+- 设置 `wechat.enable_login: true` 启用微信登录
+- 确保小程序的 `request` 合法域名已配置后端地址
+- 重新启动后端服务使配置生效
+
+### 5. 微信登录后跳回登录页
+- 检查后端日志确认是否成功获取 openid
+- 确认 `wechat.app_id` 和 `wechat.app_secret` 配置正确
+- 检查后端是否生成了有效的 JWT token（不是 mock token）
+- 确认小程序存储 token 成功（检查 `wx.getStorageSync('token')`）
 
 ### 4. 前端代理问题
 - 检查 vite.config.ts 中的代理配置
