@@ -1,4 +1,6 @@
 {
   "usingComponents": {},
-  "navigationBarTitleText": "登记走失人员"
+  "navigationBarTitleText": "登记走失人员",
+  "navigationBarBackgroundColor": "#e67e22",
+  "navigationBarTextStyle": "white"
 }

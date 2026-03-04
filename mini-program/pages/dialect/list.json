@@ -1,7 +1,6 @@
 {
-  "usingComponents": {},
-  "enablePullDownRefresh": true,
-  "backgroundTextStyle": "dark",
   "navigationBarTitleText": "方言库",
-  "onReachBottomDistance": 100
+  "enablePullDownRefresh": true,
+  "backgroundColor": "#f5f7fa",
+  "usingComponents": {}
 }

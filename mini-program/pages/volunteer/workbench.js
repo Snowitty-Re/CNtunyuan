@@ -1,19 +1,32 @@
-const { get, post } = require('../../utils/request')
-const { formatDate, showSuccess } = require('../../utils/util')
+const taskService = require('../../services/task')
+const { formatTimeAgo, showSuccess, showToast, showLoading, hideLoading } = require('../../utils/util')
+const app = getApp()
 
 Page({
   data: {
-    currentDate: '',
+    // 用户信息
     userInfo: {},
-    stats: {
-      taskCount: 0,
-      caseCount: 0,
-      dialectCount: 0,
-      completedCount: 0
+    currentDate: '',
+    
+    // 今日统计
+    todayStats: {
+      pendingCount: 0,    // 待处理任务
+      processingCount: 0, // 进行中任务
+      helpedCount: 0      // 已帮助案件
     },
-    todos: [],
-    myTasks: [],
-    activities: [],
+    
+    // 快捷入口
+    quickActions: [
+      { key: 'myTasks', icon: 'task', label: '我的任务', color: '#FF8C42' },
+      { key: 'createCase', icon: 'case', label: '发布案件', color: '#3498DB' },
+      { key: 'recordDialect', icon: 'mic', label: '录制方言', color: '#27AE60' },
+      { key: 'pendingAssign', icon: 'assign', label: '待分配', color: '#9B59B6', managerOnly: true }
+    ],
+    
+    // 最近任务列表
+    recentTasks: [],
+    
+    // 状态映射
     roleMap: {
       super_admin: '超级管理员',
       admin: '管理员',
@@ -25,6 +38,13 @@ Page({
       high: '高',
       normal: '普通',
       low: '低'
+    },
+    statusMap: {
+      pending: '待处理',
+      assigned: '已分配',
+      processing: '进行中',
+      completed: '已完成',
+      cancelled: '已取消'
     },
     taskTypeMap: {
       search: '实地寻访',
@@ -38,9 +58,25 @@ Page({
 
   onLoad() {
     this.setCurrentDate()
-    this.loadUserInfo()
   },
 
+  onShow() {
+    this.loadUserInfo()
+    this.loadTodayStats()
+    this.loadRecentTasks()
+  },
+
+  onPullDownRefresh() {
+    Promise.all([
+      this.loadUserInfo(),
+      this.loadTodayStats(),
+      this.loadRecentTasks()
+    ]).finally(() => {
+      wx.stopPullDownRefresh()
+    })
+  },
+
+  // 设置当前日期
   setCurrentDate() {
     const date = new Date()
     const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -52,135 +88,115 @@ Page({
     })
   },
 
-  onShow() {
-    this.loadStats()
-    this.loadMyTasks()
-    this.loadActivities()
-  },
-
+  // 加载用户信息
   async loadUserInfo() {
     try {
-      let userInfo = wx.getStorageSync('userInfo') || {}
-      // 获取最新用户信息
-      const freshUserInfo = await get('/auth/me')
-      if (freshUserInfo) {
-        userInfo = { ...userInfo, ...freshUserInfo }
-        wx.setStorageSync('userInfo', userInfo)
-      }
-      userInfo.avatar = userInfo.avatar || 'https://picsum.photos/100/100'
-      userInfo.nickname = userInfo.nickname || '志愿者'
-      this.setData({ userInfo })
+      const userInfo = await app.getUserInfo() || wx.getStorageSync('userInfo') || {}
+      this.setData({ 
+        userInfo: {
+          ...userInfo,
+          avatar: userInfo.avatar || '/assets/images/avatar-default.png',
+          nickname: userInfo.nickname || '志愿者',
+          role: userInfo.role || 'volunteer'
+        }
+      })
     } catch (error) {
       console.error('加载用户信息失败:', error)
     }
   },
 
-  async loadStats() {
+  // 加载今日统计
+  async loadTodayStats() {
     try {
-      // 获取任务统计
-      const taskStats = await get('/tasks/statistics')
+      showLoading('加载中...')
+      const stats = await taskService.getStats()
       this.setData({
-        stats: {
-          taskCount: taskStats.total || 0,
-          completedCount: taskStats.completed || 0,
-          pendingCount: taskStats.pending || 0,
-          processingCount: taskStats.processing || 0
+        todayStats: {
+          pendingCount: stats.pending_count || 0,
+          processingCount: stats.processing_count || 0,
+          helpedCount: stats.helped_count || stats.completed_count || 0
         }
       })
     } catch (error) {
       console.error('加载统计失败:', error)
+      showToast('统计加载失败')
+    } finally {
+      hideLoading()
     }
   },
 
-  async loadMyTasks() {
+  // 加载最近任务
+  async loadRecentTasks() {
     try {
-      const result = await get('/tasks/my', { status: 'assigned' })
-      const myTasks = result.slice(0, 5).map(item => ({
+      const result = await taskService.getMyTasks({ 
+        page: 1, 
+        page_size: 5 
+      })
+      const tasks = (result.list || result || []).map(item => ({
         ...item,
-        deadline: item.deadline ? formatDate(item.deadline) : null
+        timeAgo: formatTimeAgo(item.created_at || item.updated_at)
       }))
-      this.setData({ myTasks })
+      this.setData({ recentTasks: tasks })
     } catch (error) {
-      console.error('加载我的任务失败:', error)
+      console.error('加载最近任务失败:', error)
     }
   },
 
-  async loadActivities() {
-    try {
-      // 获取任务日志作为动态
-      const result = await get('/tasks/my', { status: 'completed' })
-      const activities = result.slice(0, 5).map(item => ({
-        id: item.id,
-        content: `完成了任务"${item.title}"`,
-        time: formatDate(item.completed_time || item.updated_at)
-      }))
-      this.setData({ activities })
-    } catch (error) {
-      console.error('加载动态失败:', error)
-    }
-  },
-
-  // 快速操作
-  quickAction(e) {
-    const type = e.currentTarget.dataset.type
-    switch(type) {
-      case 'task':
-        wx.navigateTo({ url: '/pages/tasks/list' })
+  // 快捷入口点击
+  onQuickActionTap(e) {
+    const { key } = e.currentTarget.dataset
+    switch (key) {
+      case 'myTasks':
+        wx.navigateTo({ url: '/pages/tasks/my' })
         break
-      case 'case':
-        wx.switchTab({ url: '/pages/cases/list' })
+      case 'createCase':
+        wx.navigateTo({ url: '/pages/cases/create' })
         break
-      case 'dialect':
+      case 'recordDialect':
         wx.navigateTo({ url: '/pages/dialect/create' })
         break
-      case 'map':
-        wx.navigateTo({ url: '/pages/map/index' })
+      case 'pendingAssign':
+        wx.navigateTo({ url: '/pages/tasks/list?status=pending' })
         break
     }
   },
 
+  // 查看全部任务
   goToMyTasks() {
     wx.navigateTo({ url: '/pages/tasks/my' })
   },
 
-  goToCreateTask() {
-    wx.navigateTo({ url: '/pages/tasks/create' })
-  },
-
-  goToCreateCase() {
-    wx.navigateTo({ url: '/pages/cases/create' })
-  },
-
-  goToCreateDialect() {
-    wx.navigateTo({ url: '/pages/dialect/create' })
-  },
-
-  goToMap() {
-    wx.navigateTo({ url: '/pages/map/index' })
-  },
-
+  // 任务详情
   goToTaskDetail(e) {
-    const id = e.currentTarget.dataset.id
+    const { id } = e.currentTarget.dataset
     wx.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
   },
 
   // 开始任务
   async startTask(e) {
     e.stopPropagation()
-    const id = e.currentTarget.dataset.id
+    const { id } = e.currentTarget.dataset
     try {
-      await post(`/tasks/${id}/progress`, { progress: 1 })
-      showSuccess('开始执行')
-      this.loadMyTasks()
+      showLoading('处理中...')
+      await taskService.start(id)
+      showSuccess('任务已开始')
+      this.loadRecentTasks()
+      this.loadTodayStats()
     } catch (error) {
-      console.error('开始任务失败:', error)
+      showToast(error.message || '开始任务失败')
+    } finally {
+      hideLoading()
     }
   },
 
-  // 完成任务
-  completeTask(e) {
-    e.stopPropagation()
-    const id = e.currentTarget.dataset.id
-    wx.navigateTo({ url: `/pages/tasks/feedback?id=${id}&type=complete` })
+  // 跳转到任务列表
+  goToTaskList() {
+    wx.navigateTo({ url: '/pages/tasks/list' })
+  },
+
+  // 判断是否显示管理者专属入口
+  isManager() {
+    const { role } = this.data.userInfo
+    return ['super_admin', 'admin', 'manager'].includes(role)
   }
 })

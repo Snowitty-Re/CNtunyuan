@@ -1,146 +1,102 @@
-const { post } = require('../../utils/request')
-const { showSuccess, showToast } = require('../../utils/util')
+const { showConfirm } = require('../../utils/util')
 
 Page({
   data: {
-    userInfo: {},
-    settings: {
-      notification: true,
-      sound: true,
-      autoUpdate: true
-    },
-    version: '1.0.0'
+    settings: [
+      {
+        group: '通用',
+        items: [
+          { icon: '&#xe6b0;', title: '消息通知', type: 'switch', key: 'notification' },
+          { icon: '&#xe6b1;', title: '清除缓存', type: 'action', key: 'clearCache' }
+        ]
+      },
+      {
+        group: '关于',
+        items: [
+          { icon: '&#xe6b2;', title: '帮助中心', type: 'navigate', url: '/pages/settings/help' },
+          { icon: '&#xe6b3;', title: '关于我们', type: 'navigate', url: '/pages/settings/about' },
+          { icon: '&#xe6b4;', title: '用户协议', type: 'navigate', url: '/pages/settings/agreement' },
+          { icon: '&#xe6b5;', title: '隐私政策', type: 'navigate', url: '/pages/settings/privacy' }
+        ]
+      }
+    ],
+    cacheSize: '0MB'
   },
 
   onLoad() {
-    this.loadUserInfo()
-    this.loadSettings()
+    this.calculateCacheSize()
   },
 
   onShow() {
-    this.loadUserInfo()
+    this.calculateCacheSize()
   },
 
-  loadUserInfo() {
-    const userInfo = wx.getStorageSync('userInfo') || {}
-    this.setData({ userInfo })
-  },
-
-  loadSettings() {
-    const settings = wx.getStorageSync('app_settings')
-    if (settings) {
-      this.setData({ settings: { ...this.data.settings, ...settings } })
+  // 计算缓存大小
+  calculateCacheSize() {
+    try {
+      const info = wx.getStorageInfoSync()
+      const size = (info.currentSize / 1024).toFixed(2)
+      this.setData({ cacheSize: `${size}MB` })
+    } catch (e) {
+      console.error('获取缓存信息失败:', e)
     }
   },
 
-  saveSettings() {
-    wx.setStorageSync('app_settings', this.data.settings)
-  },
-
-  // 切换通知设置
-  toggleNotification(e) {
-    const value = e.detail.value
-    this.setData({
-      'settings.notification': value
-    })
-    this.saveSettings()
-    showSuccess(value ? '已开启消息通知' : '已关闭消息通知')
-  },
-
-  // 切换声音设置
-  toggleSound(e) {
-    const value = e.detail.value
-    this.setData({
-      'settings.sound': value
-    })
-    this.saveSettings()
-  },
-
-  // 清除缓存
-  clearCache() {
-    wx.showModal({
-      title: '提示',
-      content: '确定清除缓存吗？不会影响您的登录状态',
-      success: (res) => {
-        if (res.confirm) {
-          wx.clearStorage({
-            success: () => {
-              // 保留登录信息
-              const token = wx.getStorageSync('token')
-              const userInfo = wx.getStorageSync('userInfo')
-              const refreshToken = wx.getStorageSync('refresh_token')
-              
-              wx.setStorageSync('token', token)
-              wx.setStorageSync('userInfo', userInfo)
-              wx.setStorageSync('refresh_token', refreshToken)
-              
-              showSuccess('缓存已清除')
-            }
-          })
-        }
-      }
-    })
-  },
-
-  // 关于我们
-  goToAbout() {
-    wx.navigateTo({ url: '/pages/settings/about' })
-  },
-
-  // 隐私政策
-  goToPrivacy() {
-    wx.navigateTo({ url: '/pages/settings/privacy' })
-  },
-
-  // 用户协议
-  goToAgreement() {
-    wx.navigateTo({ url: '/pages/settings/agreement' })
-  },
-
-  // 检查更新
-  checkUpdate() {
-    wx.showLoading({ title: '检查中...' })
+  // 设置项点击
+  onSettingTap(e) {
+    const item = e.currentTarget.dataset.item
     
-    setTimeout(() => {
-      wx.hideLoading()
-      wx.showModal({
-        title: '检查更新',
-        content: '当前已是最新版本',
-        showCancel: false
-      })
-    }, 1000)
+    switch (item.type) {
+      case 'navigate':
+        wx.navigateTo({ url: item.url })
+        break
+      case 'action':
+        this.handleAction(item.key)
+        break
+      case 'switch':
+        // 处理开关
+        break
+    }
+  },
+
+  // 处理操作
+  async handleAction(key) {
+    switch (key) {
+      case 'clearCache':
+        const confirm = await showConfirm('清除缓存', '确定要清除本地缓存吗？')
+        if (confirm) {
+          try {
+            wx.clearStorageSync()
+            wx.showToast({
+              title: '清除成功',
+              icon: 'success'
+            })
+            this.setData({ cacheSize: '0MB' })
+          } catch (e) {
+            wx.showToast({
+              title: '清除失败',
+              icon: 'none'
+            })
+          }
+        }
+        break
+    }
   },
 
   // 退出登录
-  logout() {
-    wx.showModal({
-      title: '提示',
-      content: '确定退出登录吗？',
-      success: async (res) => {
-        if (res.confirm) {
-          try {
-            await post('/auth/logout')
-          } catch (error) {
-            console.error('退出登录失败:', error)
-          }
-          
-          // 清除本地存储
-          wx.clearStorageSync()
-          
-          // 跳转到登录页
-          wx.reLaunch({ url: '/pages/login/index' })
-        }
+  async logout() {
+    const confirm = await showConfirm('退出登录', '确定要退出登录吗？')
+    if (!confirm) return
+
+    try {
+      const app = getApp()
+      if (app.logout) {
+        await app.logout()
       }
-    })
-  },
-
-  // 编辑个人资料
-  editProfile() {
-    wx.navigateTo({ url: '/pages/volunteer/edit-profile' })
-  },
-
-  // 查看通知
-  viewNotifications() {
-    wx.navigateTo({ url: '/pages/notification/list' })
+      
+      wx.reLaunch({ url: '/pages/login/index' })
+    } catch (error) {
+      console.error('退出失败:', error)
+    }
   }
 })

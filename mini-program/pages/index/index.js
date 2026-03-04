@@ -1,31 +1,53 @@
-const { get } = require('../../utils/request')
-const { formatDate } = require('../../utils/util')
+const dashboardService = require('../../services/dashboard')
+const missingPersonService = require('../../services/missingPerson')
+const dialectService = require('../../services/dialect')
+const { formatDate, formatTimeAgo, showError, showLoading, hideLoading } = require('../../utils/util')
 
 Page({
   data: {
+    // 加载状态
+    isLoading: false,
+    hasError: false,
+    errorMessage: '',
+
+    // 统计数据
     stats: {
       totalCases: 0,
       resolvedCases: 0,
       volunteers: 0,
       dialects: 0
     },
+
+    // 最新案件列表
     recentCases: [],
+    casesLoading: false,
+    casesError: false,
+
+    // 最新方言列表
     recentDialects: [],
+    dialectsLoading: false,
+    dialectsError: false,
+
+    // 状态文本映射
     statusText: {
       missing: '失踪中',
       searching: '寻找中',
       found: '已找到',
       reunited: '已团圆',
       closed: '已结案'
-    }
+    },
+
+    // 问候语
+    greeting: ''
   },
 
   onLoad() {
+    this.updateGreeting()
     this.loadData()
   },
 
   onShow() {
-    this.loadData()
+    this.updateGreeting()
   },
 
   onPullDownRefresh() {
@@ -34,99 +56,353 @@ Page({
     })
   },
 
+  /**
+   * 更新问候语
+   */
+  updateGreeting() {
+    const hour = new Date().getHours()
+    let greeting = '你好'
+    if (hour < 6) {
+      greeting = '夜深了'
+    } else if (hour < 9) {
+      greeting = '早上好'
+    } else if (hour < 12) {
+      greeting = '上午好'
+    } else if (hour < 14) {
+      greeting = '中午好'
+    } else if (hour < 18) {
+      greeting = '下午好'
+    } else {
+      greeting = '晚上好'
+    }
+    this.setData({ greeting })
+  },
+
+  /**
+   * 加载所有数据
+   */
   async loadData() {
+    this.setData({ isLoading: true, hasError: false })
+
     try {
-      // 加载统计数据
-      this.loadStats()
-      // 加载最新案件
-      this.loadRecentCases()
-      // 加载最新方言
-      this.loadRecentDialects()
+      // 并行加载所有数据
+      await Promise.all([
+        this.loadStats(),
+        this.loadRecentCases(),
+        this.loadRecentDialects()
+      ])
     } catch (error) {
       console.error('加载数据失败:', error)
+      this.setData({ hasError: true, errorMessage: '加载失败，请下拉刷新重试' })
+    } finally {
+      this.setData({ isLoading: false })
     }
   },
 
+  /**
+   * 加载统计数据
+   */
   async loadStats() {
     try {
-      const [caseStats, userStats, dialectStats] = await Promise.all([
-        get('/missing-persons/statistics'),
-        get('/users/statistics'),
-        get('/dialects/statistics')
-      ])
-      
-      this.setData({
-        stats: {
-          totalCases: caseStats.total || 0,
-          resolvedCases: caseStats.resolved || 0,
-          volunteers: userStats.total || 0,
-          dialects: dialectStats.total || 0
+      // 优先使用仪表盘服务的统计数据
+      let stats = {
+        totalCases: 0,
+        resolvedCases: 0,
+        volunteers: 0,
+        dialects: 0
+      }
+
+      // 获取仪表盘统计数据
+      try {
+        const dashboardStats = await dashboardService.getStats()
+        if (dashboardStats) {
+          stats.totalCases = dashboardStats.missing_persons || dashboardStats.totalCases || 0
+          stats.resolvedCases = dashboardStats.found || dashboardStats.resolvedCases || 0
+          stats.volunteers = dashboardStats.volunteers || 0
+          stats.dialects = dashboardStats.dialects || 0
         }
+      } catch (e) {
+        console.log('仪表盘统计获取失败，尝试其他接口')
+      }
+
+      // 如果仪表盘数据不完整，尝试单独获取
+      const promises = []
+
+      if (stats.totalCases === 0) {
+        promises.push(
+          missingPersonService.getStats().then(res => {
+            stats.totalCases = res.total || res.total_cases || 0
+            stats.resolvedCases = res.found || res.resolved || 0
+          }).catch(() => {})
+        )
+      }
+
+      if (stats.dialects === 0) {
+        promises.push(
+          dialectService.getStats().then(res => {
+            stats.dialects = res.total || 0
+          }).catch(() => {})
+        )
+      }
+
+      // 尝试获取概览数据中的志愿者数
+      if (stats.volunteers === 0) {
+        promises.push(
+          dashboardService.getOverview().then(res => {
+            if (res && res.stats) {
+              stats.volunteers = res.stats.volunteers || 0
+            }
+          }).catch(() => {})
+        )
+      }
+
+      await Promise.all(promises)
+
+      this.setData({ stats })
+    } catch (error) {
+      console.error('加载统计数据失败:', error)
+      // 统计数据加载失败不影响其他功能
+    }
+  },
+
+  /**
+   * 加载最新案件列表
+   */
+  async loadRecentCases() {
+    this.setData({ casesLoading: true, casesError: false })
+
+    try {
+      const result = await missingPersonService.getList({ 
+        page: 1, 
+        page_size: 5 
+      })
+
+      const list = result.list || result.data || result || []
+      
+      const cases = list.map(item => ({
+        id: item.id,
+        name: item.name || '未知',
+        status: item.status || 'missing',
+        photoUrl: this.getPhotoUrl(item),
+        missingLocation: item.missing_location || item.missingLocation || '未知地点',
+        missingTime: formatTimeAgo(item.missing_time || item.missingTime),
+        age: this.calculateAge(item.birth_date || item.birthDate),
+        gender: item.gender === 'male' ? '男' : item.gender === 'female' ? '女' : '未知'
+      }))
+
+      this.setData({ 
+        recentCases: cases,
+        casesLoading: false 
       })
     } catch (error) {
-      console.error('加载统计失败:', error)
+      console.error('加载案件列表失败:', error)
+      this.setData({ 
+        casesLoading: false, 
+        casesError: true 
+      })
     }
   },
 
-  async loadRecentCases() {
-    try {
-      const result = await get('/missing-persons', { page: 1, page_size: 5 })
-      const cases = result.list.map(item => ({
-        ...item,
-        missing_time: formatDate(item.missing_time),
-        photoUrl: (item.photos && item.photos[0] && item.photos[0].url) ? item.photos[0].url : 'https://picsum.photos/100/100'
-      }))
-      this.setData({ recentCases: cases })
-    } catch (error) {
-      console.error('加载案件失败:', error)
-    }
-  },
-
+  /**
+   * 加载最新方言列表
+   */
   async loadRecentDialects() {
+    this.setData({ dialectsLoading: true, dialectsError: false })
+
     try {
-      const result = await get('/dialects', { page: 1, page_size: 5 })
-      this.setData({ recentDialects: result.list })
+      // 优先获取精选方言，如果没有则获取普通列表
+      let result
+      try {
+        result = await dialectService.getFeatured({ page: 1, page_size: 5 })
+      } catch (e) {
+        result = await dialectService.getList({ page: 1, page_size: 5 })
+      }
+
+      const list = result.list || result.data || result || []
+
+      const dialects = list.map(item => ({
+        id: item.id,
+        title: item.title || item.content || '方言录音',
+        province: item.province || '',
+        city: item.city || '',
+        playCount: this.formatCount(item.play_count || item.playCount || 0),
+        likeCount: this.formatCount(item.like_count || item.likeCount || 0),
+        duration: item.duration || '00:00',
+        createdAt: formatTimeAgo(item.created_at || item.createdAt)
+      }))
+
+      this.setData({ 
+        recentDialects: dialects,
+        dialectsLoading: false 
+      })
     } catch (error) {
-      console.error('加载方言失败:', error)
+      console.error('加载方言列表失败:', error)
+      this.setData({ 
+        dialectsLoading: false, 
+        dialectsError: true 
+      })
     }
   },
 
-  onSearchInput(e) {
-    // 搜索逻辑
-    console.log('搜索:', e.detail.value)
+  /**
+   * 获取照片URL
+   */
+  getPhotoUrl(item) {
+    // 尝试多种可能的图片字段
+    if (item.photos && item.photos.length > 0) {
+      return item.photos[0].url || item.photos[0]
+    }
+    if (item.photo_url) return item.photo_url
+    if (item.avatar) return item.avatar
+    if (item.image) return item.image
+    if (item.cover) return item.cover
+    if (item.cover_url) return item.cover_url
+    // 默认头像
+    return '/assets/images/default-avatar.png'
   },
 
-  goToCreateCase() {
-    wx.navigateTo({ url: '/pages/cases/create' })
+  /**
+   * 计算年龄
+   */
+  calculateAge(birthDate) {
+    if (!birthDate) return null
+    try {
+      const birth = new Date(birthDate)
+      const now = new Date()
+      let age = now.getFullYear() - birth.getFullYear()
+      const monthDiff = now.getMonth() - birth.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
+        age--
+      }
+      return age > 0 ? age : null
+    } catch (e) {
+      return null
+    }
   },
 
-  goToDialect() {
-    wx.navigateTo({ url: '/pages/dialect/create' })
+  /**
+   * 格式化数字（超过1000显示为k）
+   */
+  formatCount(count) {
+    const num = parseInt(count) || 0
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M'
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'k'
+    }
+    return num.toString()
   },
 
-  goToMap() {
-    wx.navigateTo({ url: '/pages/map/index' })
+  // ========== 导航方法 ==========
+
+  /**
+   * 跳转到案件详情
+   */
+  goToCaseDetail(e) {
+    const id = e.currentTarget.dataset.id
+    if (!id) return
+    wx.navigateTo({ url: `/pages/cases/detail?id=${id}` })
   },
 
-  goToTasks() {
-    wx.switchTab({ url: '/pages/volunteer/workbench' })
+  /**
+   * 跳转到方言详情
+   */
+  goToDialectDetail(e) {
+    const id = e.currentTarget.dataset.id
+    if (!id) return
+    wx.navigateTo({ url: `/pages/dialect/detail?id=${id}` })
   },
 
+  /**
+   * 跳转到案件列表
+   */
   goToCases() {
     wx.switchTab({ url: '/pages/cases/list' })
   },
 
-  goToCaseDetail(e) {
-    const id = e.currentTarget.dataset.id
-    wx.navigateTo({ url: `/pages/cases/detail?id=${id}` })
-  },
-
-  goToDialectList() {
+  /**
+   * 跳转到方言列表
+   */
+  goToDialects() {
     wx.navigateTo({ url: '/pages/dialect/list' })
   },
 
-  playDialect(e) {
-    const id = e.currentTarget.dataset.id
-    wx.navigateTo({ url: `/pages/dialect/detail?id=${id}` })
+  // ========== 快捷入口 ==========
+
+  /**
+   * 发布案件
+   */
+  onCreateCase() {
+    wx.navigateTo({ url: '/pages/cases/create' })
+  },
+
+  /**
+   * 录制方言
+   */
+  onRecordDialect() {
+    wx.navigateTo({ url: '/pages/dialect/create' })
+  },
+
+  /**
+   * 查看地图
+   */
+  onViewMap() {
+    wx.switchTab({ url: '/pages/map/index' })
+  },
+
+  /**
+   * 我的任务
+   */
+  onMyTasks() {
+    wx.navigateTo({ url: '/pages/tasks/my' })
+  },
+
+  // ========== 重试方法 ==========
+
+  /**
+   * 重试加载统计数据
+   */
+  retryLoadStats() {
+    this.loadStats()
+  },
+
+  /**
+   * 重试加载案件列表
+   */
+  retryLoadCases() {
+    this.loadRecentCases()
+  },
+
+  /**
+   * 重试加载方言列表
+   */
+  retryLoadDialects() {
+    this.loadRecentDialects()
+  },
+
+  /**
+   * 点击统计卡片
+   */
+  onStatCardTap(e) {
+    const type = e.currentTarget.dataset.type
+    switch (type) {
+      case 'cases':
+        this.goToCases()
+        break
+      case 'resolved':
+        // 跳转到已找到的案件列表
+        wx.navigateTo({ 
+          url: '/pages/cases/list?status=found' 
+        })
+        break
+      case 'volunteers':
+        // 跳转到志愿者页面
+        wx.navigateTo({ url: '/pages/volunteer/profile' })
+        break
+      case 'dialects':
+        this.goToDialects()
+        break
+    }
   }
 })

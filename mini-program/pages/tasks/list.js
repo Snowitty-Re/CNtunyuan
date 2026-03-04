@@ -1,5 +1,5 @@
-const { get, post } = require('../../utils/request')
-const { formatDate, showSuccess, showToast } = require('../../utils/util')
+const taskService = require('../../services/task')
+const { formatDate, showSuccess, showToast, showConfirm } = require('../../utils/util')
 
 Page({
   data: {
@@ -14,14 +14,12 @@ Page({
     stats: {
       total: 0,
       pending: 0,
-      assigned: 0,
       processing: 0,
-      completed: 0
+      completed: 0,
+      cancelled: 0
     },
     statusMap: {
-      draft: '草稿',
       pending: '待分配',
-      assigned: '已分配',
       processing: '进行中',
       completed: '已完成',
       cancelled: '已取消'
@@ -32,24 +30,24 @@ Page({
       normal: '普通',
       low: '低'
     },
-    taskTypeMap: {
-      search: '实地寻访',
-      call: '电话核实',
-      info_collect: '信息收集',
-      dialect_record: '方言录制',
-      coordination: '协调沟通',
-      other: '其他'
+    priorityColorMap: {
+      urgent: '#ff4d4f',
+      high: '#faad14',
+      normal: '#1890ff',
+      low: '#52c41a'
     },
-    canCreate: false
+    canCreate: false,
+    userRole: ''
   },
 
   onLoad() {
+    this.checkPermission()
     this.loadStats()
     this.loadTasks()
-    this.checkPermission()
   },
 
   onShow() {
+    this.checkPermission()
     this.loadStats()
     this.loadTasks()
   },
@@ -58,14 +56,15 @@ Page({
   checkPermission() {
     const userInfo = wx.getStorageSync('userInfo') || {}
     this.setData({
-      canCreate: ['super_admin', 'admin', 'manager'].includes(userInfo.role)
+      canCreate: ['super_admin', 'admin', 'manager'].includes(userInfo.role),
+      userRole: userInfo.role || ''
     })
   },
 
-  // 加载统计
+  // 加载统计数据
   async loadStats() {
     try {
-      const stats = await get('/tasks/statistics')
+      const stats = await taskService.getStats()
       this.setData({ stats })
     } catch (error) {
       console.error('加载统计失败:', error)
@@ -74,6 +73,8 @@ Page({
 
   // 加载任务列表
   async loadTasks(loadMore = false) {
+    if (this.data.loading || (loadMore && this.data.loadingMore)) return
+
     if (loadMore) {
       this.setData({ loadingMore: true })
     } else {
@@ -81,20 +82,28 @@ Page({
     }
 
     try {
-      const result = await get('/tasks', {
-        page: this.data.page,
-        page_size: this.data.pageSize,
-        status: this.data.currentStatus || undefined
-      })
+      const params = {
+        page: loadMore ? this.data.page : 1,
+        page_size: this.data.pageSize
+      }
+      
+      if (this.data.currentStatus) {
+        params.status = this.data.currentStatus
+      }
 
-      const tasks = result.list.map(item => ({
+      const result = await taskService.getList(params)
+      const list = result.list || result || []
+
+      const tasks = list.map(item => ({
         ...item,
         deadline: item.deadline ? formatDate(item.deadline) : null,
-        isOverdue: item.deadline && new Date(item.deadline) < new Date() && item.status !== 'completed'
+        isOverdue: item.deadline && new Date(item.deadline) < new Date() && 
+                   item.status !== 'completed' && item.status !== 'cancelled'
       }))
 
       this.setData({
         tasks: loadMore ? [...this.data.tasks, ...tasks] : tasks,
+        page: loadMore ? this.data.page + 1 : 2,
         hasMore: tasks.length === this.data.pageSize,
         loading: false,
         loadingMore: false,
@@ -102,37 +111,43 @@ Page({
       })
     } catch (error) {
       console.error('加载任务失败:', error)
-      this.setData({ loading: false, loadingMore: false, refreshing: false })
+      showToast('加载失败')
+      this.setData({ 
+        loading: false, 
+        loadingMore: false, 
+        refreshing: false 
+      })
     }
   },
 
-  // 筛选状态
+  // 按状态筛选
   filterByStatus(e) {
     const status = e.currentTarget.dataset.status
+    if (status === this.data.currentStatus) return
+    
     this.setData({
       currentStatus: status,
       page: 1,
-      tasks: []
+      tasks: [],
+      hasMore: true
     })
     this.loadTasks()
   },
 
   // 下拉刷新
   onRefresh() {
-    this.setData({ refreshing: true, page: 1 })
+    this.setData({ refreshing: true, page: 1, hasMore: true })
     this.loadStats()
     this.loadTasks()
   },
 
   // 加载更多
   onLoadMore() {
-    if (!this.data.loadingMore && this.data.hasMore) {
-      this.setData({ page: this.data.page + 1 })
-      this.loadTasks(true)
-    }
+    if (!this.data.hasMore || this.data.loadingMore) return
+    this.loadTasks(true)
   },
 
-  // 跳转到详情
+  // 跳转到详情页
   goToDetail(e) {
     const id = e.currentTarget.dataset.id
     wx.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
@@ -144,10 +159,13 @@ Page({
     const id = e.currentTarget.dataset.id
     const userInfo = wx.getStorageSync('userInfo') || {}
     
+    if (!userInfo.id) {
+      showToast('请先登录')
+      return
+    }
+
     try {
-      await post(`/tasks/${id}/assign`, {
-        assignee_id: String(userInfo.id)
-      })
+      await taskService.assign(id, String(userInfo.id))
       showSuccess('领取成功')
       this.loadTasks()
       this.loadStats()
@@ -157,10 +175,11 @@ Page({
     }
   },
 
-  // 创建任务
+  // 跳转到创建页
   goToCreate() {
     wx.navigateTo({ url: '/pages/tasks/create' })
   },
 
+  // 阻止冒泡
   stopPropagation() {}
 })

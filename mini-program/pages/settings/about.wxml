@@ -1,0 +1,32 @@
+<view class="container">
+  <view class="header">
+    <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
+    <text class="app-name">{{appInfo.name}}</text>
+    <text class="version">版本 {{version}}</text>
+    <text class="slogan">{{appInfo.slogan}}</text>
+  </view>
+
+  <view class="intro-section">
+    <text class="intro-text">{{appInfo.description}}</text>
+  </view>
+
+  <view class="features-section">
+    <view class="section-title">核心功能</view>
+    <view class="features-grid">
+      <view class="feature-item" wx:for="{{features}}" wx:key="index">
+        <text class="feature-icon">{{item.icon}}</text>
+        <text class="feature-title">{{item.title}}</text>
+        <text class="feature-desc">{{item.desc}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="action-section">
+    <button class="update-btn" bindtap="checkUpdate">检查更新</button>
+  </view>
+
+  <view class="footer">
+    <text>© 2024 团圆寻亲志愿者系统</text>
+    <text>All Rights Reserved</text>
+  </view>
+</view>

@@ -1,131 +1,122 @@
-const { post, put, get } = require('../../utils/request')
-const { showSuccess, showToast } = require('../../utils/util')
+const services = require('../../services')
+const { showSuccess, showError, showLoading, hideLoading } = require('../../utils/util')
 
 Page({
   data: {
     taskId: '',
-    type: 'complete', // complete | transfer
-    content: '',
-    progress: 100,
-    attachments: [],
-    transferTo: '',
-    transferToName: '',
-    users: [],
+    task: null,
+    feedback: '',
+    result: '',
+    photos: [],
     loading: false
   },
 
   onLoad(options) {
-    this.setData({
-      taskId: options.id,
-      type: options.type || 'complete'
-    })
-    wx.setNavigationBarTitle({
-      title: this.data.type === 'complete' ? '任务完成反馈' : '任务转派'
-    })
-    if (this.data.type === 'transfer') {
-      this.loadUsers()
+    if (options.id) {
+      this.setData({ taskId: options.id })
+      this.loadTaskDetail(options.id)
     }
   },
 
-  // 加载可选用户
-  async loadUsers() {
+  // 加载任务详情
+  async loadTaskDetail(id) {
     try {
-      const users = await get('/users', { page_size: 100 })
-      this.setData({ users: users.list || [] })
+      const task = await services.task.getById(id)
+      this.setData({ task })
     } catch (error) {
-      console.error('加载用户列表失败:', error)
+      console.error('加载任务失败:', error)
+      showError('加载任务失败')
     }
   },
 
-  // 输入反馈内容
-  onContentInput(e) {
-    this.setData({ content: e.detail.value })
+  // 反馈内容输入
+  onFeedbackInput(e) {
+    this.setData({ feedback: e.detail.value })
   },
 
-  // 选择转派人
-  onUserChange(e) {
-    const index = e.detail.value
-    const user = this.data.users[index]
-    this.setData({ 
-      transferTo: user.id,
-      transferToName: user.nickname
-    })
-  },
-
-  // 进度变化
-  onProgressChange(e) {
-    this.setData({ progress: e.detail.value })
+  // 结果输入
+  onResultInput(e) {
+    this.setData({ result: e.detail.value })
   },
 
   // 选择图片
   chooseImage() {
-    wx.chooseImage({
-      count: 9 - this.data.attachments.length,
+    const { photos } = this.data
+    const remainCount = 9 - photos.length
+    
+    if (remainCount <= 0) {
+      showError('最多上传9张图片')
+      return
+    }
+
+    wx.chooseMedia({
+      count: remainCount,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
       success: (res) => {
-        const attachments = [...this.data.attachments, ...res.tempFilePaths]
-        this.setData({ attachments })
+        const newPhotos = res.tempFiles.map(file => file.tempFilePath)
+        this.setData({
+          photos: [...photos, ...newPhotos]
+        })
       }
     })
   },
 
   // 删除图片
-  removeImage(e) {
+  deleteImage(e) {
     const index = e.currentTarget.dataset.index
-    const attachments = this.data.attachments.filter((_, i) => i !== index)
-    this.setData({ attachments })
+    const photos = this.data.photos.filter((_, i) => i !== index)
+    this.setData({ photos })
   },
 
-  // 提交
-  async submit() {
-    const { taskId, type, content, progress, attachments, transferTo } = this.data
-    
-    if (!content.trim()) {
-      showToast('请填写反馈内容')
-      return
-    }
+  // 预览图片
+  previewImage(e) {
+    const url = e.currentTarget.dataset.url
+    wx.previewImage({
+      urls: this.data.photos,
+      current: url
+    })
+  },
 
-    if (type === 'transfer' && !transferTo) {
-      showToast('请选择转派对象')
+  // 提交反馈
+  async submitFeedback() {
+    const { taskId, feedback, result, photos } = this.data
+    
+    if (!feedback.trim()) {
+      showError('请输入反馈内容')
       return
     }
 
     this.setData({ loading: true })
+    showLoading('提交中...')
 
     try {
-      if (type === 'complete') {
-        // 先更新进度
-        if (progress < 100) {
-          await post(`/tasks/${taskId}/progress`, { progress })
-        }
-        // 完成任务
-        await post(`/tasks/${taskId}/complete`, {
-          feedback: content,
-          attachments
-        })
-        showSuccess('任务已完成')
-      } else {
-        // 转派任务
-        await post(`/tasks/${taskId}/transfer`, {
-          assignee_id: transferTo,
-          reason: content
-        })
-        showSuccess('转派成功')
+      // 先上传图片
+      let photoUrls = []
+      if (photos.length > 0) {
+        const uploadResults = await Promise.all(
+          photos.map(path => services.upload.upload(path))
+        )
+        photoUrls = uploadResults.map(r => r.url)
       }
-      
-      // 返回上一页
-      wx.navigateBack({
-        success: () => {
-          // 通知前一页刷新
-          const pages = getCurrentPages()
-          const prevPage = pages[pages.length - 2]
-          if (prevPage && prevPage.loadTaskDetail) {
-            prevPage.loadTaskDetail()
-          }
-        }
+
+      // 提交任务完成
+      await services.task.complete(taskId, {
+        result: result || feedback,
+        feedback,
+        attachments: photoUrls
       })
+
+      hideLoading()
+      showSuccess('提交成功')
+      
+      setTimeout(() => {
+        wx.navigateBack()
+      }, 1500)
     } catch (error) {
+      hideLoading()
       console.error('提交失败:', error)
-      showToast('提交失败，请重试')
+      showError(error.message || '提交失败')
     } finally {
       this.setData({ loading: false })
     }

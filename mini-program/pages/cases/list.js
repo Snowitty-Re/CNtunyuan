@@ -1,29 +1,51 @@
-const { get } = require('../../utils/request')
-const { formatDate, showLoading, hideLoading } = require('../../utils/util')
+const missingPersonService = require('../../services/missingPerson')
+const { formatDate, showLoading, hideLoading, debounce } = require('../../utils/util')
+
+// 状态映射
+const STATUS_MAP = {
+  '': { label: '全部', color: '' },
+  'missing': { label: '失踪中', color: '#ff4d4f' },
+  'searching': { label: '寻找中', color: '#1890ff' },
+  'found': { label: '已找到', color: '#52c41a' },
+  'reunited': { label: '已团圆', color: '#52c41a' }
+}
+
+// 案件类型映射
+const CASE_TYPE_MAP = {
+  'elderly': '老人',
+  'child': '儿童',
+  'adult': '成人',
+  'disability': '残障',
+  'other': '其他'
+}
 
 Page({
   data: {
+    // 列表数据
     cases: [],
-    keyword: '',
-    currentStatus: '',
+    
+    // 分页参数
     page: 1,
-    pageSize: 20,
+    pageSize: 10,
     loading: false,
     noMore: false,
-    statusMap: {
-      missing: '失踪中',
-      searching: '寻找中',
-      found: '已找到',
-      reunited: '已团圆',
-      closed: '已结案'
-    },
-    caseTypeMap: {
-      elderly: '老人',
-      child: '儿童',
-      adult: '成人',
-      disability: '残障',
-      other: '其他'
-    }
+    
+    // 搜索和筛选
+    keyword: '',
+    currentStatus: '',
+    
+    // 状态选项
+    statusTabs: [
+      { value: '', label: '全部' },
+      { value: 'missing', label: '失踪中' },
+      { value: 'searching', label: '寻找中' },
+      { value: 'found', label: '已找到' },
+      { value: 'reunited', label: '已团圆' }
+    ],
+    
+    // 映射常量
+    statusMap: STATUS_MAP,
+    caseTypeMap: CASE_TYPE_MAP
   },
 
   onLoad() {
@@ -43,9 +65,16 @@ Page({
     }
   },
 
+  /**
+   * 加载案件列表
+   */
   async loadCases() {
+    if (this.data.loading) return
+
     this.setData({ loading: true })
-    showLoading()
+    if (this.data.page === 1) {
+      showLoading()
+    }
 
     try {
       const params = {
@@ -55,11 +84,13 @@ Page({
         keyword: this.data.keyword
       }
 
-      const result = await get('/missing-persons', params)
-      const cases = result.list.map(item => ({
+      const result = await missingPersonService.getList(params)
+      const list = result.list || result || []
+      
+      const cases = list.map(item => ({
         ...item,
         missing_time: formatDate(item.missing_time),
-        photoUrl: (item.photos && item.photos[0] && item.photos[0].url) ? item.photos[0].url : 'https://picsum.photos/100/100'
+        photoUrl: this.getFirstPhoto(item.photos)
       }))
 
       this.setData({
@@ -68,38 +99,83 @@ Page({
       })
     } catch (error) {
       console.error('加载案件失败:', error)
+      wx.showToast({
+        title: '加载失败，请重试',
+        icon: 'none'
+      })
     } finally {
       hideLoading()
       this.setData({ loading: false })
     }
   },
 
+  /**
+   * 加载更多
+   */
   loadMore() {
     this.setData({ page: this.data.page + 1 })
     this.loadCases()
   },
 
-  onSearchInput(e) {
-    this.setData({ keyword: e.detail.value })
+  /**
+   * 获取第一张图片
+   */
+  getFirstPhoto(photos) {
+    if (photos && photos.length > 0) {
+      return photos[0].url || photos[0]
+    }
+    return '/assets/images/default-avatar.png'
   },
 
+  /**
+   * 搜索输入（防抖）
+   */
+  onSearchInput: debounce(function(e) {
+    const keyword = e.detail.value
+    this.setData({ keyword, page: 1, cases: [] })
+    this.loadCases()
+  }, 500),
+
+  /**
+   * 搜索确认
+   */
   onSearch() {
     this.setData({ page: 1, cases: [] })
     this.loadCases()
   },
 
+  /**
+   * 切换状态筛选
+   */
   switchStatus(e) {
     const status = e.currentTarget.dataset.status
-    this.setData({ currentStatus: status, page: 1, cases: [] })
+    if (status === this.data.currentStatus) return
+    
+    this.setData({ 
+      currentStatus: status, 
+      page: 1, 
+      cases: [],
+      noMore: false
+    })
     this.loadCases()
   },
 
+  /**
+   * 跳转到详情页
+   */
   goToDetail(e) {
     const id = e.currentTarget.dataset.id
-    wx.navigateTo({ url: `/pages/cases/detail?id=${id}` })
+    wx.navigateTo({ 
+      url: `/pages/cases/detail?id=${id}` 
+    })
   },
 
+  /**
+   * 跳转到创建页
+   */
   goToCreate() {
-    wx.navigateTo({ url: '/pages/cases/create' })
+    wx.navigateTo({ 
+      url: '/pages/cases/create' 
+    })
   }
 })

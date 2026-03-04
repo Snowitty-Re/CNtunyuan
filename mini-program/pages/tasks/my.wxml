@@ -1,43 +1,96 @@
 <view class="my-tasks-page">
   <!-- 标签栏 -->
   <view class="tab-bar">
-    <view class="tab-item {{status === item.key ? 'active' : ''}}" wx:for="{{tabs}}" wx:key="key" bindtap="switchTab" data-key="{{item.key}}">
-      {{item.label}}
+    <view 
+      class="tab-item {{currentStatus === item.key ? 'active' : ''}}" 
+      wx:for="{{tabs}}" 
+      wx:key="key" 
+      bindtap="switchTab" 
+      data-key="{{item.key}}"
+    >
+      <text class="tab-label">{{item.label}}</text>
+      <text class="tab-count" wx:if="{{item.count > 0}}">{{item.count}}</text>
     </view>
   </view>
 
   <!-- 任务列表 -->
-  <view class="task-list">
-    <view class="task-card" wx:for="{{tasks}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
-      <view class="task-header">
-        <view class="task-title">{{item.title}}</view>
-        <view class="task-status status-{{item.status}}">{{statusMap[item.status]}}</view>
-      </view>
-      
-      <view class="task-info">
-        <text class="task-type">{{taskTypeMap[item.task_type] || '其他'}}</text>
-        <text class="priority-tag priority-{{item.priority}}">{{priorityMap[item.priority]}}</text>
-      </view>
-      
-      <view class="task-desc" wx:if="{{item.description}}">{{item.description}}</view>
-      
-      <view class="task-footer">
-        <view class="task-progress" wx:if="{{item.progress !== undefined}}">
-          <view class="progress-bar">
-            <view class="progress-fill" style="width: {{item.progress}}%"></view>
+  <scroll-view 
+    class="task-list" 
+    scroll-y
+    refresher-enabled
+    refresher-triggered="{{refreshing}}"
+    bindrefresherrefresh="onPullDownRefresh"
+    bindscrolltolower="onReachBottom"
+    enhanced
+    show-scrollbar="{{false}}"
+  >
+    <view class="task-cards">
+      <view class="task-card" wx:for="{{tasks}}" wx:key="id">
+        <!-- 点击卡片跳转详情 -->
+        <view class="card-main" bindtap="goToDetail" data-id="{{item.id}}">
+          <!-- 头部：标题和状态 -->
+          <view class="card-header">
+            <view class="task-title">{{item.title}}</view>
+            <view class="status-badge status-{{item.status}}">
+              {{statusMap[item.status] || item.status}}
+            </view>
           </view>
-          <text class="progress-text">{{item.progress}}%</text>
+          
+          <!-- 任务信息 -->
+          <view class="task-info">
+            <view class="priority-tag priority-{{item.priority}}">
+              {{priorityMap[item.priority]}}
+            </view>
+            <view class="deadline {{item.isOverdue ? 'overdue' : ''}}" wx:if="{{item.deadline}}">
+              <text class="iconfont icon-time"></text>
+              <text>截止 {{item.deadline}}</text>
+            </view>
+          </view>
+          
+          <!-- 任务描述 -->
+          <view class="task-desc" wx:if="{{item.description}}">{{item.description}}</view>
+          
+          <!-- 关联案件 -->
+          <view class="task-case" wx:if="{{item.missing_person}}">
+            <text class="iconfont icon-user"></text>
+            <text class="case-name">{{item.missing_person.name}}</text>
+          </view>
+          
+          <!-- 进度条 -->
+          <view class="progress-section" wx:if="{{item.progress !== undefined && item.progress !== null}}">
+            <view class="progress-bar">
+              <view class="progress-fill" style="width: {{item.progress}}%"></view>
+            </view>
+            <text class="progress-text">{{item.progress}}%</text>
+          </view>
         </view>
-        <view class="task-deadline {{item.isOverdue ? 'overdue' : ''}}" wx:if="{{item.deadline}}">
-          截止: {{item.deadline}}
+
+        <!-- 操作按钮区 -->
+        <view class="card-actions" wx:if="{{item.status === 'processing' || item.status === 'pending'}}">
+          <block wx:if="{{item.status === 'pending'}}">
+            <button class="action-btn primary" bindtap="startTask" data-id="{{item.id}}">
+              开始任务
+            </button>
+          </block>
+          <block wx:if="{{item.status === 'processing'}}">
+            <button class="action-btn secondary" bindtap="updateProgress" data-id="{{item.id}}">
+              更新进度
+            </button>
+            <button class="action-btn success" bindtap="completeTask" data-id="{{item.id}}">
+              完成任务
+            </button>
+          </block>
         </view>
       </view>
     </view>
 
     <!-- 空状态 -->
     <view class="empty-state" wx:if="{{!loading && tasks.length === 0}}">
-      <image src="https://picsum.photos/200/200?random=empty" mode="aspectFit" />
-      <text>暂无任务</text>
+      <view class="empty-icon-circle">
+        <text class="iconfont icon-task"></text>
+      </view>
+      <text class="empty-title">暂无任务</text>
+      <text class="empty-desc">您还没有{{currentStatus === 'processing' ? '进行中' : currentStatus === 'completed' ? '已完成' : ''}}的任务</text>
     </view>
 
     <!-- 加载更多 -->
@@ -48,5 +101,5 @@
     <view class="no-more" wx:if="{{!hasMore && tasks.length > 0}}">
       没有更多了
     </view>
-  </view>
+  </scroll-view>
 </view>

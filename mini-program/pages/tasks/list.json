@@ -1,5 +1,6 @@
 {
   "navigationBarTitleText": "任务中心",
   "enablePullDownRefresh": true,
-  "backgroundColor": "#f5f7fa"
+  "backgroundColor": "#f5f7fa",
+  "usingComponents": {}
 }

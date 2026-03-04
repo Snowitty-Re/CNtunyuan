@@ -1,4 +1,5 @@
 {
   "navigationBarTitleText": "新建任务",
-  "backgroundColor": "#f5f7fa"
+  "backgroundColor": "#f5f7fa",
+  "usingComponents": {}
 }

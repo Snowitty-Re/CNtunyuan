@@ -1,59 +1,71 @@
-<view class="feedback-page">
+<view class="container">
+  <view class="task-info" wx:if="{{task}}">
+    <text class="task-title">{{task.title}}</text>
+    <text class="task-desc">{{task.description}}</text>
+  </view>
+
   <view class="form-section">
-    <view class="section-title">{{type === 'complete' ? '完成情况' : '转派原因'}}</view>
-    <textarea
-      class="content-input"
-      placeholder="{{type === 'complete' ? '请描述任务完成情况...' : '请说明转派原因...'}}"
-      value="{{content}}"
-      bindinput="onContentInput"
-      maxlength="500"
-    />
-    <view class="char-count">{{content.length}}/500</view>
-  </view>
+    <view class="form-group">
+      <view class="form-label required">反馈内容</view>
+      <textarea 
+        class="form-textarea"
+        placeholder="请详细描述任务执行情况、遇到的问题和解决方案..."
+        maxlength="500"
+        value="{{feedback}}"
+        bindinput="onFeedbackInput"
+      />
+      <view class="word-count">{{feedback.length}}/500</view>
+    </view>
 
-  <!-- 转派选择 -->
-  <view class="form-section" wx:if="{{type === 'transfer'}}">
-    <view class="section-title">转派给</view>
-    <picker bindchange="onUserChange" range="{{users}}" range-key="nickname">
-      <view class="picker-value {{transferTo ? '' : 'placeholder'}}">
-        {{transferToName || '选择志愿者'}}
-      </view>
-    </picker>
-  </view>
+    <view class="form-group">
+      <view class="form-label">任务结果</view>
+      <textarea 
+        class="form-textarea"
+        placeholder="请简要说明任务最终结果..."
+        maxlength="200"
+        value="{{result}}"
+        bindinput="onResultInput"
+      />
+    </view>
 
-  <!-- 完成进度 -->
-  <view class="form-section" wx:if="{{type === 'complete'}}">
-    <view class="section-title">完成进度: {{progress}}%</view>
-    <slider 
-      value="{{progress}}" 
-      min="0" 
-      max="100" 
-      step="5"
-      activeColor="#1890ff"
-      bindchange="onProgressChange"
-    />
-  </view>
-
-  <!-- 附件上传 -->
-  <view class="form-section" wx:if="{{type === 'complete'}}">
-    <view class="section-title">附件图片（可选）</view>
-    <view class="image-list">
-      <view class="image-item" wx:for="{{attachments}}" wx:key="*this">
-        <image src="{{item}}" mode="aspectFill" />
-        <view class="remove-btn" bindtap="removeImage" data-index="{{index}}">
-          <text class="iconfont icon-close"></text>
+    <view class="form-group">
+      <view class="form-label">上传图片</view>
+      <view class="image-list">
+        <view 
+          class="image-item"
+          wx:for="{{photos}}"
+          wx:key="index"
+        >
+          <image 
+            src="{{item}}" 
+            mode="aspectFill"
+            data-url="{{item}}"
+            bindtap="previewImage"
+          />
+          <text 
+            class="delete-icon"
+            data-index="{{index}}"
+            catchtap="deleteImage"
+          >×</text>
         </view>
-      </view>
-      <view class="add-btn" bindtap="chooseImage" wx:if="{{attachments.length < 9}}">
-        <text class="iconfont icon-add"></text>
+        
+        <view class="upload-btn" bindtap="chooseImage" wx:if="{{photos.length < 9}}">
+          <text class="upload-icon">+</text>
+          <text class="upload-text">{{photos.length}}/9</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 提交按钮 -->
-  <view class="footer">
-    <button class="submit-btn" type="primary" bindtap="submit" loading="{{loading}}">
-      {{type === 'complete' ? '提交完成' : '确认转派'}}
+  <view class="submit-section">
+    <button 
+      class="submit-btn"
+      type="primary"
+      bindtap="submitFeedback"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+    >
+      提交反馈
     </button>
   </view>
 </view>

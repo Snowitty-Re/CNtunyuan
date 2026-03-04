@@ -3,5 +3,7 @@
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
   "navigationBarTitleText": "案件列表",
+  "navigationBarBackgroundColor": "#e67e22",
+  "navigationBarTextStyle": "white",
   "onReachBottomDistance": 100
 }

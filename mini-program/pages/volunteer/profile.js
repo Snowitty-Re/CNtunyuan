@@ -1,174 +1,205 @@
-const { get, post } = require('../../utils/request')
+const userService = require('../../services/user')
+const taskService = require('../../services/task')
 const { showConfirm, showSuccess, showToast } = require('../../utils/util')
 const app = getApp()
 
 Page({
   data: {
-    userInfo: {},
-    stats: {
-      taskCount: 0,
-      caseCount: 0,
-      dialectCount: 0,
-      score: 0
+    // 用户信息
+    userInfo: {
+      id: '',
+      avatar: '',
+      nickname: '',
+      realName: '',
+      role: 'volunteer',
+      points: 0,
+      org: null
     },
+    
+    // 角色映射
     roleMap: {
       super_admin: '超级管理员',
       admin: '管理员',
       manager: '管理者',
       volunteer: '志愿者'
     },
+    
+    // 角色等级颜色
+    roleColorMap: {
+      super_admin: '#E74C3C',
+      admin: '#E67E22',
+      manager: '#3498DB',
+      volunteer: '#27AE60'
+    },
+    
+    // 统计数据
+    stats: {
+      taskCount: 0,
+      caseCount: 0,
+      dialectCount: 0,
+      points: 0
+    },
+    
+    // 功能菜单
     menuList: [
-      { icon: 'task', text: '我的任务', url: '/pages/tasks/my', badge: 0 },
-      { icon: 'case', text: '我的案件', url: '/pages/cases/list', badge: 0 },
-      { icon: 'dialect', text: '方言录音', url: '/pages/dialect/list', badge: 0 },
-      { icon: 'certificate', text: '志愿者证书', url: '', badge: 0 }
+      { icon: 'edit', text: '编辑资料', url: '/pages/volunteer/edit-profile', type: 'navigate' },
+      { icon: 'task', text: '我的任务', url: '/pages/tasks/my', type: 'navigate' },
+      { icon: 'notification', text: '消息通知', url: '/pages/notification/list', type: 'navigate', badge: 0 },
+      { icon: 'certificate', text: '志愿者证书', url: '', type: 'toast' },
+      { icon: 'settings', text: '设置', url: '/pages/settings/index', type: 'navigate' }
     ]
   },
 
   onLoad() {
-    this.loadUserInfo()
-    this.loadStats()
+    this.loadData()
   },
 
   onShow() {
-    this.loadUserInfo()
-    this.loadStats()
+    this.loadData()
   },
 
+  onPullDownRefresh() {
+    this.loadData().finally(() => {
+      wx.stopPullDownRefresh()
+    })
+  },
+
+  // 加载所有数据
+  async loadData() {
+    try {
+      await Promise.all([
+        this.loadUserInfo(),
+        this.loadStats()
+      ])
+    } catch (error) {
+      console.error('加载数据失败:', error)
+    }
+  },
+
+  // 加载用户信息
   async loadUserInfo() {
     try {
-      let userInfo = await app.getUserInfo() || {}
-      userInfo.avatar = userInfo.avatar || 'https://picsum.photos/100/100'
-      userInfo.nickname = userInfo.nickname || '志愿者'
-      userInfo.phone = userInfo.phone || ''
-      userInfo.email = userInfo.email || ''
-      userInfo.real_name = userInfo.real_name || ''
+      const userInfo = await app.getUserInfo() || wx.getStorageSync('userInfo') || {}
+      const profile = await userService.getProfile().catch(() => ({}))
       
-      // 更新本地存储
-      wx.setStorageSync('userInfo', userInfo)
+      const mergedUserInfo = {
+        ...userInfo,
+        ...profile,
+        id: userInfo.id || profile.id || '',
+        avatar: userInfo.avatar || profile.avatar || '/assets/images/avatar-default.png',
+        nickname: userInfo.nickname || profile.nickname || '志愿者',
+        realName: userInfo.real_name || profile.real_name || '',
+        role: userInfo.role || profile.role || 'volunteer',
+        points: userInfo.points || profile.points || 0,
+        org: userInfo.org || profile.org || null
+      }
       
-      this.setData({ userInfo })
+      this.setData({ userInfo: mergedUserInfo })
+      wx.setStorageSync('userInfo', mergedUserInfo)
     } catch (error) {
       console.error('加载用户信息失败:', error)
     }
   },
 
+  // 加载统计数据
   async loadStats() {
     try {
-      // 获取真实统计数据
-      const [taskStats, caseStats, dialectStats] = await Promise.all([
-        get('/tasks/statistics').catch(() => ({ total: 0 })),
-        get('/missing-persons/statistics').catch(() => ({ total: 0 })),
-        get('/dialects/statistics').catch(() => ({ total: 0 }))
+      // 并行获取各项统计
+      const [userStats, taskStats] = await Promise.all([
+        userService.getStats().catch(() => ({})),
+        taskService.getStats().catch(() => ({}))
       ])
       
       this.setData({
         stats: {
-          taskCount: taskStats.total || 0,
-          caseCount: caseStats.total || 0,
-          dialectCount: dialectStats.total || 0,
-          score: this.calculateScore(taskStats.total, caseStats.total, dialectStats.total)
+          taskCount: userStats.task_count || taskStats.total || 0,
+          caseCount: userStats.case_count || 0,
+          dialectCount: userStats.dialect_count || 0,
+          points: userStats.points || this.data.userInfo.points || 0
         }
       })
-      
-      // 更新菜单徽章
-      this.updateMenuBadge(0, taskStats.pending || 0)
     } catch (error) {
       console.error('加载统计失败:', error)
     }
   },
 
-  calculateScore(tasks, cases, dialects) {
-    // 简单的积分计算规则
-    return (tasks * 10) + (cases * 20) + (dialects * 15)
-  },
-
-  updateMenuBadge(index, count) {
-    const menuList = this.data.menuList
-    menuList[index].badge = count
-    this.setData({ menuList })
-  },
-
-  // 更换头像
-  changeAvatar() {
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['album', 'camera'],
-      success: async (res) => {
-        try {
-          const tempFilePath = res.tempFiles[0].tempFilePath
-          // 这里应该调用上传接口
-          // const result = await uploadFile('/upload', tempFilePath)
-          showSuccess('头像更新成功')
-        } catch (error) {
-          showToast('上传失败')
-        }
-      }
-    })
-  },
-
-  // 编辑资料
-  editProfile() {
-    wx.navigateTo({ url: '/pages/volunteer/edit-profile' })
+  // 点击统计卡片
+  onStatTap(e) {
+    const { type } = e.currentTarget.dataset
+    switch (type) {
+      case 'task':
+        wx.navigateTo({ url: '/pages/tasks/my' })
+        break
+      case 'case':
+        wx.switchTab({ url: '/pages/cases/list' })
+        break
+      case 'dialect':
+        wx.navigateTo({ url: '/pages/dialect/list' })
+        break
+      case 'points':
+        showToast('积分可用于兑换志愿者福利')
+        break
+    }
   },
 
   // 菜单点击
   onMenuTap(e) {
-    const { url } = e.currentTarget.dataset
-    if (url) {
-      wx.navigateTo({ url })
-    } else {
-      showToast('功能开发中')
-    }
-  },
-
-  // 功能菜单点击
-  onFunctionTap(e) {
-    const { type } = e.currentTarget.dataset
-    switch(type) {
-      case 'notification':
-        wx.navigateTo({ url: '/pages/notification/list' })
+    const { index } = e.currentTarget.dataset
+    const menu = this.data.menuList[index]
+    
+    if (!menu) return
+    
+    switch (menu.type) {
+      case 'navigate':
+        if (menu.url) {
+          wx.navigateTo({ url: menu.url })
+        }
         break
-      case 'settings':
-        wx.navigateTo({ url: '/pages/settings/index' })
+      case 'toast':
+        showToast('功能开发中，敬请期待')
         break
-      case 'help':
-        wx.navigateTo({ url: '/pages/settings/help' })
-        break
-      case 'about':
-        wx.navigateTo({ url: '/pages/settings/about' })
+      case 'switchTab':
+        if (menu.url) {
+          wx.switchTab({ url: menu.url })
+        }
         break
     }
   },
 
-  // 复制ID
-  copyId() {
+  // 复制用户ID
+  copyUserId() {
+    const { id } = this.data.userInfo
+    if (!id) {
+      showToast('用户ID获取失败')
+      return
+    }
+    
     wx.setClipboardData({
-      data: this.data.userInfo.id || '',
+      data: id,
       success: () => {
         showSuccess('已复制用户ID')
       }
     })
   },
 
+  // 退出登录
   async logout() {
     const confirm = await showConfirm('确认退出', '退出后需要重新登录')
-    if (confirm) {
-      try {
-        await post('/auth/logout')
-      } catch (error) {
-        console.error('退出登录失败:', error)
-      }
-      
-      // 清除登录信息
-      wx.clearStorageSync()
-      
-      app.globalData.token = null
-      app.globalData.userInfo = null
-      
-      // 跳转到登录页
-      wx.reLaunch({ url: '/pages/login/index' })
+    if (!confirm) return
+    
+    try {
+      // 调用退出登录接口
+      await userService.logout?.().catch(() => {})
+    } catch (error) {
+      console.error('退出登录接口调用失败:', error)
     }
+    
+    // 清除本地数据
+    wx.clearStorageSync()
+    app.globalData.token = null
+    app.globalData.userInfo = null
+    
+    // 跳转到登录页
+    wx.reLaunch({ url: '/pages/login/index' })
   }
 })

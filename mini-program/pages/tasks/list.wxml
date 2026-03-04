@@ -1,34 +1,30 @@
 <view class="tasks-page">
   <!-- 顶部统计卡片区 -->
   <view class="stats-banner">
-    <view class="stats-bg">
-      <view class="gradient-circle circle-1"></view>
-      <view class="gradient-circle circle-2"></view>
-    </view>
     <view class="stats-content">
       <view class="stat-item" bindtap="filterByStatus" data-status="">
-        <text class="stat-value">{{stats.total}}</text>
+        <text class="stat-value">{{stats.total || 0}}</text>
         <text class="stat-label">全部</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item" bindtap="filterByStatus" data-status="pending">
-        <text class="stat-value highlight">{{stats.pending}}</text>
-        <text class="stat-label">待领取</text>
+        <text class="stat-value highlight">{{stats.pending || 0}}</text>
+        <text class="stat-label">待分配</text>
       </view>
       <view class="stat-divider"></view>
-      <view class="stat-item" bindtap="filterByStatus" data-status="assigned">
-        <text class="stat-value">{{stats.assigned}}</text>
+      <view class="stat-item" bindtap="filterByStatus" data-status="processing">
+        <text class="stat-value">{{stats.processing || 0}}</text>
         <text class="stat-label">进行中</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item" bindtap="filterByStatus" data-status="completed">
-        <text class="stat-value">{{stats.completed}}</text>
+        <text class="stat-value">{{stats.completed || 0}}</text>
         <text class="stat-label">已完成</text>
       </view>
     </view>
   </view>
 
-  <!-- 筛选标签 -->
+  <!-- 状态筛选标签 -->
   <view class="filter-bar">
     <scroll-view class="filter-scroll" scroll-x enhanced show-scrollbar="{{false}}">
       <view class="filter-list">
@@ -37,11 +33,7 @@
         </view>
         <view class="filter-chip {{currentStatus === 'pending' ? 'active' : ''}}" bindtap="filterByStatus" data-status="pending">
           <text class="chip-dot pending"></text>
-          <text class="chip-text">待领取</text>
-        </view>
-        <view class="filter-chip {{currentStatus === 'assigned' ? 'active' : ''}}" bindtap="filterByStatus" data-status="assigned">
-          <text class="chip-dot assigned"></text>
-          <text class="chip-text">已分配</text>
+          <text class="chip-text">待分配</text>
         </view>
         <view class="filter-chip {{currentStatus === 'processing' ? 'active' : ''}}" bindtap="filterByStatus" data-status="processing">
           <text class="chip-dot processing"></text>
@@ -50,6 +42,10 @@
         <view class="filter-chip {{currentStatus === 'completed' ? 'active' : ''}}" bindtap="filterByStatus" data-status="completed">
           <text class="chip-dot completed"></text>
           <text class="chip-text">已完成</text>
+        </view>
+        <view class="filter-chip {{currentStatus === 'cancelled' ? 'active' : ''}}" bindtap="filterByStatus" data-status="cancelled">
+          <text class="chip-dot cancelled"></text>
+          <text class="chip-text">已取消</text>
         </view>
       </view>
     </scroll-view>
@@ -68,21 +64,18 @@
   >
     <view class="task-cards">
       <view class="task-card" wx:for="{{tasks}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
-        <!-- 左侧装饰条 -->
+        <!-- 左侧优先级装饰条 -->
         <view class="card-accent accent-{{item.priority}}"></view>
         
         <view class="card-content">
-          <!-- 头部 -->
+          <!-- 头部：状态标签 -->
           <view class="card-header">
-            <view class="task-type">
-              <view class="type-icon type-{{item.task_type}}">
-                <text class="iconfont icon-{{item.task_type === 'search' ? 'location' : item.task_type === 'call' ? 'phone' : 'task'}}"></text>
-              </view>
-              <text class="type-text">{{taskTypeMap[item.task_type] || '其他'}}</text>
-            </view>
             <view class="status-badge status-{{item.status}}">
               <text class="status-dot"></text>
-              <text class="status-text">{{statusMap[item.status]}}</text>
+              <text class="status-text">{{statusMap[item.status] || item.status}}</text>
+            </view>
+            <view class="priority-tag priority-{{item.priority}}">
+              {{priorityMap[item.priority]}}
             </view>
           </view>
 
@@ -92,31 +85,26 @@
           <!-- 描述 -->
           <view class="task-desc" wx:if="{{item.description}}">{{item.description}}</view>
 
-          <!-- 元信息 -->
+          <!-- 关联案件 -->
+          <view class="task-case" wx:if="{{item.missing_person}}">
+            <text class="iconfont icon-user"></text>
+            <text class="case-text">关联案件：{{item.missing_person.name}}</text>
+          </view>
+
+          <!-- 截止日期 -->
           <view class="task-meta">
-            <view class="meta-item" wx:if="{{item.address}}">
-              <text class="iconfont icon-location"></text>
-              <text class="meta-text">{{item.address}}</text>
-            </view>
             <view class="meta-item {{item.isOverdue ? 'overdue' : ''}}" wx:if="{{item.deadline}}">
               <text class="iconfont icon-time"></text>
               <text class="meta-text">截止 {{item.deadline}}</text>
             </view>
-          </view>
-
-          <!-- 底部信息 -->
-          <view class="card-footer">
-            <view class="assignee" wx:if="{{item.assignee}}">
-              <image class="assignee-avatar" src="{{item.assignee.avatar || 'https://picsum.photos/100/100'}}" />
-              <text class="assignee-name">{{item.assignee.nickname}}</text>
-            </view>
-            <view class="priority-tag priority-{{item.priority}}">
-              {{priorityMap[item.priority]}}
+            <view class="meta-item" wx:if="{{item.assignee}}">
+              <text class="iconfont icon-user"></text>
+              <text class="meta-text">执行人：{{item.assignee.nickname || item.assignee.name}}</text>
             </view>
           </view>
         </view>
 
-        <!-- 快速操作按钮 -->
+        <!-- 快速领取按钮 -->
         <view class="quick-action" wx:if="{{item.status === 'pending'}}" catchtap="quickClaim" data-id="{{item.id}}">
           <view class="action-btn-primary">
             <text class="iconfont icon-plus"></text>
@@ -150,7 +138,7 @@
     </view>
   </scroll-view>
 
-  <!-- 浮动按钮 -->
+  <!-- 创建任务浮动按钮 -->
   <view class="fab" bindtap="goToCreate" wx:if="{{canCreate}}">
     <view class="fab-bg">
       <text class="iconfont icon-add"></text>

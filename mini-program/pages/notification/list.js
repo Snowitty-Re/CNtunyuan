@@ -1,161 +1,166 @@
-const { get, post } = require('../../utils/request')
-const { formatDate, showSuccess } = require('../../utils/util')
-
 Page({
   data: {
     notifications: [],
+    loading: false,
+    hasMore: true,
     page: 1,
     pageSize: 20,
-    loading: false,
-    loadingMore: false,
-    hasMore: true,
-    unreadCount: 0,
-    typeMap: {
-      system: '系统通知',
-      task: '任务通知',
-      case: '案件通知',
-      workflow: '审批通知'
-    }
+    unreadCount: 0
   },
 
   onLoad() {
     this.loadNotifications()
-    this.loadUnreadCount()
   },
 
   onShow() {
-    this.loadUnreadCount()
+    this.loadNotifications()
   },
 
+  // 加载通知列表
+  async loadNotifications(refresh = false) {
+    if (this.data.loading) return
+    
+    const page = refresh ? 1 : this.data.page
+    
+    this.setData({ loading: true })
+    
+    try {
+      // TODO: 接入后端通知API
+      // const result = await services.notification.getList({
+      //   page,
+      //   page_size: this.data.pageSize
+      // })
+      
+      // 模拟数据
+      const mockData = this.getMockNotifications()
+      
+      this.setData({
+        notifications: refresh ? mockData : [...this.data.notifications, ...mockData],
+        page: page + 1,
+        hasMore: mockData.length === this.data.pageSize,
+        loading: false,
+        unreadCount: mockData.filter(n => !n.is_read).length
+      })
+    } catch (error) {
+      console.error('加载通知失败:', error)
+      this.setData({ loading: false })
+    }
+  },
+
+  // 模拟数据
+  getMockNotifications() {
+    const types = ['task', 'case', 'system']
+    const titles = ['新任务分配', '案件状态更新', '系统通知']
+    const contents = [
+      '您有一个新的寻人任务待处理',
+      '您关注的案件有了新的进展',
+      '欢迎使用团圆寻亲志愿者系统'
+    ]
+    
+    return Array.from({ length: 10 }, (_, i) => ({
+      id: `notification_${i}`,
+      type: types[i % 3],
+      title: titles[i % 3],
+      content: contents[i % 3],
+      is_read: i > 2,
+      created_at: new Date(Date.now() - i * 3600000).toISOString()
+    }))
+  },
+
+  // 下拉刷新
   onPullDownRefresh() {
-    this.setData({ page: 1, notifications: [] })
-    this.loadNotifications().finally(() => {
+    this.loadNotifications(true).finally(() => {
       wx.stopPullDownRefresh()
     })
   },
 
+  // 加载更多
   onReachBottom() {
-    if (!this.data.loadingMore && this.data.hasMore) {
-      this.setData({ page: this.data.page + 1 })
-      this.loadNotifications(true)
+    if (this.data.hasMore && !this.data.loading) {
+      this.loadNotifications()
     }
   },
 
-  async loadNotifications(loadMore = false) {
-    if (loadMore) {
-      this.setData({ loadingMore: true })
-    } else {
-      this.setData({ loading: true })
-    }
-
-    try {
-      const result = await get('/notifications', {
-        page: this.data.page,
-        page_size: this.data.pageSize
-      })
-
-      const notifications = result.list.map(item => ({
-        ...item,
-        created_at: formatDate(item.created_at)
-      }))
-
-      this.setData({
-        notifications: loadMore ? [...this.data.notifications, ...notifications] : notifications,
-        hasMore: notifications.length === this.data.pageSize,
-        loading: false,
-        loadingMore: false
-      })
-    } catch (error) {
-      console.error('加载通知失败:', error)
-      this.setData({ loading: false, loadingMore: false })
+  // 点击通知
+  onNotificationTap(e) {
+    const notification = e.currentTarget.dataset.item
+    
+    // 标记为已读
+    this.markAsRead(notification.id)
+    
+    // 根据类型跳转
+    switch (notification.type) {
+      case 'task':
+        wx.navigateTo({ url: '/pages/tasks/my' })
+        break
+      case 'case':
+        wx.navigateTo({ url: '/pages/cases/list' })
+        break
     }
   },
 
-  async loadUnreadCount() {
-    try {
-      const result = await get('/notifications/unread-count')
-      this.setData({ unreadCount: result.count || 0 })
-    } catch (error) {
-      console.error('加载未读数失败:', error)
-    }
+  // 标记为已读
+  async markAsRead(id) {
+    const notifications = this.data.notifications.map(n => {
+      if (n.id === id) {
+        return { ...n, is_read: true }
+      }
+      return n
+    })
+    
+    this.setData({ 
+      notifications,
+      unreadCount: notifications.filter(n => !n.is_read).length
+    })
+    
+    // TODO: 调用后端API标记已读
   },
 
-  // 标记已读
-  async markAsRead(e) {
-    const id = e.currentTarget.dataset.id
-    try {
-      await post(`/notifications/${id}/read`)
-      
-      const notifications = this.data.notifications.map(item => {
-        if (item.id === id) {
-          return { ...item, is_read: true }
-        }
-        return item
-      })
-      
-      this.setData({ notifications })
-      this.loadUnreadCount()
-    } catch (error) {
-      console.error('标记已读失败:', error)
-    }
-  },
-
-  // 标记全部已读
+  // 全部标记为已读
   async markAllAsRead() {
-    try {
-      await post('/notifications/read-all')
-      showSuccess('已标记全部已读')
-      
-      const notifications = this.data.notifications.map(item => ({
-        ...item, is_read: true
-      }))
-      this.setData({ notifications })
-      this.loadUnreadCount()
-    } catch (error) {
-      console.error('标记全部已读失败:', error)
-    }
+    const notifications = this.data.notifications.map(n => ({
+      ...n,
+      is_read: true
+    }))
+    
+    this.setData({ 
+      notifications,
+      unreadCount: 0
+    })
+    
+    wx.showToast({
+      title: '已标记为已读',
+      icon: 'success'
+    })
   },
 
   // 删除通知
   async deleteNotification(e) {
     const id = e.currentTarget.dataset.id
     
-    wx.showModal({
-      title: '提示',
-      content: '确定删除这条通知吗？',
-      success: async (res) => {
-        if (res.confirm) {
-          try {
-            await post(`/notifications/${id}/delete`)
-            
-            const notifications = this.data.notifications.filter(
-              item => item.id !== id
-            )
-            this.setData({ notifications })
-            this.loadUnreadCount()
-          } catch (error) {
-            console.error('删除通知失败:', error)
-          }
-        }
-      }
+    const confirm = await wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这条通知吗？'
     })
+    
+    if (confirm.confirm) {
+      const notifications = this.data.notifications.filter(n => n.id !== id)
+      this.setData({ notifications })
+    }
   },
 
-  // 点击通知
-  onNotificationTap(e) {
-    const { id, type, businessid } = e.currentTarget.dataset
+  // 清空所有通知
+  async clearAll() {
+    const confirm = await wx.showModal({
+      title: '确认清空',
+      content: '确定要清空所有通知吗？'
+    })
     
-    this.markAsRead(e)
-    
-    switch(type) {
-      case 'task':
-        wx.navigateTo({ url: `/pages/tasks/detail?id=${businessid}` })
-        break
-      case 'case':
-        wx.navigateTo({ url: `/pages/cases/detail?id=${businessid}` })
-        break
-      default:
-        break
+    if (confirm.confirm) {
+      this.setData({ 
+        notifications: [],
+        unreadCount: 0
+      })
     }
   }
 })
