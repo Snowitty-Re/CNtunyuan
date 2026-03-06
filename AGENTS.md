@@ -172,10 +172,10 @@ cd backend
 # 开发模式启动（统一入口：cmd/app/main.go）
 go run cmd/app/main.go
 
-# 数据库迁移（自动创建表结构）
-go run cmd/app/main.go -migrate
+# 检查数据库表结构
+go run cmd/app/main.go -check-db
 
-# 数据填充
+# 数据填充（生成测试数据）
 go run cmd/seed/main.go -all
 
 # 重置密码
@@ -186,6 +186,32 @@ go fmt ./...
 
 # 运行测试
 go test ./...
+```
+
+### 数据库迁移命令
+
+**PostgreSQL:**
+```bash
+# 创建数据库
+createdb -U postgres -E UTF8 cntuanyuan
+
+# 执行表结构
+psql -U postgres -d cntuanyuan -f backend/migrations/postgres/01_schema.sql
+
+# 插入种子数据
+psql -U postgres -d cntuanyuan -f backend/migrations/postgres/02_seed.sql
+```
+
+**MySQL:**
+```bash
+# 创建数据库
+mysql -u root -p -e "CREATE DATABASE cntuanyuan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# 执行表结构
+mysql -u root -p cntuanyuan < backend/migrations/mysql/01_schema.sql
+
+# 插入种子数据
+mysql -u root -p cntuanyuan < backend/migrations/mysql/02_seed.sql
 ```
 
 ### 前端命令
@@ -330,20 +356,105 @@ VITE_API_BASE_URL=/api/v1
    - 文件上传大小限制默认为 50MB
 7. **初始化**: 首次启动前请确保已配置数据库并执行数据迁移
 
+## 安全指南
+
+### 生产环境部署检查清单
+
+#### 敏感信息保护
+- [ ] 所有敏感信息使用环境变量或配置文件（config.yaml 已添加到 .gitignore）
+- [ ] JWT 密钥已修改（长度 >= 32，不要使用默认密钥）
+- [ ] 数据库密码已修改为强密码
+- [ ] 微信小程序凭证已配置且安全存储
+
+#### 网络安全
+- [ ] HTTPS 已启用（生产环境必须）
+- [ ] 安全响应头已配置（X-Content-Type-Options, X-Frame-Options, CSP 等）
+- [ ] CORS 配置正确，只允许需要的域名
+- [ ] 限流已启用（IP 限流：每秒 100 请求，突发 200）
+
+#### 输入安全
+- [ ] 所有 Handler 入口进行参数验证
+- [ ] 使用参数化查询防止 SQL 注入（GORM 默认防护）
+- [ ] XSS 防护：字符串清理、输出编码
+- [ ] 文件上传限制类型和大小
+
+### 凭证轮换流程
+
+如果怀疑敏感信息泄露，立即执行：
+
+1. **微信小程序凭证**
+   - 登录 [微信小程序后台](https://mp.weixin.qq.com)
+   - 进入「开发」->「开发管理」->「开发设置」
+   - 点击 AppSecret 的「重置」按钮
+
+2. **数据库密码**
+   - 修改 PostgreSQL/MySQL 的密码
+   - 更新 `backend/config/config.yaml` 文件
+
+3. **JWT 密钥**
+   - 生成新的随机密钥（长度 >= 32）
+   - 更新配置文件
+   - 所有用户需要重新登录（密钥更改后现有 token 失效）
+
+### 安全最佳实践
+
+1. **提交前检查**
+   ```bash
+   git diff --cached
+   # 确保没有敏感信息被提交
+   ```
+
+2. **使用 git-secrets 工具**
+   ```bash
+   # 安装
+   brew install git-secrets  # macOS
+   
+   # 配置
+   git secrets --install
+   git secrets --register-aws
+   ```
+
+3. **配置文件管理**
+   - 始终使用 `config.yaml.example` 作为模板
+   - 复制为 `config.yaml` 并填入真实值
+   - `config.yaml` 已在 .gitignore 中，不会被提交
+
 ## 常见问题
 
 ### 1. 数据库连接失败
 - 检查数据库服务是否启动（PostgreSQL/MySQL）
 - 检查 config.yaml 中的数据库配置（类型、主机、端口、用户名、密码）
-- 确认数据库 `cntuanyuan` 已创建，或运行初始化向导自动创建
+- 确认数据库 `cntuanyuan` 已手动创建
 - 检查防火墙设置是否允许连接
 
 ### 2. 首次启动如何初始化系统
-1. 配置 `backend/config/config.yaml` 中的数据库连接
-2. 执行数据库迁移：`cd backend && go run cmd/app/main.go -migrate`
-3. （可选）导入种子数据：`cd backend && go run cmd/seed/main.go -all`
-4. 启动后端服务：`cd backend && go run cmd/app/main.go`
-5. 访问 `http://localhost:3000`，使用种子数据的默认账号登录
+1. **手动创建数据库**
+   - PostgreSQL: `createdb -U postgres -E UTF8 cntuanyuan`
+   - MySQL: `CREATE DATABASE cntuanyuan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
+
+2. **执行 SQL 迁移文件**
+   - PostgreSQL: `psql -U postgres -d cntuanyuan -f backend/migrations/postgres/01_schema.sql`
+   - MySQL: `mysql -u root -p cntuanyuan < backend/migrations/mysql/01_schema.sql`
+
+3. **插入种子数据**
+   - PostgreSQL: `psql -U postgres -d cntuanyuan -f backend/migrations/postgres/02_seed.sql`
+   - MySQL: `mysql -u root -p cntuanyuan < backend/migrations/mysql/02_seed.sql`
+
+4. **启动后端服务**: `cd backend && go run cmd/app/main.go`
+
+5. **验证安装**: `cd backend && go run cmd/app/main.go -check-db`
+
+6. 访问 `http://localhost:3000`，使用种子数据的默认账号登录
+   - 超级管理员: 13800138000 / admin123
+
+### 3. 开发环境快速初始化（不推荐用于生产）
+```bash
+cd backend
+# 自动迁移表结构
+go run cmd/app/main.go -migrate
+# 插入种子数据
+go run cmd/app/main.go -seed
+```
 
 ### 3. 登录失败
 - 确认系统已完成初始化（访问 `/setup` 查看状态）
@@ -374,6 +485,17 @@ VITE_API_BASE_URL=/api/v1
 - 如果使用 `caching_sha2_password` 认证，确保驱动版本兼容
 
 ## 更新日志
+
+### 2026-03-06
+- **生产级重构完成**:
+  - 统一错误处理 (`pkg/errors`): 完整的错误码体系、AppError 结构体、HTTP 状态码映射
+  - 统一响应格式 (`pkg/response`): 标准化 API 响应、分页数据支持
+  - 请求验证 (`pkg/validator`): 基于 go-playground/validator、自定义验证规则、XSS 防护
+  - 中间件 (`pkg/middleware`): TraceID、日志、恢复、安全头、限流、CORS、请求大小限制
+  - Prometheus 监控 (`pkg/metrics`): HTTP/DB 指标、业务操作计数、缓存命中率
+  - 数据库连接池优化: 连接池监控、慢查询检测(>100ms)、连接等待告警
+  - 前端 Error Boundary: React 错误边界处理
+  - 请求工具增强: 自动重试(最多3次)、防抖请求、统一错误处理
 
 ### 2026-03-05
 - **移除系统初始化向导**:
@@ -462,6 +584,8 @@ VITE_API_BASE_URL=/api/v1
 
 ## 参考文档
 
-- [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md) - 后端架构详细说明
+- [README.md](README.md) - 项目主文档（项目介绍、快速开始、功能特性）
+- [backend/README.md](backend/README.md) - 后端开发指南（API 文档、开发规范）
+- [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md) - 后端架构详细说明（Clean Architecture 设计）
 - [backend/REFACTORING.md](backend/REFACTORING.md) - 架构重构指南
-- [README.md](README.md) - 项目主文档
+- [backend/migrations/README.md](backend/migrations/README.md) - 数据库迁移指南
