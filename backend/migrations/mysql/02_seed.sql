@@ -45,7 +45,7 @@ INSERT IGNORE INTO ty_users (
     '超级管理员',
     '13800138000',
     'admin@cntuanyuan.org',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjXAgwkLzhxDfmAg5r3eRmFfbwkBDeq',
+    '$2a$10$0P4.9amnrR6959b1e6WeouNswfG.6rOz796S/Jm2SEOeiu7lc/duG',
     'super_admin',
     'active',
     '00000000-0000-0000-0000-000000000000',
