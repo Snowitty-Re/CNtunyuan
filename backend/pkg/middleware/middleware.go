@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/pkg/errors"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/metrics"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -115,6 +117,16 @@ func LoggingMiddleware() gin.HandlerFunc {
 		} else {
 			logger.Info("HTTP Request", fields...)
 		}
+
+		// 记录 Prometheus 指标
+		metrics.RecordHTTPRequest(
+			c.Request.Method,
+			path,
+			strconv.Itoa(status),
+			latency.Seconds(),
+			c.Request.ContentLength,
+			int64(c.Writer.Size()),
+		)
 	}
 }
 

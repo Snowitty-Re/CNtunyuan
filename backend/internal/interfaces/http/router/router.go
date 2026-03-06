@@ -6,6 +6,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	pkgmiddleware "github.com/Snowitty-Re/CNtunyuan/pkg/middleware"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Router 路由管理器
@@ -83,6 +84,9 @@ func (r *Router) Setup() {
 	// 健康检查（不需要认证）
 	api.GET("/health", r.healthCheck)
 	api.GET("/health/detailed", r.detailedHealthCheck)
+	
+	// Prometheus 指标端点
+	api.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	
 	// 公开路由（不需要认证）
 	public := api.Group("/")
