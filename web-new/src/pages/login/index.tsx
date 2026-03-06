@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 import {
   Button,
@@ -27,8 +26,7 @@ interface LoginForm {
 }
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-  const { setToken, setUser } = useAuthStore();
+  const { login } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('password');
 
@@ -53,11 +51,14 @@ export default function LoginPage() {
         // 后端返回 access_token，前端使用 token
         const token = loginData.access_token || loginData.token;
         if (loginData && token) {
-          setToken(token, loginData.refresh_token || '');
-          setUser(loginData.user);
+          // 一次性设置所有登录状态
+          login(token, loginData.refresh_token || '', loginData.user);
           message.success('登录成功');
-          // 登录成功后跳转到工作台
-          navigate('/dashboard', { replace: true });
+          
+          // 使用 window.location.href 强制刷新，确保状态从 localStorage 恢复
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 300);
         } else {
           console.error('登录 data 字段缺少 token:', loginData);
           message.error('登录数据格式错误');

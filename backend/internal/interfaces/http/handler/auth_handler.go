@@ -30,7 +30,9 @@ func NewAuthHandler(authService *service.AuthService, authMiddleware *middleware
 
 // WechatLoginRequest WeChat mini-program login request
 type WechatLoginRequest struct {
-	Code string `json:"code" binding:"required"`
+	Code     string `json:"code" binding:"required"`
+	Nickname string `json:"nickname"` // 用户昵称（可选）
+	Avatar   string `json:"avatar"`   // 用户头像（可选）
 }
 
 // LoginRequest 登录请求
@@ -42,7 +44,7 @@ type LoginRequest struct {
 // BindPhoneRequest 绑定手机号请求
 type BindPhoneRequest struct {
 	Phone string `json:"phone" binding:"required"`
-	Code  string `json:"code" binding:"required"`
+	Code  string `json:"code"` // 验证码（测试阶段可选）
 }
 
 // SendCodeRequest 发送验证码请求
@@ -193,7 +195,13 @@ func (h *AuthHandler) WechatLogin(c *gin.Context) {
 		return
 	}
 
-	result, user, needBind, err := h.authService.WechatLogin(c.Request.Context(), req.Code, c.ClientIP())
+	// 构建用户信息
+	userInfo := &valueobject.WechatUserInfo{
+		Nickname: req.Nickname,
+		Avatar:   req.Avatar,
+	}
+
+	result, user, needBind, err := h.authService.WechatLogin(c.Request.Context(), req.Code, c.ClientIP(), userInfo)
 	if err != nil {
 		logger.Error("Wechat login failed", logger.Err(err))
 		response.Error(c, err)
@@ -202,14 +210,27 @@ func (h *AuthHandler) WechatLogin(c *gin.Context) {
 
 	// Need to bind phone
 	if needBind {
+		// Generate temp token for the new user
+		// This allows the frontend to make authenticated requests (like bind-phone)
+		tokens, err := h.authService.GenerateTokenPair(user)
+		if err != nil {
+			logger.Error("Failed to generate temp token", logger.Err(err))
+			response.Error(c, errors.New(errors.CodeInternal, "token generation failed"))
+			return
+		}
+		
 		response.Success(c, gin.H{
 			"need_bind_phone": true,
+			"access_token":    tokens.AccessToken,
+			"refresh_token":   tokens.RefreshToken,
+			"expires_in":      tokens.ExpiresIn,
+			"token_type":      "Bearer",
 			"user": gin.H{
-				"id":       "",
-				"nickname": "微信用户",
-				"phone":    "",
-				"role":     "volunteer",
-				"status":   "active",
+				"id":       user.ID,
+				"nickname": user.Nickname,
+				"phone":    user.Phone,
+				"role":     user.Role,
+				"status":   user.Status,
 			},
 		})
 		return

@@ -79,8 +79,8 @@ type User struct {
 	Emergency    string           `gorm:"size:50" json:"emergency,omitempty"`
 	EmergencyTel string           `gorm:"size:20" json:"emergency_tel,omitempty"`
 	Introduction string           `gorm:"type:text" json:"introduction,omitempty"`
-	WxOpenID     string           `gorm:"size:100;uniqueIndex" json:"wx_openid,omitempty"`
-	WxUnionID    string           `gorm:"size:100" json:"wx_unionid,omitempty"`
+	WxOpenID     string           `gorm:"column:wx_openid;size:100;uniqueIndex" json:"wx_openid,omitempty"`
+	WxUnionID    string           `gorm:"column:wx_unionid;size:100" json:"wx_unionid,omitempty"`
 	Org          *Organization    `gorm:"foreignKey:OrgID" json:"org,omitempty"`
 	Permissions  []Permission     `gorm:"many2many:user_permissions;" json:"permissions,omitempty"`
 }

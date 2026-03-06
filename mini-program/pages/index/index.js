@@ -48,6 +48,8 @@ Page({
 
   onShow() {
     this.updateGreeting()
+    // 每次显示页面时刷新数据
+    this.loadData()
   },
 
   onPullDownRefresh() {
@@ -104,7 +106,7 @@ Page({
    */
   async loadStats() {
     try {
-      // 优先使用仪表盘服务的统计数据
+      // 初始化统计数据
       let stats = {
         totalCases: 0,
         resolvedCases: 0,
@@ -115,14 +117,31 @@ Page({
       // 获取仪表盘统计数据
       try {
         const dashboardStats = await dashboardService.getStats()
+        console.log('仪表盘统计数据:', dashboardStats)
+        
         if (dashboardStats) {
-          stats.totalCases = dashboardStats.missing_persons || dashboardStats.totalCases || 0
-          stats.resolvedCases = dashboardStats.found || dashboardStats.resolvedCases || 0
-          stats.volunteers = dashboardStats.volunteers || 0
-          stats.dialects = dashboardStats.dialects || 0
+          // 处理嵌套结构：missing_persons.total, users.total, dialects.total
+          if (dashboardStats.missing_persons) {
+            stats.totalCases = dashboardStats.missing_persons.total || 0
+            stats.resolvedCases = (dashboardStats.missing_persons.found || 0) + (dashboardStats.missing_persons.reunited || 0)
+          }
+          
+          if (dashboardStats.users) {
+            stats.volunteers = dashboardStats.users.total || 0
+          }
+          
+          if (dashboardStats.dialects) {
+            stats.dialects = dashboardStats.dialects.total || 0
+          }
+          
+          // 也尝试平铺结构的兼容
+          stats.totalCases = stats.totalCases || dashboardStats.total_cases || 0
+          stats.resolvedCases = stats.resolvedCases || dashboardStats.resolved_cases || 0
+          stats.volunteers = stats.volunteers || dashboardStats.total_users || 0
+          stats.dialects = stats.dialects || dashboardStats.total_dialects || 0
         }
       } catch (e) {
-        console.log('仪表盘统计获取失败，尝试其他接口')
+        console.log('仪表盘统计获取失败:', e)
       }
 
       // 如果仪表盘数据不完整，尝试单独获取
@@ -131,8 +150,17 @@ Page({
       if (stats.totalCases === 0) {
         promises.push(
           missingPersonService.getStats().then(res => {
-            stats.totalCases = res.total || res.total_cases || 0
-            stats.resolvedCases = res.found || res.resolved || 0
+            console.log('案件统计:', res)
+            if (res) {
+              // 处理嵌套或平铺结构
+              if (res.missing_persons) {
+                stats.totalCases = res.missing_persons.total || 0
+                stats.resolvedCases = (res.missing_persons.found || 0) + (res.missing_persons.reunited || 0)
+              } else {
+                stats.totalCases = res.total || res.total_cases || 0
+                stats.resolvedCases = res.found || res.resolved || 0
+              }
+            }
           }).catch(() => {})
         )
       }
@@ -140,24 +168,35 @@ Page({
       if (stats.dialects === 0) {
         promises.push(
           dialectService.getStats().then(res => {
-            stats.dialects = res.total || 0
+            console.log('方言统计:', res)
+            if (res) {
+              if (res.dialects) {
+                stats.dialects = res.dialects.total || 0
+              } else {
+                stats.dialects = res.total || res.total_dialects || 0
+              }
+            }
           }).catch(() => {})
         )
       }
 
-      // 尝试获取概览数据中的志愿者数
-      if (stats.volunteers === 0) {
+      // 尝试获取概览数据
+      if (stats.volunteers === 0 || stats.totalCases === 0) {
         promises.push(
           dashboardService.getOverview().then(res => {
-            if (res && res.stats) {
-              stats.volunteers = res.stats.volunteers || 0
+            console.log('概览数据:', res)
+            if (res) {
+              stats.volunteers = stats.volunteers || res.total_users || 0
+              stats.totalCases = stats.totalCases || res.total_cases || 0
+              stats.resolvedCases = stats.resolvedCases || res.resolved_cases || 0
             }
           }).catch(() => {})
         )
       }
 
       await Promise.all(promises)
-
+      
+      console.log('最终统计数据:', stats)
       this.setData({ stats })
     } catch (error) {
       console.error('加载统计数据失败:', error)
@@ -177,18 +216,38 @@ Page({
         page_size: 5 
       })
 
+      console.log('案件列表原始数据:', result)
+      
       const list = result.list || result.data || result || []
       
-      const cases = list.map(item => ({
-        id: item.id,
-        name: item.name || '未知',
-        status: item.status || 'missing',
-        photoUrl: this.getPhotoUrl(item),
-        missingLocation: item.missing_location || item.missingLocation || '未知地点',
-        missingTime: formatTimeAgo(item.missing_time || item.missingTime),
-        age: this.calculateAge(item.birth_date || item.birthDate),
-        gender: item.gender === 'male' ? '男' : item.gender === 'female' ? '女' : '未知'
-      }))
+      const cases = list.map(item => {
+        // 组合地址：province + city + district + address
+        const locationParts = []
+        if (item.province) locationParts.push(item.province)
+        if (item.city) locationParts.push(item.city)
+        if (item.district) locationParts.push(item.district)
+        if (item.address) locationParts.push(item.address)
+        
+        const missingLocation = locationParts.length > 0 
+          ? locationParts.join(' ') 
+          : '未知地点'
+        
+        // 处理时间字段 - 后端返回的是 ISO 格式字符串
+        const missingTime = item.missing_time 
+          ? formatTimeAgo(item.missing_time) 
+          : '未知时间'
+        
+        return {
+          id: item.id,
+          name: item.name || '未知',
+          status: item.status || 'missing',
+          photoUrl: this.getPhotoUrl(item),
+          missingLocation: missingLocation,
+          missingTime: missingTime,
+          age: this.calculateAge(item.birth_date),
+          gender: item.gender === 'male' ? '男' : item.gender === 'female' ? '女' : '未知'
+        }
+      })
 
       this.setData({ 
         recentCases: cases,
@@ -218,18 +277,27 @@ Page({
         result = await dialectService.getList({ page: 1, page_size: 5 })
       }
 
+      console.log('方言列表原始数据:', result)
+      
       const list = result.list || result.data || result || []
 
-      const dialects = list.map(item => ({
-        id: item.id,
-        title: item.title || item.content || '方言录音',
-        province: item.province || '',
-        city: item.city || '',
-        playCount: this.formatCount(item.play_count || item.playCount || 0),
-        likeCount: this.formatCount(item.like_count || item.likeCount || 0),
-        duration: item.duration || '00:00',
-        createdAt: formatTimeAgo(item.created_at || item.createdAt)
-      }))
+      const dialects = list.map(item => {
+        // 确保所有字段都是字符串
+        const title = item.title || item.content || '方言录音'
+        const province = item.province || ''
+        const city = item.city || ''
+        
+        return {
+          id: item.id,
+          title: String(title),
+          province: String(province),
+          city: String(city),
+          playCount: this.formatCount(item.play_count || item.playCount || 0),
+          likeCount: this.formatCount(item.like_count || item.likeCount || 0),
+          duration: item.duration || '00:00',
+          createdAt: formatTimeAgo(item.created_at || item.createdAt)
+        }
+      })
 
       this.setData({ 
         recentDialects: dialects,
@@ -292,6 +360,28 @@ Page({
       return (num / 1000).toFixed(1) + 'k'
     }
     return num.toString()
+  },
+
+  /**
+   * 安全转换为字符串（处理对象类型）
+   */
+  safeString(value, defaultValue = '') {
+    if (value === null || value === undefined) {
+      return defaultValue
+    }
+    if (typeof value === 'string') {
+      return value
+    }
+    if (typeof value === 'object') {
+      // 如果是对象，尝试获取 name 或 title 字段
+      if (value.name) return String(value.name)
+      if (value.title) return String(value.title)
+      if (value.label) return String(value.label)
+      // 否则返回默认字符串
+      console.warn('字段值为对象:', value)
+      return defaultValue
+    }
+    return String(value)
   },
 
   // ========== 导航方法 ==========

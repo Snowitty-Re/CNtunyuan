@@ -235,13 +235,45 @@ docker-compose up -d
 3. 配置 appid
 4. 编译运行
 
+#### 小程序图标系统
+
+小程序使用 **Emoji 图标系统**，无需外部字体文件：
+
+- 图标定义在 `mini-program/assets/styles/icons.wxss`
+- 使用方式：`<text class="iconfont icon-add"></text>`
+- 支持 40+ 常用图标映射
+
+详见 [mini-program/assets/icons/README.md](mini-program/assets/icons/README.md)
+
 ## API 文档
 
 启动后端服务后，访问 `http://localhost:8080/swagger/index.html` 查看 Swagger API 文档。
 
 ## 默认账号
 
-通过初始化向导创建第一个超级管理员账号。系统不再预置默认账号，所有管理员必须通过初始化页面或数据库迁移后手动创建。
+种子数据会自动创建超级管理员账号：
+
+- **手机号**: 13800138000
+- **密码**: admin123
+
+使用种子数据导入：
+```bash
+cd backend
+
+# 导入所有种子数据（包含超级管理员、组织、测试数据）
+go run cmd/seed/main.go -all
+
+# 或单独导入特定数据
+go run cmd/seed/main.go -orgs     # 只导入组织
+go run cmd/seed/main.go -users    # 只导入用户
+```
+
+### 重置密码
+
+```bash
+cd backend
+go run cmd/resetpassword/main.go -phone=13800138000 -password=newpassword
+```
 
 ## 开发指南
 

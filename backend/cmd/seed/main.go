@@ -132,7 +132,8 @@ var (
 	roles       = []string{"volunteer", "manager", "admin"}
 	statuses    = []string{"active", "inactive"}
 	caseStatuses = []string{"missing", "searching", "found", "reunited"}
-	urgencies   = []string{"low", "medium", "high", "critical"}
+	urgencies      = []string{"low", "medium", "high", "critical"}  // 用于案件
+	taskPriorities = []string{"low", "medium", "high", "urgent"}    // 用于任务
 	taskTypes   = []string{"search", "verify", "assist", "follow", "interview"}
 	taskStatuses = []string{"draft", "pending", "assigned", "processing", "completed"}
 	dialectTypes = []string{"phrase", "story", "song", "daily"}
@@ -162,6 +163,30 @@ func randomTime() time.Time {
 	return time.Now().AddDate(0, 0, -days)
 }
 
+// isDuplicateError 检查是否是唯一约束错误
+func isDuplicateError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return contains(errStr, "duplicate") || contains(errStr, "重复") || contains(errStr, "23505")
+}
+
+// contains 检查字符串是否包含子串
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) > 0 && 
+		(len(s) > 0 && containsImpl(s, substr)))
+}
+
+func containsImpl(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
 // cleanData 清理现有数据
 func cleanData(db *gorm.DB) error {
 	tables := []string{
@@ -185,25 +210,38 @@ func cleanData(db *gorm.DB) error {
 func importOrganizations(db *gorm.DB, count int) error {
 	logger.Info("Importing organizations...")
 
-	// 创建根组织
-	rootOrg := &entity.Organization{
-		BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
-		Name:       "团圆寻亲志愿者总会",
-		Code:       "ROOT",
-		Type:       "root",
-		Level:      1,
-		Status:     "active",
-	}
-	if err := db.Create(rootOrg).Error; err != nil {
-		return err
+	// 创建或获取根组织
+	var rootOrg entity.Organization
+	if err := db.Where("code = ?", "ROOT").First(&rootOrg).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			rootOrg = entity.Organization{
+				BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
+				Name:       "团圆寻亲志愿者总会",
+				Code:       "ROOT",
+				Type:       "root",
+				Level:      1,
+				Status:     "active",
+			}
+			if err := db.Create(&rootOrg).Error; err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
-	// 创建省级组织
+	// 创建省级组织（跳过已存在的）
 	for i := 0; i < count && i < len(provinces); i++ {
+		code := fmt.Sprintf("PROV_%02d", i+1)
+		var existing entity.Organization
+		if err := db.Where("code = ?", code).First(&existing).Error; err == nil {
+			continue // 已存在，跳过
+		}
+		
 		org := &entity.Organization{
 			BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
 			Name:       fmt.Sprintf("%s%s", provinces[i], orgNames[0]),
-			Code:       fmt.Sprintf("PROV_%02d", i+1),
+			Code:       code,
 			Type:       "province",
 			Level:      2,
 			ParentID:   &rootOrg.ID,
@@ -215,7 +253,7 @@ func importOrganizations(db *gorm.DB, count int) error {
 		}
 	}
 
-	// 创建市级组织
+	// 创建市级组织（跳过已存在的）
 	var parentOrgs []entity.Organization
 	if err := db.Where("type = ?", "province").Find(&parentOrgs).Error; err != nil {
 		return err
@@ -227,11 +265,17 @@ func importOrganizations(db *gorm.DB, count int) error {
 			break
 		}
 		for j := 0; j < 3 && orgCount > 0; j++ {
+			code := fmt.Sprintf("CITY_%02d%02d", i+1, j+1)
+			var existing entity.Organization
+			if err := db.Where("code = ?", code).First(&existing).Error; err == nil {
+				continue // 已存在，跳过
+			}
+			
 			cityIndex := (i*3 + j) % len(cities)
 			org := &entity.Organization{
 				BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
 				Name:       fmt.Sprintf("%s%s", cities[cityIndex], orgNames[rand.Intn(len(orgNames))]),
-				Code:       fmt.Sprintf("CITY_%02d%02d", i+1, j+1),
+				Code:       code,
 				Type:       "city",
 				Level:      3,
 				ParentID:   &parent.ID,
@@ -263,36 +307,60 @@ func importUsers(db *gorm.DB, count int) error {
 		return fmt.Errorf("no organizations found, please import organizations first")
 	}
 
-	// 创建超级管理员
-	adminUser := &entity.User{
-		BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
-		Nickname:   "超级管理员",
-		Phone:      "13800138000",
-		Email:      "admin@cntuanyuan.com",
-		Password:   "",
-		Role:       entity.RoleSuperAdmin,
-		Status:     entity.UserStatusActive,
-		OrgID:      orgs[0].ID,
-	}
-	adminUser.SetPassword("admin123")
-	if err := db.Create(adminUser).Error; err != nil {
-		return err
+	// 用户字段列表（不含微信字段，避免数据库不匹配）
+	userFields := []string{
+		"id", "created_at", "updated_at", "deleted_at",
+		"nickname", "phone", "email", "password", "role", "status",
+		"org_id", "avatar", "last_login_at", "last_login_ip",
+		"real_name", "id_card", "gender", "address", "emergency", "emergency_tel", "introduction",
 	}
 
-	// 创建普通用户
-	for i := 0; i < count; i++ {
+	// 创建或获取超级管理员
+	var adminUser entity.User
+	if err := db.Where("phone = ?", "13800138000").First(&adminUser).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			adminUser = entity.User{
+				BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
+				Nickname:   "超级管理员",
+				Phone:      "13800138000",
+				Email:      "admin@cntuanyuan.com",
+				Password:   "",
+				Role:       entity.RoleSuperAdmin,
+				Status:     entity.UserStatusActive,
+				OrgID:      orgs[0].ID,
+			}
+			adminUser.SetPassword("admin123")
+			if err := db.Select(userFields).Create(&adminUser).Error; err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	// 创建普通用户（跳过已存在的手机号）
+	created := 0
+	for i := 0; i < count*3 && created < count; i++ { // 最多尝试3倍次数
+		phone := randomPhone()
+		
+		// 检查手机号是否已存在
+		var existing entity.User
+		if err := db.Where("phone = ?", phone).First(&existing).Error; err == nil {
+			continue // 已存在，跳过
+		}
+		
 		role := entity.RoleVolunteer
-		if i < 5 {
+		if created < 5 {
 			role = entity.RoleAdmin
-		} else if i < 15 {
+		} else if created < 15 {
 			role = entity.RoleManager
 		}
 
 		user := &entity.User{
 			BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
 			Nickname:   randomName(),
-			Phone:      randomPhone(),
-			Email:      fmt.Sprintf("user%d@example.com", i+1),
+			Phone:      phone,
+			Email:      fmt.Sprintf("user%d@example.com", created+1),
 			Password:   "",
 			Role:       role,
 			Status:     entity.UserStatusActive,
@@ -302,12 +370,17 @@ func importUsers(db *gorm.DB, count int) error {
 			Address:    fmt.Sprintf("%s%s%s", randomChoice(provinces), randomChoice(cities), randomChoice(districts)),
 		}
 		user.SetPassword("123456")
-		if err := db.Create(user).Error; err != nil {
+		if err := db.Select(userFields).Create(user).Error; err != nil {
+			// 如果是唯一约束错误，继续尝试
+			if isDuplicateError(err) {
+				continue
+			}
 			return err
 		}
+		created++
 	}
 
-	logger.Info("Users imported successfully")
+	logger.Info("Users imported successfully", logger.Int("created", created))
 	return nil
 }
 
@@ -481,7 +554,7 @@ func importTasks(db *gorm.DB, count int) error {
 			Title:      fmt.Sprintf("%s-%d", titles[rand.Intn(len(titles))], i+1),
 			Description: descriptions[rand.Intn(len(descriptions))],
 			Type:       entity.TaskType(randomChoice(taskTypes)),
-			Priority:   entity.TaskPriority(randomChoice(urgencies)),
+			Priority:   entity.TaskPriority(randomChoice(taskPriorities)),
 			Status:     status,
 			CreatorID:  creator.ID,
 			AssigneeID: assigneeID,

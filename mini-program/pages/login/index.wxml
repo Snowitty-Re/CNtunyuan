@@ -116,7 +116,7 @@
 
     <!-- 返回微信登录 -->
     <view class="back-wechat" wx:if="{{isBinding}}">
-      <text bindtap="switchLoginType" data-type="wechat">← 返回微信登录</text>
+      <text bindtap="backToWechatLogin">← 返回微信登录</text>
     </view>
   </view>
 

@@ -11,7 +11,7 @@ database:
   host: localhost
   port: 5432
   user: postgres
-  password: "300133ys"
+  password: "yourpassword"
   database: cntuanyuan
   ssl_mode: disable
   charset: UTF8  # 数据库字符集，使用UTF8支持中文和Emoji
@@ -33,9 +33,9 @@ jwt:
   refresh_time: 2592000  # 30天，刷新令牌有效期
 
 wechat:
-  app_id: "your-wechat-app-id"  # 微信小程序 AppID - 替换为真实值
-  app_secret: "your-wechat-app-secret"  # 微信小程序 AppSecret - 替换为真实值
-  enable_login: false  # 是否启用微信小程序登录
+  app_id: "wxid"  # 微信小程序 AppID - 替换为真实值
+  app_secret: "wxappsecret"  # 微信小程序 AppSecret - 替换为真实值
+  enable_login: true  # 是否启用微信小程序登录
   mch_id: ""  # 商户号(支付用)
   api_key: ""  # API密钥(支付用)
   notify_url: ""  # 支付回调地址

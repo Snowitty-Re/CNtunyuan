@@ -7,9 +7,15 @@ module.exports = {
   /**
    * 微信登录
    * @param {String} code 微信登录码
+   * @param {Object} userInfo 用户信息（可选）
    */
-  wechatLogin(code) {
-    return post('/auth/wechat-login', { code })
+  wechatLogin(code, userInfo = null) {
+    const data = { code }
+    if (userInfo) {
+      data.nickname = userInfo.nickName
+      data.avatar = userInfo.avatarUrl
+    }
+    return post('/auth/wechat-login', data)
   },
 
   /**
@@ -46,10 +52,15 @@ module.exports = {
   /**
    * 绑定手机号
    * @param {String} phone 手机号
-   * @param {String} code 验证码
+   * @param {String} code 验证码（可选，测试阶段可传空跳过）
    */
   bindPhone(phone, code) {
-    return post('/auth/bind-phone', { phone, code })
+    const data = { phone }
+    // 有验证码时传入，测试阶段可跳过
+    if (code) {
+      data.code = code
+    }
+    return post('/auth/bind-phone', data)
   },
 
   /**

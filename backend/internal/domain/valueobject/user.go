@@ -71,3 +71,9 @@ type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password"`
 	NewPassword string `json:"new_password"`
 }
+
+// WechatUserInfo 微信用户信息
+type WechatUserInfo struct {
+	Nickname string `json:"nickname"`
+	Avatar   string `json:"avatar"`
+}

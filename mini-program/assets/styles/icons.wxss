@@ -1,0 +1,223 @@
+/**
+ * Emoji 图标系统
+ * 使用 Unicode Emoji 作为图标，无需外部字体文件
+ */
+
+/* 基础图标样式 */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  line-height: 1;
+}
+
+/* iconfont 兼容层 - 将 iconfont 类名映射到 emoji */
+.iconfont {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+  line-height: 1;
+}
+
+/* 图标映射表 */
+.icon-add::before,
+.iconfont.icon-add::before { content: "➕"; }
+
+.icon-mic::before,
+.iconfont.icon-mic::before { content: "🎙️"; }
+
+.icon-location::before,
+.iconfont.icon-location::before { content: "📍"; }
+
+.icon-task::before,
+.iconfont.icon-task::before { content: "📋"; }
+
+.icon-people::before,
+.iconfont.icon-people::before { content: "👥"; }
+
+.icon-success::before,
+.iconfont.icon-success::before { content: "✅"; }
+
+.icon-volunteer::before,
+.iconfont.icon-volunteer::before { content: "🤝"; }
+
+.icon-audio::before,
+.iconfont.icon-audio::before { content: "🔊"; }
+
+.icon-arrow-right::before,
+.iconfont.icon-arrow-right::before { content: "→"; }
+
+.icon-empty::before,
+.iconfont.icon-empty::before { content: "📭"; }
+
+.icon-play::before,
+.iconfont.icon-play::before { content: "▶️"; }
+
+.icon-like::before,
+.iconfont.icon-like::before { content: "❤️"; }
+
+.icon-search::before,
+.iconfont.icon-search::before { content: "🔍"; }
+
+.icon-user::before,
+.iconfont.icon-user::before { content: "👤"; }
+
+.icon-time::before,
+.iconfont.icon-time::before { content: "⏰"; }
+
+.icon-plus::before,
+.iconfont.icon-plus::before { content: "➕"; }
+
+.icon-info::before,
+.iconfont.icon-info::before { content: "ℹ️"; }
+
+.icon-org::before,
+.iconfont.icon-org::before { content: "🏢"; }
+
+.icon-star::before,
+.iconfont.icon-star::before { content: "⭐"; }
+
+.icon-logout::before,
+.iconfont.icon-logout::before { content: "🚪"; }
+
+.icon-camera::before,
+.iconfont.icon-camera::before { content: "📷"; }
+
+.icon-close::before,
+.iconfont.icon-close::before { content: "✕"; }
+
+.icon-edit::before,
+.iconfont.icon-edit::before { content: "✏️"; }
+
+.icon-delete::before,
+.iconfont.icon-delete::before { content: "🗑️"; }
+
+.icon-phone::before,
+.iconfont.icon-phone::before { content: "📞"; }
+
+.icon-email::before,
+.iconfont.icon-email::before { content: "📧"; }
+
+.icon-home::before,
+.iconfont.icon-home::before { content: "🏠"; }
+
+.icon-settings::before,
+.iconfont.icon-settings::before { content: "⚙️"; }
+
+.icon-notification::before,
+.iconfont.icon-notification::before { content: "🔔"; }
+
+.icon-menu::before,
+.iconfont.icon-menu::before { content: "☰"; }
+
+.icon-back::before,
+.iconfont.icon-back::before { content: "←"; }
+
+.icon-more::before,
+.iconfont.icon-more::before { content: "⋮"; }
+
+.icon-filter::before,
+.iconfont.icon-filter::before { content: "🔽"; }
+
+.icon-sort::before,
+.iconfont.icon-sort::before { content: "↕️"; }
+
+.icon-refresh::before,
+.iconfont.icon-refresh::before { content: "🔄"; }
+
+.icon-share::before,
+.iconfont.icon-share::before { content: "📤"; }
+
+.icon-download::before,
+.iconfont.icon-download::before { content: "⬇️"; }
+
+.icon-upload::before,
+.iconfont.icon-upload::before { content: "⬆️"; }
+
+.icon-image::before,
+.iconfont.icon-image::before { content: "🖼️"; }
+
+.icon-file::before,
+.iconfont.icon-file::before { content: "📄"; }
+
+.icon-calendar::before,
+.iconfont.icon-calendar::before { content: "📅"; }
+
+.icon-check::before,
+.iconfont.icon-check::before { content: "✓"; }
+
+.icon-close-circle::before,
+.iconfont.icon-close-circle::before { content: "❌"; }
+
+.icon-warning::before,
+.iconfont.icon-warning::before { content: "⚠️"; }
+
+.icon-error::before,
+.iconfont.icon-error::before { content: "❗"; }
+
+.icon-help::before,
+.iconfont.icon-help::before { content: "❓"; }
+
+/* 暂停按钮特殊处理 */
+.icon-pause::before,
+.iconfont.icon-pause::before { content: "⏸️"; }
+
+/* 录制按钮 */
+.icon-record::before { content: "🔴"; }
+
+/* 停止按钮 */
+.icon-stop::before { content: "⏹️"; }
+
+/* 额外图标 */
+.icon-case::before,
+.iconfont.icon-case::before { content: "📋"; }
+
+.icon-assign::before,
+.iconfont.icon-assign::before { content: "📤"; }
+
+.icon-certificate::before,
+.iconfont.icon-certificate::before { content: "📜"; }
+
+/* 图标尺寸 */
+.icon-xs { font-size: 20rpx; }
+.icon-sm { font-size: 28rpx; }
+.icon-md { font-size: 36rpx; }
+.icon-lg { font-size: 48rpx; }
+.icon-xl { font-size: 64rpx; }
+.icon-xxl { font-size: 96rpx; }
+
+/* Emoji 图标优化显示 */
+.iconfont {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 特殊图标样式 */
+.icon-play::before,
+.iconfont.icon-play::before { 
+  content: "▶"; 
+  font-size: 0.8em;
+}
+
+.icon-pause::before,
+.iconfont.icon-pause::before { 
+  content: "⏸"; 
+  font-size: 0.8em;
+}
+
+/* 箭头图标优化 */
+.icon-arrow-right::before,
+.iconfont.icon-arrow-right::before {
+  content: "›";
+  font-weight: bold;
+}
+
+/* 空状态图标 */
+.icon-empty::before,
+.iconfont.icon-empty::before {
+  content: "📭";
+  opacity: 0.7;
+}

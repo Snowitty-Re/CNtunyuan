@@ -9,6 +9,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/errors"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/google/uuid"
 )
 
 // TokenService token service interface
@@ -162,18 +163,68 @@ func (s *AuthService) GetCurrentUser(ctx context.Context, userID string) (*entit
 }
 
 // WechatLogin WeChat mini-program login
-func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string) (*valueobject.LoginResult, *entity.User, bool, error) {
+func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, userInfo *valueobject.WechatUserInfo) (*valueobject.LoginResult, *entity.User, bool, error) {
 	// Get session from WeChat
 	session, err := s.wechatClient.Code2Session(code)
 	if err != nil {
+		logger.Error("Wechat code2session failed", logger.Err(err))
 		return nil, nil, false, errors.Wrap(err, errors.CodeInternal, "wechat code2session failed")
+	}
+
+	logger.Info("Wechat login code2session success", logger.String("openid", session.OpenID))
+
+	// 使用微信提供的用户信息
+	nickname := "微信用户"
+	avatar := ""
+	if userInfo != nil {
+		if userInfo.Nickname != "" {
+			nickname = userInfo.Nickname
+		}
+		if userInfo.Avatar != "" {
+			avatar = userInfo.Avatar
+		}
 	}
 
 	// Find user by openid
 	user, err := s.userRepo.FindByOpenID(ctx, session.OpenID)
 	if err != nil {
-		// User not found, need to bind phone
-		return nil, nil, true, nil
+		// User not found, create a temporary user with openid
+		// This allows binding phone later while preserving the openid
+		
+		// Get or create default org
+		orgID, orgErr := s.getDefaultOrgID(ctx)
+		if orgErr != nil {
+			logger.Error("Failed to get default org", logger.Err(orgErr))
+			return nil, nil, false, errors.Wrap(orgErr, errors.CodeInternal, "get default org failed")
+		}
+		
+		tempUser := &entity.User{
+			Nickname: nickname,
+			Avatar:   avatar,
+			Phone:    "", // Will be filled when binding phone
+			Role:     entity.RoleVolunteer,
+			Status:   entity.UserStatusActive,
+			OrgID:    orgID,
+			WxOpenID: session.OpenID,
+		}
+		// Set a random password (user will login via wechat)
+		if pwdErr := tempUser.SetPassword(uuid.New().String()[:8]); pwdErr != nil {
+			logger.Error("Failed to set temp user password", logger.Err(pwdErr))
+			return nil, nil, false, errors.Wrap(pwdErr, errors.CodeInternal, "set password failed")
+		}
+		
+		if createErr := s.userRepo.Create(ctx, tempUser); createErr != nil {
+			logger.Error("Failed to create temp user", logger.Err(createErr), logger.String("openid", session.OpenID))
+			return nil, nil, false, errors.Wrap(createErr, errors.CodeInternal, "create temp user failed")
+		}
+		
+		logger.Info("Created temp user for wechat login",
+			logger.String("user_id", tempUser.ID),
+			logger.String("openid", session.OpenID),
+		)
+		
+		// Return the temp user, frontend still needs to bind phone
+		return nil, tempUser, true, nil
 	}
 
 	// Check user status
@@ -210,6 +261,18 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string) (
 // ValidateToken 验证token
 func (s *AuthService) ValidateToken(ctx context.Context, token string) (*TokenClaims, error) {
 	return s.tokenService.ValidateToken(ctx, token)
+}
+
+// GenerateTokenPair 生成token对（供handler使用）
+func (s *AuthService) GenerateTokenPair(user *entity.User) (*TokenPair, error) {
+	return s.tokenService.GenerateTokenPair(context.Background(), user)
+}
+
+// getDefaultOrgID 获取默认组织ID
+func (s *AuthService) getDefaultOrgID(ctx context.Context) (string, error) {
+	// 使用根组织ID作为默认值
+	// 实际应用中应该检查组织是否存在
+	return "00000000-0000-0000-0000-000000000000", nil
 }
 
 // BindPhone 绑定手机号

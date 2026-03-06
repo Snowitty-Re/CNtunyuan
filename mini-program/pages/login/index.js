@@ -35,7 +35,20 @@ Page({
   // 切换登录方式
   switchLoginType(e) {
     const type = e.currentTarget.dataset.type
-    this.setData({ loginType: type })
+    this.setData({ 
+      loginType: type,
+      isBinding: false // 切换登录方式时退出绑定模式
+    })
+  },
+
+  // 返回微信登录（从绑定页面返回）
+  backToWechatLogin() {
+    this.setData({
+      loginType: 'wechat',
+      isBinding: false,
+      phone: '',
+      smsCode: ''
+    })
   },
 
   // ==================== 微信登录 ====================
@@ -55,22 +68,48 @@ Page({
         throw new Error('获取微信登录码失败')
       }
 
+      // 获取用户信息（头像、昵称）
+      let userInfo = null
+      try {
+        const profileRes = await wx.getUserProfile({
+          desc: '用于完善用户资料',
+          lang: 'zh_CN'
+        })
+        userInfo = profileRes.userInfo
+        console.log('获取到用户信息:', userInfo)
+      } catch (profileErr) {
+        console.log('用户拒绝获取信息，继续使用默认信息')
+      }
+
       // 调用后端微信登录
-      const result = await services.auth.wechatLogin(wxLoginRes.code)
+      const result = await services.auth.wechatLogin(wxLoginRes.code, userInfo)
       
       hideLoading()
 
       // 判断是否需要绑定手机号
       if (result.need_bind_phone) {
+        // 保存临时 token，用于后续绑定请求
+        if (result.access_token) {
+          wx.setStorageSync('token', result.access_token)
+          if (result.refresh_token) {
+            wx.setStorageSync('refresh_token', result.refresh_token)
+          }
+        }
+        
         this.setData({
           isBinding: true,
           loginType: 'phone',
           tempUserInfo: result.user
         })
+        
         wx.showModal({
-          title: '绑定手机号',
-          content: '为了您的账号安全，请先绑定手机号',
-          showCancel: false
+          title: '完善信息',
+          content: '您是新用户，请完善手机号信息',
+          showCancel: false,
+          success: () => {
+            // 直接进入绑定流程，无需验证码
+            this.quickBindPhone()
+          }
         })
         return
       }
@@ -88,6 +127,56 @@ Page({
       hideLoading()
       console.error('微信登录失败:', error)
       showError(error.message || '登录失败')
+    } finally {
+      this.setData({ loading: false })
+    }
+  },
+
+  // 快速绑定手机号（无需验证码，临时方案）
+  async quickBindPhone() {
+    // 使用默认手机号或让用户输入
+    // 这里为了简化，使用一个临时格式手机号，实际应该弹出输入框
+    wx.showModal({
+      title: '输入手机号',
+      content: '测试阶段，跳过短信验证。请输入您的手机号：',
+      editable: true,
+      placeholderText: '请输入手机号',
+      success: async (res) => {
+        if (res.confirm && res.content) {
+          const phone = res.content.trim()
+          if (!validatePhone(phone)) {
+            showError('手机号格式不正确')
+            return
+          }
+          
+          this.setData({ phone })
+          await this.doBindPhoneWithoutCode(phone)
+        }
+      }
+    })
+  },
+
+  // 执行绑定（无需验证码）
+  async doBindPhoneWithoutCode(phone) {
+    this.setData({ loading: true })
+    showLoading('绑定中...')
+
+    try {
+      // 调用后端绑定接口，不传验证码
+      const result = await services.auth.bindPhone(phone, '')
+      
+      hideLoading()
+      this.setLoginData(result)
+      showSuccess('绑定成功')
+
+      setTimeout(() => {
+        wx.switchTab({ url: '/pages/index/index' })
+      }, 1500)
+
+    } catch (error) {
+      hideLoading()
+      console.error('绑定失败:', error)
+      showError(error.message || '绑定失败')
     } finally {
       this.setData({ loading: false })
     }

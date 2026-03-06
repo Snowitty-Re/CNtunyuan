@@ -486,6 +486,23 @@ go run cmd/app/main.go -seed
 
 ## 更新日志
 
+### 2026-03-07
+- **Bug 修复与体验优化**:
+  - **Web 端登录修复**:
+    - 修复登录成功不跳转问题（使用 window.location.href 强制刷新）
+    - 修复 Ant Design 5 废弃属性警告（`bordered` → `variant`, `TabPane` → `items`）
+    - 修复请求拦截器无法获取 token 问题（从 `auth-storage` 解析）
+  - **后端修复**:
+    - 修复 GORM 字段名与数据库列名不匹配（`wx_open_id` → `wx_openid`）
+    - 修复微信登录创建临时用户时的组织 ID 问题
+    - 修复种子数据生成器（处理重复数据和约束错误）
+  - **小程序优化**:
+    - 微信登录跳过短信验证（临时方案，方便测试）
+    - 获取微信用户信息（头像、昵称）
+    - 修复数据统计实时更新
+    - 修复 [object Object] 显示问题
+    - **Emoji 图标系统**: 替换缺失的 iconfont，使用 Unicode Emoji
+
 ### 2026-03-06
 - **生产级重构完成**:
   - 统一错误处理 (`pkg/errors`): 完整的错误码体系、AppError 结构体、HTTP 状态码映射

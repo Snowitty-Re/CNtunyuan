@@ -1,6 +1,20 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { message } from 'antd';
 
+// 从 auth-storage 解析 token
+function getTokenFromStorage(): string | null {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      return parsed.state?.token || null;
+    }
+  } catch (e) {
+    console.error('解析 auth-storage 失败:', e);
+  }
+  return null;
+}
+
 // 创建 axios 实例
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
@@ -13,8 +27,8 @@ const http = axios.create({
 // 请求拦截器
 http.interceptors.request.use(
   (config) => {
-    // 添加 token
-    const token = localStorage.getItem('token');
+    // 从 zustand persist 存储中获取 token
+    const token = getTokenFromStorage();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -86,7 +100,7 @@ function handleError(error: AxiosError) {
       break;
     case 401:
       message.error('登录已过期，请重新登录');
-      localStorage.removeItem('token');
+      localStorage.removeItem('auth-storage');
       window.location.href = '/login';
       break;
     case 403:

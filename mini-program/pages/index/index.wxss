@@ -221,7 +221,8 @@
 }
 
 .stat-icon .iconfont {
-  font-size: 32rpx;
+  font-size: 36rpx;
+  line-height: 1;
 }
 
 .stat-icon.orange .iconfont { color: #FF8C42; }
