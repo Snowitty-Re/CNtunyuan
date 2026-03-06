@@ -19,6 +19,9 @@ type UserRepository interface {
 	// FindByPhoneOrNickname 根据手机号或昵称查找
 	FindByPhoneOrNickname(ctx context.Context, username string) (*entity.User, error)
 
+	// FindByOpenID 根据微信OpenID查找
+	FindByOpenID(ctx context.Context, openID string) (*entity.User, error)
+
 	// FindByOrgID 根据组织ID查找用户
 	FindByOrgID(ctx context.Context, orgID string, pagination Pagination) (*PageResult[entity.User], error)
 

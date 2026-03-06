@@ -254,6 +254,8 @@ var (
 	ErrInvalidPassword  = New(CodeInvalidPassword, "")
 	ErrInvalidToken     = New(CodeInvalidToken, "")
 	ErrTokenExpired     = New(CodeTokenExpired, "")
+	ErrAccountDisabled  = New(CodeAccountDisabled, "")
+	ErrAccountLocked    = New(CodeAccountLocked, "")
 	ErrTooManyRequests  = New(CodeTooManyRequests, "")
 	ErrFileTooLarge     = New(CodeFileTooLarge, "")
 	ErrInvalidFileType  = New(CodeInvalidFileType, "")

@@ -117,12 +117,10 @@ func (s *JWTService) ValidateToken(ctx context.Context, tokenString string) (*se
 	}
 
 	return &service.TokenClaims{
-		UserID:    claims.UserID,
-		Nickname:  claims.Nickname,
-		Role:      entity.Role(claims.Role),
-		OrgID:     claims.OrgID,
-		IssuedAt:  claims.IssuedAt.Time,
-		ExpiresAt: claims.ExpiresAt.Time,
+		UserID:   claims.UserID,
+		Nickname: claims.Nickname,
+		Role:     claims.Role,
+		OrgID:    claims.OrgID,
 	}, nil
 }
 

@@ -62,6 +62,19 @@ func (r *UserRepositoryImpl) FindByPhoneOrNickname(ctx context.Context, username
 	return &user, nil
 }
 
+// FindByOpenID 根据微信OpenID查找
+func (r *UserRepositoryImpl) FindByOpenID(ctx context.Context, openID string) (*entity.User, error) {
+	var user entity.User
+	err := r.db.WithContext(ctx).Where("wx_openid = ?", openID).First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("用户不存在")
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
 // FindByOrgID 根据组织ID查找用户
 func (r *UserRepositoryImpl) FindByOrgID(ctx context.Context, orgID string, pagination repository.Pagination) (*repository.PageResult[entity.User], error) {
 	var users []entity.User

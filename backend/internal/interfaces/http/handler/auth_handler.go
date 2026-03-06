@@ -5,8 +5,10 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/valueobject"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/errors"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/validator"
 	"github.com/gin-gonic/gin"
 )
 
@@ -29,6 +31,12 @@ type WechatLoginRequest struct {
 	Code string `json:"code" binding:"required"`
 }
 
+// LoginRequest 登录请求
+type LoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 // RegisterRoutes register routes
 func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 	auth := router.Group("/auth")
@@ -46,9 +54,9 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 
 // Login login
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req dto.LoginRequest
+	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		response.Error(c, validator.ValidateStruct(&req))
 		return
 	}
 
@@ -58,16 +66,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}, c.ClientIP())
 
 	if err != nil {
-		logger.Warn("Login failed", logger.String("username", req.Username), logger.Err(err))
-		switch err {
-		case service.ErrInvalidCredentials:
-			response.Unauthorized(c, "invalid username or password")
-		case service.ErrUserDisabled:
-			response.Unauthorized(c, "user is disabled")
-		case service.ErrUserBanned:
-			response.Unauthorized(c, "user is banned")
+		logger.Warn("Login failed", 
+			logger.String("username", req.Username), 
+			logger.Err(err))
+		
+		// 使用新的错误体系
+		switch {
+		case errors.IsCode(err, errors.CodeInvalidPassword):
+			response.Error(c, errors.ErrInvalidPassword.WithDetail("用户名或密码错误"))
+		case errors.IsCode(err, errors.CodeAccountDisabled):
+			response.Error(c, errors.ErrAccountDisabled)
+		case errors.IsCode(err, errors.CodeAccountLocked):
+			response.Error(c, errors.ErrAccountLocked)
 		default:
-			response.InternalServerError(c, "login failed")
+			response.Error(c, err)
 		}
 		return
 	}
@@ -90,19 +102,21 @@ func (h *AuthHandler) AdminLogin(c *gin.Context) {
 func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	var req dto.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		response.Error(c, validator.ValidateStruct(&req))
 		return
 	}
 
 	result, user, err := h.authService.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
-		switch err {
-		case service.ErrTokenExpired:
-			response.Unauthorized(c, "refresh token expired")
-		case service.ErrTokenInvalid:
-			response.Unauthorized(c, "invalid token")
+		switch {
+		case errors.IsCode(err, errors.CodeTokenExpired):
+			response.Error(c, errors.ErrTokenExpired)
+		case errors.IsCode(err, errors.CodeInvalidToken):
+			response.Error(c, errors.ErrInvalidToken)
+		case errors.IsCode(err, errors.CodeAccountDisabled):
+			response.Error(c, errors.ErrAccountDisabled)
 		default:
-			response.InternalServerError(c, "refresh token failed")
+			response.Error(c, err)
 		}
 		return
 	}
@@ -136,14 +150,16 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	if userID == "" {
-		response.Unauthorized(c, "please login first")
+		response.Error(c, errors.ErrUnauthorized)
 		return
 	}
 
 	user, err := h.authService.GetCurrentUser(c.Request.Context(), userID)
 	if err != nil {
-		logger.Warn("Get current user failed", logger.String("user_id", userID), logger.Err(err))
-		response.NotFound(c, "user not found")
+		logger.Warn("Get current user failed", 
+			logger.String("user_id", userID), 
+			logger.Err(err))
+		response.Error(c, errors.ErrUserNotFound)
 		return
 	}
 
@@ -154,14 +170,14 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 func (h *AuthHandler) WechatLogin(c *gin.Context) {
 	var req WechatLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, err.Error())
+		response.Error(c, validator.ValidateStruct(&req))
 		return
 	}
 
 	result, user, needBind, err := h.authService.WechatLogin(c.Request.Context(), req.Code, c.ClientIP())
 	if err != nil {
 		logger.Error("Wechat login failed", logger.Err(err))
-		response.Unauthorized(c, "wechat login failed")
+		response.Error(c, err)
 		return
 	}
 
