@@ -1,8 +1,10 @@
+// Package response 提供统一响应格式
 package response
 
 import (
 	"net/http"
 
+	"github.com/Snowitty-Re/CNtunyuan/pkg/errors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,127 +13,203 @@ type Response struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
-}
-
-// New 创建响应
-func New(code int, message string, data interface{}) *Response {
-	return &Response{
-		Code:    code,
-		Message: message,
-		Data:    data,
-	}
+	TraceID string      `json:"trace_id,omitempty"`
 }
 
 // Success 成功响应
 func Success(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, New(0, "success", data))
+	c.JSON(http.StatusOK, Response{
+		Code:    0,
+		Message: "success",
+		Data:    data,
+	})
 }
 
-// SuccessWithMessage 成功响应（带消息）
+// SuccessWithMessage 成功响应带自定义消息
 func SuccessWithMessage(c *gin.Context, message string, data interface{}) {
-	c.JSON(http.StatusOK, New(0, message, data))
+	c.JSON(http.StatusOK, Response{
+		Code:    0,
+		Message: message,
+		Data:    data,
+	})
 }
 
-// Created 创建成功响应
+// Error 错误响应
+func Error(c *gin.Context, err error) {
+	if err == nil {
+		Success(c, nil)
+		return
+	}
+
+	// 检查是否是应用错误
+	if appErr, ok := err.(*errors.AppError); ok {
+		status := appErr.Code.HTTPStatus()
+		c.JSON(status, Response{
+			Code:    int(appErr.Code),
+			Message: appErr.Message,
+			Data:    appErr.Detail,
+		})
+		return
+	}
+
+	// 普通错误
+	c.JSON(http.StatusInternalServerError, Response{
+		Code:    int(errors.CodeInternal),
+		Message: "internal server error",
+		Data:    err.Error(),
+	})
+}
+
+// ErrorCode 使用错误码返回错误
+func ErrorCode(c *gin.Context, code errors.ErrorCode) {
+	status := code.HTTPStatus()
+	c.JSON(status, Response{
+		Code:    int(code),
+		Message: code.String(),
+	})
+}
+
+// ErrorCodeWithMessage 使用错误码和自定义消息返回错误
+func ErrorCodeWithMessage(c *gin.Context, code errors.ErrorCode, message string) {
+	status := code.HTTPStatus()
+	c.JSON(status, Response{
+		Code:    int(code),
+		Message: message,
+	})
+}
+
+// ErrorCodeWithDetail 使用错误码、消息和详情返回错误
+func ErrorCodeWithDetail(c *gin.Context, code errors.ErrorCode, message, detail string) {
+	status := code.HTTPStatus()
+	c.JSON(status, Response{
+		Code:    int(code),
+		Message: message,
+		Data:    detail,
+	})
+}
+
+// BadRequest 400 错误
+func BadRequest(c *gin.Context, message string) {
+	ErrorCodeWithMessage(c, errors.CodeInvalidParam, message)
+}
+
+// Unauthorized 401 错误
+func Unauthorized(c *gin.Context, message string) {
+	if message == "" {
+		message = "unauthorized"
+	}
+	ErrorCodeWithMessage(c, errors.CodeUnauthorized, message)
+}
+
+// Forbidden 403 错误
+func Forbidden(c *gin.Context, message string) {
+	if message == "" {
+		message = "forbidden"
+	}
+	ErrorCodeWithMessage(c, errors.CodeForbidden, message)
+}
+
+// NotFound 404 错误
+func NotFound(c *gin.Context, message string) {
+	if message == "" {
+		message = "resource not found"
+	}
+	ErrorCodeWithMessage(c, errors.CodeNotFound, message)
+}
+
+// InternalServerError 500 错误
+func InternalServerError(c *gin.Context, message string) {
+	if message == "" {
+		message = "internal server error"
+	}
+	ErrorCodeWithMessage(c, errors.CodeInternal, message)
+}
+
+// TooManyRequests 429 限流错误
+func TooManyRequests(c *gin.Context, message string) {
+	if message == "" {
+		message = "too many requests"
+	}
+	ErrorCodeWithMessage(c, errors.CodeTooManyRequests, message)
+}
+
+// Created 201 创建成功
 func Created(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusCreated, New(0, "created", data))
+	c.JSON(http.StatusCreated, Response{
+		Code:    0,
+		Message: "created",
+		Data:    data,
+	})
 }
 
-// NoContent 无内容响应
+// NoContent 204 无内容
 func NoContent(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Error 错误响应
-func Error(c *gin.Context, code int, message string) {
-	c.JSON(code, New(code, message, nil))
-}
-
-// BadRequest 参数错误
-func BadRequest(c *gin.Context, message string) {
-	if message == "" {
-		message = "请求参数错误"
-	}
-	c.JSON(http.StatusBadRequest, New(http.StatusBadRequest, message, nil))
-}
-
-// Unauthorized 未授权
-func Unauthorized(c *gin.Context, message string) {
-	if message == "" {
-		message = "请先登录"
-	}
-	c.JSON(http.StatusUnauthorized, New(http.StatusUnauthorized, message, nil))
-}
-
-// Forbidden 禁止访问
-func Forbidden(c *gin.Context, message string) {
-	if message == "" {
-		message = "权限不足"
-	}
-	c.JSON(http.StatusForbidden, New(http.StatusForbidden, message, nil))
-}
-
-// NotFound 资源不存在
-func NotFound(c *gin.Context, message string) {
-	if message == "" {
-		message = "资源不存在"
-	}
-	c.JSON(http.StatusNotFound, New(http.StatusNotFound, message, nil))
-}
-
-// Conflict 资源冲突
+// Conflict 409 冲突
 func Conflict(c *gin.Context, message string) {
 	if message == "" {
-		message = "资源已存在"
+		message = "resource conflict"
 	}
-	c.JSON(http.StatusConflict, New(http.StatusConflict, message, nil))
+	ErrorCodeWithMessage(c, errors.CodeConflict, message)
 }
 
-// InternalServerError 服务器内部错误
-func InternalServerError(c *gin.Context, message string) {
-	if message == "" {
-		message = "服务器内部错误"
+// PaginatedData 分页数据结构
+type PaginatedData struct {
+	List     interface{} `json:"list"`
+	Total    int64       `json:"total"`
+	Page     int         `json:"page"`
+	PageSize int         `json:"page_size"`
+}
+
+// Pagination 分页参数
+type Pagination struct {
+	Page     int `form:"page" json:"page"`
+	PageSize int `form:"page_size" json:"page_size"`
+}
+
+// DefaultPagination 返回默认分页参数
+func DefaultPagination() Pagination {
+	return Pagination{
+		Page:     1,
+		PageSize: 10,
 	}
-	c.JSON(http.StatusInternalServerError, New(http.StatusInternalServerError, message, nil))
 }
 
-// PageResult 分页结果
-type PageResult[T any] struct {
-	List       []T   `json:"list"`
-	Total      int64 `json:"total"`
-	Page       int   `json:"page"`
-	PageSize   int   `json:"page_size"`
-	TotalPages int   `json:"total_pages"`
-}
-
-// Page 分页响应
-func Page[T any](c *gin.Context, list []T, total int64, page, pageSize int) {
-	totalPages := int(total) / pageSize
-	if int(total)%pageSize > 0 {
-		totalPages++
+// Normalize 规范化分页参数
+func (p *Pagination) Normalize() {
+	if p.Page < 1 {
+		p.Page = 1
 	}
-
-	Success(c, PageResult[T]{
-		List:       list,
-		Total:      total,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalPages: totalPages,
-	})
+	if p.PageSize < 1 {
+		p.PageSize = 10
+	}
+	if p.PageSize > 100 {
+		p.PageSize = 100
+	}
 }
 
-// PaginationParams 分页参数
-type PaginationParams struct {
-	Page     int `form:"page,default=1" binding:"min=1"`
-	PageSize int `form:"page_size,default=10" binding:"min=1,max=100"`
-}
-
-// GetOffset 获取偏移量
-func (p *PaginationParams) GetOffset() int {
+// Offset 返回偏移量
+func (p *Pagination) Offset() int {
 	return (p.Page - 1) * p.PageSize
 }
 
-// GetLimit 获取限制数
-func (p *PaginationParams) GetLimit() int {
+// Limit 返回限制数
+func (p *Pagination) Limit() int {
 	return p.PageSize
+}
+
+// SuccessPaginated 成功响应带分页数据
+func SuccessPaginated(c *gin.Context, list interface{}, total int64, page, pageSize int) {
+	c.JSON(http.StatusOK, Response{
+		Code:    0,
+		Message: "success",
+		Data: PaginatedData{
+			List:     list,
+			Total:    total,
+			Page:     page,
+			PageSize: pageSize,
+		},
+	})
 }
