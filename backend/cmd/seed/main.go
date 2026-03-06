@@ -49,11 +49,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 自动创建数据库（如果不存在）
-	if err := database.CreateDatabaseIfNotExists(&cfg.Database); err != nil {
-		logger.Warn("Failed to create database, will try to connect directly", logger.Err(err))
-	}
-
 	// 连接数据库
 	db, err := database.NewDatabase(&cfg.Database)
 	if err != nil {

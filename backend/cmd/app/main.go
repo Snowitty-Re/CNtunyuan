@@ -35,14 +35,28 @@ func main() {
 	// 处理命令行参数
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
+		case "-check-db":
+			// 检查数据库连接和表结构
+			if err := checkDatabase(cfg); err != nil {
+				logger.Error("Database check failed", logger.Err(err))
+				os.Exit(1)
+			}
+			return
 		case "-migrate":
-			if err := runMigration(cfg); err != nil {
+			// 使用 GORM AutoMigrate（开发环境用）
+			logger.Warn("Using GORM AutoMigrate is deprecated. Please use SQL migration files instead.")
+			if err := runAutoMigrate(cfg); err != nil {
 				logger.Error("Migration failed", logger.Err(err))
 				os.Exit(1)
 			}
 			return
 		case "-seed":
-			logger.Info("Seed data import not implemented yet")
+			// 使用 GORM 插入种子数据（开发环境用）
+			logger.Warn("Using GORM seed is deprecated. Please use SQL seed files instead.")
+			if err := runSeed(cfg); err != nil {
+				logger.Error("Seed failed", logger.Err(err))
+				os.Exit(1)
+			}
 			return
 		}
 	}
@@ -58,23 +72,77 @@ func main() {
 	startServer(cfg, container)
 }
 
-// runMigration 执行数据库迁移
-func runMigration(cfg *config.Config) error {
-	// 首先尝试创建数据库（如果不存在）
-	if err := database.CreateDatabaseIfNotExists(&cfg.Database); err != nil {
-		logger.Warn("Failed to create database, will try to connect directly", logger.Err(err))
-	}
-
+// checkDatabase 检查数据库连接和表结构
+func checkDatabase(cfg *config.Config) error {
 	db, err := database.NewDatabase(&cfg.Database)
 	if err != nil {
 		return fmt.Errorf("failed to connect database: %w", err)
 	}
 
-	logger.Info("Starting database migration...")
+	// 检查关键表是否存在
+	tables := []string{
+		"ty_organizations",
+		"ty_users",
+		"ty_permissions",
+		"ty_missing_persons",
+		"ty_tasks",
+		"ty_dialects",
+		"ty_files",
+	}
+
+	logger.Info("Checking database tables...")
+	allExist := true
+	for _, table := range tables {
+		exists, err := database.TableExists(db, table)
+		if err != nil {
+			logger.Error("Failed to check table", logger.String("table", table), logger.Err(err))
+			allExist = false
+			continue
+		}
+		if exists {
+			logger.Info("✓ Table exists", logger.String("table", table))
+		} else {
+			logger.Error("✗ Table missing", logger.String("table", table))
+			allExist = false
+		}
+	}
+
+	if allExist {
+		logger.Info("Database check passed: all tables exist")
+	} else {
+		return fmt.Errorf("some tables are missing, please run SQL migration files first")
+	}
+
+	return nil
+}
+
+// runAutoMigrate 使用 GORM AutoMigrate（仅用于开发环境）
+func runAutoMigrate(cfg *config.Config) error {
+	db, err := database.NewDatabase(&cfg.Database)
+	if err != nil {
+		return fmt.Errorf("failed to connect database: %w", err)
+	}
+
+	logger.Info("Starting database migration with GORM AutoMigrate...")
 	if err := database.AutoMigrate(db); err != nil {
 		return fmt.Errorf("migration failed: %w", err)
 	}
 	logger.Info("Database migration completed")
+	return nil
+}
+
+// runSeed 使用 GORM 插入种子数据（仅用于开发环境）
+func runSeed(cfg *config.Config) error {
+	db, err := database.NewDatabase(&cfg.Database)
+	if err != nil {
+		return fmt.Errorf("failed to connect database: %w", err)
+	}
+
+	logger.Info("Starting database seeding with GORM...")
+	if err := database.Seed(db); err != nil {
+		return fmt.Errorf("seed failed: %w", err)
+	}
+	logger.Info("Database seeding completed")
 	return nil
 }
 

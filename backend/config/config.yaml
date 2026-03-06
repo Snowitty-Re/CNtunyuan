@@ -7,10 +7,11 @@ server:
   max_header_bytes: 1048576  # 1MB
 
 database:
+  type: postgres  # 数据库类型: postgres/mysql
   host: localhost
   port: 5432
   user: postgres
-  password: "your-database-password"
+  password: "300133ys"
   database: cntuanyuan
   ssl_mode: disable
   charset: UTF8  # 数据库字符集，使用UTF8支持中文和Emoji

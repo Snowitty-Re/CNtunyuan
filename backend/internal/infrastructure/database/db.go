@@ -17,108 +17,6 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-// CreateDatabaseIfNotExists 如果数据库不存在则创建
-func CreateDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
-	switch cfg.Type {
-	case config.DatabaseTypeMySQL:
-		return createMySQLDatabaseIfNotExists(cfg)
-	case config.DatabaseTypePostgres:
-		return createPostgresDatabaseIfNotExists(cfg)
-	default:
-		return fmt.Errorf("unsupported database type: %s", cfg.Type)
-	}
-}
-
-// createPostgresDatabaseIfNotExists 创建 PostgreSQL 数据库
-func createPostgresDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
-	// 连接到 postgres 数据库（不指定具体数据库）
-	// 强制使用 disable 避免 TLS 连接问题
-	sslMode := cfg.SSLMode
-	if sslMode == "" || sslMode == "require" || sslMode == "prefer" {
-		sslMode = "disable"
-	}
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s client_encoding=UTF8",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, sslMode,
-	)
-
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: &gormLogger{},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to connect to postgres: %w", err)
-	}
-
-	sqlDB, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("failed to get sql.DB: %w", err)
-	}
-	defer sqlDB.Close()
-
-	// 检查数据库是否存在
-	var exists bool
-	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '%s')", cfg.Database)
-	if err := db.Raw(query).Scan(&exists).Error; err != nil {
-		return fmt.Errorf("failed to check database exists: %w", err)
-	}
-
-	if !exists {
-		logger.Info("Database does not exist, creating...", logger.String("database", cfg.Database))
-		createSQL := fmt.Sprintf("CREATE DATABASE \"%s\" WITH ENCODING = 'UTF8'", cfg.Database)
-		if err := db.Exec(createSQL).Error; err != nil {
-			return fmt.Errorf("failed to create database: %w", err)
-		}
-		logger.Info("Database created successfully", logger.String("database", cfg.Database))
-	}
-
-	return nil
-}
-
-// createMySQLDatabaseIfNotExists 创建 MySQL 数据库
-func createMySQLDatabaseIfNotExists(cfg *config.DatabaseConfig) error {
-	// 连接到 MySQL（不指定具体数据库）
-	charset := cfg.Charset
-	if charset == "" {
-		charset = "utf8mb4"
-	}
-
-	// 构建不包含数据库名的 DSN
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=%s&parseTime=True&loc=Local",
-		cfg.User, cfg.Password, cfg.Host, cfg.Port, charset)
-
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-		Logger: &gormLogger{},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to connect to mysql: %w", err)
-	}
-
-	sqlDB, err := db.DB()
-	if err != nil {
-		return fmt.Errorf("failed to get sql.DB: %w", err)
-	}
-	defer sqlDB.Close()
-
-	// 检查数据库是否存在
-	var exists bool
-	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM information_schema.schemata WHERE schema_name = '%s')", cfg.Database)
-	if err := db.Raw(query).Scan(&exists).Error; err != nil {
-		return fmt.Errorf("failed to check database exists: %w", err)
-	}
-
-	if !exists {
-		logger.Info("Database does not exist, creating...", logger.String("database", cfg.Database))
-		createSQL := fmt.Sprintf("CREATE DATABASE `%s` CHARACTER SET %s COLLATE %s_unicode_ci",
-			cfg.Database, charset, charset)
-		if err := db.Exec(createSQL).Error; err != nil {
-			return fmt.Errorf("failed to create database: %w", err)
-		}
-		logger.Info("Database created successfully", logger.String("database", cfg.Database))
-	}
-
-	return nil
-}
-
 // DB 数据库连接管理器
 type DB struct {
 	*gorm.DB
@@ -251,7 +149,7 @@ func TestConnection(cfg *config.DatabaseConfig) error {
 	return sqlDB.PingContext(ctx)
 }
 
-// AutoMigrate 自动迁移数据库
+// AutoMigrate 自动迁移数据库（仅用于开发环境）
 func AutoMigrate(db *gorm.DB) error {
 	logger.Info("Starting database migration...")
 
@@ -270,6 +168,54 @@ func AutoMigrate(db *gorm.DB) error {
 	}
 
 	logger.Info("Database migration completed successfully")
+	return nil
+}
+
+// TableExists 检查表是否存在
+func TableExists(db *gorm.DB, tableName string) (bool, error) {
+	var count int64
+	err := db.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?", tableName).Scan(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// Seed 插入种子数据（仅用于开发环境）
+func Seed(db *gorm.DB) error {
+	logger.Info("Starting database seeding...")
+
+	// 检查是否已有数据
+	var count int64
+	if err := db.Model(&entity.Organization{}).Count(&count).Error; err != nil {
+		return fmt.Errorf("failed to check organizations: %w", err)
+	}
+	if count > 0 {
+		logger.Info("Database already has data, skipping seed")
+		return nil
+	}
+
+	// 创建根组织
+	rootOrg, err := entity.NewRootOrganization("团圆寻亲志愿者协会", "ROOT")
+	if err != nil {
+		return fmt.Errorf("failed to create root organization: %w", err)
+	}
+	if err := db.Create(rootOrg).Error; err != nil {
+		return fmt.Errorf("failed to save root organization: %w", err)
+	}
+	logger.Info("Created root organization")
+
+	// 创建超级管理员
+	admin, err := entity.NewSuperAdmin("超级管理员", "13800138000", "admin123")
+	if err != nil {
+		return fmt.Errorf("failed to create super admin: %w", err)
+	}
+	if err := db.Create(admin).Error; err != nil {
+		return fmt.Errorf("failed to save super admin: %w", err)
+	}
+	logger.Info("Created super admin")
+
+	logger.Info("Database seeding completed successfully")
 	return nil
 }
 

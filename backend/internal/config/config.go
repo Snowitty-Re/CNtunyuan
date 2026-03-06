@@ -257,9 +257,10 @@ func setDefaults() {
 	viper.SetDefault("server.max_header_bytes", 1048576)
 
 	// Database defaults
+	viper.SetDefault("database.type", "postgres")
 	viper.SetDefault("database.host", "localhost")
 	viper.SetDefault("database.port", 5432)
-	viper.SetDefault("database.database", "cntunyuan")
+	viper.SetDefault("database.database", "cntuanyuan")
 	viper.SetDefault("database.ssl_mode", "disable")
 	viper.SetDefault("database.charset", "UTF8")
 	viper.SetDefault("database.max_idle_conns", 10)
