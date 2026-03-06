@@ -2,7 +2,7 @@ import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { message } from 'antd';
 
 // 创建 axios 实例
-const request = axios.create({
+const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   timeout: 30000,
   headers: {
@@ -10,25 +10,8 @@ const request = axios.create({
   },
 });
 
-// 请求重试配置
-interface RetryConfig {
-  retries: number;
-  retryDelay: number;
-  retryCondition: (error: AxiosError) => boolean;
-}
-
-const defaultRetryConfig: RetryConfig = {
-  retries: 3,
-  retryDelay: 1000,
-  retryCondition: (error: AxiosError) => {
-    // 仅在网络错误或 5xx 错误时重试
-    const status = error.response?.status;
-    return !status || status >= 500 || error.code === 'ECONNABORTED';
-  },
-};
-
 // 请求拦截器
-request.interceptors.request.use(
+http.interceptors.request.use(
   (config) => {
     // 添加 token
     const token = localStorage.getItem('token');
@@ -47,7 +30,7 @@ request.interceptors.request.use(
 );
 
 // 响应拦截器
-request.interceptors.response.use(
+http.interceptors.response.use(
   (response: AxiosResponse) => {
     // 统一处理响应
     const { data } = response;
@@ -60,33 +43,37 @@ request.interceptors.response.use(
     return data.data;
   },
   async (error: AxiosError) => {
-    const config = error.config as AxiosRequestConfig & { retryCount?: number; retryConfig?: RetryConfig };
+    const config = error.config as AxiosRequestConfig & { retryCount?: number };
     
     if (!config) {
       return Promise.reject(error);
     }
     
-    // 重试逻辑
-    const retryConfig = { ...defaultRetryConfig, ...config.retryConfig };
+    // 重试逻辑（最多 3 次）
     config.retryCount = config.retryCount || 0;
+    const maxRetries = 3;
     
-    if (
-      retryConfig.retryCondition(error) &&
-      config.retryCount < retryConfig.retries
-    ) {
+    if (config.retryCount < maxRetries && shouldRetry(error)) {
       config.retryCount++;
       
       // 延迟重试
-      await new Promise(resolve => setTimeout(resolve, retryConfig.retryDelay * config.retryCount!));
+      await new Promise(resolve => setTimeout(resolve, 1000 * config.retryCount!));
       
-      console.log(`Retrying request (${config.retryCount}/${retryConfig.retries}):`, config.url);
-      return request(config);
+      console.log(`Retrying request (${config.retryCount}/${maxRetries}):`, config.url);
+      return http(config);
     }
     
     // 处理错误
     return handleError(error);
   }
 );
+
+// 判断是否应该重试
+function shouldRetry(error: AxiosError): boolean {
+  const status = error.response?.status;
+  // 仅在网络错误或 5xx 错误时重试
+  return !status || status >= 500 || error.code === 'ECONNABORTED';
+}
 
 // 错误处理
 function handleError(error: AxiosError) {
@@ -132,17 +119,6 @@ function generateRequestId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// 带重试的请求
-export function requestWithRetry<T>(
-  config: AxiosRequestConfig,
-  retryConfig?: Partial<RetryConfig>
-): Promise<T> {
-  return request({
-    ...config,
-    retryConfig: { ...defaultRetryConfig, ...retryConfig },
-  });
-}
-
 // 防抖请求
 export function debounceRequest<T>(
   config: AxiosRequestConfig,
@@ -158,8 +134,8 @@ export function debounceRequest<T>(
     
     // 设置新的定时器
     const timer = setTimeout(() => {
-      request(config)
-        .then(resolve)
+      http.request(config)
+        .then((data: any) => resolve(data as T))
         .catch(reject);
     }, wait);
     
@@ -171,4 +147,5 @@ export function debounceRequest<T>(
   });
 }
 
-export default request;
+export default http;
+export { http };
