@@ -10,19 +10,19 @@ interface RouteGuardProps {
 export default function RouteGuard({ children }: RouteGuardProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isHydrated } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
 
+  // 等待状态从存储恢复
   useEffect(() => {
-    // 简单延迟确保状态已恢复
-    const timer = setTimeout(() => {
+    // 如果状态已经恢复，标记为 ready
+    if (isHydrated) {
       setIsReady(true);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
+    }
+  }, [isHydrated]);
 
   useEffect(() => {
+    // 等待状态恢复后再执行路由守卫逻辑
     if (!isReady) return;
 
     // 如果未登录且不在登录页，跳转到登录页
@@ -36,15 +36,17 @@ export default function RouteGuard({ children }: RouteGuardProps) {
     }
   }, [isAuthenticated, location.pathname, navigate, isReady]);
 
+  // 等待状态恢复时显示 loading
   if (!isReady) {
     return (
       <div style={{ 
         display: 'flex', 
         justifyContent: 'center', 
         alignItems: 'center', 
-        height: '100vh' 
+        height: '100vh',
+        background: '#f5f7fa'
       }}>
-        <Spin size="large" />
+        <Spin size="large" tip="加载中..." />
       </div>
     );
   }

@@ -27,16 +27,17 @@ interface LoginForm {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setToken, setUser, isAuthenticated } = useAuthStore();
+  const { setToken, setUser, isAuthenticated, isHydrated } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('password');
 
-  // 如果已登录，跳转到工作台
+  // 如果已登录且状态已恢复，跳转到工作台
   useEffect(() => {
-    if (isAuthenticated) {
+    // 等待状态恢复后再检查登录状态
+    if (isHydrated && isAuthenticated) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isHydrated, navigate]);
 
   // 账号密码登录
   const handlePasswordLogin = async (values: LoginForm) => {
@@ -62,7 +63,8 @@ export default function LoginPage() {
           setToken(token, loginData.refresh_token || '');
           setUser(loginData.user);
           message.success('登录成功');
-          navigate('/dashboard', { replace: true });
+          // 跳转由 useEffect 处理，避免重复跳转
+          // navigate('/dashboard', { replace: true });
         } else {
           console.error('登录 data 字段缺少 token:', loginData);
           message.error('登录数据格式错误');
