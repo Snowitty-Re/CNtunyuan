@@ -164,7 +164,7 @@ export default function DashboardPage() {
         {statCards.map((card, index) => (
           <Col xs={24} sm={12} lg={6} key={index}>
             <Card 
-              bordered={false}
+              variant="borderless"
               bodyStyle={{ padding: 20 }}
               style={{ 
                 borderRadius: 8,

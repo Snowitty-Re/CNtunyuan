@@ -200,7 +200,7 @@ export default function OrganizationsPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginTop: 24 }}>
                 <Card 
-                  bordered 
+                  bordered={true}
                   bodyStyle={{ padding: 20 }}
                   style={{ borderRadius: 8 }}
                 >
@@ -227,7 +227,7 @@ export default function OrganizationsPage() {
                   </div>
                 </Card>
                 <Card 
-                  bordered 
+                  bordered={true}
                   bodyStyle={{ padding: 20 }}
                   style={{ borderRadius: 8 }}
                 >
@@ -254,7 +254,7 @@ export default function OrganizationsPage() {
                   </div>
                 </Card>
                 <Card 
-                  bordered 
+                  bordered={true}
                   bodyStyle={{ padding: 20 }}
                   style={{ borderRadius: 8 }}
                 >

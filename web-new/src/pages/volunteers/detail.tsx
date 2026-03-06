@@ -130,17 +130,17 @@ export default function VolunteerDetailPage() {
 
         <Row gutter={24}>
           <Col span={8}>
-            <Card bordered bodyStyle={{ padding: 16 }}>
+            <Card bordered={true} bodyStyle={{ padding: 16 }}>
               <Statistic title="参与任务" value={stats.taskCount} />
             </Card>
           </Col>
           <Col span={8}>
-            <Card bordered bodyStyle={{ padding: 16 }}>
+            <Card bordered={true} bodyStyle={{ padding: 16 }}>
               <Statistic title="已完成任务" value={stats.completedTasks} />
             </Card>
           </Col>
           <Col span={8}>
-            <Card bordered bodyStyle={{ padding: 16 }}>
+            <Card bordered={true} bodyStyle={{ padding: 16 }}>
               <Statistic title="参与案件" value={stats.caseCount} />
             </Card>
           </Col>

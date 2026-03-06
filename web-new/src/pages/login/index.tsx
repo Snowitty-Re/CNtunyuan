@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
   Button,
@@ -26,6 +27,7 @@ interface LoginForm {
 }
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const { setToken, setUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('password');
@@ -54,7 +56,8 @@ export default function LoginPage() {
           setToken(token, loginData.refresh_token || '');
           setUser(loginData.user);
           message.success('登录成功');
-          // 不在这里跳转，由 RouteGuard 检测到 isAuthenticated 变化后统一跳转
+          // 登录成功后跳转到工作台
+          navigate('/dashboard', { replace: true });
         } else {
           console.error('登录 data 字段缺少 token:', loginData);
           message.error('登录数据格式错误');
@@ -74,6 +77,93 @@ export default function LoginPage() {
   const handleWechatLogin = () => {
     message.info('微信登录功能开发中');
   };
+
+  // Tabs items 配置
+  const tabItems = [
+    {
+      key: 'password',
+      label: '账号登录',
+      children: (
+        <Form
+          name="login"
+          initialValues={{ remember: true }}
+          onFinish={handlePasswordLogin}
+          autoComplete="off"
+          layout="vertical"
+        >
+          <Form.Item
+            name="username"
+            rules={[{ required: true, message: '请输入手机号或用户名' }]}
+          >
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="请输入手机号或用户名"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="password"
+            rules={[{ required: true, message: '请输入密码' }]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="请输入密码"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item>
+            <div className="flex justify-between items-center">
+              <Form.Item name="remember" valuePropName="checked" noStyle>
+                <Checkbox>记住我</Checkbox>
+              </Form.Item>
+              <a className="text-orange-500 hover:text-orange-600">
+                忘记密码？
+              </a>
+            </div>
+          </Form.Item>
+
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              size="large"
+              block
+              loading={loading}
+              className="login-btn"
+            >
+              登录
+            </Button>
+          </Form.Item>
+        </Form>
+      ),
+    },
+    {
+      key: 'wechat',
+      label: '微信登录',
+      children: (
+        <div className="wechat-login">
+          <div className="qr-code">
+            <div className="qr-placeholder">
+              <WechatOutlined style={{ fontSize: 64, color: '#07C160' }} />
+            </div>
+            <p className="qr-tip">请使用微信扫一扫登录</p>
+          </div>
+          <Button
+            type="primary"
+            block
+            size="large"
+            icon={<WechatOutlined />}
+            onClick={handleWechatLogin}
+            style={{ backgroundColor: '#07C160', borderColor: '#07C160' }}
+          >
+            唤起微信登录
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="login-page">
@@ -120,7 +210,7 @@ export default function LoginPage() {
         transition={{ duration: 0.6, delay: 0.2 }}
         className="login-form-wrapper"
       >
-        <Card className="login-card" bordered={false}>
+        <Card className="login-card" variant="borderless">
           <div className="login-header">
             <h2 className="login-title">欢迎登录</h2>
             <p className="login-subtitle">团圆寻亲志愿者系统</p>
@@ -131,84 +221,8 @@ export default function LoginPage() {
             onChange={setActiveTab}
             className="login-tabs"
             centered
-          >
-            <Tabs.TabPane tab="账号登录" key="password">
-              <Form
-                name="login"
-                initialValues={{ remember: true }}
-                onFinish={handlePasswordLogin}
-                autoComplete="off"
-                layout="vertical"
-              >
-                <Form.Item
-                  name="username"
-                  rules={[{ required: true, message: '请输入手机号或用户名' }]}
-                >
-                  <Input
-                    prefix={<UserOutlined />}
-                    placeholder="请输入手机号或用户名"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="password"
-                  rules={[{ required: true, message: '请输入密码' }]}
-                >
-                  <Input.Password
-                    prefix={<LockOutlined />}
-                    placeholder="请输入密码"
-                    size="large"
-                  />
-                </Form.Item>
-
-                <Form.Item>
-                  <div className="flex justify-between items-center">
-                    <Form.Item name="remember" valuePropName="checked" noStyle>
-                      <Checkbox>记住我</Checkbox>
-                    </Form.Item>
-                    <a className="text-orange-500 hover:text-orange-600">
-                      忘记密码？
-                    </a>
-                  </div>
-                </Form.Item>
-
-                <Form.Item>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    size="large"
-                    block
-                    loading={loading}
-                    className="login-btn"
-                  >
-                    登录
-                  </Button>
-                </Form.Item>
-              </Form>
-            </Tabs.TabPane>
-
-            <Tabs.TabPane tab="微信登录" key="wechat">
-              <div className="wechat-login">
-                <div className="qr-code">
-                  <div className="qr-placeholder">
-                    <WechatOutlined style={{ fontSize: 64, color: '#07C160' }} />
-                  </div>
-                  <p className="qr-tip">请使用微信扫一扫登录</p>
-                </div>
-                <Button
-                  type="primary"
-                  block
-                  size="large"
-                  icon={<WechatOutlined />}
-                  onClick={handleWechatLogin}
-                  style={{ backgroundColor: '#07C160', borderColor: '#07C160' }}
-                >
-                  唤起微信登录
-                </Button>
-              </div>
-            </Tabs.TabPane>
-          </Tabs>
+            items={tabItems}
+          />
 
           <div className="login-footer">
             <p className="text-gray-400 text-sm">
