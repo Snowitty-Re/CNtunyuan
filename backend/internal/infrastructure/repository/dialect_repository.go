@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
@@ -30,7 +31,7 @@ func (r *DialectRepositoryImpl) List(ctx context.Context, query *repository.Dial
 
 	// 关键词搜索
 	if query.Keyword != "" {
-		db = db.Where("title LIKE ? OR content LIKE ? OR region LIKE ?",
+		db = db.Where("title LIKE ? OR content LIKE ? OR description LIKE ?",
 			"%"+query.Keyword+"%", "%"+query.Keyword+"%", "%"+query.Keyword+"%")
 	}
 
@@ -71,20 +72,14 @@ func (r *DialectRepositoryImpl) List(ctx context.Context, query *repository.Dial
 	}
 
 	// 排序
-	sortBy := query.SortBy
-	if sortBy == "" {
-		sortBy = "created_at"
+	order := "created_at DESC"
+	if query.SortBy != "" {
+		order = query.SortBy + " " + query.SortOrder
 	}
-	sortOrder := query.SortOrder
-	if sortOrder == "" {
-		sortOrder = "desc"
-	}
-	order := sortBy + " " + sortOrder
 
 	// 分页查询
 	if err := db.Order(order).
 		Preload("Uploader").
-		Preload("Org").
 		Offset((query.Page - 1) * query.PageSize).
 		Limit(query.PageSize).
 		Find(&dialects).Error; err != nil {
@@ -100,7 +95,6 @@ func (r *DialectRepositoryImpl) FindByRegion(ctx context.Context, province, city
 	var total int64
 
 	db := r.db.WithContext(ctx)
-
 	if province != "" {
 		db = db.Where("province = ?", province)
 	}
@@ -112,7 +106,7 @@ func (r *DialectRepositoryImpl) FindByRegion(ctx context.Context, province, city
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).Find(&dialects).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&dialects).Error; err != nil {
 		return nil, err
 	}
 
@@ -130,7 +124,7 @@ func (r *DialectRepositoryImpl) FindByUploader(ctx context.Context, uploaderID s
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).Find(&dialects).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&dialects).Error; err != nil {
 		return nil, err
 	}
 
@@ -142,13 +136,13 @@ func (r *DialectRepositoryImpl) FindFeatured(ctx context.Context, pagination rep
 	var dialects []entity.Dialect
 	var total int64
 
-	db := r.db.WithContext(ctx).Where("is_featured = ?", true)
+	db := r.db.WithContext(ctx).Where("is_featured = ? AND status = ?", true, entity.DialectStatusActive)
 
 	if err := db.Model(&entity.Dialect{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).Find(&dialects).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&dialects).Error; err != nil {
 		return nil, err
 	}
 
@@ -166,7 +160,7 @@ func (r *DialectRepositoryImpl) FindByType(ctx context.Context, dialectType enti
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).Find(&dialects).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&dialects).Error; err != nil {
 		return nil, err
 	}
 
@@ -178,15 +172,16 @@ func (r *DialectRepositoryImpl) Search(ctx context.Context, keyword string, pagi
 	var dialects []entity.Dialect
 	var total int64
 
-	db := r.db.WithContext(ctx).
-		Where("title LIKE ? OR content LIKE ? OR region LIKE ? OR description LIKE ?",
-			"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%")
+	db := r.db.WithContext(ctx).Where(
+		"title LIKE ? OR content LIKE ? OR region LIKE ? OR description LIKE ?",
+		"%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%", "%"+keyword+"%",
+	)
 
 	if err := db.Model(&entity.Dialect{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).Find(&dialects).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&dialects).Error; err != nil {
 		return nil, err
 	}
 
@@ -195,29 +190,17 @@ func (r *DialectRepositoryImpl) Search(ctx context.Context, keyword string, pagi
 
 // IncrementPlayCount 增加播放次数
 func (r *DialectRepositoryImpl) IncrementPlayCount(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).
-		Model(&entity.Dialect{}).
-		Where("id = ?", id).
-		UpdateColumn("play_count", gorm.Expr("play_count + 1")).
-		Error
+	return r.db.WithContext(ctx).Model(&entity.Dialect{}).Where("id = ?", id).UpdateColumn("play_count", gorm.Expr("play_count + 1")).Error
 }
 
 // IncrementLikeCount 增加点赞数
 func (r *DialectRepositoryImpl) IncrementLikeCount(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).
-		Model(&entity.Dialect{}).
-		Where("id = ?", id).
-		UpdateColumn("like_count", gorm.Expr("like_count + 1")).
-		Error
+	return r.db.WithContext(ctx).Model(&entity.Dialect{}).Where("id = ?", id).UpdateColumn("like_count", gorm.Expr("like_count + 1")).Error
 }
 
 // DecrementLikeCount 减少点赞数
 func (r *DialectRepositoryImpl) DecrementLikeCount(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).
-		Model(&entity.Dialect{}).
-		Where("id = ?", id).
-		UpdateColumn("like_count", gorm.Expr("CASE WHEN like_count > 0 THEN like_count - 1 ELSE 0 END")).
-		Error
+	return r.db.WithContext(ctx).Model(&entity.Dialect{}).Where("id = ?", id).UpdateColumn("like_count", gorm.Expr("CASE WHEN like_count > 0 THEN like_count - 1 ELSE 0 END")).Error
 }
 
 // AddComment 添加评论
@@ -227,10 +210,7 @@ func (r *DialectRepositoryImpl) AddComment(ctx context.Context, comment *entity.
 			return err
 		}
 		// 更新评论数
-		return tx.Model(&entity.Dialect{}).
-			Where("id = ?", comment.DialectID).
-			UpdateColumn("comment_count", gorm.Expr("comment_count + 1")).
-			Error
+		return tx.Model(&entity.Dialect{}).Where("id = ?", comment.DialectID).UpdateColumn("comment_count", gorm.Expr("comment_count + 1")).Error
 	})
 }
 
@@ -245,8 +225,9 @@ func (r *DialectRepositoryImpl) GetComments(ctx context.Context, dialectID strin
 		return nil, err
 	}
 
-	if err := r.Paginate(db.Order("created_at DESC"), pagination).
-		Preload("User").
+	if err := db.Order("created_at DESC").Preload("User").
+		Offset((pagination.Page - 1) * pagination.PageSize).
+		Limit(pagination.PageSize).
 		Find(&comments).Error; err != nil {
 		return nil, err
 	}
@@ -257,26 +238,11 @@ func (r *DialectRepositoryImpl) GetComments(ctx context.Context, dialectID strin
 // AddLike 添加点赞
 func (r *DialectRepositoryImpl) AddLike(ctx context.Context, like *entity.DialectLike) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 检查是否已点赞
-		var count int64
-		if err := tx.Model(&entity.DialectLike{}).
-			Where("dialect_id = ? AND user_id = ?", like.DialectID, like.UserID).
-			Count(&count).Error; err != nil {
-			return err
-		}
-		if count > 0 {
-			return errors.New("already liked")
-		}
-
 		if err := tx.Create(like).Error; err != nil {
 			return err
 		}
-
 		// 更新点赞数
-		return tx.Model(&entity.Dialect{}).
-			Where("id = ?", like.DialectID).
-			UpdateColumn("like_count", gorm.Expr("like_count + 1")).
-			Error
+		return tx.Model(&entity.Dialect{}).Where("id = ?", like.DialectID).UpdateColumn("like_count", gorm.Expr("like_count + 1")).Error
 	})
 }
 
@@ -287,24 +253,18 @@ func (r *DialectRepositoryImpl) RemoveLike(ctx context.Context, dialectID, userI
 		if result.Error != nil {
 			return result.Error
 		}
-		if result.RowsAffected == 0 {
-			return errors.New("like not found")
+		if result.RowsAffected > 0 {
+			// 更新点赞数
+			return tx.Model(&entity.Dialect{}).Where("id = ?", dialectID).UpdateColumn("like_count", gorm.Expr("CASE WHEN like_count > 0 THEN like_count - 1 ELSE 0 END")).Error
 		}
-
-		// 更新点赞数
-		return tx.Model(&entity.Dialect{}).
-			Where("id = ?", dialectID).
-			UpdateColumn("like_count", gorm.Expr("CASE WHEN like_count > 0 THEN like_count - 1 ELSE 0 END")).
-			Error
+		return nil
 	})
 }
 
 // HasLiked 是否已点赞
 func (r *DialectRepositoryImpl) HasLiked(ctx context.Context, dialectID, userID string) (bool, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&entity.DialectLike{}).
-		Where("dialect_id = ? AND user_id = ?", dialectID, userID).
-		Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&entity.DialectLike{}).Where("dialect_id = ? AND user_id = ?", dialectID, userID).Count(&count).Error
 	return count > 0, err
 }
 
@@ -316,41 +276,55 @@ func (r *DialectRepositoryImpl) AddPlayLog(ctx context.Context, log *entity.Dial
 // GetStats 获取统计
 func (r *DialectRepositoryImpl) GetStats(ctx context.Context) (*entity.DialectStats, error) {
 	stats := &entity.DialectStats{}
+	db := r.db.WithContext(ctx).Model(&entity.Dialect{})
 
 	// 总数
-	if err := r.db.WithContext(ctx).Model(&entity.Dialect{}).Count(&stats.Total).Error; err != nil {
+	if err := db.Count(&stats.Total).Error; err != nil {
 		return nil, err
 	}
 
 	// 活跃数
-	if err := r.db.WithContext(ctx).Model(&entity.Dialect{}).
-		Where("status = ?", entity.DialectStatusActive).Count(&stats.Active).Error; err != nil {
+	if err := db.Where("status = ?", entity.DialectStatusActive).Count(&stats.Active).Error; err != nil {
 		return nil, err
 	}
 
 	// 待审核数
-	if err := r.db.WithContext(ctx).Model(&entity.Dialect{}).
-		Where("status = ?", entity.DialectStatusPending).Count(&stats.Pending).Error; err != nil {
+	if err := db.Where("status = ?", entity.DialectStatusPending).Count(&stats.Pending).Error; err != nil {
 		return nil, err
 	}
 
 	// 精选数
-	if err := r.db.WithContext(ctx).Model(&entity.Dialect{}).
-		Where("is_featured = ?", true).Count(&stats.Featured).Error; err != nil {
+	if err := db.Where("is_featured = ?", true).Count(&stats.Featured).Error; err != nil {
 		return nil, err
 	}
 
 	// 总播放数
-	if err := r.db.WithContext(ctx).Model(&entity.Dialect{}).
-		Select("COALESCE(SUM(play_count), 0)").Scan(&stats.TotalPlays).Error; err != nil {
+	if err := db.Select("COALESCE(SUM(play_count), 0)").Scan(&stats.TotalPlays).Error; err != nil {
 		return nil, err
 	}
 
 	// 总点赞数
-	if err := r.db.WithContext(ctx).Model(&entity.Dialect{}).
-		Select("COALESCE(SUM(like_count), 0)").Scan(&stats.TotalLikes).Error; err != nil {
+	if err := db.Select("COALESCE(SUM(like_count), 0)").Scan(&stats.TotalLikes).Error; err != nil {
+		return nil, err
+	}
+
+	// 总评论数
+	if err := db.Select("COALESCE(SUM(comment_count), 0)").Scan(&stats.TotalComments).Error; err != nil {
 		return nil, err
 	}
 
 	return stats, nil
+}
+
+// FindByID 根据ID查找
+func (r *DialectRepositoryImpl) FindByID(ctx context.Context, id string) (*entity.Dialect, error) {
+	var dialect entity.Dialect
+	err := r.db.WithContext(ctx).Preload("Uploader").First(&dialect, "id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("dialect not found")
+		}
+		return nil, err
+	}
+	return &dialect, nil
 }

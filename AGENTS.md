@@ -497,6 +497,22 @@ go run cmd/app/main.go -seed
   - 前端 Error Boundary: React 错误边界处理
   - 请求工具增强: 自动重试(最多3次)、防抖请求、统一错误处理
 
+- **后端核心模块实现完成**:
+  - **仓储层实现** (`internal/infrastructure/repository/`):
+    - `MissingPersonRepositoryImpl`: 走失人员数据访问，支持列表查询、地区筛选、轨迹管理、统计
+    - `DialectRepositoryImpl`: 方言数据访问，支持精选管理、点赞/评论/播放记录、统计
+    - `TaskRepositoryImpl`: 任务数据访问，支持状态流转、逾期检测、日志/附件管理
+  - **应用服务层** (`internal/application/service/`):
+    - `OrganizationAppService`: 组织管理服务（CRUD、组织树、移动）
+    - `MissingPersonAppService`: 走失人员服务（登记、状态管理、轨迹）
+    - `DialectAppService`: 方言服务（上传、审核、精选、互动）
+    - `TaskAppService`: 任务服务（创建、分配、执行、完成）
+  - **HTTP 接口层** (`internal/interfaces/http/handler/`):
+    - `OrganizationHandler`: /organizations 组织管理接口
+    - `MissingPersonHandler`: /missing-persons 走失人员接口
+    - `DialectHandler`: /dialects 方言管理接口
+    - `TaskHandler`: /tasks 任务管理接口
+
 ### 2026-03-05
 - **移除系统初始化向导**:
   - 删除 `/setup` 页面和相关后端接口
@@ -589,3 +605,18 @@ go run cmd/app/main.go -seed
 - [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md) - 后端架构详细说明（Clean Architecture 设计）
 - [backend/REFACTORING.md](backend/REFACTORING.md) - 架构重构指南
 - [backend/migrations/README.md](backend/migrations/README.md) - 数据库迁移指南
+
+## 后端模块状态
+
+### 已实现模块 ✅
+
+| 模块 | 仓储 | 应用服务 | Handler | 状态 |
+|------|------|----------|---------|------|
+| 用户管理 | UserRepository | UserAppService | UserHandler | ✅ 完整 |
+| 组织管理 | OrganizationRepository | OrganizationAppService | OrganizationHandler | ✅ 完整 |
+| 走失人员 | MissingPersonRepository | MissingPersonAppService | MissingPersonHandler | ✅ 完整 |
+| 方言管理 | DialectRepository | DialectAppService | DialectHandler | ✅ 完整 |
+| 任务管理 | TaskRepository | TaskAppService | TaskHandler | ✅ 完整 |
+| 文件管理 | FileRepository | FileAppService | UploadHandler | ✅ 完整 |
+| 仪表盘 | - | DashboardService | DashboardHandler | ✅ 完整 |
+| 认证授权 | - | AuthService | AuthHandler | ✅ 完整 |

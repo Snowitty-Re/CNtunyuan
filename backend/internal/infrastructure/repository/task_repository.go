@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -64,7 +66,7 @@ func (r *TaskRepositoryImpl) List(ctx context.Context, query *repository.TaskQue
 		db = db.Where("org_id = ?", query.OrgID)
 	}
 
-	// 走失人员筛选
+	// 走失人员关联
 	if query.MissingPersonID != "" {
 		db = db.Where("missing_person_id = ?", query.MissingPersonID)
 	}
@@ -86,12 +88,8 @@ func (r *TaskRepositoryImpl) List(ctx context.Context, query *repository.TaskQue
 	}
 
 	// 逾期筛选
-	if query.IsOverdue != nil {
-		if *query.IsOverdue {
-			db = db.Where("deadline < ? AND status NOT IN (?, ?)", time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled)
-		} else {
-			db = db.Where("deadline >= ? OR status IN (?, ?)", time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled)
-		}
+	if query.IsOverdue != nil && *query.IsOverdue {
+		db = db.Where("deadline < ? AND status NOT IN (?, ?)", time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled)
 	}
 
 	// 统计总数
@@ -100,21 +98,15 @@ func (r *TaskRepositoryImpl) List(ctx context.Context, query *repository.TaskQue
 	}
 
 	// 排序
-	sortField := query.SortField
-	if sortField == "" {
-		sortField = "created_at"
+	order := "created_at DESC"
+	if query.SortField != "" {
+		order = query.SortField + " " + query.SortOrder
 	}
-	sortOrder := query.SortOrder
-	if sortOrder == "" {
-		sortOrder = "desc"
-	}
-	order := sortField + " " + sortOrder
 
 	// 分页查询
 	if err := db.Order(order).
 		Preload("Creator").
 		Preload("Assignee").
-		Preload("Org").
 		Preload("MissingPerson").
 		Offset((query.Page - 1) * query.PageSize).
 		Limit(query.PageSize).
@@ -136,11 +128,7 @@ func (r *TaskRepositoryImpl) FindByAssignee(ctx context.Context, assigneeID stri
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).
-		Preload("Creator").
-		Preload("Assignee").
-		Preload("MissingPerson").
-		Find(&tasks).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
@@ -158,11 +146,7 @@ func (r *TaskRepositoryImpl) FindByCreator(ctx context.Context, creatorID string
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).
-		Preload("Creator").
-		Preload("Assignee").
-		Preload("MissingPerson").
-		Find(&tasks).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
@@ -180,10 +164,7 @@ func (r *TaskRepositoryImpl) FindByStatus(ctx context.Context, status entity.Tas
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).
-		Preload("Creator").
-		Preload("Assignee").
-		Find(&tasks).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
@@ -201,10 +182,7 @@ func (r *TaskRepositoryImpl) FindByOrg(ctx context.Context, orgID string, pagina
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).
-		Preload("Creator").
-		Preload("Assignee").
-		Find(&tasks).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
@@ -214,11 +192,7 @@ func (r *TaskRepositoryImpl) FindByOrg(ctx context.Context, orgID string, pagina
 // FindByMissingPerson 根据走失人员查找
 func (r *TaskRepositoryImpl) FindByMissingPerson(ctx context.Context, missingPersonID string) ([]entity.Task, error) {
 	var tasks []entity.Task
-	err := r.db.WithContext(ctx).
-		Where("missing_person_id = ?", missingPersonID).
-		Preload("Creator").
-		Preload("Assignee").
-		Find(&tasks).Error
+	err := r.db.WithContext(ctx).Where("missing_person_id = ?", missingPersonID).Order("created_at DESC").Find(&tasks).Error
 	return tasks, err
 }
 
@@ -233,10 +207,7 @@ func (r *TaskRepositoryImpl) FindPending(ctx context.Context, pagination reposit
 		return nil, err
 	}
 
-	if err := r.Paginate(db.Order("priority DESC, created_at ASC"), pagination).
-		Preload("Creator").
-		Preload("MissingPerson").
-		Find(&tasks).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("created_at DESC").Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
@@ -248,18 +219,13 @@ func (r *TaskRepositoryImpl) FindOverdue(ctx context.Context, pagination reposit
 	var tasks []entity.Task
 	var total int64
 
-	db := r.db.WithContext(ctx).
-		Where("deadline < ? AND status NOT IN (?, ?)",
-			time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled)
+	db := r.db.WithContext(ctx).Where("deadline < ? AND status NOT IN (?, ?)", time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled)
 
 	if err := db.Model(&entity.Task{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	if err := r.Paginate(db, pagination).
-		Preload("Creator").
-		Preload("Assignee").
-		Find(&tasks).Error; err != nil {
+	if err := r.Paginate(db, pagination).Order("deadline ASC").Find(&tasks).Error; err != nil {
 		return nil, err
 	}
 
@@ -268,20 +234,29 @@ func (r *TaskRepositoryImpl) FindOverdue(ctx context.Context, pagination reposit
 
 // UpdateStatus 更新状态
 func (r *TaskRepositoryImpl) UpdateStatus(ctx context.Context, id string, status entity.TaskStatus) error {
-	return r.db.WithContext(ctx).
-		Model(&entity.Task{}).
-		Where("id = ?", id).
-		Update("status", status).
-		Error
+	updates := map[string]interface{}{
+		"status": status,
+	}
+	
+	// 如果开始处理，记录开始时间
+	if status == entity.TaskStatusProcessing {
+		now := time.Now()
+		updates["started_at"] = &now
+	}
+	
+	// 如果完成，记录完成时间
+	if status == entity.TaskStatusCompleted {
+		now := time.Now()
+		updates["completed_at"] = &now
+		updates["progress"] = 100
+	}
+
+	return r.db.WithContext(ctx).Model(&entity.Task{}).Where("id = ?", id).Updates(updates).Error
 }
 
 // UpdateProgress 更新进度
 func (r *TaskRepositoryImpl) UpdateProgress(ctx context.Context, id string, progress int) error {
-	return r.db.WithContext(ctx).
-		Model(&entity.Task{}).
-		Where("id = ?", id).
-		Update("progress", progress).
-		Error
+	return r.db.WithContext(ctx).Model(&entity.Task{}).Where("id = ?", id).Update("progress", progress).Error
 }
 
 // AddLog 添加日志
@@ -292,11 +267,7 @@ func (r *TaskRepositoryImpl) AddLog(ctx context.Context, log *entity.TaskLog) er
 // GetLogs 获取日志
 func (r *TaskRepositoryImpl) GetLogs(ctx context.Context, taskID string) ([]entity.TaskLog, error) {
 	var logs []entity.TaskLog
-	err := r.db.WithContext(ctx).
-		Where("task_id = ?", taskID).
-		Order("created_at DESC").
-		Preload("User").
-		Find(&logs).Error
+	err := r.db.WithContext(ctx).Where("task_id = ?", taskID).Order("created_at DESC").Preload("User").Find(&logs).Error
 	return logs, err
 }
 
@@ -308,9 +279,7 @@ func (r *TaskRepositoryImpl) AddAttachment(ctx context.Context, attachment *enti
 // GetAttachments 获取附件
 func (r *TaskRepositoryImpl) GetAttachments(ctx context.Context, taskID string) ([]entity.TaskAttachment, error) {
 	var attachments []entity.TaskAttachment
-	err := r.db.WithContext(ctx).
-		Where("task_id = ?", taskID).
-		Find(&attachments).Error
+	err := r.db.WithContext(ctx).Where("task_id = ?", taskID).Order("created_at DESC").Find(&attachments).Error
 	return attachments, err
 }
 
@@ -318,59 +287,68 @@ func (r *TaskRepositoryImpl) GetAttachments(ctx context.Context, taskID string) 
 func (r *TaskRepositoryImpl) GetStats(ctx context.Context, userID string) (*entity.TaskStats, error) {
 	stats := &entity.TaskStats{}
 
+	db := r.db.WithContext(ctx).Model(&entity.Task{})
+
 	// 总数
-	if err := r.db.WithContext(ctx).Model(&entity.Task{}).Count(&stats.Total).Error; err != nil {
+	if err := db.Count(&stats.Total).Error; err != nil {
 		return nil, err
 	}
 
-	// 按状态统计
-	if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("status = ?", entity.TaskStatusDraft).Count(&stats.Draft).Error; err != nil {
-		return nil, err
-	}
-	if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("status = ?", entity.TaskStatusPending).Count(&stats.Pending).Error; err != nil {
-		return nil, err
-	}
-	if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("status = ?", entity.TaskStatusAssigned).Count(&stats.Assigned).Error; err != nil {
-		return nil, err
-	}
-	if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("status = ?", entity.TaskStatusProcessing).Count(&stats.Processing).Error; err != nil {
-		return nil, err
-	}
-	if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("status = ?", entity.TaskStatusCompleted).Count(&stats.Completed).Error; err != nil {
-		return nil, err
-	}
-	if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("status = ?", entity.TaskStatusCancelled).Count(&stats.Cancelled).Error; err != nil {
-		return nil, err
+	// 各状态统计
+	statuses := []entity.TaskStatus{
+		entity.TaskStatusDraft,
+		entity.TaskStatusPending,
+		entity.TaskStatusAssigned,
+		entity.TaskStatusProcessing,
+		entity.TaskStatusCompleted,
+		entity.TaskStatusCancelled,
+		entity.TaskStatusOverdue,
 	}
 
-	// 逾期任务
-	if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("deadline < ? AND status NOT IN (?, ?)",
-			time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled).
-		Count(&stats.Overdue).Error; err != nil {
-		return nil, err
+	for _, status := range statuses {
+		var count int64
+		if err := db.Where("status = ?", status).Count(&count).Error; err != nil {
+			return nil, err
+		}
+		switch status {
+		case entity.TaskStatusDraft:
+			stats.Draft = count
+		case entity.TaskStatusPending:
+			stats.Pending = count
+		case entity.TaskStatusAssigned:
+			stats.Assigned = count
+		case entity.TaskStatusProcessing:
+			stats.Processing = count
+		case entity.TaskStatusCompleted:
+			stats.Completed = count
+		case entity.TaskStatusCancelled:
+			stats.Cancelled = count
+		case entity.TaskStatusOverdue:
+			stats.Overdue = count
+		}
 	}
 
 	// 我的任务统计
 	if userID != "" {
-		if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-			Where("assignee_id = ?", userID).Count(&stats.MyTasks).Error; err != nil {
+		var myTasks int64
+		if err := db.Where("creator_id = ? OR assignee_id = ?", userID, userID).Count(&myTasks).Error; err != nil {
 			return nil, err
 		}
-		if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-			Where("assignee_id = ? AND status = ?", userID, entity.TaskStatusProcessing).Count(&stats.MyPending).Error; err != nil {
+		stats.MyTasks = myTasks
+
+		var myPending int64
+		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status IN (?, ?, ?)", 
+			userID, userID, entity.TaskStatusPending, entity.TaskStatusAssigned, entity.TaskStatusProcessing).Count(&myPending).Error; err != nil {
 			return nil, err
 		}
-		if err := r.db.WithContext(ctx).Model(&entity.Task{}).
-			Where("assignee_id = ? AND status = ?", userID, entity.TaskStatusCompleted).Count(&stats.MyCompleted).Error; err != nil {
+		stats.MyPending = myPending
+
+		var myCompleted int64
+		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status = ?", 
+			userID, userID, entity.TaskStatusCompleted).Count(&myCompleted).Error; err != nil {
 			return nil, err
 		}
+		stats.MyCompleted = myCompleted
 	}
 
 	return stats, nil
@@ -379,18 +357,14 @@ func (r *TaskRepositoryImpl) GetStats(ctx context.Context, userID string) (*enti
 // CountByStatus 按状态统计
 func (r *TaskRepositoryImpl) CountByStatus(ctx context.Context, status entity.TaskStatus) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("status = ?", status).
-		Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&entity.Task{}).Where("status = ?", status).Count(&count).Error
 	return count, err
 }
 
 // CountByAssignee 按执行人统计
 func (r *TaskRepositoryImpl) CountByAssignee(ctx context.Context, assigneeID string) (int64, error) {
 	var count int64
-	err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("assignee_id = ?", assigneeID).
-		Count(&count).Error
+	err := r.db.WithContext(ctx).Model(&entity.Task{}).Where("assignee_id = ?", assigneeID).Count(&count).Error
 	return count, err
 }
 
@@ -398,8 +372,20 @@ func (r *TaskRepositoryImpl) CountByAssignee(ctx context.Context, assigneeID str
 func (r *TaskRepositoryImpl) CountOverdue(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&entity.Task{}).
-		Where("deadline < ? AND status NOT IN (?, ?)",
-			time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled).
+		Where("deadline < ? AND status NOT IN (?, ?)", time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled).
 		Count(&count).Error
 	return count, err
+}
+
+// FindByID 根据ID查找
+func (r *TaskRepositoryImpl) FindByID(ctx context.Context, id string) (*entity.Task, error) {
+	var task entity.Task
+	err := r.db.WithContext(ctx).Preload("Creator").Preload("Assignee").Preload("MissingPerson").First(&task, "id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("task not found")
+		}
+		return nil, err
+	}
+	return &task, nil
 }
