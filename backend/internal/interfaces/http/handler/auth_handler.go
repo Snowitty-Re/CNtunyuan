@@ -37,6 +37,17 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// BindPhoneRequest 绑定手机号请求
+type BindPhoneRequest struct {
+	Phone string `json:"phone" binding:"required"`
+	Code  string `json:"code" binding:"required"`
+}
+
+// SendCodeRequest 发送验证码请求
+type SendCodeRequest struct {
+	Phone string `json:"phone" binding:"required"`
+}
+
 // RegisterRoutes register routes
 func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 	auth := router.Group("/auth")
@@ -46,6 +57,8 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 		auth.POST("/refresh", h.RefreshToken)
 		auth.POST("/logout", h.Logout)
 		auth.POST("/wechat-login", h.WechatLogin)
+		auth.POST("/bind-phone", h.BindPhone)
+		auth.POST("/send-code", h.SendVerifyCode)
 
 		// Protected routes
 		auth.GET("/me", h.authMiddleware.Required(), h.GetCurrentUser)
@@ -202,5 +215,58 @@ func (h *AuthHandler) WechatLogin(c *gin.Context) {
 		ExpiresIn:    result.ExpiresIn,
 		TokenType:    result.TokenType,
 		User:         dto.ToUserResponse(user),
+	})
+}
+
+// BindPhone 绑定手机号
+func (h *AuthHandler) BindPhone(c *gin.Context) {
+	var req BindPhoneRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, validator.ValidateStruct(&req))
+		return
+	}
+
+	// 验证手机号格式
+	if !validator.IsValidPhone(req.Phone) {
+		response.Error(c, errors.New(errors.CodeInvalidParam, "手机号格式不正确"))
+		return
+	}
+
+	// 获取当前用户ID（如果已登录）
+	userID := middleware.GetUserID(c)
+
+	result, err := h.authService.BindPhone(c.Request.Context(), userID, req.Phone, req.Code)
+	if err != nil {
+		logger.Error("Bind phone failed", logger.Err(err))
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, result)
+}
+
+// SendVerifyCode 发送验证码
+func (h *AuthHandler) SendVerifyCode(c *gin.Context) {
+	var req SendCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, validator.ValidateStruct(&req))
+		return
+	}
+
+	// 验证手机号格式
+	if !validator.IsValidPhone(req.Phone) {
+		response.Error(c, errors.New(errors.CodeInvalidParam, "手机号格式不正确"))
+		return
+	}
+
+	if err := h.authService.SendVerifyCode(c.Request.Context(), req.Phone); err != nil {
+		logger.Error("Send verify code failed", logger.Err(err))
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"message": "验证码已发送",
+		"expire":  300, // 5分钟有效期
 	})
 }
