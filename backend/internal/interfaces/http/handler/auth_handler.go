@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strings"
+
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/valueobject"
@@ -72,6 +74,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		response.Error(c, validator.ValidateStruct(&req))
 		return
 	}
+
+	// 去除用户名和密码前后的空格
+	req.Username = strings.TrimSpace(req.Username)
+	req.Password = strings.TrimSpace(req.Password)
 
 	result, user, err := h.authService.Login(c.Request.Context(), valueobject.LoginCredentials{
 		Username: req.Username,
