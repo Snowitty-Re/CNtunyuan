@@ -62,16 +62,16 @@ type DialectRepository interface {
 // DialectQuery 方言查询参数
 type DialectQuery struct {
 	Pagination
-	Keyword   string             `json:"keyword"`
-	Region    string             `json:"region"`
-	Province  string             `json:"province"`
-	City      string             `json:"city"`
-	Type      entity.DialectType `json:"type"`
-	Status    entity.DialectStatus `json:"status"`
-	UploaderID string            `json:"uploader_id"`
-	IsFeatured *bool              `json:"is_featured,omitempty"`
-	SortBy    string             `json:"sort_by"` // play_count, like_count, created_at
-	SortOrder string             `json:"sort_order"`
+	Keyword    string               `json:"keyword"`
+	Region     string               `json:"region"`
+	Province   string               `json:"province"`
+	City       string               `json:"city"`
+	Type       entity.DialectType   `json:"type"`
+	Status     entity.DialectStatus `json:"status"`
+	UploaderID string               `json:"uploader_id"`
+	IsFeatured *bool                `json:"is_featured,omitempty"`
+	SortBy     string               `json:"sort_by"` // play_count, like_count, created_at
+	SortOrder  string               `json:"sort_order"`
 }
 
 // NewDialectQuery 创建默认方言查询

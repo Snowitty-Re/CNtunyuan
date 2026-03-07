@@ -85,6 +85,7 @@ func (r *MissingPersonRepositoryImpl) List(ctx context.Context, query *repositor
 	if err := db.Order(order).
 		Preload("Reporter").
 		Preload("Assignee").
+		Preload("Photos").
 		Offset((query.Page - 1) * query.PageSize).
 		Limit(query.PageSize).
 		Find(&persons).Error; err != nil {
@@ -285,7 +286,7 @@ func (r *MissingPersonRepositoryImpl) IncrementViews(ctx context.Context, id str
 // FindByID 根据ID查找
 func (r *MissingPersonRepositoryImpl) FindByID(ctx context.Context, id string) (*entity.MissingPerson, error) {
 	var person entity.MissingPerson
-	err := r.db.WithContext(ctx).Preload("Reporter").Preload("Assignee").First(&person, "id = ?", id).Error
+	err := r.db.WithContext(ctx).Preload("Reporter").Preload("Assignee").Preload("Photos").First(&person, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("missing person not found")

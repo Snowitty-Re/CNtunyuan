@@ -49,7 +49,7 @@ type DatabaseConfig struct {
 	User            string       `mapstructure:"user"`
 	Password        string       `mapstructure:"password"`
 	Database        string       `mapstructure:"database"`
-	SSLMode         string       `mapstructure:"ssl_mode"`   // PostgreSQL 使用
+	SSLMode         string       `mapstructure:"ssl_mode"` // PostgreSQL 使用
 	Charset         string       `mapstructure:"charset"`  // MySQL 使用，默认 utf8mb4
 	MaxIdleConns    int          `mapstructure:"max_idle_conns"`
 	MaxOpenConns    int          `mapstructure:"max_open_conns"`
@@ -58,8 +58,8 @@ type DatabaseConfig struct {
 
 // IsValid 检查数据库配置是否有效
 func (c *DatabaseConfig) IsValid() bool {
-	return c.Type != "" && c.Host != "" && c.Port > 0 && 
-	       c.User != "" && c.Database != ""
+	return c.Type != "" && c.Host != "" && c.Port > 0 &&
+		c.User != "" && c.Database != ""
 }
 
 // GetDSN 获取数据库连接字符串
@@ -137,13 +137,13 @@ type StorageConfig struct {
 
 // SMSConfig 短信配置
 type SMSConfig struct {
-	Provider          string `mapstructure:"provider"`
-	SignName          string `mapstructure:"sign_name"`
-	AliyunAccessKeyID string `mapstructure:"aliyun_access_key_id"`
+	Provider           string `mapstructure:"provider"`
+	SignName           string `mapstructure:"sign_name"`
+	AliyunAccessKeyID  string `mapstructure:"aliyun_access_key_id"`
 	AliyunAccessSecret string `mapstructure:"aliyun_access_key_secret"`
-	TencentSecretID   string `mapstructure:"tencent_secret_id"`
-	TencentSecretKey  string `mapstructure:"tencent_secret_key"`
-	TencentAppID      string `mapstructure:"tencent_app_id"`
+	TencentSecretID    string `mapstructure:"tencent_secret_id"`
+	TencentSecretKey   string `mapstructure:"tencent_secret_key"`
+	TencentAppID       string `mapstructure:"tencent_app_id"`
 }
 
 // EmailConfig 邮件配置
@@ -159,11 +159,11 @@ type EmailConfig struct {
 
 // MapConfig 地图配置
 type MapConfig struct {
-	Provider    string `mapstructure:"provider"`
-	Key         string `mapstructure:"key"`
-	TencentKey  string `mapstructure:"tencent_key"`
-	AmapKey     string `mapstructure:"amap_key"`
-	BaiduKey    string `mapstructure:"baidu_key"`
+	Provider   string `mapstructure:"provider"`
+	Key        string `mapstructure:"key"`
+	TencentKey string `mapstructure:"tencent_key"`
+	AmapKey    string `mapstructure:"amap_key"`
+	BaiduKey   string `mapstructure:"baidu_key"`
 }
 
 // LogConfig 日志配置
@@ -275,7 +275,7 @@ func setDefaults() {
 	viper.SetDefault("redis.min_idle_conns", 2)
 
 	// JWT defaults
-	viper.SetDefault("jwt.expire_time", 604800) // 7天
+	viper.SetDefault("jwt.expire_time", 604800)   // 7天
 	viper.SetDefault("jwt.refresh_time", 2592000) // 30天
 
 	// Storage defaults

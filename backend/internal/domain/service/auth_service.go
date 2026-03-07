@@ -118,7 +118,6 @@ func (s *AuthService) Login(ctx context.Context, creds valueobject.LoginCredenti
 	}, user, nil
 }
 
-
 // Logout logout
 func (s *AuthService) Logout(ctx context.Context, token string) error {
 	return s.tokenService.RevokeToken(ctx, token)
@@ -156,7 +155,6 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*v
 	}, user, nil
 }
 
-
 // GetCurrentUser get current user info
 func (s *AuthService) GetCurrentUser(ctx context.Context, userID string) (*entity.User, error) {
 	return s.userRepo.FindByID(ctx, userID)
@@ -190,14 +188,14 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 	if err != nil {
 		// User not found, create a temporary user with openid
 		// This allows binding phone later while preserving the openid
-		
+
 		// Get or create default org
 		orgID, orgErr := s.getDefaultOrgID(ctx)
 		if orgErr != nil {
 			logger.Error("Failed to get default org", logger.Err(orgErr))
 			return nil, nil, false, errors.Wrap(orgErr, errors.CodeInternal, "get default org failed")
 		}
-		
+
 		tempUser := &entity.User{
 			Nickname: nickname,
 			Avatar:   avatar,
@@ -212,17 +210,17 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 			logger.Error("Failed to set temp user password", logger.Err(pwdErr))
 			return nil, nil, false, errors.Wrap(pwdErr, errors.CodeInternal, "set password failed")
 		}
-		
+
 		if createErr := s.userRepo.Create(ctx, tempUser); createErr != nil {
 			logger.Error("Failed to create temp user", logger.Err(createErr), logger.String("openid", session.OpenID))
 			return nil, nil, false, errors.Wrap(createErr, errors.CodeInternal, "create temp user failed")
 		}
-		
+
 		logger.Info("Created temp user for wechat login",
 			logger.String("user_id", tempUser.ID),
 			logger.String("openid", session.OpenID),
 		)
-		
+
 		// Return the temp user, frontend still needs to bind phone
 		return nil, tempUser, true, nil
 	}
@@ -281,7 +279,7 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 	// TODO: 验证验证码
 	// 这里应该调用短信服务验证验证码
 	// 为了简化，暂时跳过验证码验证
-	
+
 	// 检查手机号是否已被绑定
 	existingUser, err := s.userRepo.FindByPhone(ctx, phone)
 	if err == nil && existingUser != nil {
@@ -301,10 +299,10 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 		}
 		return nil, errors.ErrUserExists
 	}
-	
+
 	// 创建新用户或更新现有用户
 	var user *entity.User
-	
+
 	if userID != "" {
 		// 更新现有用户
 		user, err = s.userRepo.FindByID(ctx, userID)
@@ -326,23 +324,23 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 		}
 		// 设置默认密码
 		user.SetPassword("123456") // 实际应该发送随机密码到手机
-		
+
 		if err := s.userRepo.Create(ctx, user); err != nil {
 			return nil, errors.Wrap(err, errors.CodeInternal, "create user failed")
 		}
 	}
-	
+
 	// 生成 token
 	tokens, err := s.tokenService.GenerateTokenPair(ctx, user)
 	if err != nil {
 		return nil, errors.Wrap(err, errors.CodeInternal, "token generation failed")
 	}
-	
+
 	logger.Info("Bind phone success",
 		logger.String("user_id", user.ID),
 		logger.String("phone", phone),
 	)
-	
+
 	return &valueobject.LoginResult{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
@@ -355,21 +353,21 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 func (s *AuthService) SendVerifyCode(ctx context.Context, phone string) error {
 	// TODO: 集成短信服务（如阿里云短信、腾讯云短信）
 	// 这里模拟发送验证码
-	
+
 	// 生成6位验证码
 	// code := fmt.Sprintf("%06d", rand.Intn(1000000))
-	
+
 	// 将验证码存入缓存，5分钟有效期
 	// if s.cache != nil {
 	//     key := fmt.Sprintf("verify_code:%s", phone)
 	//     s.cache.Set(ctx, key, code, 5*time.Minute)
 	// }
-	
+
 	// 模拟发送成功
 	logger.Info("Send verify code", logger.String("phone", phone))
-	
+
 	// 实际项目中应该调用短信API
 	// 如: smsClient.Send(phone, fmt.Sprintf("您的验证码是：%s，5分钟内有效。", code))
-	
+
 	return nil
 }

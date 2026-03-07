@@ -20,40 +20,40 @@ const (
 type DialectType string
 
 const (
-	DialectTypePhrase  DialectType = "phrase"  // 短语
-	DialectTypeStory   DialectType = "story"   // 故事
-	DialectTypeSong    DialectType = "song"    // 歌曲
-	DialectTypeDaily   DialectType = "daily"   // 日常用语
-	DialectTypeOther   DialectType = "other"   // 其他
+	DialectTypePhrase DialectType = "phrase" // 短语
+	DialectTypeStory  DialectType = "story"  // 故事
+	DialectTypeSong   DialectType = "song"   // 歌曲
+	DialectTypeDaily  DialectType = "daily"  // 日常用语
+	DialectTypeOther  DialectType = "other"  // 其他
 )
 
 // Dialect 方言语音领域实体
 type Dialect struct {
 	BaseEntity
-	Title       string        `gorm:"size:100;not null" json:"title"`
-	Content     string        `gorm:"type:text" json:"content,omitempty"`
-	Region      string        `gorm:"size:100" json:"region"`
-	Province    string        `gorm:"size:50" json:"province,omitempty"`
-	City        string        `gorm:"size:50" json:"city,omitempty"`
-	DialectType DialectType   `gorm:"size:20;default:'phrase'" json:"dialect_type"`
-	AudioUrl    string        `gorm:"size:255;not null" json:"audio_url"`
-	Duration    int           `json:"duration"` // 秒
-	FileSize    int           `json:"file_size"` // 字节
-	Format      string        `gorm:"size:10" json:"format,omitempty"` // mp3, wav, etc.
-	Status      DialectStatus `gorm:"size:20;default:'active'" json:"status"`
-	IsFeatured  bool          `gorm:"default:false" json:"is_featured"`
-	PlayCount   int           `gorm:"default:0" json:"play_count"`
-	LikeCount   int           `gorm:"default:0" json:"like_count"`
-	CommentCount int          `gorm:"default:0" json:"comment_count"`
-	Tags        string        `gorm:"type:json" json:"tags,omitempty"`
-	Description string        `gorm:"type:text" json:"description,omitempty"`
-	
+	Title        string        `gorm:"size:100;not null" json:"title"`
+	Content      string        `gorm:"type:text" json:"content,omitempty"`
+	Region       string        `gorm:"size:100" json:"region"`
+	Province     string        `gorm:"size:50" json:"province,omitempty"`
+	City         string        `gorm:"size:50" json:"city,omitempty"`
+	DialectType  DialectType   `gorm:"size:20;default:'phrase'" json:"dialect_type"`
+	AudioUrl     string        `gorm:"size:255;not null" json:"audio_url"`
+	Duration     int           `json:"duration"`                        // 秒
+	FileSize     int           `json:"file_size"`                       // 字节
+	Format       string        `gorm:"size:10" json:"format,omitempty"` // mp3, wav, etc.
+	Status       DialectStatus `gorm:"size:20;default:'active'" json:"status"`
+	IsFeatured   bool          `gorm:"default:false" json:"is_featured"`
+	PlayCount    int           `gorm:"default:0" json:"play_count"`
+	LikeCount    int           `gorm:"default:0" json:"like_count"`
+	CommentCount int           `gorm:"default:0" json:"comment_count"`
+	Tags         string        `gorm:"type:json" json:"tags,omitempty"`
+	Description  string        `gorm:"type:text" json:"description,omitempty"`
+
 	// 关联
-	UploaderID  string         `gorm:"type:uuid;not null;index" json:"uploader_id"`
-	OrgID       string         `gorm:"type:uuid;not null;index" json:"org_id"`
-	
-	Uploader    *User          `gorm:"foreignKey:UploaderID" json:"uploader,omitempty"`
-	Org         *Organization  `gorm:"foreignKey:OrgID" json:"org,omitempty"`
+	UploaderID string `gorm:"type:uuid;not null;index" json:"uploader_id"`
+	OrgID      string `gorm:"type:uuid;not null;index" json:"org_id"`
+
+	Uploader *User         `gorm:"foreignKey:UploaderID" json:"uploader,omitempty"`
+	Org      *Organization `gorm:"foreignKey:OrgID" json:"org,omitempty"`
 }
 
 // TableName 表名
@@ -140,14 +140,14 @@ func (d *Dialect) Reject() {
 // DialectComment 方言评论
 type DialectComment struct {
 	BaseEntity
-	DialectID   string `gorm:"type:uuid;not null;index" json:"dialect_id"`
-	UserID      string `gorm:"type:uuid;not null" json:"user_id"`
-	Content     string `gorm:"type:text;not null" json:"content"`
-	ParentID    *string `gorm:"type:uuid;index" json:"parent_id,omitempty"`
-	ReplyCount  int    `gorm:"default:0" json:"reply_count"`
-	LikeCount   int    `gorm:"default:0" json:"like_count"`
-	
-	User        *User   `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	DialectID  string  `gorm:"type:uuid;not null;index" json:"dialect_id"`
+	UserID     string  `gorm:"type:uuid;not null" json:"user_id"`
+	Content    string  `gorm:"type:text;not null" json:"content"`
+	ParentID   *string `gorm:"type:uuid;index" json:"parent_id,omitempty"`
+	ReplyCount int     `gorm:"default:0" json:"reply_count"`
+	LikeCount  int     `gorm:"default:0" json:"like_count"`
+
+	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
 // TableName 表名
@@ -186,14 +186,14 @@ func (DialectPlayLog) TableName() string {
 
 // DialectStats 方言统计
 type DialectStats struct {
-	Total          int64 `json:"total"`
-	Active         int64 `json:"active"`
-	Pending        int64 `json:"pending"`
-	Featured       int64 `json:"featured"`
-	TotalPlays     int64 `json:"total_plays"`
-	TotalLikes     int64 `json:"total_likes"`
-	TotalComments  int64 `json:"total_comments"`
-	TodayUploads   int64 `json:"today_uploads"`
+	Total           int64 `json:"total"`
+	Active          int64 `json:"active"`
+	Pending         int64 `json:"pending"`
+	Featured        int64 `json:"featured"`
+	TotalPlays      int64 `json:"total_plays"`
+	TotalLikes      int64 `json:"total_likes"`
+	TotalComments   int64 `json:"total_comments"`
+	TodayUploads    int64 `json:"today_uploads"`
 	ThisWeekUploads int64 `json:"this_week_uploads"`
 }
 

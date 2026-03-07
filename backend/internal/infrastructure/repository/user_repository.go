@@ -120,7 +120,7 @@ func (r *UserRepositoryImpl) List(ctx context.Context, query *repository.UserQue
 
 	// 关键词搜索
 	if query.Keyword != "" {
-		db = db.Where("nickname LIKE ? OR phone LIKE ? OR email LIKE ?", 
+		db = db.Where("nickname LIKE ? OR phone LIKE ? OR email LIKE ?",
 			"%"+query.Keyword+"%", "%"+query.Keyword+"%", "%"+query.Keyword+"%")
 	}
 

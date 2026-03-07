@@ -32,11 +32,11 @@ type UserFullProfile struct {
 
 // UserStats 用户统计
 type UserStats struct {
-	TotalCases    int64 `json:"total_cases"`
-	ActiveCases   int64 `json:"active_cases"`
+	TotalCases     int64 `json:"total_cases"`
+	ActiveCases    int64 `json:"active_cases"`
 	CompletedCases int64 `json:"completed_cases"`
-	TotalTasks    int64 `json:"total_tasks"`
-	PendingTasks  int64 `json:"pending_tasks"`
+	TotalTasks     int64 `json:"total_tasks"`
+	PendingTasks   int64 `json:"pending_tasks"`
 }
 
 // LoginCredentials 登录凭证

@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	ErrTaskNotFound    = errors.New("task not found")
+	ErrTaskNotFound      = errors.New("task not found")
 	ErrTaskInvalidStatus = errors.New("invalid status transition")
-	ErrAlreadyAssigned = errors.New("task already assigned")
+	ErrAlreadyAssigned   = errors.New("task already assigned")
 )
 
 // TaskAppService 任务应用服务

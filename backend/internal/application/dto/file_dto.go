@@ -39,16 +39,16 @@ type FileListResponse = PageResult[FileResponse]
 
 // FileStatsResponse 文件统计响应
 type FileStatsResponse struct {
-	TotalCount   int64 `json:"total_count"`
-	TotalSize    int64 `json:"total_size"`
-	ImageCount   int64 `json:"image_count"`
-	ImageSize    int64 `json:"image_size"`
-	AudioCount   int64 `json:"audio_count"`
-	AudioSize    int64 `json:"audio_size"`
-	VideoCount   int64 `json:"video_count"`
-	VideoSize    int64 `json:"video_size"`
-	DocCount     int64 `json:"doc_count"`
-	DocSize      int64 `json:"doc_size"`
+	TotalCount int64 `json:"total_count"`
+	TotalSize  int64 `json:"total_size"`
+	ImageCount int64 `json:"image_count"`
+	ImageSize  int64 `json:"image_size"`
+	AudioCount int64 `json:"audio_count"`
+	AudioSize  int64 `json:"audio_size"`
+	VideoCount int64 `json:"video_count"`
+	VideoSize  int64 `json:"video_size"`
+	DocCount   int64 `json:"doc_count"`
+	DocSize    int64 `json:"doc_size"`
 }
 
 // BindFileRequest 绑定文件请求

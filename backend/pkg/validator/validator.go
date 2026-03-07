@@ -14,7 +14,7 @@ var validate *validator.Validate
 
 func init() {
 	validate = validator.New()
-	
+
 	// 注册自定义验证规则
 	validate.RegisterValidation("phone", validatePhone)
 	validate.RegisterValidation("idcard", validateIDCard)
@@ -170,13 +170,13 @@ func IsValidUUID(uuid string) bool {
 func SanitizeString(s string) string {
 	// 去除前后空白
 	s = strings.TrimSpace(s)
-	
+
 	// 限制长度
 	if utf8.RuneCountInString(s) > 10000 {
 		runes := []rune(s)
 		s = string(runes[:10000])
 	}
-	
+
 	return s
 }
 
@@ -185,11 +185,11 @@ func TruncateString(s string, maxLen int) string {
 	if maxLen <= 0 {
 		return s
 	}
-	
+
 	runes := []rune(s)
 	if len(runes) <= maxLen {
 		return s
 	}
-	
+
 	return string(runes[:maxLen])
 }

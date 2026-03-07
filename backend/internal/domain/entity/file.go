@@ -28,19 +28,19 @@ const (
 // File 文件领域实体
 type File struct {
 	BaseEntity
-	FileName    string      `gorm:"size:255;not null" json:"file_name"`
-	OriginalName string     `gorm:"size:255;not null" json:"original_name"`
-	FileType    FileType    `gorm:"size:20;not null" json:"file_type"`
-	MimeType    string      `gorm:"size:100" json:"mime_type"`
-	Size        int64       `json:"size"`
-	Path        string      `gorm:"size:500;not null" json:"path"`
-	URL         string      `gorm:"size:500" json:"url"`
-	StorageType StorageType `gorm:"size:20;not null" json:"storage_type"`
-	UploaderID  string      `gorm:"type:uuid;index" json:"uploader_id"`
-	EntityType  string      `gorm:"size:50;index" json:"entity_type"` // 关联实体类型
-	EntityID    string      `gorm:"type:uuid;index" json:"entity_id"`   // 关联实体ID
-	Description string      `gorm:"type:text" json:"description"`
-	IsDeleted   bool        `gorm:"default:false" json:"is_deleted"`
+	FileName     string      `gorm:"size:255;not null" json:"file_name"`
+	OriginalName string      `gorm:"size:255;not null" json:"original_name"`
+	FileType     FileType    `gorm:"size:20;not null" json:"file_type"`
+	MimeType     string      `gorm:"size:100" json:"mime_type"`
+	Size         int64       `json:"size"`
+	Path         string      `gorm:"size:500;not null" json:"path"`
+	URL          string      `gorm:"size:500" json:"url"`
+	StorageType  StorageType `gorm:"size:20;not null" json:"storage_type"`
+	UploaderID   string      `gorm:"type:uuid;index" json:"uploader_id"`
+	EntityType   string      `gorm:"size:50;index" json:"entity_type"` // 关联实体类型
+	EntityID     string      `gorm:"type:uuid;index" json:"entity_id"` // 关联实体ID
+	Description  string      `gorm:"type:text" json:"description"`
+	IsDeleted    bool        `gorm:"default:false" json:"is_deleted"`
 }
 
 // TableName 表名
@@ -94,16 +94,16 @@ func (f *File) MarkAsDeleted() {
 
 // FileStats 文件统计
 type FileStats struct {
-	TotalCount   int64 `json:"total_count"`
-	TotalSize    int64 `json:"total_size"`
-	ImageCount   int64 `json:"image_count"`
-	ImageSize    int64 `json:"image_size"`
-	AudioCount   int64 `json:"audio_count"`
-	AudioSize    int64 `json:"audio_size"`
-	VideoCount   int64 `json:"video_count"`
-	VideoSize    int64 `json:"video_size"`
-	DocCount     int64 `json:"doc_count"`
-	DocSize      int64 `json:"doc_size"`
+	TotalCount int64 `json:"total_count"`
+	TotalSize  int64 `json:"total_size"`
+	ImageCount int64 `json:"image_count"`
+	ImageSize  int64 `json:"image_size"`
+	AudioCount int64 `json:"audio_count"`
+	AudioSize  int64 `json:"audio_size"`
+	VideoCount int64 `json:"video_count"`
+	VideoSize  int64 `json:"video_size"`
+	DocCount   int64 `json:"doc_count"`
+	DocSize    int64 `json:"doc_size"`
 }
 
 // DetectFileType 检测文件类型

@@ -53,14 +53,14 @@ export default function ProfilePage() {
   const handleChangePassword = async (values: any) => {
     setLoading(true);
     try {
-      await http.post('/auth/change-password', {
+      await http.put('/profile/password', {
         old_password: values.old_password,
         new_password: values.new_password,
       });
-      message.success('密码修改成功，请重新登录');
+      message.success('密码修改成功');
       passwordForm.resetFields();
-    } catch (error) {
-      message.error('密码修改失败');
+    } catch (error: any) {
+      message.error(error?.message || '密码修改失败');
     } finally {
       setLoading(false);
     }

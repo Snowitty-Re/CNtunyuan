@@ -34,7 +34,7 @@ export default function LoginPage() {
   const handlePasswordLogin = async (values: LoginForm) => {
     setLoading(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1';
       const response: any = await axios.post(`${apiUrl}/auth/admin-login`, {
         username: values.username,
         password: values.password,

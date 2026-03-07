@@ -17,11 +17,11 @@ const (
 
 // CustomClaims 自定义JWT Claims
 type CustomClaims struct {
-	UserID   string `json:"user_id"`
-	OpenID   string `json:"open_id"`
-	UnionID  string `json:"union_id"`
-	Role     string `json:"role"`
-	OrgID    string `json:"org_id"`
+	UserID    string `json:"user_id"`
+	OpenID    string `json:"open_id"`
+	UnionID   string `json:"union_id"`
+	Role      string `json:"role"`
+	OrgID     string `json:"org_id"`
 	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
 }

@@ -110,7 +110,7 @@ func (r *OrganizationRepositoryImpl) FindPath(ctx context.Context, orgID string)
 			break
 		}
 		path = append([]entity.Organization{org}, path...)
-		
+
 		if org.ParentID == nil {
 			break
 		}

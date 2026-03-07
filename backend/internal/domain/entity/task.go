@@ -45,46 +45,46 @@ const (
 // Task 任务领域实体
 type Task struct {
 	BaseEntity
-	Title        string        `gorm:"size:200;not null" json:"title"`
-	Description  string        `gorm:"type:text" json:"description,omitempty"`
-	Type         TaskType      `gorm:"size:20;not null" json:"type"`
-	Priority     TaskPriority  `gorm:"size:20;default:'medium'" json:"priority"`
-	Status       TaskStatus    `gorm:"size:20;default:'draft'" json:"status"`
-	
+	Title       string       `gorm:"size:200;not null" json:"title"`
+	Description string       `gorm:"type:text" json:"description,omitempty"`
+	Type        TaskType     `gorm:"size:20;not null" json:"type"`
+	Priority    TaskPriority `gorm:"size:20;default:'medium'" json:"priority"`
+	Status      TaskStatus   `gorm:"size:20;default:'draft'" json:"status"`
+
 	// 时间
-	Deadline     *time.Time    `json:"deadline,omitempty"`
-	StartedAt    *time.Time    `json:"started_at,omitempty"`
-	CompletedAt  *time.Time    `json:"completed_at,omitempty"`
-	
+	Deadline    *time.Time `json:"deadline,omitempty"`
+	StartedAt   *time.Time `json:"started_at,omitempty"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+
 	// 关联
-	CreatorID    string        `gorm:"type:uuid;not null;index" json:"creator_id"`
-	AssigneeID   *string       `gorm:"type:uuid;index" json:"assignee_id,omitempty"`
-	OrgID        string        `gorm:"type:uuid;not null;index" json:"org_id"`
-	MissingPersonID *string    `gorm:"type:uuid;index" json:"missing_person_id,omitempty"`
-	
+	CreatorID       string  `gorm:"type:uuid;not null;index" json:"creator_id"`
+	AssigneeID      *string `gorm:"type:uuid;index" json:"assignee_id,omitempty"`
+	OrgID           string  `gorm:"type:uuid;not null;index" json:"org_id"`
+	MissingPersonID *string `gorm:"type:uuid;index" json:"missing_person_id,omitempty"`
+
 	// 地点
-	Location     string        `gorm:"size:255" json:"location,omitempty"`
-	Province     string        `gorm:"size:50" json:"province,omitempty"`
-	City         string        `gorm:"size:50" json:"city,omitempty"`
-	District     string        `gorm:"size:50" json:"district,omitempty"`
-	Address      string        `gorm:"size:255" json:"address,omitempty"`
-	Lat          float64       `json:"lat,omitempty"`
-	Lng          float64       `json:"lng,omitempty"`
-	
+	Location string  `gorm:"size:255" json:"location,omitempty"`
+	Province string  `gorm:"size:50" json:"province,omitempty"`
+	City     string  `gorm:"size:50" json:"city,omitempty"`
+	District string  `gorm:"size:50" json:"district,omitempty"`
+	Address  string  `gorm:"size:255" json:"address,omitempty"`
+	Lat      float64 `json:"lat,omitempty"`
+	Lng      float64 `json:"lng,omitempty"`
+
 	// 结果
-	Result       string        `gorm:"type:text" json:"result,omitempty"`
-	ResultPhotos string        `gorm:"type:json" json:"result_photos,omitempty"`
-	Feedback     string        `gorm:"type:text" json:"feedback,omitempty"`
-	
+	Result       string `gorm:"type:text" json:"result,omitempty"`
+	ResultPhotos string `gorm:"type:json" json:"result_photos,omitempty"`
+	Feedback     string `gorm:"type:text" json:"feedback,omitempty"`
+
 	// 统计
-	Progress     int           `gorm:"default:0" json:"progress"`
-	ViewCount    int           `gorm:"default:0" json:"view_count"`
-	
+	Progress  int `gorm:"default:0" json:"progress"`
+	ViewCount int `gorm:"default:0" json:"view_count"`
+
 	// 关联实体
-	Creator      *User            `gorm:"foreignKey:CreatorID" json:"creator,omitempty"`
-	Assignee     *User            `gorm:"foreignKey:AssigneeID" json:"assignee,omitempty"`
-	Org          *Organization    `gorm:"foreignKey:OrgID" json:"org,omitempty"`
-	MissingPerson *MissingPerson  `gorm:"foreignKey:MissingPersonID" json:"missing_person,omitempty"`
+	Creator       *User          `gorm:"foreignKey:CreatorID" json:"creator,omitempty"`
+	Assignee      *User          `gorm:"foreignKey:AssigneeID" json:"assignee,omitempty"`
+	Org           *Organization  `gorm:"foreignKey:OrgID" json:"org,omitempty"`
+	MissingPerson *MissingPerson `gorm:"foreignKey:MissingPersonID" json:"missing_person,omitempty"`
 }
 
 // TableName 表名
@@ -108,9 +108,9 @@ func (t *Task) Validate() error {
 
 // IsActive 是否活跃
 func (t *Task) IsActive() bool {
-	return t.Status != TaskStatusCompleted && 
-	       t.Status != TaskStatusCancelled &&
-	       t.Status != TaskStatusOverdue
+	return t.Status != TaskStatusCompleted &&
+		t.Status != TaskStatusCancelled &&
+		t.Status != TaskStatusOverdue
 }
 
 // CanAssign 是否可以分配
@@ -214,12 +214,12 @@ func (t *Task) GetDuration() time.Duration {
 	if t.StartedAt != nil {
 		start = *t.StartedAt
 	}
-	
+
 	end := time.Now()
 	if t.CompletedAt != nil {
 		end = *t.CompletedAt
 	}
-	
+
 	return end.Sub(start)
 }
 
@@ -243,14 +243,14 @@ func (TaskAttachment) TableName() string {
 // TaskLog 任务日志
 type TaskLog struct {
 	BaseEntity
-	TaskID      string    `gorm:"type:uuid;not null;index" json:"task_id"`
-	UserID      string    `gorm:"type:uuid;not null" json:"user_id"`
-	Action      string    `gorm:"size:50;not null" json:"action"`
-	OldStatus   string    `gorm:"size:20" json:"old_status,omitempty"`
-	NewStatus   string    `gorm:"size:20" json:"new_status,omitempty"`
-	Content     string    `gorm:"type:text" json:"content,omitempty"`
-	
-	User        *User     `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	TaskID    string `gorm:"type:uuid;not null;index" json:"task_id"`
+	UserID    string `gorm:"type:uuid;not null" json:"user_id"`
+	Action    string `gorm:"size:50;not null" json:"action"`
+	OldStatus string `gorm:"size:20" json:"old_status,omitempty"`
+	NewStatus string `gorm:"size:20" json:"new_status,omitempty"`
+	Content   string `gorm:"type:text" json:"content,omitempty"`
+
+	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
 // TableName 表名
@@ -261,12 +261,12 @@ func (TaskLog) TableName() string {
 // TaskComment 任务评论
 type TaskComment struct {
 	BaseEntity
-	TaskID      string    `gorm:"type:uuid;not null;index" json:"task_id"`
-	UserID      string    `gorm:"type:uuid;not null" json:"user_id"`
-	Content     string    `gorm:"type:text;not null" json:"content"`
-	ParentID    *string   `gorm:"type:uuid;index" json:"parent_id,omitempty"`
-	
-	User        *User     `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	TaskID   string  `gorm:"type:uuid;not null;index" json:"task_id"`
+	UserID   string  `gorm:"type:uuid;not null" json:"user_id"`
+	Content  string  `gorm:"type:text;not null" json:"content"`
+	ParentID *string `gorm:"type:uuid;index" json:"parent_id,omitempty"`
+
+	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
 // TableName 表名
@@ -276,17 +276,17 @@ func (TaskComment) TableName() string {
 
 // TaskStats 任务统计
 type TaskStats struct {
-	Total        int64 `json:"total"`
-	Draft        int64 `json:"draft"`
-	Pending      int64 `json:"pending"`
-	Assigned     int64 `json:"assigned"`
-	Processing   int64 `json:"processing"`
-	Completed    int64 `json:"completed"`
-	Cancelled    int64 `json:"cancelled"`
-	Overdue      int64 `json:"overdue"`
-	MyTasks      int64 `json:"my_tasks"`
-	MyPending    int64 `json:"my_pending"`
-	MyCompleted  int64 `json:"my_completed"`
+	Total       int64 `json:"total"`
+	Draft       int64 `json:"draft"`
+	Pending     int64 `json:"pending"`
+	Assigned    int64 `json:"assigned"`
+	Processing  int64 `json:"processing"`
+	Completed   int64 `json:"completed"`
+	Cancelled   int64 `json:"cancelled"`
+	Overdue     int64 `json:"overdue"`
+	MyTasks     int64 `json:"my_tasks"`
+	MyPending   int64 `json:"my_pending"`
+	MyCompleted int64 `json:"my_completed"`
 }
 
 // isValidTaskType 验证任务类型
@@ -305,12 +305,12 @@ func NewTask(title string, taskType TaskType, creatorID, orgID string) (*Task, e
 		BaseEntity: BaseEntity{
 			ID: uuid.New().String(),
 		},
-		Title:    title,
-		Type:     taskType,
-		Status:   TaskStatusDraft,
-		Priority: TaskPriorityMedium,
+		Title:     title,
+		Type:      taskType,
+		Status:    TaskStatusDraft,
+		Priority:  TaskPriorityMedium,
 		CreatorID: creatorID,
-		OrgID:    orgID,
+		OrgID:     orgID,
 	}
 
 	if err := task.Validate(); err != nil {

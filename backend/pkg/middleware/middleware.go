@@ -40,15 +40,15 @@ func TraceIDMiddleware() gin.HandlerFunc {
 		if traceID == "" {
 			traceID = uuid.New().String()
 		}
-		
+
 		// 设置到上下文
 		ctx := context.WithValue(c.Request.Context(), TraceIDKey{}, traceID)
 		c.Request = c.Request.WithContext(ctx)
-		
+
 		// 设置到响应头
 		c.Header("X-Request-ID", traceID)
 		c.Set("trace_id", traceID)
-		
+
 		c.Next()
 	}
 }
@@ -59,31 +59,31 @@ func LoggingMiddleware() gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
-		
+
 		// 读取请求体（用于日志记录）
 		var bodyBytes []byte
 		if c.Request.Body != nil && c.Request.Method != http.MethodGet {
 			bodyBytes, _ = io.ReadAll(c.Request.Body)
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}
-		
+
 		c.Next()
-		
+
 		// 计算延迟
 		latency := time.Since(start)
-		
+
 		// 获取状态码
 		status := c.Writer.Status()
-		
+
 		// 获取错误
 		var err error
 		if len(c.Errors) > 0 {
 			err = c.Errors.Last()
 		}
-		
+
 		// 获取 trace_id
 		traceID, _ := c.Get("trace_id")
-		
+
 		// 构建日志字段
 		fields := []zap.Field{
 			zap.String("trace_id", traceID.(string)),
@@ -96,19 +96,19 @@ func LoggingMiddleware() gin.HandlerFunc {
 			zap.String("user_agent", c.Request.UserAgent()),
 			zap.String("referer", c.Request.Referer()),
 		}
-		
+
 		// 添加请求体（非敏感接口）
 		if len(bodyBytes) > 0 && len(bodyBytes) < 1024 {
 			if !isSensitivePath(path) {
 				fields = append(fields, zap.String("body", string(bodyBytes)))
 			}
 		}
-		
+
 		// 添加错误信息
 		if err != nil {
 			fields = append(fields, zap.Error(err))
 		}
-		
+
 		// 根据状态码记录日志级别
 		if status >= 500 {
 			logger.Error("HTTP Request", fields...)
@@ -152,14 +152,14 @@ func RecoveryMiddleware() gin.HandlerFunc {
 			if r := recover(); r != nil {
 				// 获取 trace_id
 				traceID, _ := c.Get("trace_id")
-				
+
 				// 记录错误日志
 				logger.Error("Panic recovered",
 					zap.String("trace_id", traceID.(string)),
 					zap.Any("panic", r),
 					zap.Stack("stack"),
 				)
-				
+
 				// 返回 500 错误
 				response.InternalServerError(c, fmt.Sprintf("internal server error (trace_id: %s)", traceID))
 				c.Abort()
@@ -176,19 +176,19 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")
-		
+
 		// CSP
 		c.Header("Content-Security-Policy", "default-src 'self'")
-		
+
 		// HSTS (仅在 HTTPS 环境下启用)
 		// c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-		
+
 		//  Referrer Policy
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		
+
 		// Permissions Policy
 		c.Header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-		
+
 		c.Next()
 	}
 }
@@ -222,7 +222,7 @@ func (rl *RateLimiter) getLimiter(key string) *rate.Limiter {
 // RateLimitMiddleware IP 限流中间件
 func RateLimitMiddleware(rps float64, burst int) gin.HandlerFunc {
 	limiter := NewRateLimiter(rps, burst)
-	
+
 	return func(c *gin.Context) {
 		key := c.ClientIP()
 		if !limiter.getLimiter(key).Allow() {
@@ -237,7 +237,7 @@ func RateLimitMiddleware(rps float64, burst int) gin.HandlerFunc {
 // UserRateLimitMiddleware 用户限流中间件（需要登录）
 func UserRateLimitMiddleware(rps float64, burst int) gin.HandlerFunc {
 	limiter := NewRateLimiter(rps, burst)
-	
+
 	return func(c *gin.Context) {
 		// 获取用户 ID
 		userID, exists := c.Get("user_id")
@@ -245,7 +245,7 @@ func UserRateLimitMiddleware(rps float64, burst int) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		
+
 		key := fmt.Sprintf("user:%v", userID)
 		if !limiter.getLimiter(key).Allow() {
 			response.TooManyRequests(c, "请求过于频繁，请稍后再试")
@@ -260,13 +260,13 @@ func UserRateLimitMiddleware(rps float64, burst int) gin.HandlerFunc {
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-		
+
 		// 允许的源（生产环境应该配置具体域名）
 		allowedOrigins := []string{
 			"http://localhost:3000",
 			"http://localhost:5173",
 		}
-		
+
 		allowed := false
 		for _, o := range allowedOrigins {
 			if origin == o {
@@ -274,21 +274,21 @@ func CORSMiddleware() gin.HandlerFunc {
 				break
 			}
 		}
-		
+
 		if allowed {
 			c.Header("Access-Control-Allow-Origin", origin)
 		}
-		
+
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Request-ID")
 		c.Header("Access-Control-Allow-Credentials", "true")
 		c.Header("Access-Control-Max-Age", "86400")
-		
+
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
-		
+
 		c.Next()
 	}
 }
@@ -297,7 +297,7 @@ func CORSMiddleware() gin.HandlerFunc {
 func ErrorHandlerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
-		
+
 		// 处理错误
 		if len(c.Errors) > 0 {
 			err := c.Errors.Last().Err
@@ -310,7 +310,7 @@ func ErrorHandlerMiddleware() gin.HandlerFunc {
 func RequestSizeMiddleware(maxSize int64) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.ContentLength > maxSize {
-			response.ErrorCodeWithMessage(c, errors.CodeInvalidParam, 
+			response.ErrorCodeWithMessage(c, errors.CodeInvalidParam,
 				fmt.Sprintf("请求体过大，最大允许 %d MB", maxSize/1024/1024))
 			c.Abort()
 			return

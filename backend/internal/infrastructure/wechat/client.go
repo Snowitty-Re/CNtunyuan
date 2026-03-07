@@ -11,8 +11,8 @@ import (
 
 // Client 微信小程序客户端
 type Client struct {
-	appID     string
-	appSecret string
+	appID      string
+	appSecret  string
 	httpClient *http.Client
 }
 

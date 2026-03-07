@@ -62,27 +62,27 @@ func HasRole(userRole Role, requiredRole Role) bool {
 // User 用户领域实体
 type User struct {
 	BaseEntity
-	Nickname     string           `gorm:"size:100;not null" json:"nickname"`
-	Phone        string           `gorm:"size:20;uniqueIndex;not null" json:"phone"`
-	Email        string           `gorm:"size:100;uniqueIndex" json:"email,omitempty"`
-	Password     string           `gorm:"size:255;not null" json:"-"`
-	Role         Role             `gorm:"size:20;not null;default:'volunteer'" json:"role"`
-	Status       UserStatus       `gorm:"size:20;not null;default:'active'" json:"status"`
-	OrgID        string           `gorm:"type:uuid;not null;index" json:"org_id"`
-	Avatar       string           `gorm:"size:255" json:"avatar,omitempty"`
-	LastLoginAt  *time.Time       `json:"last_login_at,omitempty"`
-	LastLoginIP  string           `gorm:"size:50" json:"last_login_ip,omitempty"`
-	RealName     string           `gorm:"size:50" json:"real_name,omitempty"`
-	IDCard       string           `gorm:"size:18" json:"id_card,omitempty"`
-	Gender       string           `gorm:"size:10" json:"gender,omitempty"`
-	Address      string           `gorm:"size:255" json:"address,omitempty"`
-	Emergency    string           `gorm:"size:50" json:"emergency,omitempty"`
-	EmergencyTel string           `gorm:"size:20" json:"emergency_tel,omitempty"`
-	Introduction string           `gorm:"type:text" json:"introduction,omitempty"`
-	WxOpenID     string           `gorm:"column:wx_openid;size:100;uniqueIndex" json:"wx_openid,omitempty"`
-	WxUnionID    string           `gorm:"column:wx_unionid;size:100" json:"wx_unionid,omitempty"`
-	Org          *Organization    `gorm:"foreignKey:OrgID" json:"org,omitempty"`
-	Permissions  []Permission     `gorm:"many2many:user_permissions;" json:"permissions,omitempty"`
+	Nickname     string        `gorm:"size:100;not null" json:"nickname"`
+	Phone        string        `gorm:"size:20;uniqueIndex;not null" json:"phone"`
+	Email        string        `gorm:"size:100;uniqueIndex" json:"email,omitempty"`
+	Password     string        `gorm:"size:255;not null" json:"-"`
+	Role         Role          `gorm:"size:20;not null;default:'volunteer'" json:"role"`
+	Status       UserStatus    `gorm:"size:20;not null;default:'active'" json:"status"`
+	OrgID        string        `gorm:"type:uuid;not null;index" json:"org_id"`
+	Avatar       string        `gorm:"size:255" json:"avatar,omitempty"`
+	LastLoginAt  *time.Time    `json:"last_login_at,omitempty"`
+	LastLoginIP  string        `gorm:"size:50" json:"last_login_ip,omitempty"`
+	RealName     string        `gorm:"size:50" json:"real_name,omitempty"`
+	IDCard       string        `gorm:"size:18" json:"id_card,omitempty"`
+	Gender       string        `gorm:"size:10" json:"gender,omitempty"`
+	Address      string        `gorm:"size:255" json:"address,omitempty"`
+	Emergency    string        `gorm:"size:50" json:"emergency,omitempty"`
+	EmergencyTel string        `gorm:"size:20" json:"emergency_tel,omitempty"`
+	Introduction string        `gorm:"type:text" json:"introduction,omitempty"`
+	WxOpenID     string        `gorm:"column:wx_openid;size:100;uniqueIndex" json:"wx_openid,omitempty"`
+	WxUnionID    string        `gorm:"column:wx_unionid;size:100" json:"wx_unionid,omitempty"`
+	Org          *Organization `gorm:"foreignKey:OrgID" json:"org,omitempty"`
+	Permissions  []Permission  `gorm:"many2many:user_permissions;" json:"permissions,omitempty"`
 }
 
 // TableName 表名

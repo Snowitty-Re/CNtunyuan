@@ -2,6 +2,8 @@ package entity
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,50 +33,52 @@ const (
 // MissingPerson 走失人员领域实体
 type MissingPerson struct {
 	BaseEntity
-	Name         string           `gorm:"size:50;not null" json:"name"`
-	Gender       string           `gorm:"size:10;not null" json:"gender"`
-	BirthDate    *time.Time       `json:"birth_date,omitempty"`
-	Age          int              `json:"age"`
-	Height       int              `json:"height,omitempty"`
-	Weight       int              `json:"weight,omitempty"`
-	Description  string           `gorm:"type:text" json:"description,omitempty"`
-	PhotoUrl     string           `gorm:"size:255" json:"photo_url,omitempty"`
-	
+	CaseNo      string         `gorm:"size:50;uniqueIndex" json:"case_no"`
+	Name        string         `gorm:"size:50;not null" json:"name"`
+	Gender      string         `gorm:"size:10;not null" json:"gender"`
+	BirthDate   *time.Time     `json:"birth_date,omitempty"`
+	Age         int            `json:"age"`
+	Height      int            `json:"height,omitempty"`
+	Weight      int            `json:"weight,omitempty"`
+	Description string         `gorm:"type:text" json:"description,omitempty"`
+	PhotoUrl    string         `gorm:"size:255" json:"photo_url,omitempty"`
+	Photos      []MissingPhoto `gorm:"foreignKey:MissingPersonID" json:"photos,omitempty"`
+
 	// 走失信息
-	MissingTime  time.Time        `json:"missing_time"`
-	Province     string           `gorm:"size:50" json:"province,omitempty"`
-	City         string           `gorm:"size:50" json:"city,omitempty"`
-	District     string           `gorm:"size:50" json:"district,omitempty"`
-	Address      string           `gorm:"size:255" json:"address,omitempty"`
-	Clothes      string           `gorm:"type:text" json:"clothes,omitempty"`
-	Features     string           `gorm:"type:text" json:"features,omitempty"`
-	
+	MissingTime time.Time `json:"missing_time"`
+	Province    string    `gorm:"size:50" json:"province,omitempty"`
+	City        string    `gorm:"size:50" json:"city,omitempty"`
+	District    string    `gorm:"size:50" json:"district,omitempty"`
+	Address     string    `gorm:"size:255" json:"address,omitempty"`
+	Clothes     string    `gorm:"type:text" json:"clothes,omitempty"`
+	Features    string    `gorm:"type:text" json:"features,omitempty"`
+
 	// 联系人信息
-	ContactName  string           `gorm:"size:50" json:"contact_name"`
-	ContactPhone string           `gorm:"size:20" json:"contact_phone"`
-	ContactRel   string           `gorm:"size:20" json:"contact_rel"`
-	AltContact   string           `gorm:"size:20" json:"alt_contact,omitempty"`
-	
+	ContactName  string `gorm:"size:50" json:"contact_name"`
+	ContactPhone string `gorm:"size:20" json:"contact_phone"`
+	ContactRel   string `gorm:"size:20" json:"contact_rel"`
+	AltContact   string `gorm:"size:20" json:"alt_contact,omitempty"`
+
 	// 状态和统计
-	Status       MissingStatus    `gorm:"size:20;not null;default:'missing'" json:"status"`
-	Urgency      UrgencyLevel     `gorm:"size:20;default:'medium'" json:"urgency"`
-	Views        int              `gorm:"default:0" json:"views"`
-	ShareCount   int              `gorm:"default:0" json:"share_count"`
-	
+	Status     MissingStatus `gorm:"size:20;not null;default:'missing'" json:"status"`
+	Urgency    UrgencyLevel  `gorm:"size:20;default:'medium'" json:"urgency"`
+	Views      int           `gorm:"default:0" json:"views"`
+	ShareCount int           `gorm:"default:0" json:"share_count"`
+
 	// 关联
-	ReporterID   string           `gorm:"type:uuid;not null;index" json:"reporter_id"`
-	OrgID        string           `gorm:"type:uuid;not null;index" json:"org_id"`
-	AssignedTo   *string          `gorm:"type:uuid;index" json:"assigned_to,omitempty"`
-	
+	ReporterID string  `gorm:"type:uuid;not null;index" json:"reporter_id"`
+	OrgID      string  `gorm:"type:uuid;not null;index" json:"org_id"`
+	AssignedTo *string `gorm:"type:uuid;index" json:"assigned_to,omitempty"`
+
 	// 找到信息
-	FoundTime    *time.Time       `json:"found_time,omitempty"`
-	FoundLocation string          `gorm:"size:255" json:"found_location,omitempty"`
-	FoundNote    string           `gorm:"type:text" json:"found_note,omitempty"`
-	
-	Reporter     *User            `gorm:"foreignKey:ReporterID" json:"reporter,omitempty"`
-	Org          *Organization    `gorm:"foreignKey:OrgID" json:"org,omitempty"`
-	Assignee     *User            `gorm:"foreignKey:AssignedTo" json:"assignee,omitempty"`
-	Tracks       []MissingPersonTrack `json:"tracks,omitempty"`
+	FoundTime     *time.Time `json:"found_time,omitempty"`
+	FoundLocation string     `gorm:"size:255" json:"found_location,omitempty"`
+	FoundNote     string     `gorm:"type:text" json:"found_note,omitempty"`
+
+	Reporter *User                `gorm:"foreignKey:ReporterID" json:"reporter,omitempty"`
+	Org      *Organization        `gorm:"foreignKey:OrgID" json:"org,omitempty"`
+	Assignee *User                `gorm:"foreignKey:AssignedTo" json:"assignee,omitempty"`
+	Tracks   []MissingPersonTrack `json:"tracks,omitempty"`
 }
 
 // TableName 表名
@@ -198,8 +202,8 @@ type MissingPersonTrack struct {
 	Lng             float64   `json:"lng,omitempty"`
 	Status          string    `gorm:"size:20;default:'pending'" json:"status"`
 	IsKeyPoint      bool      `gorm:"default:false" json:"is_key_point"`
-	
-	Reporter        *User           `gorm:"foreignKey:ReporterID" json:"reporter,omitempty"`
+
+	Reporter *User `gorm:"foreignKey:ReporterID" json:"reporter,omitempty"`
 }
 
 // TableName 表名
@@ -207,17 +211,40 @@ func (MissingPersonTrack) TableName() string {
 	return "ty_missing_person_tracks"
 }
 
+// MissingPhoto 走失人员照片
+type MissingPhoto struct {
+	BaseEntity
+	MissingPersonID string `gorm:"type:uuid;not null;index" json:"missing_person_id"`
+	URL             string `gorm:"size:500;not null" json:"url"`
+	Type            string `gorm:"size:20;default:'normal'" json:"type"` // normal, simulated, feature
+	Description     string `gorm:"type:text" json:"description,omitempty"`
+	IsPrimary       bool   `gorm:"default:false" json:"is_primary"`
+}
+
+// TableName 表名
+func (MissingPhoto) TableName() string {
+	return "ty_missing_photos"
+}
+
 // MissingPersonStats 走失人员统计
 type MissingPersonStats struct {
-	Total           int64 `json:"total"`
-	Missing         int64 `json:"missing"`
-	Searching       int64 `json:"searching"`
-	Found           int64 `json:"found"`
-	Reunited        int64 `json:"reunited"`
-	Closed          int64 `json:"closed"`
-	TodayNew        int64 `json:"today_new"`
-	ThisWeekNew     int64 `json:"this_week_new"`
-	ThisMonthNew    int64 `json:"this_month_new"`
+	Total        int64 `json:"total"`
+	Missing      int64 `json:"missing"`
+	Searching    int64 `json:"searching"`
+	Found        int64 `json:"found"`
+	Reunited     int64 `json:"reunited"`
+	Closed       int64 `json:"closed"`
+	TodayNew     int64 `json:"today_new"`
+	ThisWeekNew  int64 `json:"this_week_new"`
+	ThisMonthNew int64 `json:"this_month_new"`
+}
+
+// generateCaseNo 生成案件编号 (格式: CASE-YYYYMMDD-XXXX)
+func generateCaseNo() string {
+	now := time.Now()
+	dateStr := now.Format("20060102")
+	randomStr := uuid.New().String()[:4]
+	return fmt.Sprintf("CASE-%s-%s", dateStr, strings.ToUpper(randomStr))
 }
 
 // NewMissingPerson 创建新案件
@@ -226,6 +253,7 @@ func NewMissingPerson(name, gender, contactName, contactPhone, reporterID, orgID
 		BaseEntity: BaseEntity{
 			ID: uuid.New().String(),
 		},
+		CaseNo:       generateCaseNo(),
 		Name:         name,
 		Gender:       gender,
 		ContactName:  contactName,

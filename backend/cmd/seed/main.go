@@ -125,19 +125,19 @@ var (
 	cities    = []string{"北京市", "上海市", "广州市", "深圳市", "杭州市", "南京市", "济南市", "郑州市", "成都市", "武汉市", "长沙市"}
 	districts = []string{"朝阳区", "海淀区", "浦东新区", "天河区", "南山区", "西湖区", "鼓楼区", "历下区", "金水区", "锦江区"}
 
-	orgNames    = []string{"志愿者协会", "寻亲服务中心", "救助站", "公益组织", "救援队", "社区服务中心", "民政服务中心"}
-	firstNames  = []string{"伟", "芳", "娜", "敏", "静", "强", "磊", "洋", "艳", "杰", "勇", "军", "平", "刚", "桂"}
-	lastNames   = []string{"张", "王", "李", "刘", "陈", "杨", "黄", "赵", "周", "吴", "徐", "孙", "马", "朱", "胡"}
-	genders     = []string{"男", "女"}
-	roles       = []string{"volunteer", "manager", "admin"}
-	statuses    = []string{"active", "inactive"}
-	caseStatuses = []string{"missing", "searching", "found", "reunited"}
-	urgencies      = []string{"low", "medium", "high", "critical"}  // 用于案件
-	taskPriorities = []string{"low", "medium", "high", "urgent"}    // 用于任务
-	taskTypes   = []string{"search", "verify", "assist", "follow", "interview"}
-	taskStatuses = []string{"draft", "pending", "assigned", "processing", "completed"}
-	dialectTypes = []string{"phrase", "story", "song", "daily"}
-	regions     = []string{"北京话", "上海话", "粤语", "四川话", "河南话", "山东话", "东北话", "湖南话", "湖北话", "江浙话"}
+	orgNames       = []string{"志愿者协会", "寻亲服务中心", "救助站", "公益组织", "救援队", "社区服务中心", "民政服务中心"}
+	firstNames     = []string{"伟", "芳", "娜", "敏", "静", "强", "磊", "洋", "艳", "杰", "勇", "军", "平", "刚", "桂"}
+	lastNames      = []string{"张", "王", "李", "刘", "陈", "杨", "黄", "赵", "周", "吴", "徐", "孙", "马", "朱", "胡"}
+	genders        = []string{"男", "女"}
+	roles          = []string{"volunteer", "manager", "admin"}
+	statuses       = []string{"active", "inactive"}
+	caseStatuses   = []string{"missing", "searching", "found", "reunited"}
+	urgencies      = []string{"low", "medium", "high", "critical"} // 用于案件
+	taskPriorities = []string{"low", "medium", "high", "urgent"}   // 用于任务
+	taskTypes      = []string{"search", "verify", "assist", "follow", "interview"}
+	taskStatuses   = []string{"draft", "pending", "assigned", "processing", "completed"}
+	dialectTypes   = []string{"phrase", "story", "song", "daily"}
+	regions        = []string{"北京话", "上海话", "粤语", "四川话", "河南话", "山东话", "东北话", "湖南话", "湖北话", "江浙话"}
 )
 
 // randomChoice 随机选择一个元素
@@ -174,7 +174,7 @@ func isDuplicateError(err error) bool {
 
 // contains 检查字符串是否包含子串
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) > 0 && 
+	return len(s) >= len(substr) && (s == substr || len(substr) > 0 &&
 		(len(s) > 0 && containsImpl(s, substr)))
 }
 
@@ -237,7 +237,7 @@ func importOrganizations(db *gorm.DB, count int) error {
 		if err := db.Where("code = ?", code).First(&existing).Error; err == nil {
 			continue // 已存在，跳过
 		}
-		
+
 		org := &entity.Organization{
 			BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
 			Name:       fmt.Sprintf("%s%s", provinces[i], orgNames[0]),
@@ -270,7 +270,7 @@ func importOrganizations(db *gorm.DB, count int) error {
 			if err := db.Where("code = ?", code).First(&existing).Error; err == nil {
 				continue // 已存在，跳过
 			}
-			
+
 			cityIndex := (i*3 + j) % len(cities)
 			org := &entity.Organization{
 				BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
@@ -342,13 +342,13 @@ func importUsers(db *gorm.DB, count int) error {
 	created := 0
 	for i := 0; i < count*3 && created < count; i++ { // 最多尝试3倍次数
 		phone := randomPhone()
-		
+
 		// 检查手机号是否已存在
 		var existing entity.User
 		if err := db.Where("phone = ?", phone).First(&existing).Error; err == nil {
 			continue // 已存在，跳过
 		}
-		
+
 		role := entity.RoleVolunteer
 		if created < 5 {
 			role = entity.RoleAdmin
@@ -479,25 +479,25 @@ func importDialects(db *gorm.DB, count int) error {
 
 	for i := 0; i < count; i++ {
 		dialect := &entity.Dialect{
-			BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
-			Title:      fmt.Sprintf("%s-%d", titles[rand.Intn(len(titles))], i+1),
-			Content:    contents[rand.Intn(len(contents))],
-			Region:     randomChoice(regions),
-			Province:   randomChoice(provinces),
-			City:       randomChoice(cities),
+			BaseEntity:  entity.BaseEntity{ID: uuid.New().String()},
+			Title:       fmt.Sprintf("%s-%d", titles[rand.Intn(len(titles))], i+1),
+			Content:     contents[rand.Intn(len(contents))],
+			Region:      randomChoice(regions),
+			Province:    randomChoice(provinces),
+			City:        randomChoice(cities),
 			DialectType: entity.DialectType(randomChoice(dialectTypes)),
-			AudioUrl:   fmt.Sprintf("https://example.com/audio%d.mp3", i+1),
-			Duration:   10 + rand.Intn(280),
-			FileSize:   100000 + rand.Intn(900000),
-			Format:     "mp3",
-			Status:     entity.DialectStatusActive,
-			IsFeatured: rand.Intn(10) == 0, // 10% 概率设为精选
-			PlayCount:  rand.Intn(1000),
-			LikeCount:  rand.Intn(500),
-			Tags:       `["方言", "寻亲", "语音"]`,
+			AudioUrl:    fmt.Sprintf("https://example.com/audio%d.mp3", i+1),
+			Duration:    10 + rand.Intn(280),
+			FileSize:    100000 + rand.Intn(900000),
+			Format:      "mp3",
+			Status:      entity.DialectStatusActive,
+			IsFeatured:  rand.Intn(10) == 0, // 10% 概率设为精选
+			PlayCount:   rand.Intn(1000),
+			LikeCount:   rand.Intn(500),
+			Tags:        `["方言", "寻亲", "语音"]`,
 			Description: fmt.Sprintf("这是一段%s的方言录音，用于寻亲识别", randomChoice(regions)),
-			UploaderID: users[rand.Intn(len(users))].ID,
-			OrgID:      orgs[rand.Intn(len(orgs))].ID,
+			UploaderID:  users[rand.Intn(len(users))].ID,
+			OrgID:       orgs[rand.Intn(len(orgs))].ID,
 		}
 		if err := db.Create(dialect).Error; err != nil {
 			return err
@@ -550,20 +550,20 @@ func importTasks(db *gorm.DB, count int) error {
 		}
 
 		task := &entity.Task{
-			BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
-			Title:      fmt.Sprintf("%s-%d", titles[rand.Intn(len(titles))], i+1),
+			BaseEntity:  entity.BaseEntity{ID: uuid.New().String()},
+			Title:       fmt.Sprintf("%s-%d", titles[rand.Intn(len(titles))], i+1),
 			Description: descriptions[rand.Intn(len(descriptions))],
-			Type:       entity.TaskType(randomChoice(taskTypes)),
-			Priority:   entity.TaskPriority(randomChoice(taskPriorities)),
-			Status:     status,
-			CreatorID:  creator.ID,
-			AssigneeID: assigneeID,
-			OrgID:      orgs[rand.Intn(len(orgs))].ID,
-			Location:   fmt.Sprintf("%s%s", randomChoice(cities), randomChoice(districts)),
-			Province:   randomChoice(provinces),
-			City:       randomChoice(cities),
-			District:   randomChoice(districts),
-			Progress:   rand.Intn(101),
+			Type:        entity.TaskType(randomChoice(taskTypes)),
+			Priority:    entity.TaskPriority(randomChoice(taskPriorities)),
+			Status:      status,
+			CreatorID:   creator.ID,
+			AssigneeID:  assigneeID,
+			OrgID:       orgs[rand.Intn(len(orgs))].ID,
+			Location:    fmt.Sprintf("%s%s", randomChoice(cities), randomChoice(districts)),
+			Province:    randomChoice(provinces),
+			City:        randomChoice(cities),
+			District:    randomChoice(districts),
+			Progress:    rand.Intn(101),
 		}
 
 		// 关联走失人员（50%概率）

@@ -15,6 +15,53 @@ function getTokenFromStorage(): string | null {
   return null;
 }
 
+// 从 auth-storage 解析 refresh token
+function getRefreshTokenFromStorage(): string | null {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      return parsed.state?.refreshToken || null;
+    }
+  } catch (e) {
+    console.error('解析 auth-storage 失败:', e);
+  }
+  return null;
+}
+
+// 更新存储中的 token
+function updateTokens(accessToken: string, refreshToken: string) {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      parsed.state.token = accessToken;
+      parsed.state.refreshToken = refreshToken;
+      localStorage.setItem('auth-storage', JSON.stringify(parsed));
+      return true;
+    }
+  } catch (e) {
+    console.error('更新 token 失败:', e);
+  }
+  return false;
+}
+
+// 是否正在刷新 token
+let isRefreshing = false;
+// 等待 token 刷新的请求队列
+let refreshSubscribers: Array<(token: string) => void> = [];
+
+// 订阅 token 刷新
+function subscribeTokenRefresh(callback: (token: string) => void) {
+  refreshSubscribers.push(callback);
+}
+
+// 通知所有订阅者新 token
+function onTokenRefreshed(newToken: string) {
+  refreshSubscribers.forEach((callback) => callback(newToken));
+  refreshSubscribers = [];
+}
+
 // 创建 axios 实例
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
@@ -57,10 +104,71 @@ http.interceptors.response.use(
     return data.data;
   },
   async (error: AxiosError) => {
-    const config = error.config as AxiosRequestConfig & { retryCount?: number };
+    const config = error.config as AxiosRequestConfig & { retryCount?: number; _retry?: boolean };
     
     if (!config) {
       return Promise.reject(error);
+    }
+    
+    const status = error.response?.status;
+    
+    // 401 未授权，尝试刷新 token
+    if (status === 401 && !config._retry) {
+      // 如果是刷新 token 的请求本身失败，直接跳转登录
+      if (config.url?.includes('/auth/refresh')) {
+        handleAuthError();
+        return Promise.reject(error);
+      }
+      
+      config._retry = true;
+      
+      // 如果正在刷新，等待刷新完成
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((newToken: string) => {
+            config.headers = config.headers || {};
+            config.headers.Authorization = `Bearer ${newToken}`;
+            resolve(http(config));
+          });
+        });
+      }
+      
+      isRefreshing = true;
+      
+      try {
+        const refreshToken = getRefreshTokenFromStorage();
+        if (!refreshToken) {
+          throw new Error('No refresh token');
+        }
+        
+        // 调用刷新 token 接口
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_BASE_URL || '/api/v1'}/auth/refresh`,
+          { refresh_token: refreshToken },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        
+        if (response.data.code === 0 || response.data.code === 200) {
+          const { access_token, refresh_token } = response.data.data;
+          
+          // 更新存储
+          updateTokens(access_token, refresh_token);
+          
+          // 通知等待的请求
+          onTokenRefreshed(access_token);
+          
+          // 重试原请求
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${access_token}`;
+          return http(config);
+        }
+      } catch (refreshError) {
+        // 刷新失败，清除登录状态并跳转
+        handleAuthError();
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
     
     // 重试逻辑（最多 3 次）
@@ -82,6 +190,13 @@ http.interceptors.response.use(
   }
 );
 
+// 处理认证错误
+function handleAuthError() {
+  message.error('登录已过期，请重新登录');
+  localStorage.removeItem('auth-storage');
+  window.location.href = '/login';
+}
+
 // 判断是否应该重试
 function shouldRetry(error: AxiosError): boolean {
   const status = error.response?.status;
@@ -98,16 +213,11 @@ function handleError(error: AxiosError) {
     case 400:
       message.error(data?.message || '请求参数错误');
       break;
-    case 401:
-      message.error('登录已过期，请重新登录');
-      localStorage.removeItem('auth-storage');
-      window.location.href = '/login';
-      break;
     case 403:
-      message.error('没有权限执行此操作');
+      message.error(data?.message || '没有权限执行此操作');
       break;
     case 404:
-      message.error('请求的资源不存在');
+      message.error(data?.message || '请求的资源不存在');
       break;
     case 429:
       message.error('请求过于频繁，请稍后再试');

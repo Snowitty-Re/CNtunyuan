@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS ty_missing_persons (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP WITH TIME ZONE,
     
+    case_no VARCHAR(50) UNIQUE,
     name VARCHAR(50) NOT NULL,
     gender VARCHAR(10) NOT NULL,
     birth_date DATE,
@@ -251,7 +252,33 @@ CREATE INDEX idx_tracks_location ON ty_missing_person_tracks(province, city, dis
 CREATE INDEX idx_tracks_deleted_at ON ty_missing_person_tracks(deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- ============================================================
--- 8. 任务表 (ty_tasks)
+-- 8. 走失人员照片表 (ty_missing_photos)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_missing_photos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    missing_person_id UUID NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    type VARCHAR(20) NOT NULL DEFAULT 'normal' CHECK (type IN ('normal', 'simulated', 'feature')),
+    description TEXT,
+    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+    
+    CONSTRAINT fk_mp_photos_missing_person FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+COMMENT ON TABLE ty_missing_photos IS '走失人员照片表';
+COMMENT ON COLUMN ty_missing_photos.type IS '照片类型: normal-普通照片, simulated-模拟照片, feature-特征照片';
+
+-- 照片表索引
+CREATE INDEX idx_photos_missing_person ON ty_missing_photos(missing_person_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_photos_primary ON ty_missing_photos(missing_person_id, is_primary) WHERE is_primary = TRUE AND deleted_at IS NULL;
+CREATE INDEX idx_photos_deleted_at ON ty_missing_photos(deleted_at) WHERE deleted_at IS NOT NULL;
+
+-- ============================================================
+-- 9. 任务表 (ty_tasks)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_tasks (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -572,6 +599,8 @@ CREATE TRIGGER update_org_stats_updated_at BEFORE UPDATE ON ty_org_stats
 CREATE TRIGGER update_missing_persons_updated_at BEFORE UPDATE ON ty_missing_persons
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_missing_person_tracks_updated_at BEFORE UPDATE ON ty_missing_person_tracks
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_missing_photos_updated_at BEFORE UPDATE ON ty_missing_photos
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON ty_tasks
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

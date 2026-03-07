@@ -39,9 +39,9 @@ type UploadResult struct {
 
 // StorageConfig 存储配置
 type StorageConfig struct {
-	Type       string
-	LocalPath  string
-	BaseURL    string
-	MaxSize    int64
+	Type         string
+	LocalPath    string
+	BaseURL      string
+	MaxSize      int64
 	AllowedTypes []string
 }

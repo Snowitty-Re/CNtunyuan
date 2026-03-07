@@ -50,18 +50,18 @@ type MissingPersonRepository interface {
 // MissingPersonQuery 走失人员查询参数
 type MissingPersonQuery struct {
 	Pagination
-	Keyword      string             `json:"keyword"`
+	Keyword      string               `json:"keyword"`
 	Status       entity.MissingStatus `json:"status"`
-	Gender       string             `json:"gender"`
-	AgeMin       int                `json:"age_min"`
-	AgeMax       int                `json:"age_max"`
-	Province     string             `json:"province"`
-	City         string             `json:"city"`
-	District     string             `json:"district"`
-	MissingDate  string             `json:"missing_date"`
-	UrgencyLevel string             `json:"urgency_level"`
-	SortField    string             `json:"sort_field"`
-	SortOrder    string             `json:"sort_order"`
+	Gender       string               `json:"gender"`
+	AgeMin       int                  `json:"age_min"`
+	AgeMax       int                  `json:"age_max"`
+	Province     string               `json:"province"`
+	City         string               `json:"city"`
+	District     string               `json:"district"`
+	MissingDate  string               `json:"missing_date"`
+	UrgencyLevel string               `json:"urgency_level"`
+	SortField    string               `json:"sort_field"`
+	SortOrder    string               `json:"sort_order"`
 }
 
 // NewMissingPersonQuery 创建默认查询

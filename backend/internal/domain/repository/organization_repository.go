@@ -44,11 +44,11 @@ type OrganizationRepository interface {
 // OrgQuery 组织查询参数
 type OrgQuery struct {
 	Pagination
-	Keyword   string              `json:"keyword"`
-	Type      entity.OrgType      `json:"type"`
-	Status    entity.OrgStatus    `json:"status"`
-	ParentID  string              `json:"parent_id"`
-	Level     int                 `json:"level"`
+	Keyword  string           `json:"keyword"`
+	Type     entity.OrgType   `json:"type"`
+	Status   entity.OrgStatus `json:"status"`
+	ParentID string           `json:"parent_id"`
+	Level    int              `json:"level"`
 }
 
 // NewOrgQuery 创建默认组织查询

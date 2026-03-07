@@ -1,4 +1,10 @@
-const app = getApp()
+/**
+ * 请求工具
+ * 统一处理请求、响应、错误和 Token 刷新
+ */
+
+// 生产环境 API 地址 - 统一配置在这里
+const API_BASE_URL = 'https://cntuanyuan.com/api/v1'
 
 // 请求队列（用于 token 刷新时暂存请求）
 let requestQueue = []
@@ -13,20 +19,102 @@ const BASE_CONFIG = {
 }
 
 /**
+ * 获取 token
+ */
+function getToken() {
+  return wx.getStorageSync('token') || ''
+}
+
+/**
+ * 获取 refresh token
+ */
+function getRefreshToken() {
+  return wx.getStorageSync('refresh_token') || ''
+}
+
+/**
+ * 更新 tokens
+ */
+function updateTokens(accessToken, refreshToken) {
+  wx.setStorageSync('token', accessToken)
+  wx.setStorageSync('refresh_token', refreshToken)
+  const app = getApp()
+  if (app) {
+    app.globalData.token = accessToken
+    app.globalData.refreshToken = refreshToken
+  }
+}
+
+/**
+ * 处理认证失败
+ */
+function handleAuthFail() {
+  wx.removeStorageSync('token')
+  wx.removeStorageSync('refresh_token')
+  wx.removeStorageSync('userInfo')
+  
+  const app = getApp()
+  if (app) {
+    app.globalData.token = null
+    app.globalData.refreshToken = null
+    app.globalData.userInfo = null
+    app.globalData.isLogin = false
+  }
+  
+  wx.showToast({
+    title: '登录已过期',
+    icon: 'none'
+  })
+  
+  setTimeout(() => {
+    wx.reLaunch({ url: '/pages/login/index' })
+  }, 1500)
+}
+
+/**
+ * 刷新 token
+ */
+function refreshToken() {
+  return new Promise((resolve, reject) => {
+    const refreshToken = getRefreshToken()
+    
+    if (!refreshToken) {
+      reject(new Error('No refresh token'))
+      return
+    }
+
+    wx.request({
+      url: `${API_BASE_URL}/auth/refresh`,
+      method: 'POST',
+      data: { refresh_token: refreshToken },
+      header: {
+        'Content-Type': 'application/json'
+      },
+      success: (res) => {
+        if (res.statusCode === 200 && (res.data.code === 0 || res.data.code === 200)) {
+          const { access_token, refresh_token } = res.data.data
+          updateTokens(access_token, refresh_token)
+          resolve(access_token)
+        } else {
+          reject(new Error('Refresh failed'))
+        }
+      },
+      fail: reject
+    })
+  })
+}
+
+/**
  * 统一请求封装
- * @param {Object} options 请求配置
- * @returns {Promise}
  */
 const request = (options) => {
   return new Promise((resolve, reject) => {
-    const token = wx.getStorageSync('token')
-    // 直接使用生产环境 API 地址
-    const baseUrl = 'https://cntuanyuan.com/api/v1'
+    const token = getToken()
     
     // 合并配置
     const config = {
       ...BASE_CONFIG,
-      url: `${baseUrl}${options.url}`,
+      url: `${API_BASE_URL}${options.url}`,
       method: options.method || 'GET',
       data: options.data,
       header: {
@@ -37,7 +125,7 @@ const request = (options) => {
       timeout: options.timeout || BASE_CONFIG.timeout
     }
 
-    // 显示加载中（如果需要）
+    // 显示加载中
     if (options.loading !== false) {
       wx.showLoading({ 
         title: options.loadingText || '加载中...',
@@ -58,20 +146,15 @@ const request = (options) => {
           const data = res.data
           
           // 处理业务状态码
-          // code: 0 或 200 表示成功
           if (data.code === 0 || data.code === 200) {
             resolve(data.data)
+          } else if (data.code === 401) {
+            // Token 过期，尝试刷新
+            handleTokenExpired(options, resolve, reject)
           } else {
             // 业务错误
             const errorMsg = data.message || '请求失败'
             
-            // 未授权，token 过期
-            if (data.code === 401) {
-              handleTokenExpired(options, resolve, reject)
-              return
-            }
-            
-            // 显示错误提示（如果不是静默请求）
             if (options.silent !== true) {
               wx.showToast({
                 title: errorMsg,
@@ -83,7 +166,7 @@ const request = (options) => {
             reject(new Error(errorMsg))
           }
         } else if (res.statusCode === 401) {
-          // HTTP 401，token 过期
+          // HTTP 401，尝试刷新 token
           handleTokenExpired(options, resolve, reject)
         } else {
           // HTTP 错误
@@ -141,9 +224,12 @@ function handleTokenExpired(failedRequest, resolve, reject) {
   
   isRefreshing = true
   
-  refreshToken().then(() => {
+  refreshToken().then((newToken) => {
     // 重试队列中的请求
     requestQueue.forEach(({ failedRequest, resolve }) => {
+      // 更新请求头中的 token
+      failedRequest.header = failedRequest.header || {}
+      failedRequest.header['Authorization'] = `Bearer ${newToken}`
       request(failedRequest).then(resolve).catch(() => {})
     })
     requestQueue = []
@@ -154,83 +240,23 @@ function handleTokenExpired(failedRequest, resolve, reject) {
     })
     requestQueue = []
     
-    // 清除登录数据
-    const app = getApp()
-    if (app) {
-      app.clearLoginData()
-    }
-    
-    // 跳转登录页
-    wx.navigateTo({ url: '/pages/login/index' })
+    handleAuthFail()
   }).finally(() => {
     isRefreshing = false
   })
 }
 
 /**
- * 刷新 Token
- */
-function refreshToken() {
-  return new Promise((resolve, reject) => {
-    const refreshToken = wx.getStorageSync('refresh_token')
-    
-    if (!refreshToken) {
-      reject(new Error('No refresh token'))
-      return
-    }
-
-    // 直接使用生产环境 API 地址
-    const baseUrl = 'https://cntuanyuan.com/api/v1'
-
-    wx.request({
-      url: `${baseUrl}/auth/refresh`,
-      method: 'POST',
-      data: { refresh_token: refreshToken },
-      header: {
-        'Content-Type': 'application/json'
-      },
-      success: (res) => {
-        if (res.statusCode === 200 && (res.data.code === 0 || res.data.code === 200)) {
-          const { access_token, refresh_token } = res.data.data
-          
-          // 更新存储
-          wx.setStorageSync('token', access_token)
-          wx.setStorageSync('refresh_token', refresh_token)
-          
-          // 更新全局数据
-          if (app) {
-            app.globalData.token = access_token
-            app.globalData.refreshToken = refresh_token
-          }
-          
-          resolve(res.data.data)
-        } else {
-          reject(new Error('Refresh failed'))
-        }
-      },
-      fail: reject
-    })
-  })
-}
-
-/**
  * 上传文件
- * @param {String} url 上传地址
- * @param {String} filePath 文件路径
- * @param {String} name 文件字段名
- * @param {Object} formData 附加表单数据
- * @returns {Promise}
  */
 const uploadFile = (url, filePath, name = 'file', formData = {}) => {
   return new Promise((resolve, reject) => {
-    const token = wx.getStorageSync('token')
-    // 直接使用生产环境 API 地址
-    const baseUrl = 'https://cntuanyuan.com/api/v1'
+    const token = getToken()
     
     wx.showLoading({ title: '上传中...', mask: true })
 
     wx.uploadFile({
-      url: `${baseUrl}${url}`,
+      url: `${API_BASE_URL}${url}`,
       filePath,
       name,
       formData,
@@ -245,6 +271,10 @@ const uploadFile = (url, filePath, name = 'file', formData = {}) => {
             const data = JSON.parse(res.data)
             if (data.code === 0 || data.code === 200) {
               resolve(data.data)
+            } else if (data.code === 401) {
+              // Token 过期
+              handleAuthFail()
+              reject(new Error('登录已过期'))
             } else {
               wx.showToast({
                 title: data.message || '上传失败',
@@ -255,6 +285,9 @@ const uploadFile = (url, filePath, name = 'file', formData = {}) => {
           } catch (e) {
             resolve(res.data)
           }
+        } else if (res.statusCode === 401) {
+          handleAuthFail()
+          reject(new Error('登录已过期'))
         } else {
           wx.showToast({
             title: `上传失败: ${res.statusCode}`,
@@ -277,10 +310,6 @@ const uploadFile = (url, filePath, name = 'file', formData = {}) => {
 
 /**
  * 批量上传文件
- * @param {Array} files 文件路径数组
- * @param {String} url 上传地址
- * @param {Object} formData 附加表单数据
- * @returns {Promise}
  */
 const uploadFiles = (files, url = '/upload/batch', formData = {}) => {
   const uploadPromises = files.map(filePath => uploadFile(url, filePath, 'files', formData))

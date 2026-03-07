@@ -33,19 +33,19 @@ type UpdateOrganizationRequest struct {
 
 // OrganizationResponse 组织响应
 type OrganizationResponse struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	Code         string    `json:"code"`
-	Type         string    `json:"type"`
-	Level        int       `json:"level"`
-	ParentID     *string   `json:"parent_id,omitempty"`
-	Description  string    `json:"description"`
-	Address      string    `json:"address"`
-	ContactName  string    `json:"contact_name"`
-	ContactPhone string    `json:"contact_phone"`
-	Status       string    `json:"status"`
-	SortOrder    int       `json:"sort_order"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID           string                 `json:"id"`
+	Name         string                 `json:"name"`
+	Code         string                 `json:"code"`
+	Type         string                 `json:"type"`
+	Level        int                    `json:"level"`
+	ParentID     *string                `json:"parent_id,omitempty"`
+	Description  string                 `json:"description"`
+	Address      string                 `json:"address"`
+	ContactName  string                 `json:"contact_name"`
+	ContactPhone string                 `json:"contact_phone"`
+	Status       string                 `json:"status"`
+	SortOrder    int                    `json:"sort_order"`
+	CreatedAt    time.Time              `json:"created_at"`
 	Children     []OrganizationResponse `json:"children,omitempty"`
 }
 

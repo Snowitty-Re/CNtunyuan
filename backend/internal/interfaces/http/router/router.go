@@ -3,8 +3,8 @@ package router
 import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
-	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	pkgmiddleware "github.com/Snowitty-Re/CNtunyuan/pkg/middleware"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -40,25 +40,25 @@ func NewRouter(
 	// 全局中间件（按执行顺序排列）
 	// 1. 恢复中间件（捕获 panic）
 	engine.Use(pkgmiddleware.RecoveryMiddleware())
-	
+
 	// 2. 追踪 ID 中间件
 	engine.Use(pkgmiddleware.TraceIDMiddleware())
-	
+
 	// 3. 安全响应头中间件
 	engine.Use(pkgmiddleware.SecurityHeadersMiddleware())
-	
+
 	// 4. CORS 中间件
 	engine.Use(pkgmiddleware.CORSMiddleware())
-	
+
 	// 5. 请求大小限制（50MB）
 	engine.Use(pkgmiddleware.RequestSizeMiddleware(50 * 1024 * 1024))
-	
+
 	// 6. 限流中间件（每秒100请求，突发200）
 	engine.Use(pkgmiddleware.RateLimitMiddleware(100, 200))
-	
+
 	// 7. 结构化日志中间件
 	engine.Use(pkgmiddleware.LoggingMiddleware())
-	
+
 	// 8. 统一错误处理中间件
 	engine.Use(pkgmiddleware.ErrorHandlerMiddleware())
 
@@ -84,10 +84,10 @@ func (r *Router) Setup() {
 	// 健康检查（不需要认证）
 	api.GET("/health", r.healthCheck)
 	api.GET("/health/detailed", r.detailedHealthCheck)
-	
+
 	// Prometheus 指标端点
 	api.GET("/metrics", gin.WrapH(promhttp.Handler()))
-	
+
 	// 公开路由（不需要认证）
 	public := api.Group("/")
 	{
@@ -108,7 +108,7 @@ func (r *Router) Setup() {
 	r.engine.NoRoute(func(c *gin.Context) {
 		response.NotFound(c, "route not found")
 	})
-	
+
 	// 405 处理
 	r.engine.NoMethod(func(c *gin.Context) {
 		response.ErrorCodeWithMessage(c, 405, "method not allowed")

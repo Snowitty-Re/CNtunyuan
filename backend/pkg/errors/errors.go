@@ -12,55 +12,55 @@ type ErrorCode int
 
 const (
 	// 通用错误码 (0-999)
-	CodeSuccess           ErrorCode = 0
-	CodeUnknown           ErrorCode = 1
-	CodeInternal          ErrorCode = 2
-	CodeInvalidParam      ErrorCode = 400
-	CodeUnauthorized      ErrorCode = 401
-	CodeForbidden         ErrorCode = 403
-	CodeNotFound          ErrorCode = 404
-	CodeMethodNotAllowed  ErrorCode = 405
-	CodeTimeout           ErrorCode = 408
-	CodeConflict          ErrorCode = 409
-	CodeTooManyRequests   ErrorCode = 429
+	CodeSuccess            ErrorCode = 0
+	CodeUnknown            ErrorCode = 1
+	CodeInternal           ErrorCode = 2
+	CodeInvalidParam       ErrorCode = 400
+	CodeUnauthorized       ErrorCode = 401
+	CodeForbidden          ErrorCode = 403
+	CodeNotFound           ErrorCode = 404
+	CodeMethodNotAllowed   ErrorCode = 405
+	CodeTimeout            ErrorCode = 408
+	CodeConflict           ErrorCode = 409
+	CodeTooManyRequests    ErrorCode = 429
 	CodeServiceUnavailable ErrorCode = 503
 
 	// 业务错误码 (1000-9999)
-	CodeUserNotFound      ErrorCode = 1000
-	CodeUserExists        ErrorCode = 1001
-	CodeInvalidPassword   ErrorCode = 1002
-	CodeInvalidToken      ErrorCode = 1003
-	CodeTokenExpired      ErrorCode = 1004
-	CodeInvalidCaptcha    ErrorCode = 1005
-	CodeAccountDisabled   ErrorCode = 1006
-	CodeAccountLocked     ErrorCode = 1007
+	CodeUserNotFound    ErrorCode = 1000
+	CodeUserExists      ErrorCode = 1001
+	CodeInvalidPassword ErrorCode = 1002
+	CodeInvalidToken    ErrorCode = 1003
+	CodeTokenExpired    ErrorCode = 1004
+	CodeInvalidCaptcha  ErrorCode = 1005
+	CodeAccountDisabled ErrorCode = 1006
+	CodeAccountLocked   ErrorCode = 1007
 
 	// 组织相关 (2000-2099)
-	CodeOrgNotFound       ErrorCode = 2000
-	CodeOrgExists         ErrorCode = 2001
-	CodeOrgHasChildren    ErrorCode = 2002
-	CodeOrgHasUsers       ErrorCode = 2003
+	CodeOrgNotFound    ErrorCode = 2000
+	CodeOrgExists      ErrorCode = 2001
+	CodeOrgHasChildren ErrorCode = 2002
+	CodeOrgHasUsers    ErrorCode = 2003
 
 	// 案件相关 (3000-3099)
-	CodeCaseNotFound      ErrorCode = 3000
-	CodeCaseExists        ErrorCode = 3001
-	CodeCaseClosed        ErrorCode = 3002
+	CodeCaseNotFound ErrorCode = 3000
+	CodeCaseExists   ErrorCode = 3001
+	CodeCaseClosed   ErrorCode = 3002
 
 	// 任务相关 (4000-4099)
-	CodeTaskNotFound      ErrorCode = 4000
-	CodeTaskExists        ErrorCode = 4001
-	CodeTaskAssigned      ErrorCode = 4002
-	CodeTaskCompleted     ErrorCode = 4003
+	CodeTaskNotFound  ErrorCode = 4000
+	CodeTaskExists    ErrorCode = 4001
+	CodeTaskAssigned  ErrorCode = 4002
+	CodeTaskCompleted ErrorCode = 4003
 
 	// 方言相关 (5000-5099)
-	CodeDialectNotFound   ErrorCode = 5000
-	CodeDialectExists     ErrorCode = 5001
+	CodeDialectNotFound ErrorCode = 5000
+	CodeDialectExists   ErrorCode = 5001
 
 	// 文件相关 (6000-6099)
-	CodeFileNotFound      ErrorCode = 6000
-	CodeFileTooLarge      ErrorCode = 6001
-	CodeInvalidFileType   ErrorCode = 6002
-	CodeFileUploadFailed  ErrorCode = 6003
+	CodeFileNotFound     ErrorCode = 6000
+	CodeFileTooLarge     ErrorCode = 6001
+	CodeInvalidFileType  ErrorCode = 6002
+	CodeFileUploadFailed ErrorCode = 6003
 )
 
 // HTTPStatus 返回错误码对应的 HTTP 状态码
@@ -244,19 +244,19 @@ func GetCode(err error) ErrorCode {
 
 // 预定义常用错误
 var (
-	ErrInvalidParam     = New(CodeInvalidParam, "")
-	ErrUnauthorized     = New(CodeUnauthorized, "")
-	ErrForbidden        = New(CodeForbidden, "")
-	ErrNotFound         = New(CodeNotFound, "")
-	ErrInternal         = New(CodeInternal, "")
-	ErrUserNotFound     = New(CodeUserNotFound, "")
-	ErrUserExists       = New(CodeUserExists, "")
-	ErrInvalidPassword  = New(CodeInvalidPassword, "")
-	ErrInvalidToken     = New(CodeInvalidToken, "")
-	ErrTokenExpired     = New(CodeTokenExpired, "")
-	ErrAccountDisabled  = New(CodeAccountDisabled, "")
-	ErrAccountLocked    = New(CodeAccountLocked, "")
-	ErrTooManyRequests  = New(CodeTooManyRequests, "")
-	ErrFileTooLarge     = New(CodeFileTooLarge, "")
-	ErrInvalidFileType  = New(CodeInvalidFileType, "")
+	ErrInvalidParam    = New(CodeInvalidParam, "")
+	ErrUnauthorized    = New(CodeUnauthorized, "")
+	ErrForbidden       = New(CodeForbidden, "")
+	ErrNotFound        = New(CodeNotFound, "")
+	ErrInternal        = New(CodeInternal, "")
+	ErrUserNotFound    = New(CodeUserNotFound, "")
+	ErrUserExists      = New(CodeUserExists, "")
+	ErrInvalidPassword = New(CodeInvalidPassword, "")
+	ErrInvalidToken    = New(CodeInvalidToken, "")
+	ErrTokenExpired    = New(CodeTokenExpired, "")
+	ErrAccountDisabled = New(CodeAccountDisabled, "")
+	ErrAccountLocked   = New(CodeAccountLocked, "")
+	ErrTooManyRequests = New(CodeTooManyRequests, "")
+	ErrFileTooLarge    = New(CodeFileTooLarge, "")
+	ErrInvalidFileType = New(CodeInvalidFileType, "")
 )

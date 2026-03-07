@@ -36,42 +36,42 @@ type UpdateDialectRequest struct {
 
 // DialectResponse 方言响应
 type DialectResponse struct {
-	ID           string    `json:"id"`
-	Title        string    `json:"title"`
-	Content      string    `json:"content"`
-	Region       string    `json:"region"`
-	Province     string    `json:"province"`
-	City         string    `json:"city"`
-	DialectType  string    `json:"dialect_type"`
-	AudioUrl     string    `json:"audio_url"`
-	Duration     int       `json:"duration"`
-	FileSize     int       `json:"file_size"`
-	Format       string    `json:"format"`
-	Status       string    `json:"status"`
-	IsFeatured   bool      `json:"is_featured"`
-	PlayCount    int       `json:"play_count"`
-	LikeCount    int       `json:"like_count"`
-	CommentCount int       `json:"comment_count"`
-	Tags         string    `json:"tags"`
-	Description  string    `json:"description"`
-	UploaderID   string    `json:"uploader_id"`
-	OrgID        string    `json:"org_id"`
+	ID           string        `json:"id"`
+	Title        string        `json:"title"`
+	Content      string        `json:"content"`
+	Region       string        `json:"region"`
+	Province     string        `json:"province"`
+	City         string        `json:"city"`
+	DialectType  string        `json:"dialect_type"`
+	AudioUrl     string        `json:"audio_url"`
+	Duration     int           `json:"duration"`
+	FileSize     int           `json:"file_size"`
+	Format       string        `json:"format"`
+	Status       string        `json:"status"`
+	IsFeatured   bool          `json:"is_featured"`
+	PlayCount    int           `json:"play_count"`
+	LikeCount    int           `json:"like_count"`
+	CommentCount int           `json:"comment_count"`
+	Tags         string        `json:"tags"`
+	Description  string        `json:"description"`
+	UploaderID   string        `json:"uploader_id"`
+	OrgID        string        `json:"org_id"`
 	Uploader     *UserResponse `json:"uploader,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
+	CreatedAt    time.Time     `json:"created_at"`
 }
 
 // DialectListRequest 方言列表请求
 type DialectListRequest struct {
-	Page       int    `form:"page,default=1" binding:"min=1"`
-	PageSize   int    `form:"page_size,default=10" binding:"min=1,max=100"`
-	Keyword    string `form:"keyword"`
-	Region     string `form:"region"`
-	Province   string `form:"province"`
-	City       string `form:"city"`
-	Type       string `form:"type"`
-	Status     string `form:"status"`
-	SortBy     string `form:"sort_by"`
-	SortOrder  string `form:"sort_order"`
+	Page      int    `form:"page,default=1" binding:"min=1"`
+	PageSize  int    `form:"page_size,default=10" binding:"min=1,max=100"`
+	Keyword   string `form:"keyword"`
+	Region    string `form:"region"`
+	Province  string `form:"province"`
+	City      string `form:"city"`
+	Type      string `form:"type"`
+	Status    string `form:"status"`
+	SortBy    string `form:"sort_by"`
+	SortOrder string `form:"sort_order"`
 }
 
 // DialectListResponse 方言列表响应
@@ -90,25 +90,25 @@ type CreateDialectCommentRequest struct {
 
 // DialectCommentResponse 评论响应
 type DialectCommentResponse struct {
-	ID        string    `json:"id"`
-	DialectID string    `json:"dialect_id"`
-	UserID    string    `json:"user_id"`
-	Content   string    `json:"content"`
-	ParentID  *string   `json:"parent_id,omitempty"`
-	ReplyCount int      `json:"reply_count"`
-	LikeCount int       `json:"like_count"`
-	User      *UserResponse `json:"user,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID         string        `json:"id"`
+	DialectID  string        `json:"dialect_id"`
+	UserID     string        `json:"user_id"`
+	Content    string        `json:"content"`
+	ParentID   *string       `json:"parent_id,omitempty"`
+	ReplyCount int           `json:"reply_count"`
+	LikeCount  int           `json:"like_count"`
+	User       *UserResponse `json:"user,omitempty"`
+	CreatedAt  time.Time     `json:"created_at"`
 }
 
 // DialectStatsResponse 方言统计响应
 type DialectStatsResponse struct {
-	Total       int64 `json:"total"`
-	Active      int64 `json:"active"`
-	Pending     int64 `json:"pending"`
-	Featured    int64 `json:"featured"`
-	TotalPlays  int64 `json:"total_plays"`
-	TotalLikes  int64 `json:"total_likes"`
+	Total      int64 `json:"total"`
+	Active     int64 `json:"active"`
+	Pending    int64 `json:"pending"`
+	Featured   int64 `json:"featured"`
+	TotalPlays int64 `json:"total_plays"`
+	TotalLikes int64 `json:"total_likes"`
 }
 
 // ToDialectResponse 转换为方言响应

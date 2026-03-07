@@ -44,14 +44,14 @@ type FileRepository interface {
 // FileQuery 文件查询参数
 type FileQuery struct {
 	Pagination
-	Keyword      string             `json:"keyword"`
-	FileType     entity.FileType    `json:"file_type"`
-	UploaderID   string             `json:"uploader_id"`
-	EntityType   string             `json:"entity_type"`
-	EntityID     string             `json:"entity_id"`
-	StorageType  entity.StorageType `json:"storage_type"`
-	StartDate    string             `json:"start_date"`
-	EndDate      string             `json:"end_date"`
+	Keyword     string             `json:"keyword"`
+	FileType    entity.FileType    `json:"file_type"`
+	UploaderID  string             `json:"uploader_id"`
+	EntityType  string             `json:"entity_type"`
+	EntityID    string             `json:"entity_id"`
+	StorageType entity.StorageType `json:"storage_type"`
+	StartDate   string             `json:"start_date"`
+	EndDate     string             `json:"end_date"`
 }
 
 // NewFileQuery 创建默认文件查询

@@ -8,20 +8,20 @@ import (
 
 // CreateUserRequest 创建用户请求
 type CreateUserRequest struct {
-	Nickname string        `json:"nickname" binding:"required"`
-	Phone    string        `json:"phone" binding:"required"`
-	Email    string        `json:"email"`
-	Password string        `json:"password" binding:"required,min=6"`
-	Role     entity.Role   `json:"role" binding:"required"`
-	OrgID    string        `json:"org_id" binding:"required"`
+	Nickname string      `json:"nickname" binding:"required"`
+	Phone    string      `json:"phone" binding:"required"`
+	Email    string      `json:"email"`
+	Password string      `json:"password" binding:"required,min=6"`
+	Role     entity.Role `json:"role" binding:"required"`
+	OrgID    string      `json:"org_id" binding:"required"`
 }
 
 // UpdateUserRequest 更新用户请求
 type UpdateUserRequest struct {
-	Nickname string        `json:"nickname"`
-	Email    string        `json:"email"`
-	Role     entity.Role   `json:"role"`
-	OrgID    string        `json:"org_id"`
+	Nickname string            `json:"nickname"`
+	Email    string            `json:"email"`
+	Role     entity.Role       `json:"role"`
+	OrgID    string            `json:"org_id"`
 	Status   entity.UserStatus `json:"status"`
 }
 

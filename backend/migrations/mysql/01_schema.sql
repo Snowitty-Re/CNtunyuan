@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS ty_missing_persons (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP NULL DEFAULT NULL,
     
+    case_no VARCHAR(50) UNIQUE COMMENT '案件编号',
     name VARCHAR(50) NOT NULL COMMENT '姓名',
     gender VARCHAR(10) NOT NULL COMMENT '性别',
     birth_date DATE COMMENT '出生日期',
@@ -248,7 +249,31 @@ CREATE INDEX idx_tracks_location ON ty_missing_person_tracks(province, city, dis
 CREATE INDEX idx_tracks_deleted_at ON ty_missing_person_tracks(deleted_at);
 
 -- ============================================================
--- 8. 任务表 (ty_tasks)
+-- 8. 走失人员照片表 (ty_missing_photos)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_missing_photos (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    
+    missing_person_id CHAR(36) NOT NULL COMMENT '走失人员ID',
+    url VARCHAR(500) NOT NULL COMMENT '照片URL',
+    type VARCHAR(20) NOT NULL DEFAULT 'normal' COMMENT '照片类型: normal-普通, simulated-模拟, feature-特征',
+    description TEXT COMMENT '描述',
+    is_primary TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否主照片',
+    
+    CONSTRAINT fk_mp_photos_missing_person FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT chk_mp_photos_type CHECK (type IN ('normal', 'simulated', 'feature'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='走失人员照片表';
+
+-- 照片表索引
+CREATE INDEX idx_photos_missing_person ON ty_missing_photos(missing_person_id);
+CREATE INDEX idx_photos_primary ON ty_missing_photos(missing_person_id, is_primary);
+CREATE INDEX idx_photos_deleted_at ON ty_missing_photos(deleted_at);
+
+-- ============================================================
+-- 9. 任务表 (ty_tasks)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_tasks (
     id CHAR(36) PRIMARY KEY,

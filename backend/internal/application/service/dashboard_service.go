@@ -38,41 +38,41 @@ func NewDashboardService(
 
 // DashboardStats 仪表盘统计
 type DashboardStats struct {
-	Users           UserStats           `json:"users"`
-	Organizations   OrgStats            `json:"organizations"`
-	MissingPersons  MissingPersonStats  `json:"missing_persons"`
-	Tasks           TaskStats           `json:"tasks"`
-	Dialects        DialectStats        `json:"dialects"`
-	Files           FileStats           `json:"files"`
-	RecentActivity  []Activity          `json:"recent_activity"`
+	Users          UserStats          `json:"users"`
+	Organizations  OrgStats           `json:"organizations"`
+	MissingPersons MissingPersonStats `json:"missing_persons"`
+	Tasks          TaskStats          `json:"tasks"`
+	Dialects       DialectStats       `json:"dialects"`
+	Files          FileStats          `json:"files"`
+	RecentActivity []Activity         `json:"recent_activity"`
 }
 
 // UserStats 用户统计
 type UserStats struct {
-	Total       int64 `json:"total"`
-	Active      int64 `json:"active"`
-	NewToday    int64 `json:"new_today"`
-	NewWeek     int64 `json:"new_week"`
-	NewMonth    int64 `json:"new_month"`
+	Total    int64 `json:"total"`
+	Active   int64 `json:"active"`
+	NewToday int64 `json:"new_today"`
+	NewWeek  int64 `json:"new_week"`
+	NewMonth int64 `json:"new_month"`
 }
 
 // OrgStats 组织统计
 type OrgStats struct {
-	Total      int64 `json:"total"`
-	Provinces  int64 `json:"provinces"`
-	Cities     int64 `json:"cities"`
-	Districts  int64 `json:"districts"`
+	Total     int64 `json:"total"`
+	Provinces int64 `json:"provinces"`
+	Cities    int64 `json:"cities"`
+	Districts int64 `json:"districts"`
 }
 
 // MissingPersonStats 走失人员统计
 type MissingPersonStats struct {
-	Total      int64 `json:"total"`
-	Missing    int64 `json:"missing"`
-	Searching  int64 `json:"searching"`
-	Found      int64 `json:"found"`
-	Reunited   int64 `json:"reunited"`
-	NewToday   int64 `json:"new_today"`
-	NewWeek    int64 `json:"new_week"`
+	Total     int64 `json:"total"`
+	Missing   int64 `json:"missing"`
+	Searching int64 `json:"searching"`
+	Found     int64 `json:"found"`
+	Reunited  int64 `json:"reunited"`
+	NewToday  int64 `json:"new_today"`
+	NewWeek   int64 `json:"new_week"`
 }
 
 // TaskStats 任务统计
@@ -176,10 +176,10 @@ func (s *DashboardService) GetTrendData(ctx context.Context, days int) ([]TrendD
 
 // TrendData 趋势数据
 type TrendData struct {
-	Date            string `json:"date"`
-	NewCases        int64  `json:"new_cases"`
-	ResolvedCases   int64  `json:"resolved_cases"`
-	NewTasks        int64  `json:"new_tasks"`
-	CompletedTasks  int64  `json:"completed_tasks"`
-	NewUsers        int64  `json:"new_users"`
+	Date           string `json:"date"`
+	NewCases       int64  `json:"new_cases"`
+	ResolvedCases  int64  `json:"resolved_cases"`
+	NewTasks       int64  `json:"new_tasks"`
+	CompletedTasks int64  `json:"completed_tasks"`
+	NewUsers       int64  `json:"new_users"`
 }

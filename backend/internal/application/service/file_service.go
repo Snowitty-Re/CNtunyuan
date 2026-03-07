@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	ErrFileNotFound      = fmt.Errorf("file not found")
+	ErrFileNotFound       = fmt.Errorf("file not found")
 	ErrFileTypeNotAllowed = fmt.Errorf("file type not allowed")
-	ErrFileTooLarge      = fmt.Errorf("file too large")
+	ErrFileTooLarge       = fmt.Errorf("file too large")
 )
 
 // FileAppService 文件应用服务
@@ -186,15 +186,15 @@ func (s *FileAppService) GetStats(ctx context.Context) (*dto.FileStatsResponse, 
 	}
 
 	return &dto.FileStatsResponse{
-		TotalCount:   stats.TotalCount,
-		TotalSize:    stats.TotalSize,
-		ImageCount:   stats.ImageCount,
-		ImageSize:    stats.ImageSize,
-		AudioCount:   stats.AudioCount,
-		AudioSize:    stats.AudioSize,
-		VideoCount:   stats.VideoCount,
-		VideoSize:    stats.VideoSize,
-		DocCount:     stats.DocCount,
-		DocSize:      stats.DocSize,
+		TotalCount: stats.TotalCount,
+		TotalSize:  stats.TotalSize,
+		ImageCount: stats.ImageCount,
+		ImageSize:  stats.ImageSize,
+		AudioCount: stats.AudioCount,
+		AudioSize:  stats.AudioSize,
+		VideoCount: stats.VideoCount,
+		VideoSize:  stats.VideoSize,
+		DocCount:   stats.DocCount,
+		DocSize:    stats.DocSize,
 	}, nil
 }

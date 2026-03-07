@@ -41,34 +41,34 @@ type UpdateTaskRequest struct {
 
 // TaskResponse 任务响应
 type TaskResponse struct {
-	ID              string    `json:"id"`
-	Title           string    `json:"title"`
-	Description     string    `json:"description"`
-	Type            string    `json:"type"`
-	Priority        string    `json:"priority"`
-	Status          string    `json:"status"`
-	Deadline        *time.Time `json:"deadline,omitempty"`
-	StartedAt       *time.Time `json:"started_at,omitempty"`
-	CompletedAt     *time.Time `json:"completed_at,omitempty"`
-	CreatorID       string    `json:"creator_id"`
-	AssigneeID      *string   `json:"assignee_id,omitempty"`
-	OrgID           string    `json:"org_id"`
-	MissingPersonID *string   `json:"missing_person_id,omitempty"`
-	Location        string    `json:"location"`
-	Province        string    `json:"province"`
-	City            string    `json:"city"`
-	District        string    `json:"district"`
-	Address         string    `json:"address"`
-	Lat             float64   `json:"lat"`
-	Lng             float64   `json:"lng"`
-	Result          string    `json:"result"`
-	Feedback        string    `json:"feedback"`
-	Progress        int       `json:"progress"`
-	ViewCount       int       `json:"view_count"`
-	Creator         *UserResponse `json:"creator,omitempty"`
-	Assignee        *UserResponse `json:"assignee,omitempty"`
+	ID              string                 `json:"id"`
+	Title           string                 `json:"title"`
+	Description     string                 `json:"description"`
+	Type            string                 `json:"type"`
+	Priority        string                 `json:"priority"`
+	Status          string                 `json:"status"`
+	Deadline        *time.Time             `json:"deadline,omitempty"`
+	StartedAt       *time.Time             `json:"started_at,omitempty"`
+	CompletedAt     *time.Time             `json:"completed_at,omitempty"`
+	CreatorID       string                 `json:"creator_id"`
+	AssigneeID      *string                `json:"assignee_id,omitempty"`
+	OrgID           string                 `json:"org_id"`
+	MissingPersonID *string                `json:"missing_person_id,omitempty"`
+	Location        string                 `json:"location"`
+	Province        string                 `json:"province"`
+	City            string                 `json:"city"`
+	District        string                 `json:"district"`
+	Address         string                 `json:"address"`
+	Lat             float64                `json:"lat"`
+	Lng             float64                `json:"lng"`
+	Result          string                 `json:"result"`
+	Feedback        string                 `json:"feedback"`
+	Progress        int                    `json:"progress"`
+	ViewCount       int                    `json:"view_count"`
+	Creator         *UserResponse          `json:"creator,omitempty"`
+	Assignee        *UserResponse          `json:"assignee,omitempty"`
 	MissingPerson   *MissingPersonResponse `json:"missing_person,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
+	CreatedAt       time.Time              `json:"created_at"`
 }
 
 // TaskListRequest 任务列表请求
@@ -120,26 +120,26 @@ type CreateTaskCommentRequest struct {
 
 // TaskCommentResponse 任务评论响应
 type TaskCommentResponse struct {
-	ID        string    `json:"id"`
-	TaskID    string    `json:"task_id"`
-	UserID    string    `json:"user_id"`
-	Content   string    `json:"content"`
-	ParentID  *string   `json:"parent_id,omitempty"`
+	ID        string        `json:"id"`
+	TaskID    string        `json:"task_id"`
+	UserID    string        `json:"user_id"`
+	Content   string        `json:"content"`
+	ParentID  *string       `json:"parent_id,omitempty"`
 	User      *UserResponse `json:"user,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time     `json:"created_at"`
 }
 
 // TaskLogResponse 任务日志响应
 type TaskLogResponse struct {
-	ID        string    `json:"id"`
-	TaskID    string    `json:"task_id"`
-	UserID    string    `json:"user_id"`
-	Action    string    `json:"action"`
-	OldStatus string    `json:"old_status"`
-	NewStatus string    `json:"new_status"`
-	Content   string    `json:"content"`
+	ID        string        `json:"id"`
+	TaskID    string        `json:"task_id"`
+	UserID    string        `json:"user_id"`
+	Action    string        `json:"action"`
+	OldStatus string        `json:"old_status"`
+	NewStatus string        `json:"new_status"`
+	Content   string        `json:"content"`
 	User      *UserResponse `json:"user,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time     `json:"created_at"`
 }
 
 // TaskStatsResponse 任务统计响应

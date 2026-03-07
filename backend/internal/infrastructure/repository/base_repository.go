@@ -124,9 +124,9 @@ func (r *BaseRepository[T]) ApplyQueryOptions(db *gorm.DB, options *repository.Q
 
 // UnitOfWorkImpl 工作单元实现
 type UnitOfWorkImpl struct {
-	db     *gorm.DB
-	tx     *gorm.DB
-	isTx   bool
+	db   *gorm.DB
+	tx   *gorm.DB
+	isTx bool
 }
 
 // NewUnitOfWork 创建工作单元

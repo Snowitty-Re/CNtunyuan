@@ -31,21 +31,21 @@ const (
 // Organization 组织领域实体
 type Organization struct {
 	BaseEntity
-	Name        string     `gorm:"size:100;not null" json:"name"`
-	Code        string     `gorm:"size:50;uniqueIndex;not null" json:"code"`
-	Type        OrgType    `gorm:"size:20;not null" json:"type"`
-	Level       int        `gorm:"not null;default:1" json:"level"`
-	ParentID    *string    `gorm:"type:uuid;index" json:"parent_id,omitempty"`
-	Description string     `gorm:"type:text" json:"description,omitempty"`
-	Address     string     `gorm:"size:255" json:"address,omitempty"`
-	ContactName string     `gorm:"size:50" json:"contact_name,omitempty"`
-	ContactPhone string   `gorm:"size:20" json:"contact_phone,omitempty"`
-	Status      OrgStatus `gorm:"size:20;not null;default:'active'" json:"status"`
-	Logo        string     `gorm:"size:255" json:"logo,omitempty"`
-	SortOrder   int        `gorm:"default:0" json:"sort_order"`
-	Parent      *Organization `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
-	Children    []Organization `gorm:"foreignKey:ParentID" json:"children,omitempty"`
-	Stats       *OrgStats      `gorm:"-" json:"stats,omitempty"`
+	Name         string         `gorm:"size:100;not null" json:"name"`
+	Code         string         `gorm:"size:50;uniqueIndex;not null" json:"code"`
+	Type         OrgType        `gorm:"size:20;not null" json:"type"`
+	Level        int            `gorm:"not null;default:1" json:"level"`
+	ParentID     *string        `gorm:"type:uuid;index" json:"parent_id,omitempty"`
+	Description  string         `gorm:"type:text" json:"description,omitempty"`
+	Address      string         `gorm:"size:255" json:"address,omitempty"`
+	ContactName  string         `gorm:"size:50" json:"contact_name,omitempty"`
+	ContactPhone string         `gorm:"size:20" json:"contact_phone,omitempty"`
+	Status       OrgStatus      `gorm:"size:20;not null;default:'active'" json:"status"`
+	Logo         string         `gorm:"size:255" json:"logo,omitempty"`
+	SortOrder    int            `gorm:"default:0" json:"sort_order"`
+	Parent       *Organization  `gorm:"foreignKey:ParentID" json:"parent,omitempty"`
+	Children     []Organization `gorm:"foreignKey:ParentID" json:"children,omitempty"`
+	Stats        *OrgStats      `gorm:"-" json:"stats,omitempty"`
 }
 
 // TableName 表名
@@ -137,15 +137,15 @@ func (o *Organization) calculateLevel() int {
 
 // OrgStats 组织统计
 type OrgStats struct {
-	ID             string `gorm:"type:uuid;primaryKey" json:"id"`
-	OrgID          string `gorm:"type:uuid;uniqueIndex;not null" json:"org_id"`
-	TotalVolunteers int   `json:"total_volunteers"`
-	ActiveVolunteers int  `json:"active_volunteers"`
-	TotalCases     int    `json:"total_cases"`
-	ActiveCases    int    `json:"active_cases"`
-	CompletedCases int    `json:"completed_cases"`
-	TotalTasks     int    `json:"total_tasks"`
-	PendingTasks   int    `json:"pending_tasks"`
+	ID               string `gorm:"type:uuid;primaryKey" json:"id"`
+	OrgID            string `gorm:"type:uuid;uniqueIndex;not null" json:"org_id"`
+	TotalVolunteers  int    `json:"total_volunteers"`
+	ActiveVolunteers int    `json:"active_volunteers"`
+	TotalCases       int    `json:"total_cases"`
+	ActiveCases      int    `json:"active_cases"`
+	CompletedCases   int    `json:"completed_cases"`
+	TotalTasks       int    `json:"total_tasks"`
+	PendingTasks     int    `json:"pending_tasks"`
 	BaseEntity
 }
 
@@ -176,11 +176,11 @@ func NewOrganization(name, code string, orgType OrgType, parentID *string) (*Org
 		BaseEntity: BaseEntity{
 			ID: uuid.New().String(),
 		},
-		Name:    name,
-		Code:    code,
-		Type:    orgType,
+		Name:     name,
+		Code:     code,
+		Type:     orgType,
 		ParentID: parentID,
-		Status:  OrgStatusActive,
+		Status:   OrgStatusActive,
 	}
 	org.Level = org.calculateLevel()
 

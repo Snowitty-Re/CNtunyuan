@@ -237,13 +237,13 @@ func (r *TaskRepositoryImpl) UpdateStatus(ctx context.Context, id string, status
 	updates := map[string]interface{}{
 		"status": status,
 	}
-	
+
 	// 如果开始处理，记录开始时间
 	if status == entity.TaskStatusProcessing {
 		now := time.Now()
 		updates["started_at"] = &now
 	}
-	
+
 	// 如果完成，记录完成时间
 	if status == entity.TaskStatusCompleted {
 		now := time.Now()
@@ -337,14 +337,14 @@ func (r *TaskRepositoryImpl) GetStats(ctx context.Context, userID string) (*enti
 		stats.MyTasks = myTasks
 
 		var myPending int64
-		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status IN (?, ?, ?)", 
+		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status IN (?, ?, ?)",
 			userID, userID, entity.TaskStatusPending, entity.TaskStatusAssigned, entity.TaskStatusProcessing).Count(&myPending).Error; err != nil {
 			return nil, err
 		}
 		stats.MyPending = myPending
 
 		var myCompleted int64
-		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status = ?", 
+		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status = ?",
 			userID, userID, entity.TaskStatusCompleted).Count(&myCompleted).Error; err != nil {
 			return nil, err
 		}

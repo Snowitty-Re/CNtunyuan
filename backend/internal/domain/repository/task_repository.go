@@ -68,21 +68,21 @@ type TaskRepository interface {
 // TaskQuery 任务查询参数
 type TaskQuery struct {
 	Pagination
-	Keyword        string             `json:"keyword"`
-	Type           entity.TaskType    `json:"type"`
-	Status         entity.TaskStatus  `json:"status"`
-	Priority       entity.TaskPriority `json:"priority"`
-	CreatorID      string             `json:"creator_id"`
-	AssigneeID     string             `json:"assignee_id"`
-	OrgID          string             `json:"org_id"`
-	MissingPersonID string            `json:"missing_person_id"`
-	Province       string             `json:"province"`
-	City           string             `json:"city"`
-	StartDate      string             `json:"start_date"`
-	EndDate        string             `json:"end_date"`
-	IsOverdue      *bool              `json:"is_overdue,omitempty"`
-	SortField      string             `json:"sort_field"`
-	SortOrder      string             `json:"sort_order"`
+	Keyword         string              `json:"keyword"`
+	Type            entity.TaskType     `json:"type"`
+	Status          entity.TaskStatus   `json:"status"`
+	Priority        entity.TaskPriority `json:"priority"`
+	CreatorID       string              `json:"creator_id"`
+	AssigneeID      string              `json:"assignee_id"`
+	OrgID           string              `json:"org_id"`
+	MissingPersonID string              `json:"missing_person_id"`
+	Province        string              `json:"province"`
+	City            string              `json:"city"`
+	StartDate       string              `json:"start_date"`
+	EndDate         string              `json:"end_date"`
+	IsOverdue       *bool               `json:"is_overdue,omitempty"`
+	SortField       string              `json:"sort_field"`
+	SortOrder       string              `json:"sort_order"`
 }
 
 // NewTaskQuery 创建默认任务查询

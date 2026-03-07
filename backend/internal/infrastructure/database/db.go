@@ -50,7 +50,7 @@ func NewDatabase(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 			SingularTable: false,
 		},
 		DisableForeignKeyConstraintWhenMigrating: true,
-		Logger: &gormLogger{},
+		Logger:                                   &gormLogger{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect database: %w", err)

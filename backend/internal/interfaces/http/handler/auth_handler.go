@@ -87,10 +87,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}, c.ClientIP())
 
 	if err != nil {
-		logger.Warn("Login failed", 
-			logger.String("username", req.Username), 
+		logger.Warn("Login failed",
+			logger.String("username", req.Username),
 			logger.Err(err))
-		
+
 		// 使用新的错误体系
 		switch {
 		case errors.IsCode(err, errors.CodeInvalidPassword):
@@ -177,8 +177,8 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 
 	user, err := h.authService.GetCurrentUser(c.Request.Context(), userID)
 	if err != nil {
-		logger.Warn("Get current user failed", 
-			logger.String("user_id", userID), 
+		logger.Warn("Get current user failed",
+			logger.String("user_id", userID),
 			logger.Err(err))
 		response.Error(c, errors.ErrUserNotFound)
 		return
@@ -218,7 +218,7 @@ func (h *AuthHandler) WechatLogin(c *gin.Context) {
 			response.Error(c, errors.New(errors.CodeInternal, "token generation failed"))
 			return
 		}
-		
+
 		response.Success(c, gin.H{
 			"need_bind_phone": true,
 			"access_token":    tokens.AccessToken,
