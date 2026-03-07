@@ -1,6 +1,0 @@
-<view class="container">
-  <view class="content">
-    <text class="title">{{title}}</text>
-    <text class="text-content">{{content}}</text>
-  </view>
-</view>
