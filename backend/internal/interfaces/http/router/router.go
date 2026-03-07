@@ -23,6 +23,8 @@ type Router struct {
 	auditHandler             *handler.AuditHandler
 	workflowHandler          *handler.WorkflowHandler
 	permissionHandler        *handler.PermissionHandler
+	notificationHandler      *handler.NotificationHandler
+	webSocketHandler         *handler.WebSocketHandler
 	authMiddleware           *middleware.AuthMiddleware
 	auditMiddleware          *middleware.AuditMiddleware
 	dataPermissionMiddleware *middleware.DataPermissionMiddleware
@@ -41,6 +43,8 @@ func NewRouter(
 	auditHandler *handler.AuditHandler,
 	workflowHandler *handler.WorkflowHandler,
 	permissionHandler *handler.PermissionHandler,
+	notificationHandler *handler.NotificationHandler,
+	webSocketHandler *handler.WebSocketHandler,
 	authMiddleware *middleware.AuthMiddleware,
 	auditMiddleware *middleware.AuditMiddleware,
 	dataPermissionMiddleware *middleware.DataPermissionMiddleware,
@@ -85,6 +89,8 @@ func NewRouter(
 		auditHandler:             auditHandler,
 		workflowHandler:          workflowHandler,
 		permissionHandler:        permissionHandler,
+		notificationHandler:      notificationHandler,
+		webSocketHandler:         webSocketHandler,
 		authMiddleware:           authMiddleware,
 		auditMiddleware:          auditMiddleware,
 		dataPermissionMiddleware: dataPermissionMiddleware,
@@ -121,6 +127,8 @@ func (r *Router) Setup() {
 	r.auditHandler.RegisterRoutes(api, r.authMiddleware)
 	r.workflowHandler.RegisterRoutes(api, r.authMiddleware)
 	r.permissionHandler.RegisterRoutes(api, r.authMiddleware)
+	r.notificationHandler.RegisterRoutes(api, r.authMiddleware)
+	r.webSocketHandler.RegisterRoutes(api, r.authMiddleware)
 
 	// 404 处理
 	r.engine.NoRoute(func(c *gin.Context) {

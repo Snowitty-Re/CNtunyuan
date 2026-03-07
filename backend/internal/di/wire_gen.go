@@ -6,6 +6,7 @@
 package di
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/storage"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/wechat"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/permission"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/websocket"
 	infraCache "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
@@ -43,6 +45,7 @@ type Container struct {
 	AuditService             *service.AuditService
 	WorkflowService          *service.WorkflowAppService
 	PermissionService        *service.PermissionAppService
+	NotificationService      *service.NotificationAppService
 	AuthHandler              *handler.AuthHandler
 	UserHandler              *handler.UserHandler
 	OrganizationHandler      *handler.OrganizationHandler
@@ -54,6 +57,9 @@ type Container struct {
 	AuditHandler             *handler.AuditHandler
 	WorkflowHandler          *handler.WorkflowHandler
 	PermissionHandler        *handler.PermissionHandler
+	NotificationHandler      *handler.NotificationHandler
+	WebSocketHandler         *handler.WebSocketHandler
+	WebSocketManager         *websocket.Manager
 	AuthMiddleware           *middleware.AuthMiddleware
 	AuditMiddleware          *middleware.AuditMiddleware
 	DataPermissionMiddleware *middleware.DataPermissionMiddleware
@@ -121,6 +127,11 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	
 	// Phase 3: 创建权限仓储
 	permRepo := infraRepo.NewPermissionRepository(db)
+	
+	// Phase 4: 创建通知仓储
+	notifRepo := infraRepo.NewNotificationRepository(db)
+	notifSettingRepo := infraRepo.NewNotificationSettingRepository(db)
+	msgTemplateRepo := infraRepo.NewMessageTemplateRepository(db)
 
 	// 创建领域服务
 	authService := domainService.NewAuthService(userRepo, tokenService, redisCache, wechatClient)
@@ -158,6 +169,15 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	
 	// Phase 3: 创建权限服务
 	permissionService := service.NewPermissionAppService(permRepo)
+	
+	// Phase 4: 创建WebSocket管理器和通知服务
+	wsManager := websocket.NewManager()
+	notificationService := service.NewNotificationAppService(
+		notifRepo,
+		notifSettingRepo,
+		msgTemplateRepo,
+		wsManager,
+	)
 
 	// 创建数据权限提供者
 	dataPermissionProvider := permission.NewDataPermissionProvider(db)
@@ -180,6 +200,8 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	auditHandler := handler.NewAuditHandler(auditService)
 	workflowHandler := handler.NewWorkflowHandler(workflowService)
 	permissionHandler := handler.NewPermissionHandler(permissionService)
+	notificationHandler := handler.NewNotificationHandler(notificationService)
+	webSocketHandler := handler.NewWebSocketHandler(wsManager)
 
 	// 创建路由
 	r := router.NewRouter(
@@ -194,11 +216,16 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		auditHandler,
 		workflowHandler,
 		permissionHandler,
+		notificationHandler,
+		webSocketHandler,
 		authMiddleware,
 		auditMiddleware,
 		dataPermissionMiddleware,
 	)
 	r.Setup()
+	
+	// 启动WebSocket管理器
+	go wsManager.Start(context.Background())
 
 	return &Container{
 		Config:                   cfg,
@@ -216,6 +243,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		AuditService:             auditService,
 		WorkflowService:          workflowService,
 		PermissionService:        permissionService,
+		NotificationService:      notificationService,
 		AuthHandler:              authHandler,
 		UserHandler:              userHandler,
 		OrganizationHandler:      orgHandler,
@@ -227,6 +255,9 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		AuditHandler:             auditHandler,
 		WorkflowHandler:          workflowHandler,
 		PermissionHandler:        permissionHandler,
+		NotificationHandler:      notificationHandler,
+		WebSocketHandler:         webSocketHandler,
+		WebSocketManager:         wsManager,
 		AuthMiddleware:           authMiddleware,
 		AuditMiddleware:          auditMiddleware,
 		DataPermissionMiddleware: dataPermissionMiddleware,
