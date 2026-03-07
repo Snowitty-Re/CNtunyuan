@@ -1,14 +1,31 @@
+/**
+ * 团圆寻亲小程序 - 主应用文件
+ * 
+ * 环境配置说明：
+ * 1. 修改 API_CONFIG 中的 production 配置为你的实际域名
+ * 2. 修改 initEnvironment 中的 FORCE_ENV 来切换环境
+ * 3. 每次修改后需要重新上传代码才能生效
+ * 
+ * 常见问题：
+ * Q: 为什么修改配置后还是请求开发环境？
+ * A: 需要重新上传代码，且清除小程序缓存（开发者工具 → 详情 → 清除缓存）
+ * 
+ * Q: 体验版如何切换到生产环境？
+ * A: 将 FORCE_ENV 设为 'production' 并重新上传
+ */
+
 const { request, uploadFile } = require('./utils/request')
 
 // API 基础配置
+// 【重要】生产环境域名必须正确配置！
 const API_CONFIG = {
   development: {
     baseUrl: 'http://localhost:8080/api/v1',
     wsUrl: 'ws://localhost:8080/ws'
   },
   production: {
-    baseUrl: 'https://api.cntunyuan.com/api/v1',
-    wsUrl: 'wss://api.cntunyuan.com/ws'
+    baseUrl: 'https://cntuanyuan.com/api/v1',
+    wsUrl: 'wss://cntuanyuan.com/ws'
   }
 }
 
@@ -37,12 +54,29 @@ App({
   // 初始化环境配置
   initEnvironment() {
     const accountInfo = wx.getAccountInfoSync()
-    const env = accountInfo.miniProgram.envVersion === 'release' ? 'production' : 'development'
+    
+    // envVersion: develop(开发版), trial(体验版), release(正式版)
+    const envVersion = accountInfo.miniProgram.envVersion
+    
+    // 强制使用生产环境（临时方案，方便测试）
+    // 如需切换环境，修改此行：
+    // 'production' - 生产环境
+    // 'development' - 开发环境
+    // 'auto' - 自动根据 envVersion 判断
+    const FORCE_ENV = 'production'  // <-- 修改这里切换环境
+    
+    let env
+    if (FORCE_ENV === 'auto') {
+      // 自动判断：release 为生产环境，其他为开发环境
+      env = envVersion === 'release' ? 'production' : 'development'
+    } else {
+      env = FORCE_ENV
+    }
     
     this.globalData.apiBaseUrl = API_CONFIG[env].baseUrl
     this.globalData.wsUrl = API_CONFIG[env].wsUrl
     
-    console.log(`[App] 当前环境: ${env}, API: ${this.globalData.apiBaseUrl}`)
+    console.log(`[App] 当前环境: ${env}, envVersion: ${envVersion}, API: ${this.globalData.apiBaseUrl}`)
   },
 
   // 获取系统信息
