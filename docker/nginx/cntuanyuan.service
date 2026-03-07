@@ -1,0 +1,32 @@
+[Unit]
+Description=CNtunyuan Volunteer System Backend
+After=network.target postgresql.service mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+
+# 工作目录
+WorkingDirectory=/var/www/cntuanyuan/backend
+
+# 启动命令
+ExecStart=/var/www/cntuanyuan/backend/cntuanyuan
+
+# 重启策略
+Restart=always
+RestartSec=5
+
+# 环境变量
+Environment="GIN_MODE=release"
+Environment="PORT=8080"
+
+# 日志输出
+StandardOutput=journal
+StandardError=journal
+
+# 文件描述符限制
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
