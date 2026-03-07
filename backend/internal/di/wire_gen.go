@@ -11,7 +11,6 @@ import (
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
-	domainRepo "github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/auth"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
@@ -29,32 +28,34 @@ import (
 
 // Container dependency container
 type Container struct {
-	Config                  *config.Config
-	DB                      *gorm.DB
-	Cache                   cache.Cache
-	CacheManager            infraCache.CacheManager
-	AuthService             *domainService.AuthService
-	UserService             *service.UserAppService
-	OrganizationService     *service.OrganizationAppService
-	MissingPersonService    *service.MissingPersonAppService
-	DialectService          *service.DialectAppService
-	TaskService             *service.TaskAppService
-	FileService             *service.FileAppService
-	DashboardService        *service.DashboardService
-	AuditService            *service.AuditService
-	AuthHandler             *handler.AuthHandler
-	UserHandler             *handler.UserHandler
-	OrganizationHandler     *handler.OrganizationHandler
-	MissingPersonHandler    *handler.MissingPersonHandler
-	DialectHandler          *handler.DialectHandler
-	TaskHandler             *handler.TaskHandler
-	UploadHandler           *handler.UploadHandler
-	DashboardHandler        *handler.DashboardHandler
-	AuditHandler            *handler.AuditHandler
-	AuthMiddleware          *middleware.AuthMiddleware
-	AuditMiddleware         *middleware.AuditMiddleware
+	Config                   *config.Config
+	DB                       *gorm.DB
+	Cache                    cache.Cache
+	CacheManager             infraCache.CacheManager
+	AuthService              *domainService.AuthService
+	UserService              *service.UserAppService
+	OrganizationService      *service.OrganizationAppService
+	MissingPersonService     *service.MissingPersonAppService
+	DialectService           *service.DialectAppService
+	TaskService              *service.TaskAppService
+	FileService              *service.FileAppService
+	DashboardService         *service.DashboardService
+	AuditService             *service.AuditService
+	WorkflowService          *service.WorkflowAppService
+	AuthHandler              *handler.AuthHandler
+	UserHandler              *handler.UserHandler
+	OrganizationHandler      *handler.OrganizationHandler
+	MissingPersonHandler     *handler.MissingPersonHandler
+	DialectHandler           *handler.DialectHandler
+	TaskHandler              *handler.TaskHandler
+	UploadHandler            *handler.UploadHandler
+	DashboardHandler         *handler.DashboardHandler
+	AuditHandler             *handler.AuditHandler
+	WorkflowHandler          *handler.WorkflowHandler
+	AuthMiddleware           *middleware.AuthMiddleware
+	AuditMiddleware          *middleware.AuditMiddleware
 	DataPermissionMiddleware *middleware.DataPermissionMiddleware
-	Router                  *router.Router
+	Router                   *router.Router
 }
 
 // NewContainer 手动创建依赖容器
@@ -93,10 +94,8 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	var storageService domainService.StorageService
 	switch cfg.Storage.Type {
 	case "oss":
-		// TODO: 实现 OSS 存储
 		storageService = storage.NewLocalStorage(&cfg.Storage)
 	case "cos":
-		// TODO: 实现 COS 存储
 		storageService = storage.NewLocalStorage(&cfg.Storage)
 	default:
 		storageService = storage.NewLocalStorage(&cfg.Storage)
@@ -110,8 +109,12 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	taskRepo := infraRepo.NewTaskRepository(db)
 	fileRepo := infraRepo.NewFileRepository(db)
 	
-	// 创建审计日志仓储
+	// Phase 1: 创建审计日志仓储
 	auditLogRepo := infraRepo.NewAuditLogRepository(db)
+	
+	// Phase 2: 创建工作流仓储
+	workflowRepo := infraRepo.NewWorkflowRepository(db)
+	workflowTaskRepo := infraRepo.NewWorkflowTaskRepository(db)
 
 	// 创建领域服务
 	authService := domainService.NewAuthService(userRepo, tokenService, redisCache, wechatClient)
@@ -137,8 +140,15 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		fileRepo,
 	)
 	
-	// 创建审计服务
+	// Phase 1: 创建审计服务
 	auditService := service.NewAuditService(auditLogRepo)
+	
+	// Phase 2: 创建工作流服务
+	workflowService := service.NewWorkflowAppService(
+		workflowRepo,
+		workflowTaskRepo,
+		userRepo,
+	)
 
 	// 创建数据权限提供者
 	dataPermissionProvider := permission.NewDataPermissionProvider(db)
@@ -158,6 +168,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	uploadHandler := handler.NewUploadHandler(fileService)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 	auditHandler := handler.NewAuditHandler(auditService)
+	workflowHandler := handler.NewWorkflowHandler(workflowService)
 
 	// 创建路由
 	r := router.NewRouter(
@@ -170,6 +181,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		uploadHandler,
 		dashboardHandler,
 		auditHandler,
+		workflowHandler,
 		authMiddleware,
 		auditMiddleware,
 		dataPermissionMiddleware,
@@ -190,6 +202,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		FileService:              fileService,
 		DashboardService:         dashboardService,
 		AuditService:             auditService,
+		WorkflowService:          workflowService,
 		AuthHandler:              authHandler,
 		UserHandler:              userHandler,
 		OrganizationHandler:      orgHandler,
@@ -199,31 +212,10 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		UploadHandler:            uploadHandler,
 		DashboardHandler:         dashboardHandler,
 		AuditHandler:             auditHandler,
+		WorkflowHandler:          workflowHandler,
 		AuthMiddleware:           authMiddleware,
 		AuditMiddleware:          auditMiddleware,
 		DataPermissionMiddleware: dataPermissionMiddleware,
 		Router:                   r,
 	}, nil
-}
-
-// ProvideCacheManager 提供缓存管理器
-func ProvideCacheManager(redisCache cache.Cache) infraCache.CacheManager {
-	if redisCache == nil {
-		return nil
-	}
-	// Type assertion to access GetClient method
-	if rc, ok := redisCache.(*cache.RedisCache); ok {
-		return infraCache.NewRedisCacheManager(rc.GetClient(), infraCache.DefaultCacheConfig())
-	}
-	return nil
-}
-
-// ProvideDataPermissionProvider 提供数据权限提供者
-func ProvideDataPermissionProvider(db *gorm.DB) permission.DataPermissionProvider {
-	return permission.NewDataPermissionProvider(db)
-}
-
-// ProvideAuditLogRepository 提供审计日志仓储
-func ProvideAuditLogRepository(db *gorm.DB) domainRepo.AuditLogRepository {
-	return infraRepo.NewAuditLogRepository(db)
 }
