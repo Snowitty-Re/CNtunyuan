@@ -269,13 +269,29 @@ func (s *AuthService) GenerateTokenPair(user *entity.User) (*TokenPair, error) {
 // getDefaultOrgID 获取默认组织ID
 func (s *AuthService) getDefaultOrgID(ctx context.Context) (string, error) {
 	// 使用根组织ID作为默认值
-	// 实际应用中应该检查组织是否存在
-	return "00000000-0000-0000-0000-000000000000", nil
+	const defaultOrgID = "00000000-0000-0000-0000-000000000000"
+
+	// 检查组织是否存在
+	_, err := s.userRepo.FindByID(ctx, defaultOrgID)
+	if err != nil {
+		// 组织可能不存在，记录警告但继续返回默认ID
+		// 实际生产环境应该确保默认组织存在
+		logger.Warn("Default organization may not exist",
+			logger.String("org_id", defaultOrgID),
+			logger.Err(err))
+	}
+
+	return defaultOrgID, nil
 }
 
 // BindPhone 绑定手机号
 // userID 可为空，表示新用户注册
 func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string, code string) (*valueobject.LoginResult, error) {
+	logger.Info("BindPhone called",
+		logger.String("user_id", userID),
+		logger.String("phone", phone),
+	)
+
 	// TODO: 验证验证码
 	// 这里应该调用短信服务验证验证码
 	// 为了简化，暂时跳过验证码验证
@@ -283,6 +299,7 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 	// 检查手机号是否已被绑定
 	existingUser, err := s.userRepo.FindByPhone(ctx, phone)
 	if err == nil && existingUser != nil {
+		logger.Info("Phone already bound to user", logger.String("existing_user_id", existingUser.ID))
 		// 如果提供了 userID，且是同一用户，则更新
 		if userID != "" && existingUser.ID == userID {
 			// 同一用户，无需操作
@@ -304,35 +321,51 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 	var user *entity.User
 
 	if userID != "" {
+		logger.Info("Updating existing user", logger.String("user_id", userID))
 		// 更新现有用户
 		user, err = s.userRepo.FindByID(ctx, userID)
 		if err != nil {
+			logger.Error("Find user by ID failed", logger.String("user_id", userID), logger.Err(err))
 			return nil, errors.ErrUserNotFound
 		}
 		user.Phone = phone
 		if err := s.userRepo.Update(ctx, user); err != nil {
+			logger.Error("Update user failed", logger.String("user_id", userID), logger.Err(err))
 			return nil, errors.Wrap(err, errors.CodeInternal, "update user failed")
 		}
 	} else {
+		logger.Info("Creating new user for phone", logger.String("phone", phone))
 		// 创建新用户（志愿者角色）
+		// 安全地获取手机号后4位
+		suffix := phone
+		if len(phone) >= 4 {
+			suffix = phone[len(phone)-4:]
+		}
+
 		user = &entity.User{
-			Nickname: "志愿者" + phone[len(phone)-4:],
+			Nickname: "志愿者" + suffix,
 			Phone:    phone,
 			Role:     entity.RoleVolunteer,
 			Status:   entity.UserStatusActive,
 			OrgID:    "00000000-0000-0000-0000-000000000000", // 默认组织
 		}
 		// 设置默认密码
-		user.SetPassword("123456") // 实际应该发送随机密码到手机
+		if err := user.SetPassword("123456"); err != nil { // 实际应该发送随机密码到手机
+			logger.Error("Set password failed", logger.Err(err))
+			return nil, errors.Wrap(err, errors.CodeInternal, "set password failed")
+		}
 
 		if err := s.userRepo.Create(ctx, user); err != nil {
+			logger.Error("Create user failed", logger.String("phone", phone), logger.Err(err))
 			return nil, errors.Wrap(err, errors.CodeInternal, "create user failed")
 		}
+		logger.Info("User created successfully", logger.String("user_id", user.ID))
 	}
 
 	// 生成 token
 	tokens, err := s.tokenService.GenerateTokenPair(ctx, user)
 	if err != nil {
+		logger.Error("Generate token pair failed", logger.Err(err))
 		return nil, errors.Wrap(err, errors.CodeInternal, "token generation failed")
 	}
 
