@@ -44,17 +44,30 @@ func NewFileAppService(
 
 // UploadFile 上传单个文件
 func (s *FileAppService) UploadFile(ctx context.Context, file multipart.File, header *multipart.FileHeader, uploaderID string) (*dto.FileResponse, error) {
+	logger.Info("UploadFile service called",
+		logger.String("filename", header.Filename),
+		logger.Int64("size", header.Size),
+		logger.String("uploader_id", uploaderID),
+		logger.Int64("max_file_size", s.maxFileSize),
+	)
+
 	// 检查文件大小
 	if s.maxFileSize > 0 && header.Size > s.maxFileSize {
+		logger.Warn("File too large", logger.Int64("size", header.Size), logger.Int64("max", s.maxFileSize))
 		return nil, ErrFileTooLarge
 	}
 
 	// 上传文件到存储
 	uploadedFile, err := s.storageService.Upload(ctx, file, header.Filename, header.Size, header.Header.Get("Content-Type"))
 	if err != nil {
-		logger.Error("Failed to upload file", logger.Err(err))
+		logger.Error("Failed to upload file to storage", logger.Err(err))
 		return nil, err
 	}
+
+	logger.Info("File uploaded to storage",
+		logger.String("path", uploadedFile.Path),
+		logger.String("url", uploadedFile.URL),
+	)
 
 	// 设置上传者
 	uploadedFile.UploaderID = uploaderID
@@ -63,9 +76,11 @@ func (s *FileAppService) UploadFile(ctx context.Context, file multipart.File, he
 	if err := s.fileRepo.Create(ctx, uploadedFile); err != nil {
 		// 删除已上传的文件
 		s.storageService.Delete(ctx, uploadedFile.Path)
-		logger.Error("Failed to save file record", logger.Err(err))
+		logger.Error("Failed to save file record to database", logger.Err(err))
 		return nil, err
 	}
+
+	logger.Info("File record saved to database", logger.String("file_id", uploadedFile.ID))
 
 	resp := dto.ToFileResponse(uploadedFile)
 	return &resp, nil

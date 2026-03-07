@@ -41,14 +41,24 @@ func (h *UploadHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *
 
 // Upload 单文件上传
 func (h *UploadHandler) Upload(c *gin.Context) {
+	logger.Info("Upload handler called",
+		logger.String("content_type", c.ContentType()),
+	)
+
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
+		logger.Error("Failed to get form file", logger.Err(err))
 		response.BadRequest(c, "file is required")
 		return
 	}
 	defer file.Close()
 
 	userID := middleware.GetUserID(c)
+	logger.Info("Uploading file",
+		logger.String("filename", header.Filename),
+		logger.Int64("size", header.Size),
+		logger.String("user_id", userID),
+	)
 
 	resp, err := h.fileService.UploadFile(c.Request.Context(), file, header, userID)
 	if err != nil {
@@ -57,11 +67,12 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 			response.BadRequest(c, "file too large")
 		default:
 			logger.Error("Failed to upload file", logger.Err(err))
-			response.InternalServerError(c, "failed to upload file")
+			response.InternalServerError(c, "failed to upload file: "+err.Error())
 		}
 		return
 	}
 
+	logger.Info("File uploaded successfully", logger.String("file_id", resp.ID))
 	response.Success(c, resp)
 }
 

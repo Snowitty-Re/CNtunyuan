@@ -36,6 +36,14 @@ func NewLocalStorage(cfg *config.StorageConfig) service.StorageService {
 
 // Upload 上传文件
 func (s *LocalStorage) Upload(ctx context.Context, reader io.Reader, filename string, size int64, contentType string) (*entity.File, error) {
+	logger.Info("LocalStorage Upload called",
+		logger.String("filename", filename),
+		logger.Int64("size", size),
+		logger.String("content_type", contentType),
+		logger.String("base_path", s.basePath),
+		logger.String("base_url", s.baseURL),
+	)
+
 	// 检查文件大小
 	if s.maxSize > 0 && size > s.maxSize {
 		return nil, fmt.Errorf("file size exceeds limit: %d", s.maxSize)
@@ -53,15 +61,24 @@ func (s *LocalStorage) Upload(ctx context.Context, reader io.Reader, filename st
 	storagePath := filepath.Join(datePath, fileID+ext)
 	fullPath := filepath.Join(s.basePath, storagePath)
 
+	logger.Info("Generated paths",
+		logger.String("storage_path", storagePath),
+		logger.String("full_path", fullPath),
+	)
+
 	// 创建目录
 	dir := filepath.Dir(fullPath)
+	logger.Info("Creating directory", logger.String("dir", dir))
 	if err := os.MkdirAll(dir, 0755); err != nil {
+		logger.Error("Failed to create directory", logger.String("dir", dir), logger.Err(err))
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	// 创建文件
+	logger.Info("Creating file", logger.String("path", fullPath))
 	file, err := os.Create(fullPath)
 	if err != nil {
+		logger.Error("Failed to create file", logger.String("path", fullPath), logger.Err(err))
 		return nil, fmt.Errorf("failed to create file: %w", err)
 	}
 	defer file.Close()
@@ -70,6 +87,7 @@ func (s *LocalStorage) Upload(ctx context.Context, reader io.Reader, filename st
 	written, err := io.Copy(file, reader)
 	if err != nil {
 		os.Remove(fullPath)
+		logger.Error("Failed to write file", logger.String("path", fullPath), logger.Err(err))
 		return nil, fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -85,9 +103,10 @@ func (s *LocalStorage) Upload(ctx context.Context, reader io.Reader, filename st
 		StorageType:  entity.StorageTypeLocal,
 	}
 
-	logger.Info("File uploaded to local storage",
+	logger.Info("File uploaded to local storage successfully",
 		logger.String("path", storagePath),
 		logger.Int64("size", written),
+		logger.String("url", f.URL),
 	)
 
 	return f, nil
