@@ -20,11 +20,8 @@ const BASE_CONFIG = {
 const request = (options) => {
   return new Promise((resolve, reject) => {
     const token = wx.getStorageSync('token')
-    // 获取基础 URL，优先从 app.globalData，否则使用生产环境地址
-    let baseUrl = 'https://cntuanyuan.com/api/v1'  // 默认生产环境
-    if (app && app.globalData && app.globalData.apiBaseUrl) {
-      baseUrl = app.globalData.apiBaseUrl
-    }
+    // 直接使用生产环境 API 地址
+    const baseUrl = 'https://cntuanyuan.com/api/v1'
     
     // 合并配置
     const config = {
