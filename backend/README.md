@@ -1,197 +1,191 @@
-# 团圆寻亲系统 - 后端
+# 团圆寻亲志愿者系统 - 后端 API
 
-基于 Clean Architecture 的 Go 后端服务。
+[![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue.svg)](https://postgresql.org)
+[![Redis](https://img.shields.io/badge/Redis-7+-red.svg)](https://redis.io)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> 帮助寻找走失人员的公益平台后端 API 服务
 
 ## 技术栈
 
-- **Go 1.23+** - 编程语言
-- **Gin** - Web 框架
-- **GORM** - ORM 框架
-- **PostgreSQL** - 数据库
-- **JWT** - 认证
-- **Zap** - 日志
-
-## 项目结构
-
-```
-backend/
-├── cmd/
-│   ├── app/              # 主应用入口
-│   └── seed/             # 种子数据导入工具
-├── internal/
-│   ├── config/           # 配置管理
-│   ├── domain/           # 领域层
-│   │   ├── entity/       # 领域实体
-│   │   ├── repository/   # 仓储接口
-│   │   └── service/      # 领域服务
-│   ├── application/      # 应用层
-│   │   ├── dto/          # 数据传输对象
-│   │   └── service/      # 应用服务
-│   ├── infrastructure/   # 基础设施层
-│   │   ├── auth/         # 认证实现
-│   │   ├── cache/        # 缓存实现
-│   │   ├── database/     # 数据库连接
-│   │   ├── repository/   # 仓储实现
-│   │   └── storage/      # 文件存储
-│   ├── interfaces/       # 接口层
-│   │   └── http/
-│   │       ├── handler/  # HTTP 处理器
-│   │       ├── middleware/ # 中间件
-│   │       └── router/   # 路由
-│   └── di/               # 依赖注入
-├── pkg/                  # 公共包
-│   ├── logger/           # 日志
-│   ├── response/         # HTTP 响应
-│   └── validator/        # 验证器
-├── config/               # 配置文件
-└── go.mod
-```
+- **语言**: Go 1.21+
+- **Web框架**: Gin
+- **ORM**: GORM
+- **数据库**: PostgreSQL 15+
+- **缓存**: Redis 7+
+- **架构**: Clean Architecture / DDD
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 环境要求
+
+- Go 1.21 或更高版本
+- PostgreSQL 15 或更高版本
+- Redis 7 或更高版本
+- Make (可选)
+
+### 2. 安装依赖
 
 ```bash
 cd backend
 go mod download
 ```
 
-### 2. 配置数据库
-
-编辑 `config/config.yaml`:
-
-```yaml
-database:
-  host: "localhost"
-  port: 5432
-  user: "postgres"
-  password: "yourpassword"
-  database: "cntuanyuan"
-  ssl_mode: "disable"
-```
-
-### 3. 数据库迁移
+### 3. 配置环境变量
 
 ```bash
-cd backend
-go run cmd/app/main.go -migrate
+cp .env.example .env
+# 编辑 .env 文件，配置数据库和 Redis 连接信息
 ```
 
-### 4. 启动服务
+### 4. 数据库迁移
 
 ```bash
-cd backend
+# 使用 PostgreSQL
+psql -U postgres -d cntuanyuan -f migrations/postgres/001_init.sql
+psql -U postgres -d cntuanyuan -f migrations/postgres/002_workflow.sql
+psql -U postgres -d cntuanyuan -f migrations/postgres/003_audit_log.sql
+psql -U postgres -d cntuanyuan -f migrations/postgres/004_permissions.sql
+psql -U postgres -d cntuanyuan -f migrations/postgres/005_permissions.sql
+psql -U postgres -d cntuanyuan -f migrations/postgres/006_notifications.sql
+```
+
+### 5. 启动服务
+
+```bash
+# 开发模式
 go run cmd/app/main.go
+
+# 或构建后运行
+go build -o app cmd/app/main.go
+./app
 ```
 
-服务将在 `http://localhost:8080` 启动。
+服务默认在 `:8080` 端口启动。
 
-## API 端点
+## 项目结构
 
-### 认证
-- `POST /api/v1/auth/login` - 登录
-- `POST /api/v1/auth/register` - 注册
-- `POST /api/v1/auth/logout` - 登出
-- `POST /api/v1/auth/refresh` - 刷新令牌
+```
+backend/
+├── cmd/                    # 应用程序入口
+│   ├── app/               # HTTP 服务器
+│   └── seed/              # 数据填充工具
+├── internal/              # 私有应用代码
+│   ├── domain/            # 领域层
+│   │   ├── entity/        # 领域实体
+│   │   ├── repository/    # 仓储接口
+│   │   └── service/       # 领域服务
+│   ├── application/       # 应用层
+│   │   ├── dto/           # 数据传输对象
+│   │   └── service/       # 应用服务
+│   ├── infrastructure/    # 基础设施层
+│   │   ├── database/      # 数据库
+│   │   ├── cache/         # 缓存
+│   │   ├── repository/    # 仓储实现
+│   │   └── websocket/     # WebSocket
+│   └── interfaces/        # 接口适配层
+│       └── http/
+│           ├── handler/   # HTTP 处理器
+│           ├── middleware/# 中间件
+│           └── router/    # 路由
+├── pkg/                   # 公共包
+│   ├── errors/            # 错误处理
+│   ├── logger/            # 日志
+│   └── utils/             # 工具函数
+├── migrations/            # 数据库迁移
+└── test/                  # 测试
+```
 
-### 用户
-- `GET /api/v1/users` - 用户列表
-- `GET /api/v1/users/:id` - 用户详情
-- `PUT /api/v1/users/:id` - 更新用户
-- `DELETE /api/v1/users/:id` - 删除用户
+## API 文档
 
-### 组织
-- `GET /api/v1/organizations` - 组织列表
-- `POST /api/v1/organizations` - 创建组织
-- `GET /api/v1/organizations/:id` - 组织详情
-- `PUT /api/v1/organizations/:id` - 更新组织
-- `DELETE /api/v1/organizations/:id` - 删除组织
+启动服务后，访问 Swagger 文档：
 
-### 走失人员
-- `GET /api/v1/missing-persons` - 案件列表
-- `POST /api/v1/missing-persons` - 创建案件
-- `GET /api/v1/missing-persons/:id` - 案件详情
-- `PUT /api/v1/missing-persons/:id` - 更新案件
-- `DELETE /api/v1/missing-persons/:id` - 删除案件
+```
+http://localhost:8080/api/v1/swagger/index.html
+```
 
-### 方言
-- `GET /api/v1/dialects` - 方言列表
-- `POST /api/v1/dialects` - 上传方言
-- `GET /api/v1/dialects/:id` - 方言详情
-- `PUT /api/v1/dialects/:id` - 更新方言
-- `DELETE /api/v1/dialects/:id` - 删除方言
+## 主要功能
 
-### 任务
-- `GET /api/v1/tasks` - 任务列表
-- `POST /api/v1/tasks` - 创建任务
-- `GET /api/v1/tasks/:id` - 任务详情
-- `PUT /api/v1/tasks/:id` - 更新任务
-- `DELETE /api/v1/tasks/:id` - 删除任务
+### Phase 1: 基础设施强化 ✅
+- [x] 统一错误处理
+- [x] 审计日志系统
+- [x] 数据权限框架
+- [x] 缓存抽象层
 
-### 文件上传
-- `POST /api/v1/upload` - 单文件上传
-- `POST /api/v1/upload/batch` - 批量上传
-- `DELETE /api/v1/upload/:id` - 删除文件
+### Phase 2: OA 工作流引擎 ✅
+- [x] 流程定义管理
+- [x] 工作流状态机
+- [x] 审批节点实现
+- [x] 任务委托/催办
 
-### 仪表盘
-- `GET /api/v1/dashboard/stats` - 统计数据
-- `GET /api/v1/dashboard/overview` - 概览数据
-- `GET /api/v1/dashboard/trend` - 趋势数据
+### Phase 3: 权限系统升级 ✅
+- [x] RBAC 权限矩阵
+- [x] 数据权限规则
+- [x] 字段级权限
+- [x] 权限缓存优化
 
-## 开发指南
+### Phase 4: 通知系统 ✅
+- [x] WebSocket 实时服务
+- [x] 消息模板引擎
+- [x] 多渠道推送
+- [x] 消息中心
 
-### 添加新模块
-
-1. **创建领域实体** (`internal/domain/entity/`)
-2. **定义仓储接口** (`internal/domain/repository/`)
-3. **实现仓储** (`internal/infrastructure/repository/`)
-4. **创建应用服务** (`internal/application/service/`)
-5. **创建 HTTP 处理器** (`internal/interfaces/http/handler/`)
-6. **注册路由** (`internal/interfaces/http/router/`)
-7. **更新 DI 容器** (`internal/di/`)
-
-### 代码规范
-
-- 使用 `gofmt` 格式化代码
-- 函数命名使用驼峰式
-- 接口命名使用动词+名词
-- 错误处理返回具体错误信息
+### Phase 5: 测试与文档 ✅
+- [x] 单元测试覆盖
+- [x] 集成测试
+- [x] API 文档 (Swagger)
+- [x] 部署文档
 
 ## 测试
+
+### 运行单元测试
 
 ```bash
 # 运行所有测试
 go test ./...
 
 # 运行指定包测试
-go test ./internal/domain/...
+go test ./internal/domain/entity/...
+go test ./internal/application/service/...
 
-# 带覆盖率
-go test -cover ./...
+# 生成测试覆盖率报告
+go test -coverprofile=coverage.out ./...
+go tool cover -html=coverage.out
+```
+
+### 运行集成测试
+
+```bash
+go test ./test/integration/...
 ```
 
 ## 部署
 
-### Docker
+### Docker 部署
 
 ```bash
-# 构建镜像
-docker build -t cntuanyuan-backend .
-
-# 运行容器
-docker run -p 8080:8080 cntuanyuan-backend
+docker-compose up -d
 ```
 
-### 生产环境
+详见 [Docker 部署指南](../docs/deployment/docker.md)
+
+### Kubernetes 部署
 
 ```bash
-# 编译
-CGO_ENABLED=0 GOOS=linux go build -o app cmd/app/main.go
-
-# 运行
-./app
+kubectl apply -f k8s/
 ```
+
+详见 [Kubernetes 部署指南](../docs/deployment/kubernetes.md)
+
+## 贡献
+
+1. Fork 项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
 
 ## 许可证
 
-MIT License
+[MIT](LICENSE) © 团圆寻亲团队

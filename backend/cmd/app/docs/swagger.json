@@ -1,0 +1,25 @@
+{
+    "schemes": ["http", "https"],
+    "swagger": "2.0",
+    "info": {
+        "description": "帮助寻找走失人员的公益平台后端 API 服务",
+        "title": "团圆寻亲志愿者系统 API",
+        "contact": {
+            "name": "团圆寻亲团队",
+            "email": "support@cntuanyuan.org"
+        },
+        "version": "2.0.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {},
+    "definitions": {},
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "JWT token, e.g.: Bearer {token}"
+        }
+    }
+}
