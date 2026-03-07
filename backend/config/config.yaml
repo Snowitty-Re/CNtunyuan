@@ -1,7 +1,8 @@
 server:
   port: 8080
-  mode: debug  # debug/release
-  domain: "http://localhost:8080"  # 后端域名，用于生成文件URL等
+  mode: release  # debug/release
+  # 【生产环境】修改为实际域名，用于生成文件URL等
+  domain: "https://cntuanyuan.com"
   read_timeout: 30
   write_timeout: 30
   max_header_bytes: 1048576  # 1MB
@@ -43,7 +44,8 @@ wechat:
 storage:
   type: local  # local/oss/cos
   local_path: ./uploads
-  base_url: http://localhost:8080/uploads
+  # 【生产环境】修改为实际域名，用于生成文件访问URL
+  base_url: https://cntuanyuan.com/uploads
   max_file_size: 52428800  # 50MB
   allowed_types: "jpg,png,gif,mp4,mp3,wav"
   

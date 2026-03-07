@@ -223,7 +223,8 @@ function refreshToken() {
 const uploadFile = (url, filePath, name = 'file', formData = {}) => {
   return new Promise((resolve, reject) => {
     const token = wx.getStorageSync('token')
-    const baseUrl = app ? app.globalData.apiBaseUrl : 'http://localhost:8080/api/v1'
+    // 直接使用生产环境 API 地址
+    const baseUrl = 'https://cntuanyuan.com/api/v1'
     
     wx.showLoading({ title: '上传中...', mask: true })
 
