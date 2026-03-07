@@ -12,7 +12,7 @@ type CreateUserRequest struct {
 	Phone    string      `json:"phone" binding:"required"`
 	Email    string      `json:"email"`
 	Password string      `json:"password" binding:"required,min=6"`
-	Role     entity.Role `json:"role" binding:"required"`
+	Role     string      `json:"role" binding:"required"`
 	OrgID    string      `json:"org_id" binding:"required"`
 }
 
@@ -20,7 +20,7 @@ type CreateUserRequest struct {
 type UpdateUserRequest struct {
 	Nickname string            `json:"nickname"`
 	Email    string            `json:"email"`
-	Role     entity.Role       `json:"role"`
+	Role     string            `json:"role"`
 	OrgID    string            `json:"org_id"`
 	Status   entity.UserStatus `json:"status"`
 }

@@ -94,7 +94,7 @@ func (r *UserRepositoryImpl) FindByOrgID(ctx context.Context, orgID string, pagi
 }
 
 // FindByRole 根据角色查找用户
-func (r *UserRepositoryImpl) FindByRole(ctx context.Context, role entity.Role, pagination repository.Pagination) (*repository.PageResult[entity.User], error) {
+func (r *UserRepositoryImpl) FindByRole(ctx context.Context, role string, pagination repository.Pagination) (*repository.PageResult[entity.User], error) {
 	var users []entity.User
 	var total int64
 
@@ -189,7 +189,7 @@ func (r *UserRepositoryImpl) UpdateStatus(ctx context.Context, userID string, st
 }
 
 // UpdateRole 更新角色
-func (r *UserRepositoryImpl) UpdateRole(ctx context.Context, userID string, role entity.Role) error {
+func (r *UserRepositoryImpl) UpdateRole(ctx context.Context, userID string, role string) error {
 	return r.db.WithContext(ctx).
 		Model(&entity.User{}).
 		Where("id = ?", userID).
@@ -208,7 +208,7 @@ func (r *UserRepositoryImpl) CountByOrg(ctx context.Context, orgID string) (int6
 }
 
 // CountByRole 统计角色用户数量
-func (r *UserRepositoryImpl) CountByRole(ctx context.Context, role entity.Role) (int64, error) {
+func (r *UserRepositoryImpl) CountByRole(ctx context.Context, role string) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).
 		Model(&entity.User{}).

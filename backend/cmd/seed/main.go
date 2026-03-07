@@ -325,7 +325,7 @@ func importUsers(db *gorm.DB, count int) error {
 				Phone:      "13800138000",
 				Email:      "admin@cntuanyuan.com",
 				Password:   "",
-				Role:       entity.RoleSuperAdmin,
+				Role:       string(entity.RoleSuperAdmin),
 				Status:     entity.UserStatusActive,
 				OrgID:      orgs[0].ID,
 			}
@@ -349,11 +349,11 @@ func importUsers(db *gorm.DB, count int) error {
 			continue // 已存在，跳过
 		}
 
-		role := entity.RoleVolunteer
+		role := string(entity.RoleVolunteer)
 		if created < 5 {
-			role = entity.RoleAdmin
+			role = string(entity.RoleAdmin)
 		} else if created < 15 {
-			role = entity.RoleManager
+			role = string(entity.RoleManager)
 		}
 
 		user := &entity.User{

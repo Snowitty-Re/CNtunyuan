@@ -132,7 +132,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 
 	user, err := h.userService.Update(c.Request.Context(), id, &req, &entity.User{
 		BaseEntity: entity.BaseEntity{ID: operator.ID},
-		Role:       entity.Role(operator.Role),
+		Role:       operator.Role,
 	})
 	if err != nil {
 		switch err {
@@ -169,7 +169,7 @@ func (h *UserHandler) Delete(c *gin.Context) {
 
 	if err := h.userService.Delete(c.Request.Context(), id, &entity.User{
 		BaseEntity: entity.BaseEntity{ID: operator.ID},
-		Role:       entity.Role(operator.Role),
+		Role:       operator.Role,
 	}); err != nil {
 		switch err {
 		case service.ErrUserNotFound:
@@ -211,7 +211,7 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 
 	if err := h.userService.UpdateStatus(c.Request.Context(), id, req.Status, &entity.User{
 		BaseEntity: entity.BaseEntity{ID: operator.ID},
-		Role:       entity.Role(operator.Role),
+		Role:       operator.Role,
 	}); err != nil {
 		switch err {
 		case service.ErrUserNotFound:
@@ -236,7 +236,7 @@ func (h *UserHandler) UpdateRole(c *gin.Context) {
 	}
 
 	var req struct {
-		Role entity.Role `json:"role" binding:"required"`
+		Role string `json:"role" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err.Error())
@@ -252,7 +252,7 @@ func (h *UserHandler) UpdateRole(c *gin.Context) {
 
 	if err := h.userService.UpdateRole(c.Request.Context(), id, req.Role, &entity.User{
 		BaseEntity: entity.BaseEntity{ID: operator.ID},
-		Role:       entity.Role(operator.Role),
+		Role:       operator.Role,
 	}); err != nil {
 		switch err {
 		case service.ErrUserNotFound:

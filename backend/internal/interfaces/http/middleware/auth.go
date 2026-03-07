@@ -80,7 +80,7 @@ func (m *AuthMiddleware) extractToken(c *gin.Context) string {
 }
 
 // RequireRole require role
-func RequireRole(minRole entity.Role) gin.HandlerFunc {
+func RequireRole(minRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole, exists := c.Get("userRole")
 		if !exists {
@@ -89,7 +89,7 @@ func RequireRole(minRole entity.Role) gin.HandlerFunc {
 			return
 		}
 
-		role, ok := userRole.(entity.Role)
+		role, ok := userRole.(string)
 		if !ok {
 			response.Unauthorized(c, "invalid user info")
 			c.Abort()
@@ -108,17 +108,17 @@ func RequireRole(minRole entity.Role) gin.HandlerFunc {
 
 // RequireAdmin require admin
 func RequireAdmin() gin.HandlerFunc {
-	return RequireRole(entity.RoleAdmin)
+	return RequireRole(string(entity.RoleAdmin))
 }
 
 // RequireManager require manager
 func RequireManager() gin.HandlerFunc {
-	return RequireRole(entity.RoleManager)
+	return RequireRole(string(entity.RoleManager))
 }
 
 // RequireSuperAdmin require super admin
 func RequireSuperAdmin() gin.HandlerFunc {
-	return RequireRole(entity.RoleSuperAdmin)
+	return RequireRole(string(entity.RoleSuperAdmin))
 }
 
 // GetUserID get user ID from context
@@ -131,9 +131,9 @@ func GetUserID(c *gin.Context) string {
 }
 
 // GetUserRole get user role from context
-func GetUserRole(c *gin.Context) entity.Role {
+func GetUserRole(c *gin.Context) string {
 	userRole, _ := c.Get("userRole")
-	if role, ok := userRole.(entity.Role); ok {
+	if role, ok := userRole.(string); ok {
 		return role
 	}
 	return ""
@@ -166,13 +166,13 @@ func IsAuthenticated(c *gin.Context) bool {
 // IsAdmin check if admin
 func IsAdmin(c *gin.Context) bool {
 	role := GetUserRole(c)
-	return role == entity.RoleAdmin || role == entity.RoleSuperAdmin
+	return role == string(entity.RoleAdmin) || role == string(entity.RoleSuperAdmin)
 }
 
 // IsSuperAdmin check if super admin
 func IsSuperAdmin(c *gin.Context) bool {
 	role := GetUserRole(c)
-	return role == entity.RoleSuperAdmin
+	return role == string(entity.RoleSuperAdmin)
 }
 
 // CORSMiddleware CORS middleware

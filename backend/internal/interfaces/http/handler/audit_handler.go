@@ -59,7 +59,7 @@ func (h *AuditHandler) List(c *gin.Context) {
 	
 	// 普通用户只能查看本组织的日志
 	userRole := middleware.GetUserRole(c)
-	if userRole == entity.RoleVolunteer {
+	if userRole == string(entity.RoleVolunteer) {
 		req.OrgID = middleware.GetOrgID(c)
 	}
 	
@@ -84,7 +84,7 @@ func (h *AuditHandler) GetStats(c *gin.Context) {
 	// 普通用户只能查看本组织的统计
 	orgID := ""
 	userRole := middleware.GetUserRole(c)
-	if userRole == entity.RoleVolunteer || userRole == entity.RoleManager {
+	if userRole == string(entity.RoleVolunteer) || userRole == string(entity.RoleManager) {
 		orgID = middleware.GetOrgID(c)
 	}
 	

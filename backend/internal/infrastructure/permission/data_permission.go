@@ -43,7 +43,7 @@ func (s DataScope) String() string {
 type DataPermissionContext struct {
 	UserID            string
 	OrgID             string
-	Role              entity.Role
+	Role              string
 	DataScope         DataScope
 	IsSuperAdmin      bool
 	AccessibleOrgIDs  []string
@@ -107,20 +107,19 @@ func (p *DefaultDataPermissionProvider) GetDataPermissionContext(ctx context.Con
 	}
 	
 	orgID, _ := ctx.Value("org_id").(string)
-	roleStr, _ := ctx.Value("user_role").(string)
-	role := entity.Role(roleStr)
+	role, _ := ctx.Value("user_role").(string)
 	
 	// 超级管理员有全部权限
-	isSuperAdmin := role == entity.RoleSuperAdmin
+	isSuperAdmin := role == string(entity.RoleSuperAdmin)
 	
 	// 确定数据范围
 	var dataScope DataScope
 	switch role {
-	case entity.RoleSuperAdmin:
+	case string(entity.RoleSuperAdmin):
 		dataScope = DataScopeAll
-	case entity.RoleAdmin:
+	case string(entity.RoleAdmin):
 		dataScope = DataScopeOrgAndSub
-	case entity.RoleManager:
+	case string(entity.RoleManager):
 		dataScope = DataScopeOrgAndSub
 	default:
 		dataScope = DataScopeOrgOnly

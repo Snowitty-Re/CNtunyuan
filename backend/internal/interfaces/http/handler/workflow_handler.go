@@ -226,7 +226,7 @@ func (h *WorkflowHandler) ListInstances(c *gin.Context) {
 	req.OrgID = middleware.GetOrgID(c)
 	
 	// 普通用户只能看到自己的
-	if middleware.GetUserRole(c) == entity.RoleVolunteer {
+	if middleware.GetUserRole(c) == string(entity.RoleVolunteer) {
 		req.StartedBy = middleware.GetUserID(c)
 	}
 	

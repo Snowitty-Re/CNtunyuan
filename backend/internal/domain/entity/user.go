@@ -20,14 +20,14 @@ const (
 	UserStatusBanned   UserStatus = "banned"
 )
 
-// Role 角色类型
-type Role string
+// LegacyRole 角色类型（遗留，用于兼容旧代码）
+type LegacyRole string
 
 const (
-	RoleSuperAdmin Role = "super_admin"
-	RoleAdmin      Role = "admin"
-	RoleManager    Role = "manager"
-	RoleVolunteer  Role = "volunteer"
+	RoleSuperAdmin LegacyRole = "super_admin"
+	RoleAdmin      LegacyRole = "admin"
+	RoleManager    LegacyRole = "manager"
+	RoleVolunteer  LegacyRole = "volunteer"
 )
 
 // RoleHierarchy 角色层级
@@ -41,13 +41,13 @@ const (
 )
 
 // GetRoleLevel 获取角色等级
-func GetRoleLevel(role Role) RoleHierarchy {
+func GetRoleLevel(role string) RoleHierarchy {
 	switch role {
-	case RoleSuperAdmin:
+	case string(RoleSuperAdmin):
 		return RoleLevelSuperAdmin
-	case RoleAdmin:
+	case string(RoleAdmin):
 		return RoleLevelAdmin
-	case RoleManager:
+	case string(RoleManager):
 		return RoleLevelManager
 	default:
 		return RoleLevelVolunteer
@@ -55,7 +55,7 @@ func GetRoleLevel(role Role) RoleHierarchy {
 }
 
 // HasRole 检查角色权限
-func HasRole(userRole Role, requiredRole Role) bool {
+func HasRole(userRole string, requiredRole string) bool {
 	return GetRoleLevel(userRole) >= GetRoleLevel(requiredRole)
 }
 
@@ -66,7 +66,7 @@ type User struct {
 	Phone        string        `gorm:"size:20;uniqueIndex;not null" json:"phone"`
 	Email        string        `gorm:"size:100;uniqueIndex" json:"email,omitempty"`
 	Password     string        `gorm:"size:255;not null" json:"-"`
-	Role         Role          `gorm:"size:20;not null;default:'volunteer'" json:"role"`
+	Role         string        `gorm:"size:20;not null;default:'volunteer'" json:"role"`
 	Status       UserStatus    `gorm:"size:20;not null;default:'active'" json:"status"`
 	OrgID        string        `gorm:"type:uuid;not null;index" json:"org_id"`
 	Avatar       string        `gorm:"size:255" json:"avatar,omitempty"`
@@ -82,7 +82,7 @@ type User struct {
 	WxOpenID     string        `gorm:"column:wx_openid;size:100;uniqueIndex" json:"wx_openid,omitempty"`
 	WxUnionID    string        `gorm:"column:wx_unionid;size:100" json:"wx_unionid,omitempty"`
 	Org          *Organization `gorm:"foreignKey:OrgID" json:"org,omitempty"`
-	Permissions  []Permission  `gorm:"many2many:user_permissions;" json:"permissions,omitempty"`
+	// Permissions 字段已迁移到 UserRole 关联表，使用 Permission 服务获取用户权限
 }
 
 // TableName 表名
@@ -97,16 +97,16 @@ func (u *User) IsActive() bool {
 
 // IsAdmin 是否管理员
 func (u *User) IsAdmin() bool {
-	return u.Role == RoleAdmin || u.Role == RoleSuperAdmin
+	return u.Role == string(RoleAdmin) || u.Role == string(RoleSuperAdmin)
 }
 
 // IsSuperAdmin 是否超级管理员
 func (u *User) IsSuperAdmin() bool {
-	return u.Role == RoleSuperAdmin
+	return u.Role == string(RoleSuperAdmin)
 }
 
 // HasPermission 检查权限
-func (u *User) HasPermission(required Role) bool {
+func (u *User) HasPermission(required string) bool {
 	return HasRole(u.Role, required)
 }
 
@@ -182,7 +182,7 @@ func (u *User) Ban() {
 }
 
 // ChangeRole 修改角色
-func (u *User) ChangeRole(role Role) error {
+func (u *User) ChangeRole(role string) error {
 	if !isValidRole(role) {
 		return fmt.Errorf("无效的角色: %s", role)
 	}
@@ -207,7 +207,7 @@ func (u *User) GetPublicProfile() *valueobject.UserProfile {
 		ID:          u.ID,
 		Nickname:    u.Nickname,
 		Avatar:      u.Avatar,
-		Role:        string(u.Role),
+		Role:        u.Role,
 		OrgID:       u.OrgID,
 		LastLoginAt: u.LastLoginAt,
 	}
@@ -232,46 +232,17 @@ func (u *User) GetFullProfile() *valueobject.UserFullProfile {
 }
 
 // isValidRole 检查角色是否有效
-func isValidRole(role Role) bool {
+func isValidRole(role string) bool {
 	switch role {
-	case RoleSuperAdmin, RoleAdmin, RoleManager, RoleVolunteer:
+	case string(RoleSuperAdmin), string(RoleAdmin), string(RoleManager), string(RoleVolunteer):
 		return true
 	default:
 		return false
 	}
 }
 
-// Permission 权限
-type Permission struct {
-	ID          string `gorm:"type:uuid;primaryKey" json:"id"`
-	Name        string `gorm:"size:100;uniqueIndex;not null" json:"name"`
-	Code        string `gorm:"size:100;uniqueIndex;not null" json:"code"`
-	Description string `gorm:"size:255" json:"description,omitempty"`
-	Resource    string `gorm:"size:100;not null" json:"resource"`
-	Action      string `gorm:"size:50;not null" json:"action"`
-	BaseEntity  `json:"-"`
-}
-
-// TableName 表名
-func (Permission) TableName() string {
-	return "ty_permissions"
-}
-
-// UserPermission 用户权限关联
-type UserPermission struct {
-	UserID       string    `gorm:"type:uuid;primaryKey" json:"user_id"`
-	PermissionID string    `gorm:"type:uuid;primaryKey" json:"permission_id"`
-	GrantedAt    time.Time `json:"granted_at"`
-	GrantedBy    string    `gorm:"type:uuid" json:"granted_by"`
-}
-
-// TableName 表名
-func (UserPermission) TableName() string {
-	return "ty_user_permissions"
-}
-
 // NewUser 创建新用户
-func NewUser(nickname, phone, orgID string, role Role) (*User, error) {
+func NewUser(nickname, phone, orgID string, role string) (*User, error) {
 	user := &User{
 		BaseEntity: BaseEntity{
 			ID: uuid.New().String(),
@@ -299,7 +270,7 @@ func NewSuperAdmin(nickname, phone, password string) (*User, error) {
 		Nickname: nickname,
 		Phone:    phone,
 		OrgID:    uuid.MustParse("00000000-0000-0000-0000-000000000000").String(),
-		Role:     RoleSuperAdmin,
+		Role:     string(RoleSuperAdmin),
 		Status:   UserStatusActive,
 	}
 

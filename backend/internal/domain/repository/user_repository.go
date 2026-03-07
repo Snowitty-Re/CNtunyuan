@@ -26,7 +26,7 @@ type UserRepository interface {
 	FindByOrgID(ctx context.Context, orgID string, pagination Pagination) (*PageResult[entity.User], error)
 
 	// FindByRole 根据角色查找用户
-	FindByRole(ctx context.Context, role entity.Role, pagination Pagination) (*PageResult[entity.User], error)
+	FindByRole(ctx context.Context, role string, pagination Pagination) (*PageResult[entity.User], error)
 
 	// List 分页查询用户列表
 	List(ctx context.Context, query *UserQuery) (*PageResult[entity.User], error)
@@ -38,13 +38,13 @@ type UserRepository interface {
 	UpdateStatus(ctx context.Context, userID string, status entity.UserStatus) error
 
 	// UpdateRole 更新角色
-	UpdateRole(ctx context.Context, userID string, role entity.Role) error
+	UpdateRole(ctx context.Context, userID string, role string) error
 
 	// CountByOrg 统计组织用户数量
 	CountByOrg(ctx context.Context, orgID string) (int64, error)
 
 	// CountByRole 统计角色用户数量
-	CountByRole(ctx context.Context, role entity.Role) (int64, error)
+	CountByRole(ctx context.Context, role string) (int64, error)
 
 	// ExistsPhone 检查手机号是否存在
 	ExistsPhone(ctx context.Context, phone string) (bool, error)
@@ -57,7 +57,7 @@ type UserRepository interface {
 type UserQuery struct {
 	Pagination
 	Keyword   string            `json:"keyword"`    // 关键词搜索
-	Role      entity.Role       `json:"role"`       // 角色筛选
+	Role      string            `json:"role"`       // 角色筛选
 	Status    entity.UserStatus `json:"status"`     // 状态筛选
 	OrgID     string            `json:"org_id"`     // 组织筛选
 	StartTime string            `json:"start_time"` // 开始时间

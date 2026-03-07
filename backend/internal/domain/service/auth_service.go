@@ -200,7 +200,7 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 			Nickname: nickname,
 			Avatar:   avatar,
 			Phone:    "", // Will be filled when binding phone
-			Role:     entity.RoleVolunteer,
+			Role:     string(entity.RoleVolunteer),
 			Status:   entity.UserStatusActive,
 			OrgID:    orgID,
 			WxOpenID: session.OpenID,
@@ -345,7 +345,7 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 		user = &entity.User{
 			Nickname: "志愿者" + suffix,
 			Phone:    phone,
-			Role:     entity.RoleVolunteer,
+			Role:     string(entity.RoleVolunteer),
 			Status:   entity.UserStatusActive,
 			OrgID:    "00000000-0000-0000-0000-000000000000", // 默认组织
 		}

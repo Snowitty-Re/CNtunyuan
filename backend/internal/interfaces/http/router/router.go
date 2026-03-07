@@ -22,6 +22,7 @@ type Router struct {
 	dashboardHandler         *handler.DashboardHandler
 	auditHandler             *handler.AuditHandler
 	workflowHandler          *handler.WorkflowHandler
+	permissionHandler        *handler.PermissionHandler
 	authMiddleware           *middleware.AuthMiddleware
 	auditMiddleware          *middleware.AuditMiddleware
 	dataPermissionMiddleware *middleware.DataPermissionMiddleware
@@ -39,6 +40,7 @@ func NewRouter(
 	dashboardHandler *handler.DashboardHandler,
 	auditHandler *handler.AuditHandler,
 	workflowHandler *handler.WorkflowHandler,
+	permissionHandler *handler.PermissionHandler,
 	authMiddleware *middleware.AuthMiddleware,
 	auditMiddleware *middleware.AuditMiddleware,
 	dataPermissionMiddleware *middleware.DataPermissionMiddleware,
@@ -82,6 +84,7 @@ func NewRouter(
 		dashboardHandler:         dashboardHandler,
 		auditHandler:             auditHandler,
 		workflowHandler:          workflowHandler,
+		permissionHandler:        permissionHandler,
 		authMiddleware:           authMiddleware,
 		auditMiddleware:          auditMiddleware,
 		dataPermissionMiddleware: dataPermissionMiddleware,
@@ -117,6 +120,7 @@ func (r *Router) Setup() {
 	r.dashboardHandler.RegisterRoutes(api, r.authMiddleware)
 	r.auditHandler.RegisterRoutes(api, r.authMiddleware)
 	r.workflowHandler.RegisterRoutes(api, r.authMiddleware)
+	r.permissionHandler.RegisterRoutes(api, r.authMiddleware)
 
 	// 404 处理
 	r.engine.NoRoute(func(c *gin.Context) {

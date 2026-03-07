@@ -42,6 +42,7 @@ type Container struct {
 	DashboardService         *service.DashboardService
 	AuditService             *service.AuditService
 	WorkflowService          *service.WorkflowAppService
+	PermissionService        *service.PermissionAppService
 	AuthHandler              *handler.AuthHandler
 	UserHandler              *handler.UserHandler
 	OrganizationHandler      *handler.OrganizationHandler
@@ -52,9 +53,11 @@ type Container struct {
 	DashboardHandler         *handler.DashboardHandler
 	AuditHandler             *handler.AuditHandler
 	WorkflowHandler          *handler.WorkflowHandler
+	PermissionHandler        *handler.PermissionHandler
 	AuthMiddleware           *middleware.AuthMiddleware
 	AuditMiddleware          *middleware.AuditMiddleware
 	DataPermissionMiddleware *middleware.DataPermissionMiddleware
+	RBACMiddleware           *middleware.RBACMiddleware
 	Router                   *router.Router
 }
 
@@ -115,6 +118,9 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	// Phase 2: 创建工作流仓储
 	workflowRepo := infraRepo.NewWorkflowRepository(db)
 	workflowTaskRepo := infraRepo.NewWorkflowTaskRepository(db)
+	
+	// Phase 3: 创建权限仓储
+	permRepo := infraRepo.NewPermissionRepository(db)
 
 	// 创建领域服务
 	authService := domainService.NewAuthService(userRepo, tokenService, redisCache, wechatClient)
@@ -149,6 +155,9 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		workflowTaskRepo,
 		userRepo,
 	)
+	
+	// Phase 3: 创建权限服务
+	permissionService := service.NewPermissionAppService(permRepo)
 
 	// 创建数据权限提供者
 	dataPermissionProvider := permission.NewDataPermissionProvider(db)
@@ -157,6 +166,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 	auditMiddleware := middleware.NewAuditMiddleware(auditService)
 	dataPermissionMiddleware := middleware.NewDataPermissionMiddleware(dataPermissionProvider)
+	rbacMiddleware := middleware.NewRBACMiddleware(permissionService)
 
 	// 创建 HTTP Handler
 	authHandler := handler.NewAuthHandler(authService, authMiddleware)
@@ -169,6 +179,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 	auditHandler := handler.NewAuditHandler(auditService)
 	workflowHandler := handler.NewWorkflowHandler(workflowService)
+	permissionHandler := handler.NewPermissionHandler(permissionService)
 
 	// 创建路由
 	r := router.NewRouter(
@@ -182,6 +193,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		dashboardHandler,
 		auditHandler,
 		workflowHandler,
+		permissionHandler,
 		authMiddleware,
 		auditMiddleware,
 		dataPermissionMiddleware,
@@ -203,6 +215,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		DashboardService:         dashboardService,
 		AuditService:             auditService,
 		WorkflowService:          workflowService,
+		PermissionService:        permissionService,
 		AuthHandler:              authHandler,
 		UserHandler:              userHandler,
 		OrganizationHandler:      orgHandler,
@@ -213,9 +226,11 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		DashboardHandler:         dashboardHandler,
 		AuditHandler:             auditHandler,
 		WorkflowHandler:          workflowHandler,
+		PermissionHandler:        permissionHandler,
 		AuthMiddleware:           authMiddleware,
 		AuditMiddleware:          auditMiddleware,
 		DataPermissionMiddleware: dataPermissionMiddleware,
+		RBACMiddleware:           rbacMiddleware,
 		Router:                   r,
 	}, nil
 }

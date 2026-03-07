@@ -167,7 +167,7 @@ func (s *UserAppService) List(ctx context.Context, req *dto.UserListRequest) (*d
 	query.Page = req.Page
 	query.PageSize = req.PageSize
 	query.Keyword = req.Keyword
-	query.Role = entity.Role(req.Role)
+	query.Role = req.Role
 	query.Status = entity.UserStatus(req.Status)
 	query.OrgID = req.OrgID
 
@@ -208,7 +208,7 @@ func (s *UserAppService) UpdateStatus(ctx context.Context, id string, status ent
 }
 
 // UpdateRole update user role
-func (s *UserAppService) UpdateRole(ctx context.Context, id string, role entity.Role, operator *entity.User) error {
+func (s *UserAppService) UpdateRole(ctx context.Context, id string, role string, operator *entity.User) error {
 	if !isValidRole(role) {
 		return ErrInvalidRole
 	}
@@ -329,16 +329,16 @@ func (s *UserAppService) canModify(operator, target *entity.User) bool {
 	if operator.IsAdmin() {
 		return true
 	}
-	if operator.Role == entity.RoleManager {
-		return target.Role == entity.RoleVolunteer
+	if operator.Role == string(entity.RoleManager) {
+		return target.Role == string(entity.RoleVolunteer)
 	}
 	return operator.ID == target.ID
 }
 
 // isValidRole check if role is valid
-func isValidRole(role entity.Role) bool {
+func isValidRole(role string) bool {
 	switch role {
-	case entity.RoleSuperAdmin, entity.RoleAdmin, entity.RoleManager, entity.RoleVolunteer:
+	case string(entity.RoleSuperAdmin), string(entity.RoleAdmin), string(entity.RoleManager), string(entity.RoleVolunteer):
 		return true
 	default:
 		return false

@@ -20,14 +20,17 @@ import (
 
 // Container 依赖容器
 type Container struct {
-	Config         *config.Config
-	DB             *gorm.DB
-	Cache          cache.Cache
-	AuthService    *service.AuthService
-	UserService    *service.UserAppService
-	UserHandler    *handler.UserHandler
-	AuthHandler    *handler.AuthHandler
-	AuthMiddleware *middleware.AuthMiddleware
+	Config             *config.Config
+	DB                 *gorm.DB
+	Cache              cache.Cache
+	AuthService        *service.AuthService
+	UserService        *service.UserAppService
+	PermissionService  *service.PermissionAppService
+	UserHandler        *handler.UserHandler
+	AuthHandler        *handler.AuthHandler
+	PermissionHandler  *handler.PermissionHandler
+	AuthMiddleware     *middleware.AuthMiddleware
+	RBACMiddleware     *middleware.RBACMiddleware
 }
 
 // NewContainer 创建依赖容器
@@ -40,17 +43,21 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 
 		// 仓储
 		infraRepo.NewUserRepository,
+		infraRepo.NewPermissionRepository,
 
 		// 领域服务
 		service.NewAuthService,
 
 		// 应用服务
 		service.NewUserAppService,
+		service.NewPermissionAppService,
 
 		// HTTP 处理
 		handler.NewAuthHandler,
 		handler.NewUserHandler,
+		handler.NewPermissionHandler,
 		middleware.NewAuthMiddleware,
+		middleware.NewRBACMiddleware,
 
 		// 容器
 		wire.Struct(new(Container), "*"),
