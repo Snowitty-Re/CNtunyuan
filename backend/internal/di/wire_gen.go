@@ -11,6 +11,7 @@ import (
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
+	domainRepo "github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/auth"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
@@ -18,6 +19,8 @@ import (
 	infraRepo "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/repository"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/storage"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/wechat"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/permission"
+	infraCache "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/router"
@@ -26,27 +29,32 @@ import (
 
 // Container dependency container
 type Container struct {
-	Config               *config.Config
-	DB                   *gorm.DB
-	Cache                cache.Cache
-	AuthService          *domainService.AuthService
-	UserService          *service.UserAppService
-	OrganizationService  *service.OrganizationAppService
-	MissingPersonService *service.MissingPersonAppService
-	DialectService       *service.DialectAppService
-	TaskService          *service.TaskAppService
-	FileService          *service.FileAppService
-	DashboardService     *service.DashboardService
-	AuthHandler          *handler.AuthHandler
-	UserHandler          *handler.UserHandler
-	OrganizationHandler  *handler.OrganizationHandler
-	MissingPersonHandler *handler.MissingPersonHandler
-	DialectHandler       *handler.DialectHandler
-	TaskHandler          *handler.TaskHandler
-	UploadHandler        *handler.UploadHandler
-	DashboardHandler     *handler.DashboardHandler
-	AuthMiddleware       *middleware.AuthMiddleware
-	Router               *router.Router
+	Config                  *config.Config
+	DB                      *gorm.DB
+	Cache                   cache.Cache
+	CacheManager            infraCache.CacheManager
+	AuthService             *domainService.AuthService
+	UserService             *service.UserAppService
+	OrganizationService     *service.OrganizationAppService
+	MissingPersonService    *service.MissingPersonAppService
+	DialectService          *service.DialectAppService
+	TaskService             *service.TaskAppService
+	FileService             *service.FileAppService
+	DashboardService        *service.DashboardService
+	AuditService            *service.AuditService
+	AuthHandler             *handler.AuthHandler
+	UserHandler             *handler.UserHandler
+	OrganizationHandler     *handler.OrganizationHandler
+	MissingPersonHandler    *handler.MissingPersonHandler
+	DialectHandler          *handler.DialectHandler
+	TaskHandler             *handler.TaskHandler
+	UploadHandler           *handler.UploadHandler
+	DashboardHandler        *handler.DashboardHandler
+	AuditHandler            *handler.AuditHandler
+	AuthMiddleware          *middleware.AuthMiddleware
+	AuditMiddleware         *middleware.AuditMiddleware
+	DataPermissionMiddleware *middleware.DataPermissionMiddleware
+	Router                  *router.Router
 }
 
 // NewContainer 手动创建依赖容器
@@ -64,6 +72,12 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	redisCache, err := cache.NewRedis(&cfg.Redis)
 	if err != nil {
 		redisCache = nil
+	}
+
+	// 创建缓存管理器
+	var cacheManager infraCache.CacheManager
+	if redisCache != nil {
+		cacheManager = infraCache.NewRedisCacheManager(redisCache.GetClient(), infraCache.DefaultCacheConfig())
 	}
 
 	// 创建 Token 服务
@@ -95,6 +109,9 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	dialectRepo := infraRepo.NewDialectRepository(db)
 	taskRepo := infraRepo.NewTaskRepository(db)
 	fileRepo := infraRepo.NewFileRepository(db)
+	
+	// 创建审计日志仓储
+	auditLogRepo := infraRepo.NewAuditLogRepository(db)
 
 	// 创建领域服务
 	authService := domainService.NewAuthService(userRepo, tokenService, redisCache, wechatClient)
@@ -119,9 +136,17 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		dialectRepo,
 		fileRepo,
 	)
+	
+	// 创建审计服务
+	auditService := service.NewAuditService(auditLogRepo)
+
+	// 创建数据权限提供者
+	dataPermissionProvider := permission.NewDataPermissionProvider(db)
 
 	// 创建 Middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
+	auditMiddleware := middleware.NewAuditMiddleware(auditService)
+	dataPermissionMiddleware := middleware.NewDataPermissionMiddleware(dataPermissionProvider)
 
 	// 创建 HTTP Handler
 	authHandler := handler.NewAuthHandler(authService, authMiddleware)
@@ -132,6 +157,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	taskHandler := handler.NewTaskHandler(taskService)
 	uploadHandler := handler.NewUploadHandler(fileService)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
+	auditHandler := handler.NewAuditHandler(auditService)
 
 	// 创建路由
 	r := router.NewRouter(
@@ -143,31 +169,61 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		taskHandler,
 		uploadHandler,
 		dashboardHandler,
+		auditHandler,
 		authMiddleware,
+		auditMiddleware,
+		dataPermissionMiddleware,
 	)
 	r.Setup()
 
 	return &Container{
-		Config:               cfg,
-		DB:                   db,
-		Cache:                redisCache,
-		AuthService:          authService,
-		UserService:          userService,
-		OrganizationService:  orgService,
-		MissingPersonService: mpService,
-		DialectService:       dialectService,
-		TaskService:          taskService,
-		FileService:          fileService,
-		DashboardService:     dashboardService,
-		AuthHandler:          authHandler,
-		UserHandler:          userHandler,
-		OrganizationHandler:  orgHandler,
-		MissingPersonHandler: mpHandler,
-		DialectHandler:       dialectHandler,
-		TaskHandler:          taskHandler,
-		UploadHandler:        uploadHandler,
-		DashboardHandler:     dashboardHandler,
-		AuthMiddleware:       authMiddleware,
-		Router:               r,
+		Config:                   cfg,
+		DB:                       db,
+		Cache:                    redisCache,
+		CacheManager:             cacheManager,
+		AuthService:              authService,
+		UserService:              userService,
+		OrganizationService:      orgService,
+		MissingPersonService:     mpService,
+		DialectService:           dialectService,
+		TaskService:              taskService,
+		FileService:              fileService,
+		DashboardService:         dashboardService,
+		AuditService:             auditService,
+		AuthHandler:              authHandler,
+		UserHandler:              userHandler,
+		OrganizationHandler:      orgHandler,
+		MissingPersonHandler:     mpHandler,
+		DialectHandler:           dialectHandler,
+		TaskHandler:              taskHandler,
+		UploadHandler:            uploadHandler,
+		DashboardHandler:         dashboardHandler,
+		AuditHandler:             auditHandler,
+		AuthMiddleware:           authMiddleware,
+		AuditMiddleware:          auditMiddleware,
+		DataPermissionMiddleware: dataPermissionMiddleware,
+		Router:                   r,
 	}, nil
+}
+
+// ProvideCacheManager 提供缓存管理器
+func ProvideCacheManager(redisCache cache.Cache) infraCache.CacheManager {
+	if redisCache == nil {
+		return nil
+	}
+	// Type assertion to access GetClient method
+	if rc, ok := redisCache.(*cache.RedisCache); ok {
+		return infraCache.NewRedisCacheManager(rc.GetClient(), infraCache.DefaultCacheConfig())
+	}
+	return nil
+}
+
+// ProvideDataPermissionProvider 提供数据权限提供者
+func ProvideDataPermissionProvider(db *gorm.DB) permission.DataPermissionProvider {
+	return permission.NewDataPermissionProvider(db)
+}
+
+// ProvideAuditLogRepository 提供审计日志仓储
+func ProvideAuditLogRepository(db *gorm.DB) domainRepo.AuditLogRepository {
+	return infraRepo.NewAuditLogRepository(db)
 }

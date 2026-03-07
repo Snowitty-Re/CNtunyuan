@@ -11,16 +11,19 @@ import (
 
 // Router 路由管理器
 type Router struct {
-	engine               *gin.Engine
-	authHandler          *handler.AuthHandler
-	userHandler          *handler.UserHandler
-	organizationHandler  *handler.OrganizationHandler
-	missingPersonHandler *handler.MissingPersonHandler
-	dialectHandler       *handler.DialectHandler
-	taskHandler          *handler.TaskHandler
-	uploadHandler        *handler.UploadHandler
-	dashboardHandler     *handler.DashboardHandler
-	authMiddleware       *middleware.AuthMiddleware
+	engine                   *gin.Engine
+	authHandler              *handler.AuthHandler
+	userHandler              *handler.UserHandler
+	organizationHandler      *handler.OrganizationHandler
+	missingPersonHandler     *handler.MissingPersonHandler
+	dialectHandler           *handler.DialectHandler
+	taskHandler              *handler.TaskHandler
+	uploadHandler            *handler.UploadHandler
+	dashboardHandler         *handler.DashboardHandler
+	auditHandler             *handler.AuditHandler
+	authMiddleware           *middleware.AuthMiddleware
+	auditMiddleware          *middleware.AuditMiddleware
+	dataPermissionMiddleware *middleware.DataPermissionMiddleware
 }
 
 // NewRouter 创建路由管理器
@@ -33,7 +36,10 @@ func NewRouter(
 	taskHandler *handler.TaskHandler,
 	uploadHandler *handler.UploadHandler,
 	dashboardHandler *handler.DashboardHandler,
+	auditHandler *handler.AuditHandler,
 	authMiddleware *middleware.AuthMiddleware,
+	auditMiddleware *middleware.AuditMiddleware,
+	dataPermissionMiddleware *middleware.DataPermissionMiddleware,
 ) *Router {
 	engine := gin.New()
 
@@ -63,16 +69,19 @@ func NewRouter(
 	engine.Use(pkgmiddleware.ErrorHandlerMiddleware())
 
 	return &Router{
-		engine:               engine,
-		authHandler:          authHandler,
-		userHandler:          userHandler,
-		organizationHandler:  organizationHandler,
-		missingPersonHandler: missingPersonHandler,
-		dialectHandler:       dialectHandler,
-		taskHandler:          taskHandler,
-		uploadHandler:        uploadHandler,
-		dashboardHandler:     dashboardHandler,
-		authMiddleware:       authMiddleware,
+		engine:                   engine,
+		authHandler:              authHandler,
+		userHandler:              userHandler,
+		organizationHandler:      organizationHandler,
+		missingPersonHandler:     missingPersonHandler,
+		dialectHandler:           dialectHandler,
+		taskHandler:              taskHandler,
+		uploadHandler:            uploadHandler,
+		dashboardHandler:         dashboardHandler,
+		auditHandler:             auditHandler,
+		authMiddleware:           authMiddleware,
+		auditMiddleware:          auditMiddleware,
+		dataPermissionMiddleware: dataPermissionMiddleware,
 	}
 }
 
@@ -103,6 +112,7 @@ func (r *Router) Setup() {
 	r.taskHandler.RegisterRoutes(api, r.authMiddleware)
 	r.uploadHandler.RegisterRoutes(api, r.authMiddleware)
 	r.dashboardHandler.RegisterRoutes(api, r.authMiddleware)
+	r.auditHandler.RegisterRoutes(api, r.authMiddleware)
 
 	// 404 处理
 	r.engine.NoRoute(func(c *gin.Context) {

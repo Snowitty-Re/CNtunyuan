@@ -2,9 +2,11 @@
 package errors
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // ErrorCode 错误码类型
@@ -61,6 +63,29 @@ const (
 	CodeFileTooLarge     ErrorCode = 6001
 	CodeInvalidFileType  ErrorCode = 6002
 	CodeFileUploadFailed ErrorCode = 6003
+
+	// 工作流错误 (7000-7099)
+	CodeWorkflowNotFound       ErrorCode = 7000
+	CodeWorkflowInvalidState   ErrorCode = 7001
+	CodeWorkflowTransition     ErrorCode = 7002
+	CodeWorkflowApproval       ErrorCode = 7003
+	CodeWorkflowInstanceExists ErrorCode = 7004
+	CodeWorkflowNodeNotFound   ErrorCode = 7005
+
+	// 权限错误 (8000-8099)
+	CodePermissionDenied      ErrorCode = 8000
+	CodeDataPermissionDenied  ErrorCode = 8001
+	CodeFieldPermissionDenied ErrorCode = 8002
+	CodeRoleNotFound          ErrorCode = 8003
+	CodeRoleExists            ErrorCode = 8004
+
+	// 缓存错误 (9000-9099)
+	CodeCacheError     ErrorCode = 9000
+	CodeCacheMiss      ErrorCode = 9001
+	CodeCacheSetFailed ErrorCode = 9002
+
+	// 审计错误 (9100-9199)
+	CodeAuditLogFailed ErrorCode = 9100
 )
 
 // HTTPStatus 返回错误码对应的 HTTP 状态码
@@ -72,7 +97,7 @@ func (c ErrorCode) HTTPStatus() int {
 		return http.StatusBadRequest
 	case CodeUnauthorized:
 		return http.StatusUnauthorized
-	case CodeForbidden:
+	case CodeForbidden, CodePermissionDenied, CodeDataPermissionDenied, CodeFieldPermissionDenied:
 		return http.StatusForbidden
 	case CodeNotFound:
 		return http.StatusNotFound
@@ -89,7 +114,7 @@ func (c ErrorCode) HTTPStatus() int {
 	case CodeServiceUnavailable:
 		return http.StatusServiceUnavailable
 	default:
-		if c >= 1000 && c < 6000 {
+		if c >= 1000 && c < 10000 {
 			// 业务错误通常返回 200，通过 code 区分
 			return http.StatusOK
 		}
@@ -128,17 +153,90 @@ func (c ErrorCode) String() string {
 		return "invalid token"
 	case CodeTokenExpired:
 		return "token expired"
+	case CodePermissionDenied:
+		return "permission denied"
+	case CodeDataPermissionDenied:
+		return "data access denied"
+	case CodeFieldPermissionDenied:
+		return "field access denied"
+	case CodeWorkflowNotFound:
+		return "workflow not found"
+	case CodeWorkflowInvalidState:
+		return "invalid workflow state"
+	case CodeCacheError:
+		return "cache error"
+	case CodeAuditLogFailed:
+		return "audit log failed"
 	default:
 		return "error"
 	}
 }
 
+// ErrorContext 错误上下文信息
+type ErrorContext struct {
+	TraceID    string                 `json:"trace_id,omitempty"`
+	UserID     string                 `json:"user_id,omitempty"`
+	OrgID      string                 `json:"org_id,omitempty"`
+	Path       string                 `json:"path,omitempty"`
+	Method     string                 `json:"method,omitempty"`
+	Timestamp  time.Time              `json:"timestamp"`
+	Extra      map[string]interface{} `json:"extra,omitempty"`
+	RequestID  string                 `json:"request_id,omitempty"`
+	ClientIP   string                 `json:"client_ip,omitempty"`
+}
+
+// NewErrorContext 创建错误上下文
+func NewErrorContext() *ErrorContext {
+	return &ErrorContext{
+		Timestamp: time.Now(),
+		Extra:     make(map[string]interface{}),
+	}
+}
+
+// WithTraceID 添加追踪ID
+func (ec *ErrorContext) WithTraceID(traceID string) *ErrorContext {
+	ec.TraceID = traceID
+	return ec
+}
+
+// WithUserID 添加用户ID
+func (ec *ErrorContext) WithUserID(userID string) *ErrorContext {
+	ec.UserID = userID
+	return ec
+}
+
+// WithOrgID 添加组织ID
+func (ec *ErrorContext) WithOrgID(orgID string) *ErrorContext {
+	ec.OrgID = orgID
+	return ec
+}
+
+// WithRequestInfo 添加请求信息
+func (ec *ErrorContext) WithRequestInfo(method, path string) *ErrorContext {
+	ec.Method = method
+	ec.Path = path
+	return ec
+}
+
+// WithClientIP 添加客户端IP
+func (ec *ErrorContext) WithClientIP(ip string) *ErrorContext {
+	ec.ClientIP = ip
+	return ec
+}
+
+// WithExtra 添加额外信息
+func (ec *ErrorContext) WithExtra(key string, value interface{}) *ErrorContext {
+	ec.Extra[key] = value
+	return ec
+}
+
 // AppError 应用错误结构
 type AppError struct {
-	Code    ErrorCode `json:"code"`
-	Message string    `json:"message"`
-	Detail  string    `json:"detail,omitempty"`
-	Err     error     `json:"-"`
+	Code    ErrorCode    `json:"code"`
+	Message string       `json:"message"`
+	Detail  string       `json:"detail,omitempty"`
+	Err     error        `json:"-"`
+	Context *ErrorContext `json:"context,omitempty"`
 }
 
 // Error 实现 error 接口
@@ -166,12 +264,27 @@ func (e *AppError) WithError(err error) *AppError {
 	return e
 }
 
+// WithContext 添加上下文
+func (e *AppError) WithContext(ctx *ErrorContext) *AppError {
+	e.Context = ctx
+	return e
+}
+
 // Is 检查错误码是否匹配
 func (e *AppError) Is(target error) bool {
 	if t, ok := target.(*AppError); ok {
 		return e.Code == t.Code
 	}
 	return errors.Is(e.Err, target)
+}
+
+// ShouldLog 判断是否应该记录日志
+func (e *AppError) ShouldLog() bool {
+	// 业务错误通常不需要记录错误日志
+	if e.Code >= 1000 && e.Code < 5000 {
+		return false
+	}
+	return true
 }
 
 // New 创建新错误
@@ -220,6 +333,29 @@ func Wrapf(err error, code ErrorCode, format string, args ...interface{}) *AppEr
 	}
 }
 
+// WrapWithContext 包装错误并添加上下文
+func WrapWithContext(ctx context.Context, err error, code ErrorCode, message string) *AppError {
+	if err == nil {
+		return nil
+	}
+	appErr := Wrap(err, code, message)
+	
+	// 从 context 中提取上下文信息
+	errorCtx := NewErrorContext()
+	if traceID, ok := ctx.Value("trace_id").(string); ok {
+		errorCtx.WithTraceID(traceID)
+	}
+	if userID, ok := ctx.Value("user_id").(string); ok {
+		errorCtx.WithUserID(userID)
+	}
+	if orgID, ok := ctx.Value("org_id").(string); ok {
+		errorCtx.WithOrgID(orgID)
+	}
+	
+	appErr.Context = errorCtx
+	return appErr
+}
+
 // IsCode 检查错误是否匹配指定错误码
 func IsCode(err error, code ErrorCode) bool {
 	if err == nil {
@@ -242,6 +378,28 @@ func GetCode(err error) ErrorCode {
 	return CodeUnknown
 }
 
+// IsNotFound 判断是否是未找到错误
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	code := GetCode(err)
+	return code == CodeNotFound || code == CodeUserNotFound || 
+		   code == CodeOrgNotFound || code == CodeCaseNotFound ||
+		   code == CodeTaskNotFound || code == CodeDialectNotFound ||
+		   code == CodeFileNotFound || code == CodeWorkflowNotFound
+}
+
+// IsPermissionDenied 判断是否是权限错误
+func IsPermissionDenied(err error) bool {
+	if err == nil {
+		return false
+	}
+	code := GetCode(err)
+	return code == CodeForbidden || code == CodePermissionDenied ||
+		   code == CodeDataPermissionDenied || code == CodeFieldPermissionDenied
+}
+
 // 预定义常用错误
 var (
 	ErrInvalidParam    = New(CodeInvalidParam, "")
@@ -259,4 +417,15 @@ var (
 	ErrTooManyRequests = New(CodeTooManyRequests, "")
 	ErrFileTooLarge    = New(CodeFileTooLarge, "")
 	ErrInvalidFileType = New(CodeInvalidFileType, "")
+	ErrPermissionDenied = New(CodePermissionDenied, "")
+	ErrDataPermissionDenied = New(CodeDataPermissionDenied, "")
+	
+	// 工作流错误
+	ErrWorkflowNotFound     = New(CodeWorkflowNotFound, "")
+	ErrWorkflowInvalidState = New(CodeWorkflowInvalidState, "")
+	ErrWorkflowTransition   = New(CodeWorkflowTransition, "")
+	
+	// 缓存错误
+	ErrCacheError = New(CodeCacheError, "")
+	ErrCacheMiss  = New(CodeCacheMiss, "")
 )
