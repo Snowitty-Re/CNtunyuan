@@ -8,12 +8,15 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
+        "termsOfService": "{{.TermsOfService}}",
         "contact": {
-            "name": "CNtunyuan Team",
-            "url": "https://github.com/Snowitty-Re/CNtunyuan"
+            "name": "{{.Contact.Name}}",
+            "url": "{{.Contact.URL}}",
+            "email": "{{.Contact.Email}}"
         },
         "license": {
-            "name": "MIT"
+            "name": "{{.License.Name}}",
+            "url": "{{.License.URL}}"
         },
         "version": "{{.Version}}"
     },
@@ -31,15 +34,27 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "properties": {
-                                "status": {
-                                    "type": "string",
-                                    "example": "ok"
+                                "code": { "type": "integer", "example": 0 },
+                                "message": { "type": "string", "example": "success" },
+                                "data": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": { "type": "string", "example": "ok" }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "请输入 JWT Token，格式：Bearer {token}"
         }
     }
 }`
@@ -49,9 +64,9 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.0",
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
-	Schemes:          []string{"http"},
+	Schemes:          []string{"http", "https"},
 	Title:            "团圆寻亲志愿者系统 API",
-	Description:      "团圆寻亲志愿者系统后端 API 文档",
+	Description:      "团圆寻亲志愿者系统后端 API 文档 - 包含认证、用户、组织、走失人员、任务、方言、文件、仪表盘、审计日志等模块",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 }

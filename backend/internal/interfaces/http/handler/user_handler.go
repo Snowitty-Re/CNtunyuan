@@ -11,6 +11,9 @@ import (
 )
 
 // UserHandler user handler
+// @Description User management endpoints
+// @Tags users
+// @BasePath /api/v1
 type UserHandler struct {
 	userService *service.UserAppService
 }
@@ -45,6 +48,20 @@ func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *mi
 }
 
 // Create create user
+// @Summary Create user
+// @Description Create a new user (admin only)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body dto.CreateUserRequest true "User creation request"
+// @Success 201 {object} response.Response{data=dto.UserResponse} "User created successfully"
+// @Failure 400 {object} response.Response "Invalid request parameters"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Forbidden - admin only"
+// @Failure 409 {object} response.Response "Phone or email already exists"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /users [post]
 func (h *UserHandler) Create(c *gin.Context) {
 	var req dto.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -72,6 +89,19 @@ func (h *UserHandler) Create(c *gin.Context) {
 }
 
 // GetByID get user by ID
+// @Summary Get user by ID
+// @Description Get user details by ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} response.Response{data=dto.UserResponse} "User details retrieved successfully"
+// @Failure 400 {object} response.Response "Invalid user ID"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 404 {object} response.Response "User not found"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /users/{id} [get]
 func (h *UserHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -93,6 +123,22 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 }
 
 // List user list
+// @Summary List users
+// @Description Get paginated list of users with optional filters
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param page query int false "Page number (default: 1)" default(1) minimum(1)
+// @Param page_size query int false "Page size (default: 10, max: 100)" default(10) minimum(1) maximum(100)
+// @Param keyword query string false "Search keyword for nickname, phone, or email"
+// @Param role query string false "Filter by role: super_admin, admin, manager, volunteer"
+// @Param status query string false "Filter by status: active, inactive, banned"
+// @Param org_id query string false "Filter by organization ID"
+// @Success 200 {object} response.Response{data=dto.UserListResponse} "User list retrieved successfully"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /users [get]
 func (h *UserHandler) List(c *gin.Context) {
 	var req dto.UserListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -110,6 +156,21 @@ func (h *UserHandler) List(c *gin.Context) {
 }
 
 // Update update user
+// @Summary Update user
+// @Description Update user details (admin only)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "User ID"
+// @Param request body dto.UpdateUserRequest true "User update request"
+// @Success 200 {object} response.Response{data=dto.UserResponse} "User updated successfully"
+// @Failure 400 {object} response.Response "Invalid request parameters"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Forbidden - admin only or cannot modify this user"
+// @Failure 404 {object} response.Response "User not found"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /users/{id} [put]
 func (h *UserHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -153,6 +214,20 @@ func (h *UserHandler) Update(c *gin.Context) {
 }
 
 // Delete delete user
+// @Summary Delete user
+// @Description Delete a user (admin only)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "User ID"
+// @Success 204 "User deleted successfully"
+// @Failure 400 {object} response.Response "Invalid user ID"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Forbidden - admin only or cannot modify this user"
+// @Failure 404 {object} response.Response "User not found"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /users/{id} [delete]
 func (h *UserHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -187,6 +262,21 @@ func (h *UserHandler) Delete(c *gin.Context) {
 }
 
 // UpdateStatus update user status
+// @Summary Update user status
+// @Description Update user status (manager and above)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "User ID"
+// @Param request body object{status=entity.UserStatus} true "Status update request (active, inactive, banned)"
+// @Success 200 {object} response.Response "User status updated successfully"
+// @Failure 400 {object} response.Response "Invalid request parameters"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Forbidden - manager and above only"
+// @Failure 404 {object} response.Response "User not found"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /users/{id}/status [put]
 func (h *UserHandler) UpdateStatus(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -228,6 +318,21 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 }
 
 // UpdateRole update user role
+// @Summary Update user role
+// @Description Update user role (admin only)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "User ID"
+// @Param request body object{role=entity.Role} true "Role update request (super_admin, admin, manager, volunteer)"
+// @Success 200 {object} response.Response "User role updated successfully"
+// @Failure 400 {object} response.Response "Invalid request parameters"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 403 {object} response.Response "Forbidden - admin only or cannot modify this user"
+// @Failure 404 {object} response.Response "User not found"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /users/{id}/role [put]
 func (h *UserHandler) UpdateRole(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -271,6 +376,16 @@ func (h *UserHandler) UpdateRole(c *gin.Context) {
 }
 
 // GetProfile get profile
+// @Summary Get current user profile
+// @Description Get the profile information of the currently authenticated user
+// @Tags profile
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=dto.UserProfileResponse} "Profile retrieved successfully"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /profile [get]
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	if userID == "" {
@@ -288,6 +403,18 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 }
 
 // UpdateProfile update profile
+// @Summary Update current user profile
+// @Description Update the profile information of the currently authenticated user
+// @Tags profile
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body dto.UpdateProfileRequest true "Profile update request"
+// @Success 200 {object} response.Response{data=dto.UserProfileResponse} "Profile updated successfully"
+// @Failure 400 {object} response.Response "Invalid request parameters"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /profile [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	if userID == "" {
@@ -311,6 +438,18 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 }
 
 // ChangePassword change password
+// @Summary Change password
+// @Description Change the password of the currently authenticated user
+// @Tags profile
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body dto.ChangePasswordRequest true "Change password request"
+// @Success 200 {object} response.Response "Password changed successfully"
+// @Failure 400 {object} response.Response "Invalid request or old password is wrong"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /profile/password [put]
 func (h *UserHandler) ChangePassword(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	if userID == "" {
@@ -337,6 +476,16 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 }
 
 // GetStats get stats
+// @Summary Get user statistics
+// @Description Get statistics for the currently authenticated user
+// @Tags profile
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=dto.UserStatsResponse} "Statistics retrieved successfully"
+// @Failure 401 {object} response.Response "Unauthorized"
+// @Failure 500 {object} response.Response "Internal server error"
+// @Router /profile/stats [get]
 func (h *UserHandler) GetStats(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	if userID == "" {

@@ -54,6 +54,28 @@ type ListRequest struct {
 }
 
 // List 获取审计日志列表
+// @Summary 获取审计日志列表
+// @Description 分页查询审计日志列表，支持按用户、模块、操作类型、状态、时间范围等条件筛选
+// @Tags 审计日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param page query int false "页码，默认1" default(1) minimum(1)
+// @Param page_size query int false "每页数量，默认20" default(20) minimum(1) maximum(100)
+// @Param user_id query string false "用户ID"
+// @Param module query string false "模块名称，如：用户管理、案件管理等"
+// @Param action query string false "操作名称，如：创建、更新、删除等"
+// @Param type query string false "日志类型：login/logout/create/update/delete/query/export/upload/download/other"
+// @Param status query string false "状态：success/failure"
+// @Param start_time query string false "开始时间，格式：2006-01-02"
+// @Param end_time query string false "结束时间，格式：2006-01-02"
+// @Param keyword query string false "关键词搜索"
+// @Param request_ip query string false "请求IP地址"
+// @Success 200 {object} response.Response{data=repository.PaginatedResult} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /audit/logs [get]
 func (h *AuditHandler) List(c *gin.Context) {
 	var req ListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -109,6 +131,19 @@ func (h *AuditHandler) List(c *gin.Context) {
 }
 
 // GetByID 根据ID获取审计日志
+// @Summary 根据ID获取审计日志
+// @Description 根据审计日志ID获取单条日志详情
+// @Tags 审计日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "审计日志ID"
+// @Success 200 {object} response.Response{data=entity.AuditLog} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "日志不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /audit/logs/{id} [get]
 func (h *AuditHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -125,7 +160,20 @@ func (h *AuditHandler) GetByID(c *gin.Context) {
 	response.Success(c, log)
 }
 
-// GetStats 获取统计信息
+// GetStats 获取审计日志统计
+// @Summary 获取审计日志统计
+// @Description 获取指定时间范围内的审计日志统计信息，包括总数、今日数量、登录次数、操作次数、错误次数等
+// @Tags 审计日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param start_time query string false "开始时间，格式：2006-01-02"
+// @Param end_time query string false "结束时间，格式：2006-01-02"
+// @Success 200 {object} response.Response{data=entity.AuditLogStats} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /audit/stats [get]
 func (h *AuditHandler) GetStats(c *gin.Context) {
 	startTimeStr := c.Query("start_time")
 	endTimeStr := c.Query("end_time")
@@ -155,6 +203,19 @@ func (h *AuditHandler) GetStats(c *gin.Context) {
 }
 
 // GetUserActivity 获取用户活动统计
+// @Summary 获取用户活动统计
+// @Description 获取指定用户在指定天数内的活动统计，按日期展示操作次数
+// @Tags 审计日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param userId path string true "用户ID"
+// @Param days query int false "天数范围，默认7天，最大90天" default(7) minimum(1) maximum(90)
+// @Success 200 {object} response.Response{data=[]repository.UserActivityItem} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /audit/user-activity/{userId} [get]
 func (h *AuditHandler) GetUserActivity(c *gin.Context) {
 	userID := c.Param("userId")
 	if userID == "" {
@@ -178,6 +239,19 @@ func (h *AuditHandler) GetUserActivity(c *gin.Context) {
 }
 
 // GetModuleStats 获取模块统计
+// @Summary 获取模块统计
+// @Description 获取指定时间范围内各模块的操作次数统计
+// @Tags 审计日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param start_time query string false "开始时间，格式：2006-01-02"
+// @Param end_time query string false "结束时间，格式：2006-01-02"
+// @Success 200 {object} response.Response{data=[]repository.ModuleStatItem} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /audit/module-stats [get]
 func (h *AuditHandler) GetModuleStats(c *gin.Context) {
 	startTimeStr := c.Query("start_time")
 	endTimeStr := c.Query("end_time")
@@ -211,7 +285,26 @@ type CleanupRequest struct {
 	Days int `json:"days" binding:"required,min=1,max=365"`
 }
 
+// CleanupResponse 清理响应
+type CleanupResponse struct {
+	DeletedCount int64  `json:"deleted_count"`
+	Before       string `json:"before"`
+}
+
 // Cleanup 清理旧日志
+// @Summary 清理旧日志
+// @Description 清理指定天数之前的审计日志，只有超级管理员可以执行此操作
+// @Tags 审计日志
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body CleanupRequest true "清理请求参数"
+// @Success 200 {object} response.Response{data=CleanupResponse} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 403 {object} response.Response "禁止访问，需要超级管理员权限"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /audit/cleanup [post]
 func (h *AuditHandler) Cleanup(c *gin.Context) {
 	// 只有超级管理员可以清理日志
 	if !middleware.IsSuperAdmin(c) {

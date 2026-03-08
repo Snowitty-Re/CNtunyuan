@@ -49,6 +49,18 @@ func (h *DialectHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware 
 }
 
 // Create 创建方言
+// @Summary 创建方言
+// @Description 创建新的方言语音记录，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param request body dto.CreateDialectRequest true "创建方言请求"
+// @Success 201 {object} response.Response{data=dto.DialectResponse} "创建成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects [post]
 func (h *DialectHandler) Create(c *gin.Context) {
 	var req dto.CreateDialectRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -69,7 +81,20 @@ func (h *DialectHandler) Create(c *gin.Context) {
 	response.Created(c, dialect)
 }
 
-// GetByID 获取详情
+// GetByID 获取方言详情
+// @Summary 获取方言详情
+// @Description 根据ID获取方言详细信息，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Success 200 {object} response.Response{data=dto.DialectResponse} "获取成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "方言不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id} [get]
 func (h *DialectHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -90,7 +115,28 @@ func (h *DialectHandler) GetByID(c *gin.Context) {
 	response.Success(c, dialect)
 }
 
-// List 列表查询
+// List 获取方言列表
+// @Summary 获取方言列表
+// @Description 分页获取方言列表，支持关键词、地区、状态等筛选，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param page query int false "页码，默认为1" default(1)
+// @Param page_size query int false "每页数量，默认为10" default(10)
+// @Param keyword query string false "关键词搜索"
+// @Param region query string false "地区筛选"
+// @Param province query string false "省份筛选"
+// @Param city query string false "城市筛选"
+// @Param type query string false "方言类型"
+// @Param status query string false "状态筛选"
+// @Param sort_by query string false "排序字段"
+// @Param sort_order query string false "排序方式(asc/desc)"
+// @Success 200 {object} response.Response{data=dto.DialectListResponse} "获取成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects [get]
 func (h *DialectHandler) List(c *gin.Context) {
 	var req dto.DialectListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -107,7 +153,21 @@ func (h *DialectHandler) List(c *gin.Context) {
 	response.Success(c, dialects)
 }
 
-// Update 更新
+// Update 更新方言
+// @Summary 更新方言
+// @Description 更新指定ID的方言信息，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Param request body dto.UpdateDialectRequest true "更新方言请求"
+// @Success 200 {object} response.Response{data=dto.DialectResponse} "更新成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "方言不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id} [put]
 func (h *DialectHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -136,7 +196,19 @@ func (h *DialectHandler) Update(c *gin.Context) {
 	response.Success(c, dialect)
 }
 
-// Delete 删除
+// Delete 删除方言
+// @Summary 删除方言
+// @Description 删除指定ID的方言，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Success 204 "删除成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id} [delete]
 func (h *DialectHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -153,7 +225,22 @@ func (h *DialectHandler) Delete(c *gin.Context) {
 	response.NoContent(c)
 }
 
-// UpdateStatus 更新状态
+// UpdateStatus 更新方言状态
+// @Summary 更新方言状态
+// @Description 更新方言的审核状态，需要管理员或经理权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Param request body dto.UpdateDialectStatusRequest true "状态更新请求"
+// @Success 200 {object} response.Response "更新成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 403 {object} response.Response "权限不足"
+// @Failure 404 {object} response.Response "方言不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id}/status [put]
 func (h *DialectHandler) UpdateStatus(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -181,6 +268,20 @@ func (h *DialectHandler) UpdateStatus(c *gin.Context) {
 }
 
 // Feature 设为精选
+// @Summary 将方言设为精选
+// @Description 将指定方言标记为精选内容，需要管理员权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Success 200 {object} response.Response "设置成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 403 {object} response.Response "权限不足"
+// @Failure 404 {object} response.Response "方言不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id}/feature [post]
 func (h *DialectHandler) Feature(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -202,6 +303,20 @@ func (h *DialectHandler) Feature(c *gin.Context) {
 }
 
 // Unfeature 取消精选
+// @Summary 取消方言精选
+// @Description 取消指定方言的精选标记，需要管理员权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Success 200 {object} response.Response "取消成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 403 {object} response.Response "权限不足"
+// @Failure 404 {object} response.Response "方言不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id}/feature [delete]
 func (h *DialectHandler) Unfeature(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -222,7 +337,19 @@ func (h *DialectHandler) Unfeature(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// Play 播放记录
+// Play 记录播放
+// @Summary 记录方言播放
+// @Description 记录用户播放方言的次数，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Success 200 {object} response.Response "记录成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id}/play [post]
 func (h *DialectHandler) Play(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -238,7 +365,20 @@ func (h *DialectHandler) Play(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// Like 点赞
+// Like 点赞方言
+// @Summary 点赞方言
+// @Description 为指定方言点赞，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Success 200 {object} response.Response "点赞成功"
+// @Failure 400 {object} response.Response "请求参数错误或已点赞"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "方言不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id}/like [post]
 func (h *DialectHandler) Like(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -264,6 +404,19 @@ func (h *DialectHandler) Like(c *gin.Context) {
 }
 
 // Unlike 取消点赞
+// @Summary 取消点赞方言
+// @Description 取消对指定方言的点赞，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Success 200 {object} response.Response "取消点赞成功"
+// @Failure 400 {object} response.Response "请求参数错误或未点赞"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "方言不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id}/like [delete]
 func (h *DialectHandler) Unlike(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -289,6 +442,20 @@ func (h *DialectHandler) Unlike(c *gin.Context) {
 }
 
 // AddComment 添加评论
+// @Summary 添加方言评论
+// @Description 为指定方言添加评论，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Param request body dto.CreateDialectCommentRequest true "评论请求"
+// @Success 201 {object} response.Response{data=dto.DialectCommentResponse} "评论成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "方言不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id}/comments [post]
 func (h *DialectHandler) AddComment(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -318,7 +485,21 @@ func (h *DialectHandler) AddComment(c *gin.Context) {
 	response.Created(c, comment)
 }
 
-// GetComments 获取评论
+// GetComments 获取评论列表
+// @Summary 获取方言评论列表
+// @Description 获取指定方言的评论列表，支持分页，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param id path string true "方言ID"
+// @Param page query int false "页码，默认为1" default(1)
+// @Param page_size query int false "每页数量，默认为10" default(10)
+// @Success 200 {object} response.Response{data=repository.PageResult[dto.DialectCommentResponse]} "获取成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/{id}/comments [get]
 func (h *DialectHandler) GetComments(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -338,7 +519,19 @@ func (h *DialectHandler) GetComments(c *gin.Context) {
 	response.Success(c, comments)
 }
 
-// GetFeatured 获取精选
+// GetFeatured 获取精选列表
+// @Summary 获取精选方言列表
+// @Description 分页获取标记为精选的方言列表，需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param page query int false "页码，默认为1" default(1)
+// @Param page_size query int false "每页数量，默认为10" default(10)
+// @Success 200 {object} response.Response{data=repository.PageResult[dto.DialectResponse]} "获取成功"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/featured [get]
 func (h *DialectHandler) GetFeatured(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -352,7 +545,17 @@ func (h *DialectHandler) GetFeatured(c *gin.Context) {
 	response.Success(c, dialects)
 }
 
-// GetStats 获取统计
+// GetStats 获取方言统计
+// @Summary 获取方言统计数据
+// @Description 获取方言相关的统计数据（总数、活跃数、待审核数、精选数、总播放量、总点赞数），需要登录权限
+// @Tags 方言管理
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=dto.DialectStatsResponse} "获取成功"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dialects/stats [get]
 func (h *DialectHandler) GetStats(c *gin.Context) {
 	stats, err := h.dialectService.GetStats(c.Request.Context())
 	if err != nil {

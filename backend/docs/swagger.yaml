@@ -1,30 +1,87 @@
 schemes:
   - http
+  - https
 swagger: "2.0"
 info:
-  description: 团圆寻亲志愿者系统后端 API 文档
+  description: |
+    团圆寻亲志愿者系统后端 API 文档
+    
+    包含模块：
+    - 认证管理 (Authentication)
+    - 用户管理 (Users)
+    - 组织管理 (Organizations)
+    - 走失人员管理 (Missing Persons)
+    - 任务管理 (Tasks)
+    - 方言管理 (Dialects)
+    - 文件管理 (Files)
+    - 仪表盘 (Dashboard)
+    - 审计日志 (Audit Logs)
   title: 团圆寻亲志愿者系统 API
+  version: 1.0.0
+  termsOfService: https://github.com/Snowitty-Re/CNtunyuan
   contact:
     name: CNtunyuan Team
     url: https://github.com/Snowitty-Re/CNtunyuan
+    email: support@cntunyuan.org
   license:
     name: MIT
-  version: 1.0.0
+    url: https://opensource.org/licenses/MIT
 host: localhost:8080
 basePath: /api/v1
+
+securityDefinitions:
+  Bearer:
+    type: apiKey
+    name: Authorization
+    in: header
+    description: 请输入 JWT Token，格式：Bearer {token}
+
 paths:
   /health:
     get:
-      description: 健康检查
       tags:
         - 健康检查
       summary: 健康检查
+      description: 检查服务是否正常运行
       responses:
         "200":
-          description: OK
+          description: 服务正常运行
           schema:
             type: object
             properties:
-              status:
+              code:
+                type: integer
+                example: 0
+              message:
                 type: string
-                example: ok
+                example: success
+              data:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+tags:
+  - name: 认证管理
+    description: 用户认证相关接口（登录、注册、Token刷新等）
+  - name: 用户管理
+    description: 用户管理接口（CRUD、角色、状态等）
+  - name: 个人中心
+    description: 当前用户相关接口（个人资料、密码修改等）
+  - name: 组织管理
+    description: 组织架构管理接口
+  - name: 走失人员
+    description: 走失人员登记管理接口
+  - name: 任务管理
+    description: 寻人任务管理接口
+  - name: 方言管理
+    description: 方言语音库管理接口
+  - name: 文件管理
+    description: 文件上传下载管理接口
+  - name: 仪表盘
+    description: 数据统计仪表盘接口
+  - name: 审计日志
+    description: 系统操作审计日志接口
+  - name: 健康检查
+    description: 服务健康检查接口

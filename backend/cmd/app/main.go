@@ -1,3 +1,23 @@
+// @title 团圆寻亲志愿者系统 API
+// @version 1.0.0
+// @description 团圆寻亲志愿者系统后端 API 文档
+// @termsOfService https://github.com/Snowitty-Re/CNtunyuan
+
+// @contact.name CNtunyuan Team
+// @contact.url https://github.com/Snowitty-Re/CNtunyuan
+// @contact.email support@cntunyuan.org
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description 请输入 JWT Token，格式：Bearer {token}
+
 package main
 
 import (
@@ -8,6 +28,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/Snowitty-Re/CNtunyuan/docs"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/di"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"

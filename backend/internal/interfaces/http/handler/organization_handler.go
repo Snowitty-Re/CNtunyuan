@@ -37,6 +37,20 @@ func (h *OrganizationHandler) RegisterRoutes(router *gin.RouterGroup, authMiddle
 }
 
 // Create 创建组织
+// @Summary      创建组织
+// @Description  创建新的组织，需要管理员权限
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request  body      dto.CreateOrganizationRequest  true  "创建组织请求参数"
+// @Success      201      {object}  response.Response{data=dto.OrganizationResponse}  "创建成功"
+// @Failure      400      {object}  response.Response  "参数错误"
+// @Failure      401      {object}  response.Response  "未授权"
+// @Failure      403      {object}  response.Response  "禁止访问"
+// @Failure      409      {object}  response.Response  "组织代码已存在"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /organizations [post]
 func (h *OrganizationHandler) Create(c *gin.Context) {
 	var req dto.CreateOrganizationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -62,6 +76,19 @@ func (h *OrganizationHandler) Create(c *gin.Context) {
 }
 
 // GetByID 获取组织详情
+// @Summary      获取组织详情
+// @Description  根据ID获取组织详细信息
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "组织ID"
+// @Success      200  {object}  response.Response{data=dto.OrganizationResponse}  "获取成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      404  {object}  response.Response  "组织不存在"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /organizations/{id} [get]
 func (h *OrganizationHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -83,6 +110,23 @@ func (h *OrganizationHandler) GetByID(c *gin.Context) {
 }
 
 // List 组织列表
+// @Summary      获取组织列表
+// @Description  分页获取组织列表，支持关键字搜索和筛选
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page       query     int     false  "页码，默认1"
+// @Param        page_size  query     int     false  "每页数量，默认10，最大100"
+// @Param        keyword    query     string  false  "搜索关键字（名称或代码）"
+// @Param        type       query     string  false  "组织类型"
+// @Param        status     query     string  false  "组织状态"
+// @Param        parent_id  query     string  false  "父组织ID"
+// @Success      200        {object}  response.Response{data=dto.OrganizationListResponse}  "获取成功"
+// @Failure      400        {object}  response.Response  "参数错误"
+// @Failure      401        {object}  response.Response  "未授权"
+// @Failure      500        {object}  response.Response  "服务器内部错误"
+// @Router       /organizations [get]
 func (h *OrganizationHandler) List(c *gin.Context) {
 	var req dto.OrganizationListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -100,6 +144,22 @@ func (h *OrganizationHandler) List(c *gin.Context) {
 }
 
 // Update 更新组织
+// @Summary      更新组织
+// @Description  更新组织信息，需要管理员权限
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id       path      string                         true  "组织ID"
+// @Param        request  body      dto.UpdateOrganizationRequest  true  "更新组织请求参数"
+// @Success      200      {object}  response.Response{data=dto.OrganizationResponse}  "更新成功"
+// @Failure      400      {object}  response.Response  "参数错误"
+// @Failure      401      {object}  response.Response  "未授权"
+// @Failure      403      {object}  response.Response  "禁止访问"
+// @Failure      404      {object}  response.Response  "组织不存在"
+// @Failure      409      {object}  response.Response  "组织代码已存在"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /organizations/{id} [put]
 func (h *OrganizationHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -131,6 +191,20 @@ func (h *OrganizationHandler) Update(c *gin.Context) {
 }
 
 // Delete 删除组织
+// @Summary      删除组织
+// @Description  删除指定组织，需要管理员权限。如果组织下有子组织则无法删除
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "组织ID"
+// @Success      204  "删除成功"
+// @Failure      400  {object}  response.Response  "参数错误或组织下有子组织"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      403  {object}  response.Response  "禁止访问"
+// @Failure      404  {object}  response.Response  "组织不存在"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /organizations/{id} [delete]
 func (h *OrganizationHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -155,6 +229,17 @@ func (h *OrganizationHandler) Delete(c *gin.Context) {
 }
 
 // GetTree 获取组织树
+// @Summary      获取组织树
+// @Description  获取组织树形结构，可指定根组织ID
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        root_id  query     string  false  "根组织ID，为空则返回整棵树"
+// @Success      200      {object}  response.Response{data=dto.OrganizationTreeResponse}  "获取成功"
+// @Failure      401      {object}  response.Response  "未授权"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /organizations/tree [get]
 func (h *OrganizationHandler) GetTree(c *gin.Context) {
 	rootID := c.Query("root_id")
 
@@ -168,6 +253,18 @@ func (h *OrganizationHandler) GetTree(c *gin.Context) {
 }
 
 // GetChildren 获取子组织
+// @Summary      获取子组织列表
+// @Description  获取指定组织的直接子组织列表
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "组织ID"
+// @Success      200  {object}  response.Response{data=[]dto.OrganizationResponse}  "获取成功"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /organizations/{id}/children [get]
 func (h *OrganizationHandler) GetChildren(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -185,6 +282,18 @@ func (h *OrganizationHandler) GetChildren(c *gin.Context) {
 }
 
 // GetPath 获取组织路径
+// @Summary      获取组织路径
+// @Description  获取从根组织到指定组织的完整路径
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "组织ID"
+// @Success      200  {object}  response.Response{data=[]dto.OrganizationResponse}  "获取成功，返回从根到当前组织的路径数组"
+// @Failure      400  {object}  response.Response  "参数错误"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /organizations/{id}/path [get]
 func (h *OrganizationHandler) GetPath(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -202,6 +311,21 @@ func (h *OrganizationHandler) GetPath(c *gin.Context) {
 }
 
 // Move 移动组织
+// @Summary      移动组织
+// @Description  将组织移动到新的父组织下，需要管理员权限
+// @Tags         组织管理
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id       path      string                      true  "组织ID"
+// @Param        request  body      dto.MoveOrganizationRequest true  "移动组织请求参数"
+// @Success      200      {object}  response.Response  "移动成功"
+// @Failure      400      {object}  response.Response  "参数错误"
+// @Failure      401      {object}  response.Response  "未授权"
+// @Failure      403      {object}  response.Response  "禁止访问"
+// @Failure      404      {object}  response.Response  "组织不存在"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /organizations/{id}/move [put]
 func (h *OrganizationHandler) Move(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {

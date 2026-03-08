@@ -45,6 +45,18 @@ func (h *TaskHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *mi
 }
 
 // Create 创建任务
+// @Summary      创建任务
+// @Description  创建新的寻人任务，需要登录
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.CreateTaskRequest  true  "创建任务请求参数"
+// @Success      201      {object}  response.Response{data=dto.TaskResponse}  "创建成功"
+// @Failure      400      {object}  response.Response  "请求参数错误"
+// @Failure      401      {object}  response.Response  "未授权"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /tasks [post]
+// @Security     Bearer
 func (h *TaskHandler) Create(c *gin.Context) {
 	var req dto.CreateTaskRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,7 +77,20 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	response.Created(c, task)
 }
 
-// GetByID 获取详情
+// GetByID 获取任务详情
+// @Summary      获取任务详情
+// @Description  根据任务ID获取任务详细信息
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "任务ID"
+// @Success      200  {object}  response.Response{data=dto.TaskResponse}  "获取成功"
+// @Failure      400  {object}  response.Response  "任务ID不能为空"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      404  {object}  response.Response  "任务不存在"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id} [get]
+// @Security     Bearer
 func (h *TaskHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -86,7 +111,27 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 	response.Success(c, task)
 }
 
-// List 列表查询
+// List 获取任务列表
+// @Summary      获取任务列表
+// @Description  分页获取任务列表，支持多种筛选条件
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        page              query     int     false  "页码，默认1"
+// @Param        page_size         query     int     false  "每页数量，默认10，最大100"
+// @Param        keyword           query     string  false  "关键词搜索"
+// @Param        type              query     string  false  "任务类型"
+// @Param        status            query     string  false  "任务状态: draft, pending, assigned, processing, completed, cancelled"
+// @Param        priority          query     string  false  "优先级: low, normal, high, urgent"
+// @Param        assignee_id       query     string  false  "执行人ID"
+// @Param        missing_person_id query     string  false  "走失人员ID"
+// @Param        is_overdue        query     bool    false  "是否逾期"
+// @Success      200  {object}  response.Response{data=dto.TaskListResponse}  "获取成功"
+// @Failure      400  {object}  response.Response  "请求参数错误"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /tasks [get]
+// @Security     Bearer
 func (h *TaskHandler) List(c *gin.Context) {
 	var req dto.TaskListRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -103,7 +148,21 @@ func (h *TaskHandler) List(c *gin.Context) {
 	response.Success(c, tasks)
 }
 
-// Update 更新
+// Update 更新任务
+// @Summary      更新任务
+// @Description  更新指定任务的详细信息
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                 true  "任务ID"
+// @Param        request  body      dto.UpdateTaskRequest  true  "更新任务请求参数"
+// @Success      200      {object}  response.Response{data=dto.TaskResponse}  "更新成功"
+// @Failure      400      {object}  response.Response  "请求参数错误"
+// @Failure      401      {object}  response.Response  "未授权"
+// @Failure      404      {object}  response.Response  "任务不存在"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id} [put]
+// @Security     Bearer
 func (h *TaskHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -132,7 +191,20 @@ func (h *TaskHandler) Update(c *gin.Context) {
 	response.Success(c, task)
 }
 
-// Delete 删除
+// Delete 删除任务
+// @Summary      删除任务
+// @Description  删除指定任务，需要管理员权限(manager+)
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "任务ID"
+// @Success      204  {object}  nil  "删除成功"
+// @Failure      400  {object}  response.Response  "任务ID不能为空"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      403  {object}  response.Response  "权限不足"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id} [delete]
+// @Security     Bearer
 func (h *TaskHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -150,6 +222,20 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 }
 
 // Assign 分配任务
+// @Summary      分配任务
+// @Description  将任务分配给指定执行人，需要管理员权限(manager+)
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                   true  "任务ID"
+// @Param        request  body      dto.AssignTaskRequest    true  "分配任务请求参数"
+// @Success      200      {object}  response.Response        "分配成功"
+// @Failure      400      {object}  response.Response        "请求参数错误或任务已分配"
+// @Failure      401      {object}  response.Response        "未授权"
+// @Failure      403      {object}  response.Response        "权限不足"
+// @Failure      404      {object}  response.Response        "任务不存在"
+// @Router       /tasks/{id}/assign [post]
+// @Security     Bearer
 func (h *TaskHandler) Assign(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -179,6 +265,18 @@ func (h *TaskHandler) Assign(c *gin.Context) {
 }
 
 // Start 开始任务
+// @Summary      开始任务
+// @Description  开始执行指定的任务
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "任务ID"
+// @Success      200  {object}  response.Response  "开始任务成功"
+// @Failure      400  {object}  response.Response  "任务ID不能为空或状态不允许"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      404  {object}  response.Response  "任务不存在"
+// @Router       /tasks/{id}/start [post]
+// @Security     Bearer
 func (h *TaskHandler) Start(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -202,6 +300,19 @@ func (h *TaskHandler) Start(c *gin.Context) {
 }
 
 // Complete 完成任务
+// @Summary      完成任务
+// @Description  标记任务为已完成，并填写任务结果
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                     true  "任务ID"
+// @Param        request  body      dto.CompleteTaskRequest    true  "完成任务请求参数"
+// @Success      200      {object}  response.Response          "完成任务成功"
+// @Failure      400      {object}  response.Response          "请求参数错误或状态不允许"
+// @Failure      401      {object}  response.Response          "未授权"
+// @Failure      404      {object}  response.Response          "任务不存在"
+// @Router       /tasks/{id}/complete [post]
+// @Security     Bearer
 func (h *TaskHandler) Complete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -231,6 +342,20 @@ func (h *TaskHandler) Complete(c *gin.Context) {
 }
 
 // Cancel 取消任务
+// @Summary      取消任务
+// @Description  取消指定的任务，需要管理员权限(manager+)
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                   true  "任务ID"
+// @Param        request  body      dto.CancelTaskRequest    true  "取消任务请求参数"
+// @Success      200      {object}  response.Response        "取消任务成功"
+// @Failure      400      {object}  response.Response        "请求参数错误或状态不允许"
+// @Failure      401      {object}  response.Response        "未授权"
+// @Failure      403      {object}  response.Response        "权限不足"
+// @Failure      404      {object}  response.Response        "任务不存在"
+// @Router       /tasks/{id}/cancel [post]
+// @Security     Bearer
 func (h *TaskHandler) Cancel(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -259,7 +384,20 @@ func (h *TaskHandler) Cancel(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-// UpdateProgress 更新进度
+// UpdateProgress 更新任务进度
+// @Summary      更新任务进度
+// @Description  更新任务的执行进度(0-100)
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                          true  "任务ID"
+// @Param        request  body      dto.UpdateTaskProgressRequest   true  "更新进度请求参数"
+// @Success      200      {object}  response.Response               "更新进度成功"
+// @Failure      400      {object}  response.Response               "请求参数错误或进度值无效"
+// @Failure      401      {object}  response.Response               "未授权"
+// @Failure      404      {object}  response.Response               "任务不存在"
+// @Router       /tasks/{id}/progress [put]
+// @Security     Bearer
 func (h *TaskHandler) UpdateProgress(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -289,6 +427,18 @@ func (h *TaskHandler) UpdateProgress(c *gin.Context) {
 }
 
 // GetMyTasks 获取我的任务
+// @Summary      获取我的任务
+// @Description  获取当前登录用户的任务列表
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码，默认1"
+// @Param        page_size  query     int  false  "每页数量，默认10"
+// @Success      200        {object}  response.Response{data=dto.TaskListResponse}  "获取成功"
+// @Failure      401        {object}  response.Response  "未授权"
+// @Failure      500        {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/my [get]
+// @Security     Bearer
 func (h *TaskHandler) GetMyTasks(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -304,6 +454,18 @@ func (h *TaskHandler) GetMyTasks(c *gin.Context) {
 }
 
 // GetPendingTasks 获取待分配任务
+// @Summary      获取待分配任务
+// @Description  获取状态为待分配的任务列表
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码，默认1"
+// @Param        page_size  query     int  false  "每页数量，默认10"
+// @Success      200  {object}  response.Response{data=dto.TaskListResponse}  "获取成功"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/pending [get]
+// @Security     Bearer
 func (h *TaskHandler) GetPendingTasks(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -318,6 +480,19 @@ func (h *TaskHandler) GetPendingTasks(c *gin.Context) {
 }
 
 // GetOverdueTasks 获取逾期任务
+// @Summary      获取逾期任务
+// @Description  获取已逾期的任务列表，需要管理员权限(manager+)
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        page       query     int  false  "页码，默认1"
+// @Param        page_size  query     int  false  "每页数量，默认10"
+// @Success      200  {object}  response.Response{data=dto.TaskListResponse}  "获取成功"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      403  {object}  response.Response  "权限不足"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/overdue [get]
+// @Security     Bearer
 func (h *TaskHandler) GetOverdueTasks(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
@@ -332,6 +507,18 @@ func (h *TaskHandler) GetOverdueTasks(c *gin.Context) {
 }
 
 // GetLogs 获取任务日志
+// @Summary      获取任务日志
+// @Description  获取指定任务的操作日志记录
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "任务ID"
+// @Success      200  {object}  response.Response{data=[]dto.TaskLogResponse}  "获取成功"
+// @Failure      400  {object}  response.Response  "任务ID不能为空"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id}/logs [get]
+// @Security     Bearer
 func (h *TaskHandler) GetLogs(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -348,7 +535,17 @@ func (h *TaskHandler) GetLogs(c *gin.Context) {
 	response.Success(c, logs)
 }
 
-// GetStats 获取统计
+// GetStats 获取任务统计
+// @Summary      获取任务统计
+// @Description  获取当前用户的任务统计数据
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Success      200  {object}  response.Response{data=dto.TaskStatsResponse}  "获取成功"
+// @Failure      401  {object}  response.Response  "未授权"
+// @Failure      500  {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/stats [get]
+// @Security     Bearer
 func (h *TaskHandler) GetStats(c *gin.Context) {
 	userID := middleware.GetUserID(c)
 

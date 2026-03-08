@@ -14,6 +14,9 @@ import (
 )
 
 // UploadHandler 上传处理器
+// @Description 文件上传管理接口，支持单文件/批量上传、下载、绑定实体等功能
+// @Tags 文件管理
+// @BasePath /api/v1
 type UploadHandler struct {
 	fileService *service.FileAppService
 }
@@ -40,6 +43,18 @@ func (h *UploadHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *
 }
 
 // Upload 单文件上传
+// @Summary 单文件上传
+// @Description 上传单个文件，支持图片、音频、视频等格式，文件大小限制50MB
+// @Tags 文件管理
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "要上传的文件"
+// @Success 200 {object} response.Response{data=dto.FileResponse} "上传成功"
+// @Failure 400 {object} response.Response "请求参数错误（未提供文件或文件过大）"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload [post]
+// @Security BearerAuth
 func (h *UploadHandler) Upload(c *gin.Context) {
 	logger.Info("Upload handler called",
 		logger.String("content_type", c.ContentType()),
@@ -77,6 +92,18 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 }
 
 // UploadBatch 批量上传
+// @Summary 批量文件上传
+// @Description 同时上传多个文件，支持图片、音频、视频等格式
+// @Tags 文件管理
+// @Accept multipart/form-data
+// @Produce json
+// @Param files formData file true "要上传的文件列表（支持多个）"
+// @Success 200 {object} response.Response{data=dto.UploadResponse} "上传成功"
+// @Failure 400 {object} response.Response "请求参数错误（未提供文件）"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload/batch [post]
+// @Security BearerAuth
 func (h *UploadHandler) UploadBatch(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
@@ -116,6 +143,19 @@ func (h *UploadHandler) UploadBatch(c *gin.Context) {
 }
 
 // GetByID 获取文件信息
+// @Summary 获取文件详情
+// @Description 根据文件ID获取文件详细信息（元数据，不包含文件内容）
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param id path string true "文件ID"
+// @Success 200 {object} response.Response{data=dto.FileResponse} "获取成功"
+// @Failure 400 {object} response.Response "请求参数错误（文件ID不能为空）"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "文件不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload/{id} [get]
+// @Security BearerAuth
 func (h *UploadHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -137,6 +177,19 @@ func (h *UploadHandler) GetByID(c *gin.Context) {
 }
 
 // Download 下载文件
+// @Summary 下载文件
+// @Description 根据文件ID下载文件内容，返回二进制文件流
+// @Tags 文件管理
+// @Accept json
+// @Produce octet-stream
+// @Param id path string true "文件ID"
+// @Success 200 {file} binary "文件内容"
+// @Failure 400 {object} response.Response "请求参数错误（文件ID不能为空）"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "文件不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload/{id}/download [get]
+// @Security BearerAuth
 func (h *UploadHandler) Download(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -168,6 +221,19 @@ func (h *UploadHandler) Download(c *gin.Context) {
 }
 
 // GetFilesByEntity 获取实体的文件
+// @Summary 获取实体关联的文件列表
+// @Description 根据实体类型和ID获取关联的所有文件列表
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param type path string true "实体类型（如：missing_person, dialect, user等）"
+// @Param id path string true "实体ID"
+// @Success 200 {object} response.Response{data=[]dto.FileResponse} "获取成功"
+// @Failure 400 {object} response.Response "请求参数错误（实体类型或ID不能为空）"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload/entity/{type}/{id} [get]
+// @Security BearerAuth
 func (h *UploadHandler) GetFilesByEntity(c *gin.Context) {
 	entityType := c.Param("type")
 	entityID := c.Param("id")
@@ -187,6 +253,19 @@ func (h *UploadHandler) GetFilesByEntity(c *gin.Context) {
 }
 
 // Delete 删除文件
+// @Summary 删除文件
+// @Description 根据文件ID删除文件（物理删除文件及数据库记录）
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param id path string true "文件ID"
+// @Success 204 "删除成功，无返回内容"
+// @Failure 400 {object} response.Response "请求参数错误（文件ID不能为空）"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "文件不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload/{id} [delete]
+// @Security BearerAuth
 func (h *UploadHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -208,6 +287,20 @@ func (h *UploadHandler) Delete(c *gin.Context) {
 }
 
 // BindToEntity 绑定文件到实体
+// @Summary 绑定文件到实体
+// @Description 将已上传的文件绑定到指定实体（如走失人员、方言等）
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param id path string true "文件ID"
+// @Param body body dto.BindFileRequest true "绑定请求参数"
+// @Success 200 {object} response.Response "绑定成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 404 {object} response.Response "文件不存在"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload/{id}/bind [put]
+// @Security BearerAuth
 func (h *UploadHandler) BindToEntity(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
@@ -234,6 +327,16 @@ func (h *UploadHandler) BindToEntity(c *gin.Context) {
 }
 
 // GetStats 获取文件统计
+// @Summary 获取文件统计信息
+// @Description 获取系统文件统计数据，包括总数量、总大小、各类型文件统计等
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Success 200 {object} response.Response{data=dto.FileStatsResponse} "获取成功"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload/stats [get]
+// @Security BearerAuth
 func (h *UploadHandler) GetStats(c *gin.Context) {
 	stats, err := h.fileService.GetStats(c.Request.Context())
 	if err != nil {

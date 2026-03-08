@@ -30,6 +30,16 @@ func (h *DashboardHandler) RegisterRoutes(router *gin.RouterGroup, authMiddlewar
 }
 
 // GetStats 获取仪表盘统计
+// @Summary 获取仪表盘统计
+// @Description 获取仪表盘各项统计数据，包括用户、组织、走失人员、任务、方言、文件等统计信息
+// @Tags 仪表盘
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=service.DashboardStats} "成功"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dashboard/stats [get]
 func (h *DashboardHandler) GetStats(c *gin.Context) {
 	stats, err := h.dashboardService.GetDashboardStats(c.Request.Context())
 	if err != nil {
@@ -41,6 +51,16 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 }
 
 // GetOverview 获取概览数据
+// @Summary 获取概览数据
+// @Description 获取系统关键数据概览，包括总用户数、案件数、活跃案件数、已解决案件数等
+// @Tags 仪表盘
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} response.Response{data=map[string]interface{}} "成功"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dashboard/overview [get]
 func (h *DashboardHandler) GetOverview(c *gin.Context) {
 	overview, err := h.dashboardService.GetOverview(c.Request.Context())
 	if err != nil {
@@ -52,6 +72,18 @@ func (h *DashboardHandler) GetOverview(c *gin.Context) {
 }
 
 // GetTrend 获取趋势数据
+// @Summary 获取趋势数据
+// @Description 获取指定天数内的趋势数据，包括新增案件、已解决案件、新增任务、已完成任务、新增用户等趋势
+// @Tags 仪表盘
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param days query int false "天数范围，默认7天，最大30天" default(7) minimum(1) maximum(30)
+// @Success 200 {object} response.Response{data=[]service.TrendData} "成功"
+// @Failure 400 {object} response.Response "参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /dashboard/trend [get]
 func (h *DashboardHandler) GetTrend(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
 	if days <= 0 {

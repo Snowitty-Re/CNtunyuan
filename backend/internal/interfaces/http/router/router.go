@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	_ "github.com/Snowitty-Re/CNtunyuan/docs"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
@@ -10,6 +11,8 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // Router 路由管理器
@@ -93,6 +96,9 @@ func NewRouter(
 
 // Setup 设置路由
 func (r *Router) Setup() {
+	// Swagger UI - 公开访问
+	r.engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// API v1 路由组
 	api := r.engine.Group("/api/v1")
 
@@ -102,6 +108,11 @@ func (r *Router) Setup() {
 
 	// Prometheus 指标端点
 	api.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	
+	// Swagger JSON/YAML 文档端点
+	api.GET("/docs", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+	})
 
 	// 公开路由（不需要认证）
 	public := api.Group("/")
