@@ -262,6 +262,7 @@ func NewMissingPerson(name, gender, contactName, contactPhone, reporterID, orgID
 		OrgID:        orgID,
 		Status:       MissingStatusMissing,
 		Urgency:      UrgencyLevelMedium,
+		MissingTime:  time.Now(),
 	}
 
 	if err := mp.Validate(); err != nil {

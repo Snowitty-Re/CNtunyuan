@@ -187,14 +187,12 @@ func (r *MissingPersonRepositoryImpl) GetTracks(ctx context.Context, personID st
 func (r *MissingPersonRepositoryImpl) GetStats(ctx context.Context) (*entity.MissingPersonStats, error) {
 	stats := &entity.MissingPersonStats{}
 
-	db := r.db.WithContext(ctx).Model(&entity.MissingPerson{})
-
 	// 总数
-	if err := db.Count(&stats.Total).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&entity.MissingPerson{}).Count(&stats.Total).Error; err != nil {
 		return nil, err
 	}
 
-	// 各状态统计
+	// 各状态统计 - 每次使用新的查询对象避免条件累积
 	for _, status := range []entity.MissingStatus{
 		entity.MissingStatusMissing,
 		entity.MissingStatusSearching,
@@ -203,7 +201,7 @@ func (r *MissingPersonRepositoryImpl) GetStats(ctx context.Context) (*entity.Mis
 		entity.MissingStatusClosed,
 	} {
 		var count int64
-		if err := db.Where("status = ?", status).Count(&count).Error; err != nil {
+		if err := r.db.WithContext(ctx).Model(&entity.MissingPerson{}).Where("status = ?", status).Count(&count).Error; err != nil {
 			return nil, err
 		}
 		switch status {
@@ -222,19 +220,19 @@ func (r *MissingPersonRepositoryImpl) GetStats(ctx context.Context) (*entity.Mis
 
 	// 今日新增
 	today := time.Now().Format("2006-01-02")
-	if err := db.Where("DATE(created_at) = ?", today).Count(&stats.TodayNew).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&entity.MissingPerson{}).Where("DATE(created_at) = ?", today).Count(&stats.TodayNew).Error; err != nil {
 		return nil, err
 	}
 
 	// 本周新增
 	weekStart := time.Now().AddDate(0, 0, -int(time.Now().Weekday())).Format("2006-01-02")
-	if err := db.Where("DATE(created_at) >= ?", weekStart).Count(&stats.ThisWeekNew).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&entity.MissingPerson{}).Where("DATE(created_at) >= ?", weekStart).Count(&stats.ThisWeekNew).Error; err != nil {
 		return nil, err
 	}
 
 	// 本月新增
 	monthStart := time.Now().Format("2006-01") + "-01"
-	if err := db.Where("DATE(created_at) >= ?", monthStart).Count(&stats.ThisMonthNew).Error; err != nil {
+	if err := r.db.WithContext(ctx).Model(&entity.MissingPerson{}).Where("DATE(created_at) >= ?", monthStart).Count(&stats.ThisMonthNew).Error; err != nil {
 		return nil, err
 	}
 

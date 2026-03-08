@@ -8,6 +8,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/google/uuid"
 )
 
 var (
@@ -195,6 +196,7 @@ func (s *DialectAppService) IncrementPlayCount(ctx context.Context, id string) e
 // Like 点赞
 func (s *DialectAppService) Like(ctx context.Context, dialectID string, userID string) error {
 	like := &entity.DialectLike{
+		ID:        uuid.New().String(),
 		DialectID: dialectID,
 		UserID:    userID,
 	}

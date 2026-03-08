@@ -3,17 +3,29 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/google/uuid"
 )
 
 var (
 	ErrMissingPersonNotFound = errors.New("missing person not found")
 	ErrInvalidStatus         = errors.New("invalid status")
 )
+
+// generateCaseNo 生成案件编号 (格式: CASE-YYYYMMDD-XXXX)
+func generateCaseNo() string {
+	now := time.Now()
+	dateStr := now.Format("20060102")
+	randomStr := uuid.New().String()[:4]
+	return fmt.Sprintf("CASE-%s-%s", dateStr, strings.ToUpper(randomStr))
+}
 
 // MissingPersonAppService 走失人员应用服务
 type MissingPersonAppService struct {
@@ -27,6 +39,9 @@ func NewMissingPersonAppService(mpRepo repository.MissingPersonRepository) *Miss
 
 // Create 创建走失人员
 func (s *MissingPersonAppService) Create(ctx context.Context, req *dto.CreateMissingPersonRequest, reporterID string, orgID string) (*dto.MissingPersonResponse, error) {
+	// Generate a unique case number if not handled by entity layer
+	caseNo := generateCaseNo()
+
 	mp := &entity.MissingPerson{
 		Name:         req.Name,
 		Gender:       req.Gender,
@@ -51,6 +66,7 @@ func (s *MissingPersonAppService) Create(ctx context.Context, req *dto.CreateMis
 		OrgID:        orgID,
 		Status:       entity.MissingStatusMissing,
 		Urgency:      entity.UrgencyLevel(req.UrgencyLevel),
+		CaseNo:       caseNo,
 	}
 
 	if req.UrgencyLevel == "" {
