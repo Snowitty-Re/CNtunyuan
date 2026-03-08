@@ -180,6 +180,47 @@ http://localhost:8080/api/v1/metrics
 - 错误率 > 1%
 - 磁盘使用率 > 80%
 
+## 常见问题修复
+
+### Token 刷新与登录掉出问题
+
+**症状**：修改密码、删除人员等操作后用户被踢出登录
+
+**原因**：前端未实现 Token 自动刷新机制
+
+**修复**：确保前端 `request.ts` 已实现：
+- 401 响应时自动调用 `/auth/refresh` 接口
+- 刷新成功后自动重试失败的请求
+- 并发请求队列管理
+
+### 数据展示问题
+
+**症状**：案件编号、头像等数据不显示
+
+**原因**：数据库缺少 `case_no` 字段和 `ty_missing_photos` 表
+
+**修复**：执行数据库迁移补充字段和表
+
+```sql
+-- PostgreSQL 示例
+ALTER TABLE ty_missing_persons ADD COLUMN case_no VARCHAR(50) UNIQUE;
+
+CREATE TABLE IF NOT EXISTS ty_missing_photos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    missing_person_id UUID NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    type VARCHAR(20) NOT NULL DEFAULT 'normal',
+    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE CASCADE
+);
+
+-- 为现有数据生成 case_no
+UPDATE ty_missing_persons 
+SET case_no = 'CASE-' || TO_CHAR(created_at, 'YYYYMMDD') || '-' || SUBSTRING(id::text, 1, 4)
+WHERE case_no IS NULL;
+```
+
 ## 技术支持
 
 如有问题，请检查：
@@ -188,3 +229,5 @@ http://localhost:8080/api/v1/metrics
 2. 数据库日志：`docker-compose logs postgres`
 3. 配置文件是否正确
 4. 端口是否被占用
+
+更多问题参考项目 Wiki 或提交 Issue

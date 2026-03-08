@@ -29,6 +29,7 @@ import (
 	"time"
 
 	_ "github.com/Snowitty-Re/CNtunyuan/docs"
+	_ "gorm.io/gorm"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/di"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
