@@ -377,6 +377,19 @@ func (r *TaskRepositoryImpl) CountOverdue(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+// FindOverdueTasks 查找所有活跃且已逾期的任务（用于自动标记）
+func (r *TaskRepositoryImpl) FindOverdueTasks(ctx context.Context) ([]entity.Task, error) {
+	var tasks []entity.Task
+	err := r.db.WithContext(ctx).
+		Where("deadline < ? AND status NOT IN (?, ?, ?) AND deleted_at IS NULL", 
+			time.Now(), 
+			entity.TaskStatusCompleted, 
+			entity.TaskStatusCancelled,
+			entity.TaskStatusOverdue).
+		Find(&tasks).Error
+	return tasks, err
+}
+
 // FindByID 根据ID查找
 func (r *TaskRepositoryImpl) FindByID(ctx context.Context, id string) (*entity.Task, error) {
 	var task entity.Task

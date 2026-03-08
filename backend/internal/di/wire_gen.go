@@ -16,11 +16,13 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
 	infraRepo "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/repository"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/sms"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/storage"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/wechat"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/router"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -37,6 +39,7 @@ type Container struct {
 	TaskService          *service.TaskAppService
 	FileService          *service.FileAppService
 	DashboardService     *service.DashboardService
+	AuditLogService      *service.AuditLogService
 	AuthHandler          *handler.AuthHandler
 	UserHandler          *handler.UserHandler
 	OrganizationHandler  *handler.OrganizationHandler
@@ -45,7 +48,9 @@ type Container struct {
 	TaskHandler          *handler.TaskHandler
 	UploadHandler        *handler.UploadHandler
 	DashboardHandler     *handler.DashboardHandler
+	AuditHandler         *handler.AuditHandler
 	AuthMiddleware       *middleware.AuthMiddleware
+	AuditMiddleware      *middleware.AuditMiddleware
 	Router               *router.Router
 }
 
@@ -79,13 +84,30 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	var storageService domainService.StorageService
 	switch cfg.Storage.Type {
 	case "oss":
-		// TODO: 实现 OSS 存储
-		storageService = storage.NewLocalStorage(&cfg.Storage)
+		// 阿里云OSS存储
+		ossStorage, err := storage.NewOSSStorage(&cfg.Storage)
+		if err != nil {
+			logger.Error("Failed to create OSS storage", logger.Err(err))
+			// 降级到本地存储
+			storageService = storage.NewLocalStorage(&cfg.Storage)
+		} else {
+			storageService = ossStorage
+			logger.Info("Using OSS storage", logger.String("bucket", cfg.Storage.OSSBucket))
+		}
 	case "cos":
-		// TODO: 实现 COS 存储
-		storageService = storage.NewLocalStorage(&cfg.Storage)
+		// 腾讯云COS存储
+		cosStorage, err := storage.NewCOSStorage(&cfg.Storage)
+		if err != nil {
+			logger.Error("Failed to create COS storage", logger.Err(err))
+			// 降级到本地存储
+			storageService = storage.NewLocalStorage(&cfg.Storage)
+		} else {
+			storageService = cosStorage
+			logger.Info("Using COS storage", logger.String("bucket", cfg.Storage.COSBucket))
+		}
 	default:
 		storageService = storage.NewLocalStorage(&cfg.Storage)
+		logger.Info("Using local storage", logger.String("path", cfg.Storage.LocalPath))
 	}
 
 	// 创建仓储
@@ -95,9 +117,14 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	dialectRepo := infraRepo.NewDialectRepository(db)
 	taskRepo := infraRepo.NewTaskRepository(db)
 	fileRepo := infraRepo.NewFileRepository(db)
+	auditRepo := infraRepo.NewAuditLogRepository(db)
 
 	// 创建领域服务
 	authService := domainService.NewAuthService(userRepo, tokenService, redisCache, wechatClient)
+
+	// 创建短信服务并注入到认证服务
+	smsService := sms.NewService(&cfg.SMS, redisCache)
+	authService.SetSMSService(smsService)
 
 	// 创建应用服务
 	userService := service.NewUserAppService(userRepo)
@@ -119,11 +146,17 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		dialectRepo,
 		fileRepo,
 	)
+	healthService := service.NewHealthService(db, redisCache)
+	auditLogService := service.NewAuditLogService(auditRepo)
 
 	// 创建 Middleware
 	authMiddleware := middleware.NewAuthMiddleware(authService)
 
+	// 创建审计日志中间件（自动记录所有API请求）
+	auditMiddleware := middleware.NewAuditMiddleware(auditRepo)
+
 	// 创建 HTTP Handler
+	auditHandler := handler.NewAuditHandler(auditLogService)
 	authHandler := handler.NewAuthHandler(authService, authMiddleware)
 	userHandler := handler.NewUserHandler(userService)
 	orgHandler := handler.NewOrganizationHandler(orgService)
@@ -143,9 +176,18 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		taskHandler,
 		uploadHandler,
 		dashboardHandler,
+		auditHandler,
 		authMiddleware,
+		auditMiddleware,
+		healthService,
 	)
 	r.Setup()
+
+	// 启动定时任务调度器
+	// scheduler := task.NewScheduler(taskRepo, mpRepo, userRepo, auditRepo)
+	// if err := scheduler.Start(); err != nil {
+	// 	logger.Error("Failed to start task scheduler", logger.Err(err))
+	// }
 
 	return &Container{
 		Config:               cfg,
@@ -159,6 +201,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		TaskService:          taskService,
 		FileService:          fileService,
 		DashboardService:     dashboardService,
+		AuditLogService:      auditLogService,
 		AuthHandler:          authHandler,
 		UserHandler:          userHandler,
 		OrganizationHandler:  orgHandler,
@@ -167,7 +210,9 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		TaskHandler:          taskHandler,
 		UploadHandler:        uploadHandler,
 		DashboardHandler:     dashboardHandler,
+		AuditHandler:         auditHandler,
 		AuthMiddleware:       authMiddleware,
+		AuditMiddleware:      auditMiddleware,
 		Router:               r,
 	}, nil
 }

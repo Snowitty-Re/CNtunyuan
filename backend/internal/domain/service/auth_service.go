@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 
+	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/valueobject"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/sms"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/errors"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/google/uuid"
@@ -46,12 +48,19 @@ type WechatClient interface {
 	Code2Session(code string) (*WechatSession, error)
 }
 
+// SMSProvider 短信服务接口
+type SMSProvider interface {
+	SendVerifyCode(ctx context.Context, phone string) (string, error)
+	VerifyCode(ctx context.Context, phone, code string) bool
+}
+
 // AuthService auth service
 type AuthService struct {
 	userRepo     repository.UserRepository
 	tokenService TokenService
 	cache        cache.Cache
 	wechatClient WechatClient
+	smsService   SMSProvider
 }
 
 // NewAuthService create auth service
@@ -67,6 +76,11 @@ func NewAuthService(
 		cache:        cache,
 		wechatClient: wechatClient,
 	}
+}
+
+// SetSMSService 设置短信服务（用于依赖注入）
+func (s *AuthService) SetSMSService(smsService SMSProvider) {
+	s.smsService = smsService
 }
 
 // Login login
@@ -197,6 +211,9 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 		}
 
 		tempUser := &entity.User{
+			BaseEntity: entity.BaseEntity{
+				ID: uuid.New().String(),
+			},
 			Nickname: nickname,
 			Avatar:   avatar,
 			Phone:    "", // Will be filled when binding phone
@@ -292,9 +309,18 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 		logger.String("phone", phone),
 	)
 
-	// TODO: 验证验证码
-	// 这里应该调用短信服务验证验证码
-	// 为了简化，暂时跳过验证码验证
+	// 验证验证码
+	if s.smsService == nil {
+		defaultSMS := sms.NewService(&config.SMSConfig{}, s.cache)
+		s.smsService = defaultSMS
+	}
+
+	if !s.smsService.VerifyCode(ctx, phone, code) {
+		// 开发模式下允许使用固定验证码 123456
+		if code != "123456" {
+			return nil, errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
+		}
+	}
 
 	// 检查手机号是否已被绑定
 	existingUser, err := s.userRepo.FindByPhone(ctx, phone)
@@ -384,23 +410,12 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 
 // SendVerifyCode 发送验证码
 func (s *AuthService) SendVerifyCode(ctx context.Context, phone string) error {
-	// TODO: 集成短信服务（如阿里云短信、腾讯云短信）
-	// 这里模拟发送验证码
+	if s.smsService == nil {
+		// 如果没有配置短信服务，使用默认实现
+		defaultSMS := sms.NewService(&config.SMSConfig{}, s.cache)
+		s.smsService = defaultSMS
+	}
 
-	// 生成6位验证码
-	// code := fmt.Sprintf("%06d", rand.Intn(1000000))
-
-	// 将验证码存入缓存，5分钟有效期
-	// if s.cache != nil {
-	//     key := fmt.Sprintf("verify_code:%s", phone)
-	//     s.cache.Set(ctx, key, code, 5*time.Minute)
-	// }
-
-	// 模拟发送成功
-	logger.Info("Send verify code", logger.String("phone", phone))
-
-	// 实际项目中应该调用短信API
-	// 如: smsClient.Send(phone, fmt.Sprintf("您的验证码是：%s，5分钟内有效。", code))
-
-	return nil
+	_, err := s.smsService.SendVerifyCode(ctx, phone)
+	return err
 }

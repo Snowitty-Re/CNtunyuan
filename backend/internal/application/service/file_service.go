@@ -10,6 +10,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/storage"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 )
 
@@ -21,10 +22,12 @@ var (
 
 // FileAppService 文件应用服务
 type FileAppService struct {
-	fileRepo       repository.FileRepository
-	storageService domainService.StorageService
-	maxFileSize    int64
-	allowedTypes   []string
+	fileRepo        repository.FileRepository
+	storageService  domainService.StorageService
+	securityChecker *storage.FileSecurityChecker
+	virusScanner    storage.VirusScanner
+	maxFileSize     int64
+	allowedTypes    []string
 }
 
 // NewFileAppService 创建文件应用服务
@@ -35,11 +38,18 @@ func NewFileAppService(
 	allowedTypes []string,
 ) *FileAppService {
 	return &FileAppService{
-		fileRepo:       fileRepo,
-		storageService: storageService,
-		maxFileSize:    maxFileSize,
-		allowedTypes:   allowedTypes,
+		fileRepo:        fileRepo,
+		storageService:  storageService,
+		securityChecker: storage.NewFileSecurityChecker(allowedTypes, maxFileSize),
+		virusScanner:    storage.NewNoOpScanner(), // 默认使用空扫描器
+		maxFileSize:     maxFileSize,
+		allowedTypes:    allowedTypes,
 	}
+}
+
+// SetVirusScanner 设置病毒扫描器
+func (s *FileAppService) SetVirusScanner(scanner storage.VirusScanner) {
+	s.virusScanner = scanner
 }
 
 // UploadFile 上传单个文件
@@ -51,14 +61,41 @@ func (s *FileAppService) UploadFile(ctx context.Context, file multipart.File, he
 		logger.Int64("max_file_size", s.maxFileSize),
 	)
 
-	// 检查文件大小
-	if s.maxFileSize > 0 && header.Size > s.maxFileSize {
-		logger.Warn("File too large", logger.Int64("size", header.Size), logger.Int64("max", s.maxFileSize))
-		return nil, ErrFileTooLarge
+	// 关闭传入的文件句柄，因为我们需要重新打开进行安全检查
+	// 安全检查会在内部重新打开文件
+	file.Close()
+
+	// 执行安全检查（文件类型、MIME、病毒扫描）
+	securityResult, err := storage.PerformSecurityCheck(header, s.securityChecker, s.virusScanner)
+	if err != nil {
+		logger.Error("Security check failed", logger.Err(err), logger.String("filename", header.Filename))
+		return nil, fmt.Errorf("安全检查失败: %w", err)
 	}
 
-	// 上传文件到存储
-	uploadedFile, err := s.storageService.Upload(ctx, file, header.Filename, header.Size, header.Header.Get("Content-Type"))
+	if !securityResult.Passed {
+		logger.Warn("Security check failed",
+			logger.String("filename", header.Filename),
+			logger.String("error", securityResult.ErrorMessage),
+		)
+		return nil, fmt.Errorf("%s", securityResult.ErrorMessage)
+	}
+
+	logger.Info("Security check passed",
+		logger.String("filename", header.Filename),
+		logger.String("mime_type", securityResult.FileCheck.MimeType),
+		logger.String("scanner", securityResult.VirusScan.Scanner),
+	)
+
+	// 重新打开文件进行上传
+	uploadFile, err := header.Open()
+	if err != nil {
+		logger.Error("Failed to reopen file for upload", logger.Err(err))
+		return nil, err
+	}
+	defer uploadFile.Close()
+
+	// 上传文件到存储（使用重新打开的文件句柄）
+	uploadedFile, err := s.storageService.Upload(ctx, uploadFile, header.Filename, header.Size, header.Header.Get("Content-Type"))
 	if err != nil {
 		logger.Error("Failed to upload file to storage", logger.Err(err))
 		return nil, err

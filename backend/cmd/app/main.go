@@ -32,6 +32,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// 验证配置
+	if !config.ValidateAndPrint(cfg) {
+		logger.Error("Configuration validation failed")
+		os.Exit(1)
+	}
+
 	// 处理命令行参数
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
@@ -88,6 +94,7 @@ func checkDatabase(cfg *config.Config) error {
 		"ty_tasks",
 		"ty_dialects",
 		"ty_files",
+		"ty_audit_logs",
 	}
 
 	logger.Info("Checking database tables...")

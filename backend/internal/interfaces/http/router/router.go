@@ -1,6 +1,9 @@
 package router
 
 import (
+	"net/http"
+
+	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	pkgmiddleware "github.com/Snowitty-Re/CNtunyuan/pkg/middleware"
@@ -20,7 +23,9 @@ type Router struct {
 	taskHandler          *handler.TaskHandler
 	uploadHandler        *handler.UploadHandler
 	dashboardHandler     *handler.DashboardHandler
+	auditHandler         *handler.AuditHandler
 	authMiddleware       *middleware.AuthMiddleware
+	healthService        *service.HealthService
 }
 
 // NewRouter 创建路由管理器
@@ -33,7 +38,10 @@ func NewRouter(
 	taskHandler *handler.TaskHandler,
 	uploadHandler *handler.UploadHandler,
 	dashboardHandler *handler.DashboardHandler,
+	auditHandler *handler.AuditHandler,
 	authMiddleware *middleware.AuthMiddleware,
+	auditMiddleware *middleware.AuditMiddleware,
+	healthService *service.HealthService,
 ) *Router {
 	engine := gin.New()
 
@@ -56,10 +64,15 @@ func NewRouter(
 	// 6. 限流中间件（每秒100请求，突发200）
 	engine.Use(pkgmiddleware.RateLimitMiddleware(100, 200))
 
-	// 7. 结构化日志中间件
+	// 7. 审计日志中间件（记录所有请求）
+	if auditMiddleware != nil {
+		engine.Use(auditMiddleware.AutoAudit())
+	}
+
+	// 8. 结构化日志中间件
 	engine.Use(pkgmiddleware.LoggingMiddleware())
 
-	// 8. 统一错误处理中间件
+	// 9. 统一错误处理中间件
 	engine.Use(pkgmiddleware.ErrorHandlerMiddleware())
 
 	return &Router{
@@ -72,7 +85,9 @@ func NewRouter(
 		taskHandler:          taskHandler,
 		uploadHandler:        uploadHandler,
 		dashboardHandler:     dashboardHandler,
+		auditHandler:         auditHandler,
 		authMiddleware:       authMiddleware,
+		healthService:        healthService,
 	}
 }
 
@@ -103,6 +118,11 @@ func (r *Router) Setup() {
 	r.taskHandler.RegisterRoutes(api, r.authMiddleware)
 	r.uploadHandler.RegisterRoutes(api, r.authMiddleware)
 	r.dashboardHandler.RegisterRoutes(api, r.authMiddleware)
+	
+	// 注册审计日志路由（如果配置了）
+	if r.auditHandler != nil {
+		r.auditHandler.RegisterRoutes(api, r.authMiddleware)
+	}
 
 	// 404 处理
 	r.engine.NoRoute(func(c *gin.Context) {
@@ -133,23 +153,38 @@ func (r *Router) welcome(c *gin.Context) {
 
 // healthCheck 健康检查
 func (r *Router) healthCheck(c *gin.Context) {
-	response.Success(c, gin.H{
-		"status": "UP",
-		"time":   gin.H{},
-	})
+	if r.healthService == nil {
+		response.Success(c, gin.H{
+			"status": "UP",
+			"time":   gin.H{},
+		})
+		return
+	}
+
+	result := r.healthService.CheckHealth(c.Request.Context())
+	if result.Status == service.HealthStatusUP {
+		response.Success(c, result)
+	} else {
+		response.ErrorCodeWithMessage(c, http.StatusServiceUnavailable, "service unavailable")
+	}
 }
 
 // detailedHealthCheck 详细健康检查
 func (r *Router) detailedHealthCheck(c *gin.Context) {
-	// 返回详细的系统状态
-	response.Success(c, gin.H{
-		"status":  "UP",
-		"version": "2.0.0",
-		"checks": gin.H{
-			"api": gin.H{
-				"status":  "UP",
-				"message": "API服务正常运行",
+	if r.healthService == nil {
+		response.Success(c, gin.H{
+			"status":  "UP",
+			"version": "2.0.0",
+			"checks": gin.H{
+				"api": gin.H{
+					"status":  "UP",
+					"message": "API服务正常运行",
+				},
 			},
-		},
-	})
+		})
+		return
+	}
+
+	result := r.healthService.CheckHealth(c.Request.Context())
+	response.Success(c, result)
 }

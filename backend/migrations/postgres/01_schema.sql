@@ -577,7 +577,49 @@ CREATE INDEX idx_files_deleted ON ty_files(is_deleted) WHERE is_deleted = TRUE A
 CREATE INDEX idx_files_deleted_at ON ty_files(deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- ============================================================
--- 17. 创建更新时间触发器函数
+-- 17. 审计日志表 (ty_audit_logs)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    
+    user_id UUID,
+    username VARCHAR(100),
+    user_role VARCHAR(20),
+    module VARCHAR(50) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('login', 'logout', 'create', 'update', 'delete', 'query', 'export', 'upload', 'download', 'other')),
+    description TEXT,
+    request_method VARCHAR(10),
+    request_url VARCHAR(500),
+    request_ip VARCHAR(50),
+    request_body TEXT,
+    response_code INTEGER,
+    response_body TEXT,
+    user_agent VARCHAR(500),
+    duration_ms BIGINT,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('success', 'failure')),
+    error_message TEXT,
+    trace_id VARCHAR(100)
+);
+
+COMMENT ON TABLE ty_audit_logs IS '审计日志表';
+COMMENT ON COLUMN ty_audit_logs.type IS '类型: login-登录, logout-登出, create-创建, update-更新, delete-删除, query-查询, export-导出, upload-上传, download-下载, other-其他';
+COMMENT ON COLUMN ty_audit_logs.status IS '状态: success-成功, failure-失败';
+
+-- 审计日志表索引
+CREATE INDEX idx_audit_logs_user_id ON ty_audit_logs(user_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_audit_logs_module ON ty_audit_logs(module) WHERE deleted_at IS NULL;
+CREATE INDEX idx_audit_logs_type ON ty_audit_logs(type) WHERE deleted_at IS NULL;
+CREATE INDEX idx_audit_logs_status ON ty_audit_logs(status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_audit_logs_created_at ON ty_audit_logs(created_at) WHERE deleted_at IS NULL;
+CREATE INDEX idx_audit_logs_trace_id ON ty_audit_logs(trace_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_audit_logs_request_ip ON ty_audit_logs(request_ip) WHERE deleted_at IS NULL;
+
+-- ============================================================
+-- 18. 创建更新时间触发器函数
 -- ============================================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -615,6 +657,8 @@ CREATE TRIGGER update_dialects_updated_at BEFORE UPDATE ON ty_dialects
 CREATE TRIGGER update_dialect_comments_updated_at BEFORE UPDATE ON ty_dialect_comments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_files_updated_at BEFORE UPDATE ON ty_files
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_audit_logs_updated_at BEFORE UPDATE ON ty_audit_logs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================

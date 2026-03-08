@@ -161,6 +161,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&entity.Dialect{},
 		&entity.Task{},
 		&entity.File{},
+		&entity.AuditLog{},
 	)
 
 	if err != nil {

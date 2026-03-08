@@ -29,26 +29,36 @@ func NewTaskAppService(taskRepo repository.TaskRepository) *TaskAppService {
 // Create 创建任务
 func (s *TaskAppService) Create(ctx context.Context, req *dto.CreateTaskRequest, creatorID string, orgID string) (*dto.TaskResponse, error) {
 	task := &entity.Task{
-		Title:           req.Title,
-		Description:     req.Description,
-		Type:            entity.TaskType(req.Type),
-		Priority:        entity.TaskPriority(req.Priority),
-		Deadline:        &req.Deadline,
-		CreatorID:       creatorID,
-		OrgID:           orgID,
-		MissingPersonID: &req.MissingPersonID,
-		Location:        req.Location,
-		Province:        req.Province,
-		City:            req.City,
-		District:        req.District,
-		Address:         req.Address,
-		Lat:             req.Lat,
-		Lng:             req.Lng,
-		Status:          entity.TaskStatusDraft,
+		Title:       req.Title,
+		Description: req.Description,
+		Type:        entity.TaskType(req.Type),
+		CreatorID:   creatorID,
+		OrgID:       orgID,
+		Location:    req.Location,
+		Province:    req.Province,
+		City:        req.City,
+		District:    req.District,
+		Address:     req.Address,
+		Lat:         req.Lat,
+		Lng:         req.Lng,
+		Status:      entity.TaskStatusDraft,
 	}
 
-	if req.Priority == "" {
+	// 设置优先级
+	if req.Priority != "" {
+		task.Priority = entity.TaskPriority(req.Priority)
+	} else {
 		task.Priority = entity.TaskPriorityMedium
+	}
+
+	// 设置截止日期（如果不是零值）
+	if !req.Deadline.IsZero() {
+		task.Deadline = &req.Deadline
+	}
+
+	// 设置关联的走失人员（如果提供）
+	if req.MissingPersonID != "" {
+		task.MissingPersonID = &req.MissingPersonID
 	}
 
 	if err := s.taskRepo.Create(ctx, task); err != nil {

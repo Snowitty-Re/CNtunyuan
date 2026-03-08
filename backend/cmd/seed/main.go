@@ -196,6 +196,7 @@ func cleanData(db *gorm.DB) error {
 		"ty_user_permissions", "ty_permissions", "ty_users",
 		"ty_org_stats", "ty_organizations",
 		"ty_files",
+		"ty_audit_logs",
 	}
 	for _, table := range tables {
 		if err := db.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", table)).Error; err != nil {

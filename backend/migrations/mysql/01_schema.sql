@@ -554,6 +554,47 @@ CREATE INDEX idx_files_entity ON ty_files(entity_type, entity_id);
 CREATE INDEX idx_files_deleted ON ty_files(is_deleted);
 CREATE INDEX idx_files_deleted_at ON ty_files(deleted_at);
 
+-- ============================================================
+-- 17. 审计日志表 (ty_audit_logs)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_audit_logs (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    
+    user_id CHAR(36) COMMENT '用户ID',
+    username VARCHAR(100) COMMENT '用户名',
+    user_role VARCHAR(20) COMMENT '用户角色',
+    module VARCHAR(50) NOT NULL COMMENT '模块',
+    action VARCHAR(50) NOT NULL COMMENT '操作',
+    type VARCHAR(20) NOT NULL COMMENT '类型: login-登录, logout-登出, create-创建, update-更新, delete-删除, query-查询, export-导出, upload-上传, download-下载, other-其他',
+    description TEXT COMMENT '操作描述',
+    request_method VARCHAR(10) COMMENT 'HTTP方法',
+    request_url VARCHAR(500) COMMENT '请求URL',
+    request_ip VARCHAR(50) COMMENT '请求IP',
+    request_body TEXT COMMENT '请求体',
+    response_code INT COMMENT '响应状态码',
+    response_body TEXT COMMENT '响应体',
+    user_agent VARCHAR(500) COMMENT '用户代理',
+    duration_ms BIGINT COMMENT '执行时长(毫秒)',
+    status VARCHAR(20) NOT NULL COMMENT '状态: success-成功, failure-失败',
+    error_message TEXT COMMENT '错误信息',
+    trace_id VARCHAR(100) COMMENT '追踪ID',
+    
+    CONSTRAINT chk_audit_type CHECK (type IN ('login', 'logout', 'create', 'update', 'delete', 'query', 'export', 'upload', 'download', 'other')),
+    CONSTRAINT chk_audit_status CHECK (status IN ('success', 'failure'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='审计日志表';
+
+-- 审计日志表索引
+CREATE INDEX idx_audit_logs_user_id ON ty_audit_logs(user_id);
+CREATE INDEX idx_audit_logs_module ON ty_audit_logs(module);
+CREATE INDEX idx_audit_logs_type ON ty_audit_logs(type);
+CREATE INDEX idx_audit_logs_status ON ty_audit_logs(status);
+CREATE INDEX idx_audit_logs_created_at ON ty_audit_logs(created_at);
+CREATE INDEX idx_audit_logs_trace_id ON ty_audit_logs(trace_id);
+CREATE INDEX idx_audit_logs_request_ip ON ty_audit_logs(request_ip);
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================

@@ -158,3 +158,41 @@ func (s *LocalStorage) Exists(ctx context.Context, path string) (bool, error) {
 func (s *LocalStorage) GetType() entity.StorageType {
 	return entity.StorageTypeLocal
 }
+
+// getFileType 根据扩展名获取文件类型
+func getFileType(filename string) entity.FileType {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg":
+		return entity.FileTypeImage
+	case ".mp3", ".wav", ".ogg", ".m4a", ".flac":
+		return entity.FileTypeAudio
+	case ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv":
+		return entity.FileTypeVideo
+	case ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt":
+		return entity.FileTypeDocument
+	default:
+		return entity.FileTypeDocument
+	}
+}
+
+// generateObjectKey 生成对象存储键
+func generateObjectKey(filename string) string {
+	now := time.Now()
+	ext := filepath.Ext(filename)
+	return fmt.Sprintf("uploads/%04d/%02d/%02d/%s%s",
+		now.Year(), now.Month(), now.Day(),
+		generateRandomString(16),
+		ext,
+	)
+}
+
+// generateRandomString 生成随机字符串
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+	}
+	return string(result)
+}

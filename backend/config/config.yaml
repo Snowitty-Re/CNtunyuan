@@ -1,8 +1,8 @@
 server:
   port: 8080
-  mode: release  # debug/release
+  mode: debug  # debug/release
   # 【生产环境】修改为实际域名，用于生成文件URL等
-  domain: "https://cntuanyuan.com"
+  domain: "http://localhost:8080"
   read_timeout: 30
   write_timeout: 30
   max_header_bytes: 1048576  # 1MB
@@ -12,7 +12,7 @@ database:
   host: localhost
   port: 5432
   user: postgres
-  password: "yourpassword"
+  password: "300133ys"
   database: cntuanyuan
   ssl_mode: disable
   charset: UTF8  # 数据库字符集，使用UTF8支持中文和Emoji
