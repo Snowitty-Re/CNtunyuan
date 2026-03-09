@@ -16,8 +16,8 @@
 
 | 模块 | 技术 |
 |------|------|
-| 后端 | Go 1.24+, Gin, GORM, PostgreSQL/MySQL, Redis |
-| Web | React 18, TypeScript, Ant Design 5, Vite |
+| 后端 | Go 1.23+, Gin, GORM, PostgreSQL, Redis, JWT |
+| Web 前端 | React 18, TypeScript 5, Vite 5, Ant Design 5, Zustand |
 | 小程序 | 微信小程序原生开发 |
 
 ## 快速开始
@@ -50,12 +50,12 @@ go run cmd/app/main.go
 ### 3. 启动 Web 后台
 
 ```bash
-cd web-new
-pnpm install
-pnpm dev
+cd web
+npm install
+npm run dev
 ```
 
-访问 http://localhost:3000，默认账号：13800138000 / admin123
+访问 http://localhost:3000（自动代理 API 到 :8080），默认账号：13800138000 / admin123
 
 ### 4. 微信小程序
 
@@ -65,43 +65,66 @@ pnpm dev
 
 ```
 CNtunyuan/
-├── backend/          # Go 后端 (Clean Architecture)
+├── backend/          # Go 后端 (Clean Architecture / DDD)
 │   ├── cmd/app/      # 主应用入口
-│   ├── internal/     # 业务代码
-│   ├── pkg/          # 公共包
+│   ├── internal/     # 业务代码 (domain/application/infrastructure/interfaces)
+│   ├── pkg/          # 公共包 (logger/response/middleware)
 │   └── migrations/   # 数据库迁移
-├── web-new/          # Web 管理后台
+├── web/              # Web 管理后台 (React 18 + TypeScript + Ant Design 5)
+│   ├── src/api/      # API 层 (Axios + 类型安全)
+│   ├── src/pages/    # 页面组件 (仪表盘/案件/任务/用户/组织/方言/审计/个人中心)
+│   ├── src/store/    # 状态管理 (Zustand)
+│   └── src/types/    # TypeScript 类型 (与后端 DTO 严格对齐)
 ├── mini-program/     # 微信小程序
-└── docker/           # Docker 配置
+├── docker/           # Docker 部署配置
+└── scripts/          # 运维脚本
 ```
+
+## 功能模块
+
+| 模块 | 前端页面 | 后端 API |
+|------|---------|---------|
+| 仪表盘 | 统计卡片、快捷操作 | `/dashboard/stats`, `/dashboard/trend` |
+| 案件管理 | 列表、详情、表单、线索轨迹 | `/missing-persons/*` |
+| 任务管理 | 全部/我的/待分配、详情、日志 | `/tasks/*` |
+| 用户管理 | 列表、表单、角色/状态管理 | `/users/*` |
+| 组织管理 | 列表、表单、树形结构 | `/organizations/*` |
+| 方言管理 | 列表、表单、精选/审核 | `/dialects/*` |
+| 文件管理 | 上传、下载、实体绑定 | `/upload/*` |
+| 审计日志 | 日志列表、筛选、清理 | `/audit/*` |
+| 个人中心 | 资料编辑、密码修改 | `/profile/*` |
+
+## 角色权限 (RBAC)
+
+| 角色 | 权重 | 权限范围 |
+|------|------|---------|
+| super_admin | 100 | 全部权限，日志清理 |
+| admin | 80 | 用户/组织管理，数据管理 |
+| manager | 60 | 案件/任务管理，审核 |
+| volunteer | 40 | 基本查看和操作 |
 
 ## 文档
 
 | 文档 | 说明 |
 |------|------|
-| [DEPLOY.md](DEPLOY.md) | 生产环境部署指南 |
-| [CHANGELOG.md](CHANGELOG.md) | 版本更新记录 |
 | [backend/README.md](backend/README.md) | 后端开发指南 |
-| [backend/REFACTORING.md](backend/REFACTORING.md) | 架构设计文档 |
-| [backend/TESTING.md](backend/TESTING.md) | 测试文档 |
+| [backend/REFACTORING.md](backend/REFACTORING.md) | Clean Architecture 设计文档 |
+| [backend/TESTING.md](backend/TESTING.md) | 单元测试文档 |
 | [backend/SWAGGER.md](backend/SWAGGER.md) | Swagger API 文档使用 |
 | [backend/migrations/README.md](backend/migrations/README.md) | 数据库迁移指南 |
-| [web-new/README.md](web-new/README.md) | Web 前端说明 |
-| [mini-program/README.md](mini-program/README.md) | 小程序说明 |
-| [AGENTS.md](AGENTS.md) | AI 助手开发指南 |
 
 ## 开发规范
 
 ### 后端
-- Clean Architecture 分层架构
-- 领域驱动设计 (DDD)
-- 使用 `gofmt` 格式化代码
-- 单元测试覆盖核心逻辑
+- Clean Architecture 分层架构 (Domain → Application → Infrastructure → Interfaces)
+- 领域驱动设计 (DDD)，充血实体模型
+- 单元测试覆盖核心逻辑 (110+ 测试函数)
 
 ### Web 前端
-- 简洁办公 OA 风格
-- 不使用 Tailwind，使用 Ant Design + 内联样式
-- 主题色：#e67e22（温暖橙色）
+- 简洁办公 OA 风格，主题色 #e67e22（温暖橙色）
+- Ant Design 5 组件库 + 内联样式
+- 所有 TypeScript 类型与后端 DTO 严格一一对应
+- 路由懒加载 + 代码分割
 
 ## 默认账号
 
@@ -119,12 +142,6 @@ cp .env.example .env
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-详细部署说明参见 [DEPLOY.md](DEPLOY.md)。
-
 ## 许可证
 
 MIT License
-
-## 联系方式
-
-- 项目地址: https://github.com/Snowitty-Re/CNtunyuan
