@@ -41,10 +41,10 @@ func (h *DialectHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware 
 		dialects.PUT("/:id", authMiddleware.Required(), h.Update)
 		dialects.DELETE("/:id", authMiddleware.Required(), h.Delete)
 
-		// 需要管理员权限
-		dialects.PUT("/:id/status", middleware.RequireManager(), h.UpdateStatus)
-		dialects.POST("/:id/feature", middleware.RequireAdmin(), h.Feature)
-		dialects.DELETE("/:id/feature", middleware.RequireAdmin(), h.Unfeature)
+		// 需要管理员权限（RequireRole 检查依赖 authMiddleware.Required 设置的 userRole）
+		dialects.PUT("/:id/status", authMiddleware.Required(), middleware.RequireManager(), h.UpdateStatus)
+		dialects.POST("/:id/feature", authMiddleware.Required(), middleware.RequireAdmin(), h.Feature)
+		dialects.DELETE("/:id/feature", authMiddleware.Required(), middleware.RequireAdmin(), h.Unfeature)
 	}
 }
 

@@ -92,7 +92,7 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 		auth.POST("/refresh", h.RefreshToken)
 		auth.POST("/logout", h.Logout)
 		auth.POST("/wechat-login", h.WechatLogin)
-		auth.POST("/bind-phone", h.BindPhone)
+		auth.POST("/bind-phone", h.authMiddleware.Required(), h.BindPhone)
 		auth.POST("/send-code", h.SendVerifyCode)
 
 		// Protected routes

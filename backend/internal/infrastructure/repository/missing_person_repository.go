@@ -75,10 +75,20 @@ func (r *MissingPersonRepositoryImpl) List(ctx context.Context, query *repositor
 		return nil, err
 	}
 
-	// 排序
-	order := query.SortField + " " + query.SortOrder
-	if query.SortField == "" {
-		order = "created_at DESC"
+	// 排序（白名单校验防止 SQL 注入）
+	order := "created_at DESC"
+	if query.SortField != "" {
+		allowedSortFields := map[string]bool{
+			"created_at": true, "updated_at": true, "missing_time": true,
+			"name": true, "age": true, "status": true, "urgency": true, "views": true,
+		}
+		if allowedSortFields[query.SortField] {
+			sortOrder := "DESC"
+			if query.SortOrder == "asc" || query.SortOrder == "ASC" {
+				sortOrder = "ASC"
+			}
+			order = query.SortField + " " + sortOrder
+		}
 	}
 
 	// 分页查询

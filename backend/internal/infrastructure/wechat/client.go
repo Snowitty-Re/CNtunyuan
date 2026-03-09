@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
@@ -30,14 +31,14 @@ func NewClient(appID, appSecret string) *Client {
 // Code2Session 登录凭证校验
 // https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-login/code2Session.html
 func (c *Client) Code2Session(code string) (*service.WechatSession, error) {
-	url := fmt.Sprintf(
+	reqURL := fmt.Sprintf(
 		"https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
-		c.appID,
-		c.appSecret,
-		code,
+		url.QueryEscape(c.appID),
+		url.QueryEscape(c.appSecret),
+		url.QueryEscape(code),
 	)
 
-	resp, err := c.httpClient.Get(url)
+	resp, err := c.httpClient.Get(reqURL)
 	if err != nil {
 		return nil, fmt.Errorf("wechat api request failed: %w", err)
 	}

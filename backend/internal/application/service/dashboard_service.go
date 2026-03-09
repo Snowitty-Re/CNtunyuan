@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
@@ -115,11 +116,17 @@ func (s *DashboardService) GetDashboardStats(ctx context.Context) (*DashboardSta
 	stats := &DashboardStats{}
 
 	// 用户统计
-	userTotal, _ := s.userRepo.Count(ctx)
+	userTotal, err := s.userRepo.Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user count: %w", err)
+	}
 	stats.Users.Total = userTotal
 
 	// 走失人员统计
-	mpStats, _ := s.mpRepo.GetStats(ctx)
+	mpStats, err := s.mpRepo.GetStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get missing person stats: %w", err)
+	}
 	stats.MissingPersons.Total = mpStats.Total
 	stats.MissingPersons.Missing = mpStats.Missing
 	stats.MissingPersons.Searching = mpStats.Searching
@@ -127,7 +134,10 @@ func (s *DashboardService) GetDashboardStats(ctx context.Context) (*DashboardSta
 	stats.MissingPersons.Reunited = mpStats.Reunited
 
 	// 任务统计
-	taskStats, _ := s.taskRepo.GetStats(ctx, "")
+	taskStats, err := s.taskRepo.GetStats(ctx, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get task stats: %w", err)
+	}
 	stats.Tasks.Total = taskStats.Total
 	stats.Tasks.Pending = taskStats.Pending
 	stats.Tasks.Processing = taskStats.Processing
@@ -135,14 +145,20 @@ func (s *DashboardService) GetDashboardStats(ctx context.Context) (*DashboardSta
 	stats.Tasks.Overdue = taskStats.Overdue
 
 	// 方言统计
-	dialectStats, _ := s.dialectRepo.GetStats(ctx)
+	dialectStats, err := s.dialectRepo.GetStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dialect stats: %w", err)
+	}
 	stats.Dialects.Total = dialectStats.Total
 	stats.Dialects.Featured = dialectStats.Featured
 	stats.Dialects.Plays = dialectStats.TotalPlays
 	stats.Dialects.Likes = dialectStats.TotalLikes
 
 	// 文件统计
-	fileStats, _ := s.fileRepo.GetStats(ctx)
+	fileStats, err := s.fileRepo.GetStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file stats: %w", err)
+	}
 	stats.Files.TotalCount = fileStats.TotalCount
 	stats.Files.TotalSize = fileStats.TotalSize
 
@@ -154,9 +170,18 @@ func (s *DashboardService) GetOverview(ctx context.Context) (map[string]interfac
 	overview := make(map[string]interface{})
 
 	// 关键数据
-	userCount, _ := s.userRepo.Count(ctx)
-	mpStats, _ := s.mpRepo.GetStats(ctx)
-	taskStats, _ := s.taskRepo.GetStats(ctx, "")
+	userCount, err := s.userRepo.Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user count: %w", err)
+	}
+	mpStats, err := s.mpRepo.GetStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get missing person stats: %w", err)
+	}
+	taskStats, err := s.taskRepo.GetStats(ctx, "")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get task stats: %w", err)
+	}
 
 	overview["total_users"] = userCount
 	overview["total_cases"] = mpStats.Total
@@ -170,8 +195,42 @@ func (s *DashboardService) GetOverview(ctx context.Context) (map[string]interfac
 
 // GetTrendData 获取趋势数据
 func (s *DashboardService) GetTrendData(ctx context.Context, days int) ([]TrendData, error) {
-	// 简化实现，返回空数据
-	return []TrendData{}, nil
+	if days <= 0 {
+		days = 7
+	}
+	if days > 90 {
+		days = 90
+	}
+
+	trends := make([]TrendData, 0, days)
+	now := time.Now()
+
+	for i := days - 1; i >= 0; i-- {
+		date := now.AddDate(0, 0, -i)
+		dateStr := date.Format("2006-01-02")
+		dayStart := dateStr + " 00:00:00"
+		dayEnd := dateStr + " 23:59:59"
+
+		trend := TrendData{Date: dateStr}
+
+		// 当日新增案件
+		newCases, err := s.mpRepo.CountByDateRange(ctx, dayStart, dayEnd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count new cases for %s: %w", dateStr, err)
+		}
+		trend.NewCases = newCases
+
+		// 当日新增任务
+		newTasks, err := s.taskRepo.CountByDateRange(ctx, dayStart, dayEnd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count new tasks for %s: %w", dateStr, err)
+		}
+		trend.NewTasks = newTasks
+
+		trends = append(trends, trend)
+	}
+
+	return trends, nil
 }
 
 // TrendData 趋势数据

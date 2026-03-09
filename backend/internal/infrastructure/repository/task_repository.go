@@ -97,10 +97,20 @@ func (r *TaskRepositoryImpl) List(ctx context.Context, query *repository.TaskQue
 		return nil, err
 	}
 
-	// 排序
+	// 排序（白名单校验防止 SQL 注入）
 	order := "created_at DESC"
 	if query.SortField != "" {
-		order = query.SortField + " " + query.SortOrder
+		allowedSortFields := map[string]bool{
+			"created_at": true, "updated_at": true, "deadline": true,
+			"priority": true, "status": true, "title": true,
+		}
+		if allowedSortFields[query.SortField] {
+			sortOrder := "DESC"
+			if query.SortOrder == "asc" || query.SortOrder == "ASC" {
+				sortOrder = "ASC"
+			}
+			order = query.SortField + " " + sortOrder
+		}
 	}
 
 	// 分页查询
@@ -373,6 +383,15 @@ func (r *TaskRepositoryImpl) CountOverdue(ctx context.Context) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&entity.Task{}).
 		Where("deadline < ? AND status NOT IN (?, ?)", time.Now(), entity.TaskStatusCompleted, entity.TaskStatusCancelled).
+		Count(&count).Error
+	return count, err
+}
+
+// CountByDateRange 按日期范围统计
+func (r *TaskRepositoryImpl) CountByDateRange(ctx context.Context, start, end string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.Task{}).
+		Where("created_at >= ? AND created_at < ?", start, end).
 		Count(&count).Error
 	return count, err
 }

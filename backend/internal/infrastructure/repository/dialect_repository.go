@@ -71,10 +71,20 @@ func (r *DialectRepositoryImpl) List(ctx context.Context, query *repository.Dial
 		return nil, err
 	}
 
-	// 排序
+	// 排序（白名单校验防止 SQL 注入）
 	order := "created_at DESC"
 	if query.SortBy != "" {
-		order = query.SortBy + " " + query.SortOrder
+		allowedSortFields := map[string]bool{
+			"created_at": true, "updated_at": true, "play_count": true,
+			"like_count": true, "title": true, "region": true,
+		}
+		if allowedSortFields[query.SortBy] {
+			sortOrder := "DESC"
+			if query.SortOrder == "asc" || query.SortOrder == "ASC" {
+				sortOrder = "ASC"
+			}
+			order = query.SortBy + " " + sortOrder
+		}
 	}
 
 	// 分页查询

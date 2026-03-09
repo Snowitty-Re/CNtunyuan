@@ -287,17 +287,6 @@ func (s *AuthService) GenerateTokenPair(user *entity.User) (*TokenPair, error) {
 func (s *AuthService) getDefaultOrgID(ctx context.Context) (string, error) {
 	// 使用根组织ID作为默认值
 	const defaultOrgID = "00000000-0000-0000-0000-000000000000"
-
-	// 检查组织是否存在
-	_, err := s.userRepo.FindByID(ctx, defaultOrgID)
-	if err != nil {
-		// 组织可能不存在，记录警告但继续返回默认ID
-		// 实际生产环境应该确保默认组织存在
-		logger.Warn("Default organization may not exist",
-			logger.String("org_id", defaultOrgID),
-			logger.Err(err))
-	}
-
 	return defaultOrgID, nil
 }
 
@@ -316,10 +305,7 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 	}
 
 	if !s.smsService.VerifyCode(ctx, phone, code) {
-		// 开发模式下允许使用固定验证码 123456
-		if code != "123456" {
-			return nil, errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
-		}
+		return nil, errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
 	}
 
 	// 检查手机号是否已被绑定
@@ -375,8 +361,8 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 			Status:   entity.UserStatusActive,
 			OrgID:    "00000000-0000-0000-0000-000000000000", // 默认组织
 		}
-		// 设置默认密码
-		if err := user.SetPassword("123456"); err != nil { // 实际应该发送随机密码到手机
+		// 设置随机密码（用户通过微信或短信验证码登录，不需要记住密码）
+		if err := user.SetPassword(uuid.New().String()[:12]); err != nil {
 			logger.Error("Set password failed", logger.Err(err))
 			return nil, errors.Wrap(err, errors.CodeInternal, "set password failed")
 		}

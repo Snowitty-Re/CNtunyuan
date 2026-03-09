@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -76,8 +77,7 @@ func (c *DatabaseConfig) GetDSN() string {
 	case DatabaseTypePostgres:
 		// PostgreSQL DSN
 		sslMode := c.SSLMode
-		// 强制使用 disable 避免 TLS 连接问题（开发环境）
-		if sslMode == "" || sslMode == "require" || sslMode == "prefer" {
+		if sslMode == "" {
 			sslMode = "disable"
 		}
 		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s client_encoding=UTF8",
@@ -227,6 +227,11 @@ func LoadConfig(configPath string) (*Config, error) {
 
 	// 设置默认值
 	setDefaults()
+
+	// 启用环境变量覆盖（格式: CNTY_DATABASE_PASSWORD 覆盖 database.password）
+	viper.SetEnvPrefix("CNTY")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 
 	// 读取配置文件
 	if err := viper.ReadInConfig(); err != nil {

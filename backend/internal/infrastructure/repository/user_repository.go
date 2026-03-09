@@ -152,10 +152,25 @@ func (r *UserRepositoryImpl) List(ctx context.Context, query *repository.UserQue
 		return nil, err
 	}
 
-	// 排序
-	order := query.SortField + " " + query.SortOrder
-	if query.SortField == "" {
-		order = "created_at DESC"
+	// 排序（白名单校验防止 SQL 注入）
+	order := "created_at DESC"
+	if query.SortField != "" {
+		allowedSortFields := map[string]bool{
+			"created_at":   true,
+			"updated_at":   true,
+			"nickname":     true,
+			"phone":        true,
+			"role":         true,
+			"status":       true,
+			"last_login_at": true,
+		}
+		if allowedSortFields[query.SortField] {
+			sortOrder := "DESC"
+			if query.SortOrder == "asc" || query.SortOrder == "ASC" {
+				sortOrder = "ASC"
+			}
+			order = query.SortField + " " + sortOrder
+		}
 	}
 
 	// 分页查询

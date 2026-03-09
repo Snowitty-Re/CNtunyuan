@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
@@ -82,7 +83,7 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 			response.BadRequest(c, "file too large")
 		default:
 			logger.Error("Failed to upload file", logger.Err(err))
-			response.InternalServerError(c, "failed to upload file: "+err.Error())
+			response.InternalServerError(c, "failed to upload file")
 		}
 		return
 	}
@@ -121,13 +122,21 @@ func (h *UploadHandler) UploadBatch(c *gin.Context) {
 	fileReaders := make([]multipart.File, 0, len(files))
 	fileHeaders := make([]*multipart.FileHeader, 0, len(files))
 
+	// 收集所有文件句柄用于最终统一关闭
+	var openedFiles []multipart.File
+	defer func() {
+		for _, f := range openedFiles {
+			f.Close()
+		}
+	}()
+
 	for _, header := range files {
 		f, err := header.Open()
 		if err != nil {
 			response.InternalServerError(c, "failed to read file")
 			return
 		}
-		defer f.Close()
+		openedFiles = append(openedFiles, f)
 		fileReaders = append(fileReaders, f)
 		fileHeaders = append(fileHeaders, header)
 	}
@@ -208,12 +217,19 @@ func (h *UploadHandler) Download(c *gin.Context) {
 	}
 	defer reader.Close()
 
-	// 设置下载头
+	// 设置下载头（安全处理文件名，防止头注入）
 	filename := file.OriginalName
 	if filename == "" {
 		filename = file.FileName
 	}
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	// 清理文件名中的危险字符
+	safeName := strings.Map(func(r rune) rune {
+		if r == '"' || r == '\\' || r == '\n' || r == '\r' {
+			return '_'
+		}
+		return r
+	}, filename)
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", safeName))
 	c.Header("Content-Type", file.MimeType)
 	c.Header("Content-Length", fmt.Sprintf("%d", file.Size))
 

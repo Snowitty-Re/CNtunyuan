@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/pkg/errors"
@@ -81,12 +82,16 @@ func LoggingMiddleware() gin.HandlerFunc {
 			err = c.Errors.Last()
 		}
 
-		// 获取 trace_id
-		traceID, _ := c.Get("trace_id")
+		// 安全获取 trace_id
+		traceIDVal, _ := c.Get("trace_id")
+		traceID := "unknown"
+		if id, ok := traceIDVal.(string); ok {
+			traceID = id
+		}
 
 		// 构建日志字段
 		fields := []zap.Field{
-			zap.String("trace_id", traceID.(string)),
+			zap.String("trace_id", traceID),
 			zap.String("client_ip", c.ClientIP()),
 			zap.String("method", c.Request.Method),
 			zap.String("path", path),
@@ -150,12 +155,17 @@ func RecoveryMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {
-				// 获取 trace_id
-				traceID, _ := c.Get("trace_id")
+				// 安全获取 trace_id，避免 nil 类型断言 panic
+				traceID := "unknown"
+				if v, exists := c.Get("trace_id"); exists {
+					if id, ok := v.(string); ok {
+						traceID = id
+					}
+				}
 
 				// 记录错误日志
 				logger.Error("Panic recovered",
-					zap.String("trace_id", traceID.(string)),
+					zap.String("trace_id", traceID),
 					zap.Any("panic", r),
 					zap.Stack("stack"),
 				)
@@ -193,30 +203,69 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 	}
 }
 
-// RateLimiter 限流器
+// rateLimiterEntry 限流器条目（带最后访问时间）
+type rateLimiterEntry struct {
+	limiter    *rate.Limiter
+	lastAccess time.Time
+}
+
+// RateLimiter 限流器（并发安全，自动清理过期条目）
 type RateLimiter struct {
-	limiters map[string]*rate.Limiter
+	sync.RWMutex
+	limiters map[string]*rateLimiterEntry
 	limit    rate.Limit
 	burst    int
 }
 
 // NewRateLimiter 创建限流器
 func NewRateLimiter(rps float64, burst int) *RateLimiter {
-	return &RateLimiter{
-		limiters: make(map[string]*rate.Limiter),
+	rl := &RateLimiter{
+		limiters: make(map[string]*rateLimiterEntry),
 		limit:    rate.Limit(rps),
 		burst:    burst,
 	}
+	// 启动后台清理协程，每10分钟清理不活跃的限流器
+	go rl.cleanupLoop()
+	return rl
 }
 
 // getLimiter 获取或创建限流器
 func (rl *RateLimiter) getLimiter(key string) *rate.Limiter {
-	if limiter, ok := rl.limiters[key]; ok {
-		return limiter
+	rl.RLock()
+	entry, ok := rl.limiters[key]
+	rl.RUnlock()
+	if ok {
+		rl.Lock()
+		entry.lastAccess = time.Now()
+		rl.Unlock()
+		return entry.limiter
+	}
+	rl.Lock()
+	defer rl.Unlock()
+	// 双重检查
+	if entry, ok := rl.limiters[key]; ok {
+		entry.lastAccess = time.Now()
+		return entry.limiter
 	}
 	limiter := rate.NewLimiter(rl.limit, rl.burst)
-	rl.limiters[key] = limiter
+	rl.limiters[key] = &rateLimiterEntry{limiter: limiter, lastAccess: time.Now()}
 	return limiter
+}
+
+// cleanupLoop 定期清理过期限流器
+func (rl *RateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		rl.Lock()
+		now := time.Now()
+		for key, entry := range rl.limiters {
+			if now.Sub(entry.lastAccess) > 30*time.Minute {
+				delete(rl.limiters, key)
+			}
+		}
+		rl.Unlock()
+	}
 }
 
 // RateLimitMiddleware IP 限流中间件

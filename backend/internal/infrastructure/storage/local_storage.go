@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"fmt"
 	"io"
 	"os"
@@ -112,9 +113,32 @@ func (s *LocalStorage) Upload(ctx context.Context, reader io.Reader, filename st
 	return f, nil
 }
 
+// safePath 校验路径安全性，防止路径遍历攻击
+func (s *LocalStorage) safePath(path string) (string, error) {
+	// 清理路径中的 .. 等
+	cleanPath := filepath.Clean(path)
+	fullPath := filepath.Join(s.basePath, cleanPath)
+	// 确保最终路径在 basePath 目录内
+	absBase, err := filepath.Abs(s.basePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve base path: %w", err)
+	}
+	absFull, err := filepath.Abs(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve file path: %w", err)
+	}
+	if !strings.HasPrefix(absFull, absBase+string(filepath.Separator)) && absFull != absBase {
+		return "", fmt.Errorf("path traversal detected: %s", path)
+	}
+	return absFull, nil
+}
+
 // Download 下载文件
 func (s *LocalStorage) Download(ctx context.Context, path string) (io.ReadCloser, error) {
-	fullPath := filepath.Join(s.basePath, path)
+	fullPath, err := s.safePath(path)
+	if err != nil {
+		return nil, err
+	}
 	file, err := os.Open(fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
@@ -124,7 +148,10 @@ func (s *LocalStorage) Download(ctx context.Context, path string) (io.ReadCloser
 
 // Delete 删除文件
 func (s *LocalStorage) Delete(ctx context.Context, path string) error {
-	fullPath := filepath.Join(s.basePath, path)
+	fullPath, err := s.safePath(path)
+	if err != nil {
+		return err
+	}
 	if err := os.Remove(fullPath); err != nil {
 		if os.IsNotExist(err) {
 			return nil // 文件不存在，视为删除成功
@@ -143,8 +170,11 @@ func (s *LocalStorage) GetURL(ctx context.Context, path string) string {
 
 // Exists 检查文件是否存在
 func (s *LocalStorage) Exists(ctx context.Context, path string) (bool, error) {
-	fullPath := filepath.Join(s.basePath, path)
-	_, err := os.Stat(fullPath)
+	fullPath, err := s.safePath(path)
+	if err != nil {
+		return false, err
+	}
+	_, err = os.Stat(fullPath)
 	if err == nil {
 		return true, nil
 	}
@@ -187,12 +217,17 @@ func generateObjectKey(filename string) string {
 	)
 }
 
-// generateRandomString 生成随机字符串
+// generateRandomString 生成加密安全的随机字符串
 func generateRandomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	result := make([]byte, length)
+	randomBytes := make([]byte, length)
+	if _, err := cryptoRand.Read(randomBytes); err != nil {
+		// 降级使用 UUID
+		return uuid.New().String()[:length]
+	}
 	for i := range result {
-		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		result[i] = charset[int(randomBytes[i])%len(charset)]
 	}
 	return string(result)
 }

@@ -41,7 +41,7 @@ func (m *AuthMiddleware) Required() gin.HandlerFunc {
 		}
 
 		c.Set("userID", claims.UserID)
-		c.Set("userRole", claims.Role)
+		c.Set("userRole", entity.Role(claims.Role))
 		c.Set("orgID", claims.OrgID)
 		c.Set("claims", claims)
 
@@ -57,7 +57,7 @@ func (m *AuthMiddleware) Optional() gin.HandlerFunc {
 			claims, err := m.authService.ValidateToken(c.Request.Context(), token)
 			if err == nil {
 				c.Set("userID", claims.UserID)
-				c.Set("userRole", claims.Role)
+				c.Set("userRole", entity.Role(claims.Role))
 				c.Set("orgID", claims.OrgID)
 				c.Set("claims", claims)
 			}

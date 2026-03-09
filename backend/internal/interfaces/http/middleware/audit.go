@@ -55,7 +55,9 @@ func (m *AuditMiddleware) Audit(opts AuditOptions) gin.HandlerFunc {
 		
 		// 获取追踪ID
 		if traceID, exists := c.Get("trace_id"); exists {
-			auditLog.TraceID = traceID.(string)
+			if id, ok := traceID.(string); ok {
+				auditLog.TraceID = id
+			}
 		}
 
 		// 获取用户信息
@@ -123,7 +125,9 @@ func (m *AuditMiddleware) AutoAudit() gin.HandlerFunc {
 		auditLog.UserAgent = c.Request.UserAgent()
 		
 		if traceID, exists := c.Get("trace_id"); exists {
-			auditLog.TraceID = traceID.(string)
+			if id, ok := traceID.(string); ok {
+				auditLog.TraceID = id
+			}
 		}
 
 		// 获取用户信息

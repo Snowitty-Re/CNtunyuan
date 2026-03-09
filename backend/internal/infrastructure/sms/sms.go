@@ -3,8 +3,9 @@ package sms
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
@@ -144,12 +145,12 @@ func (s *smsService) SendSMS(ctx context.Context, phone, templateCode string, pa
 	return s.provider.SendSMS(ctx, phone, s.config.SignName, templateCode, params)
 }
 
-// generateVerifyCode 生成6位数字验证码
+// generateVerifyCode 生成6位数字验证码（使用 crypto/rand）
 func generateVerifyCode() string {
-	return fmt.Sprintf("%06d", rand.Intn(1000000))
-}
-
-// init 初始化随机种子
-func init() {
-	rand.Seed(time.Now().UnixNano())
+	n, err := cryptoRand.Int(cryptoRand.Reader, big.NewInt(1000000))
+	if err != nil {
+		// 降级方案：使用时间戳生成（极端情况）
+		return fmt.Sprintf("%06d", time.Now().UnixNano()%1000000)
+	}
+	return fmt.Sprintf("%06d", n.Int64())
 }

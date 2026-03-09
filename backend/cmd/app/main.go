@@ -23,6 +23,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -187,11 +188,19 @@ func startServer(cfg *config.Config, container *di.Container) {
 
 	logger.Info("Starting server", logger.String("port", port))
 
-	// 优雅关闭
-	srv := engine
+	// 使用 http.Server 以支持优雅关闭
+	srv := &http.Server{
+		Addr:           ":" + port,
+		Handler:        engine,
+		ReadTimeout:    time.Duration(cfg.Server.ReadTimeout) * time.Second,
+		WriteTimeout:   time.Duration(cfg.Server.WriteTimeout) * time.Second,
+		MaxHeaderBytes: cfg.Server.MaxHeaderBytes,
+	}
+
 	go func() {
-		if err := srv.Run(":" + port); err != nil {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error("Server error", logger.Err(err))
+			os.Exit(1)
 		}
 	}()
 
@@ -202,12 +211,20 @@ func startServer(cfg *config.Config, container *di.Container) {
 
 	logger.Info("Shutting down server...")
 
-	// 优雅关闭
+	// 优雅关闭：等待正在处理的请求完成
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// TODO: 实现优雅关闭逻辑
-	_ = ctx
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Error("Server forced to shutdown", logger.Err(err))
+	}
+
+	// 关闭缓存连接
+	if container.Cache != nil {
+		if err := container.Cache.Close(); err != nil {
+			logger.Error("Failed to close cache", logger.Err(err))
+		}
+	}
 
 	logger.Info("Server stopped")
 }

@@ -3,6 +3,8 @@ package task
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -17,8 +19,9 @@ type Scheduler struct {
 	userRepo   repository.UserRepository
 	auditRepo  repository.AuditLogRepository
 	ticker     *time.Ticker
-	stopChan   chan bool
-	isRunning  bool
+	stopChan   chan struct{}
+	isRunning  atomic.Bool
+	stopOnce   sync.Once
 }
 
 // NewScheduler 创建定时任务调度器
@@ -33,19 +36,19 @@ func NewScheduler(
 		mpRepo:    mpRepo,
 		userRepo:  userRepo,
 		auditRepo: auditRepo,
-		stopChan:  make(chan bool),
+		stopChan:  make(chan struct{}),
 	}
 }
 
 // Start 启动定时任务
 func (s *Scheduler) Start() error {
-	if s.isRunning {
+	if s.isRunning.Load() {
 		return nil
 	}
 
 	// 创建每分钟触发的ticker
 	s.ticker = time.NewTicker(1 * time.Minute)
-	s.isRunning = true
+	s.isRunning.Store(true)
 
 	// 启动定时任务循环
 	go s.run()
@@ -59,19 +62,19 @@ func (s *Scheduler) Start() error {
 
 // Stop 停止定时任务
 func (s *Scheduler) Stop() {
-	if s.isRunning {
-		s.isRunning = false
+	s.stopOnce.Do(func() {
+		s.isRunning.Store(false)
 		if s.ticker != nil {
 			s.ticker.Stop()
 		}
 		close(s.stopChan)
 		logger.Info("Task scheduler stopped")
-	}
+	})
 }
 
 // IsRunning 是否正在运行
 func (s *Scheduler) IsRunning() bool {
-	return s.isRunning
+	return s.isRunning.Load()
 }
 
 // run 定时任务循环
