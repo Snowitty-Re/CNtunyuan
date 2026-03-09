@@ -92,13 +92,13 @@ func TestUser_SetPassword(t *testing.T) {
 			name:     "password too short",
 			password: "123",
 			wantErr:  true,
-			errMsg:   "密码至少需要6位",
+			errMsg:   "密码至少需要8位",
 		},
 		{
 			name:     "password empty",
 			password: "",
 			wantErr:  true,
-			errMsg:   "密码至少需要6位",
+			errMsg:   "密码至少需要8位",
 		},
 	}
 

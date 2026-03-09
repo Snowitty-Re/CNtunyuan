@@ -138,8 +138,8 @@ func (u *User) ValidatePhone() error {
 
 // SetPassword 设置密码
 func (u *User) SetPassword(plainPassword string) error {
-	if len(plainPassword) < 6 {
-		return errors.New("密码至少需要6位")
+	if len(plainPassword) < 8 {
+		return errors.New("密码至少需要8位")
 	}
 	hash, err := utils.HashPassword(plainPassword)
 	if err != nil {

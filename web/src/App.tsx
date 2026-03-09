@@ -3,6 +3,7 @@ import { ConfigProvider, App as AntdApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
+import ErrorBoundary from './components/ErrorBoundary'
 import router from './router'
 
 dayjs.locale('zh-cn')
@@ -19,7 +20,9 @@ export default function App() {
   return (
     <ConfigProvider locale={zhCN} theme={themeConfig}>
       <AntdApp>
-        <RouterProvider router={router} />
+        <ErrorBoundary>
+          <RouterProvider router={router} />
+        </ErrorBoundary>
       </AntdApp>
     </ConfigProvider>
   )

@@ -112,6 +112,12 @@ request.interceptors.response.use(
       }
     }
 
+    // Handle 403 - Permission denied
+    if (error.response?.status === 403) {
+      message.error('权限不足，无法执行此操作')
+      return Promise.reject(error)
+    }
+
     // Other errors
     const msg = error.response?.data?.message || error.message || '网络错误'
     if (error.response?.status !== 401) {

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Form, Input, Select, DatePicker, Button, Card, Row, Col, message, Spin, Space } from 'antd'
 import { taskApi } from '@/api/task'
-import type { CreateTaskRequest } from '@/types'
+import { missingPersonApi } from '@/api/missingPerson'
+import type { CreateTaskRequest, MissingPerson } from '@/types'
 import dayjs from 'dayjs'
 
 const typeOptions = [
@@ -21,9 +22,16 @@ export default function TaskForm() {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [cases, setCases] = useState<MissingPerson[]>([])
+  const [caseSearching, setCaseSearching] = useState(false)
   const isEdit = !!id
 
   useEffect(() => {
+    // Preload active cases
+    missingPersonApi.list({ page: 1, page_size: 50 }).then((res) => {
+      setCases(res.data.data?.list || [])
+    }).catch(() => {})
+
     if (id) {
       setLoading(true)
       taskApi.getById(id).then((res) => {
@@ -32,6 +40,17 @@ export default function TaskForm() {
       }).finally(() => setLoading(false))
     }
   }, [id])
+
+  const handleCaseSearch = async (value: string) => {
+    if (!value || value.length < 1) return
+    setCaseSearching(true)
+    try {
+      const res = await missingPersonApi.list({ page: 1, page_size: 20, keyword: value })
+      setCases(res.data.data?.list || [])
+    } finally {
+      setCaseSearching(false)
+    }
+  }
 
   const onFinish = async (values: Record<string, unknown>) => {
     setSubmitting(true)
@@ -69,7 +88,7 @@ export default function TaskForm() {
       <Card>
         <Form form={form} layout="vertical" onFinish={onFinish} style={{ maxWidth: 800 }} initialValues={{ priority: 'medium' }}>
           <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入标题' }]}>
-            <Input />
+            <Input placeholder="简要描述任务内容" />
           </Form.Item>
           <Row gutter={16}>
             <Col span={8}>
@@ -84,15 +103,26 @@ export default function TaskForm() {
             </Col>
             <Col span={8}>
               <Form.Item name="deadline" label="截止时间">
-                <DatePicker showTime style={{ width: '100%' }} />
+                <DatePicker showTime style={{ width: '100%' }} disabledDate={(d) => d.isBefore(dayjs(), 'day')} />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={4} />
+            <Input.TextArea rows={4} placeholder="详细描述任务要求和注意事项" />
           </Form.Item>
-          <Form.Item name="missing_person_id" label="关联案件ID">
-            <Input placeholder="可选，输入案件ID" />
+          <Form.Item name="missing_person_id" label="关联案件">
+            <Select
+              showSearch
+              allowClear
+              placeholder="搜索并选择关联的案件（可选）"
+              filterOption={false}
+              onSearch={handleCaseSearch}
+              loading={caseSearching}
+              options={cases.map((c) => ({
+                value: c.id,
+                label: `${c.name} - ${c.case_no} (${c.status === 'missing' ? '走失' : c.status})`,
+              }))}
+            />
           </Form.Item>
           <Row gutter={16}>
             <Col span={8}><Form.Item name="province" label="省份"><Input /></Form.Item></Col>

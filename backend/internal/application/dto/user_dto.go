@@ -11,7 +11,7 @@ type CreateUserRequest struct {
 	Nickname string      `json:"nickname" binding:"required"`
 	Phone    string      `json:"phone" binding:"required"`
 	Email    string      `json:"email"`
-	Password string      `json:"password" binding:"required,min=6"`
+	Password string      `json:"password" binding:"required,min=8"`
 	Role     entity.Role `json:"role" binding:"required"`
 	OrgID    string      `json:"org_id" binding:"required"`
 }
@@ -85,7 +85,7 @@ type RefreshTokenRequest struct {
 // ChangePasswordRequest 修改密码请求
 type ChangePasswordRequest struct {
 	OldPassword string `json:"old_password" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=6"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
 // UpdateProfileRequest 更新资料请求

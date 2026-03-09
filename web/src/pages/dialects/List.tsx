@@ -6,17 +6,8 @@ import { dialectApi } from '@/api/dialect'
 import { usePermission } from '@/hooks/usePermission'
 import type { Dialect, DialectQuery } from '@/types'
 import type { ColumnsType } from 'antd/es/table'
+import { dialectTypeMap as typeMap, dialectStatusMap as statusMap } from '@/constants'
 import dayjs from 'dayjs'
-
-const typeMap: Record<string, string> = {
-  phrase: '短语', story: '故事', song: '歌曲', daily: '日常', other: '其他',
-}
-
-const statusMap: Record<string, { label: string; color: string }> = {
-  active: { label: '已发布', color: 'green' },
-  inactive: { label: '已下架', color: 'default' },
-  pending: { label: '待审核', color: 'orange' },
-}
 
 export default function DialectList() {
   const [data, setData] = useState<Dialect[]>([])

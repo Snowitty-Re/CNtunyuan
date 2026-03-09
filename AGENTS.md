@@ -58,7 +58,7 @@
 - 接口命名使用动词+名词，如 `CreateUser`
 - 错误处理必须返回具体错误信息
 
-#### React 前端 (web-new)
+#### React 前端 (web)
 - 使用 TypeScript 严格模式
 - 组件命名使用大驼峰式
 - Props 必须定义类型
@@ -217,7 +217,7 @@ mysql -u root -p cntuanyuan < backend/migrations/mysql/02_seed.sql
 ### 前端命令
 
 ```bash
-cd web-new
+cd web
 
 # 安装依赖
 pnpm install

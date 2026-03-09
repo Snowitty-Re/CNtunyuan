@@ -6,22 +6,8 @@ import { missingPersonApi } from '@/api/missingPerson'
 import { usePermission } from '@/hooks/usePermission'
 import type { MissingPerson, MissingPersonQuery } from '@/types'
 import type { ColumnsType } from 'antd/es/table'
+import { statusMap, urgencyMap } from '@/constants'
 import dayjs from 'dayjs'
-
-const statusMap: Record<string, { label: string; color: string }> = {
-  missing: { label: '走失', color: 'red' },
-  searching: { label: '搜寻中', color: 'orange' },
-  found: { label: '已找到', color: 'blue' },
-  reunited: { label: '已团圆', color: 'green' },
-  closed: { label: '已关闭', color: 'default' },
-}
-
-const urgencyMap: Record<string, { label: string; color: string }> = {
-  low: { label: '普通', color: 'default' },
-  medium: { label: '中等', color: 'blue' },
-  high: { label: '紧急', color: 'orange' },
-  urgent: { label: '特急', color: 'red' },
-}
 
 export default function CaseList() {
   const [data, setData] = useState<MissingPerson[]>([])

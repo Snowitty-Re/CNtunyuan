@@ -223,7 +223,7 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 			WxOpenID: session.OpenID,
 		}
 		// Set a random password (user will login via wechat)
-		if pwdErr := tempUser.SetPassword(uuid.New().String()[:8]); pwdErr != nil {
+		if pwdErr := tempUser.SetPassword(uuid.New().String()[:12]); pwdErr != nil {
 			logger.Error("Failed to set temp user password", logger.Err(pwdErr))
 			return nil, nil, false, errors.Wrap(pwdErr, errors.CodeInternal, "set password failed")
 		}

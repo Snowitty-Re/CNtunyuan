@@ -4,17 +4,8 @@ import { auditApi } from '@/api/audit'
 import { usePermission } from '@/hooks/usePermission'
 import type { AuditLog, AuditQuery } from '@/types'
 import type { ColumnsType } from 'antd/es/table'
+import { auditTypeMap as typeMap, httpMethodColor as methodColor } from '@/constants'
 import dayjs from 'dayjs'
-
-const typeMap: Record<string, string> = {
-  login: '登录', logout: '登出', create: '创建', update: '更新',
-  delete: '删除', query: '查询', upload: '上传', download: '下载',
-  export: '导出', other: '其他',
-}
-
-const methodColor: Record<string, string> = {
-  GET: 'green', POST: 'blue', PUT: 'orange', DELETE: 'red', PATCH: 'cyan',
-}
 
 export default function AuditList() {
   const [data, setData] = useState<AuditLog[]>([])

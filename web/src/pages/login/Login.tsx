@@ -4,6 +4,7 @@ import { Form, Input, Button, message } from 'antd'
 import { UserOutlined, LockOutlined, AlertOutlined } from '@ant-design/icons'
 import { authApi } from '@/api/auth'
 import { useAuthStore } from '@/store/auth'
+import { PHONE_RULE } from '@/constants'
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
@@ -40,10 +41,10 @@ export default function Login() {
           <p style={{ color: '#8f959e', marginTop: 4 }}>志愿者管理系统</p>
         </div>
         <Form onFinish={onFinish} size="large" autoComplete="off">
-          <Form.Item name="phone" rules={[{ required: true, message: '请输入手机号' }]}>
-            <Input prefix={<UserOutlined />} placeholder="手机号" />
+          <Form.Item name="phone" rules={[{ required: true, message: '请输入手机号' }, PHONE_RULE]}>
+            <Input prefix={<UserOutlined />} placeholder="手机号" maxLength={11} />
           </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }, { min: 6, message: '密码至少6位' }]}>
+          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }, { min: 8, message: '密码至少8位' }]}>
             <Input.Password prefix={<LockOutlined />} placeholder="密码" />
           </Form.Item>
           <Form.Item>
@@ -51,6 +52,9 @@ export default function Login() {
               登 录
             </Button>
           </Form.Item>
+          <div style={{ textAlign: 'center', color: '#8f959e', fontSize: 12 }}>
+            默认账号: 13800138000 / admin123
+          </div>
         </Form>
       </div>
     </div>

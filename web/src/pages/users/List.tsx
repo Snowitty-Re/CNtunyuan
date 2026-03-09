@@ -6,20 +6,8 @@ import { userApi } from '@/api/user'
 import { usePermission } from '@/hooks/usePermission'
 import type { User, UserQuery } from '@/types'
 import type { ColumnsType } from 'antd/es/table'
+import { roleMap, userStatusMap as statusBadge } from '@/constants'
 import dayjs from 'dayjs'
-
-const roleMap: Record<string, { label: string; color: string }> = {
-  super_admin: { label: '超级管理员', color: 'purple' },
-  admin: { label: '管理员', color: 'blue' },
-  manager: { label: '管理者', color: 'cyan' },
-  volunteer: { label: '志愿者', color: 'green' },
-}
-
-const statusBadge: Record<string, { text: string; status: 'success' | 'default' | 'error' }> = {
-  active: { text: '正常', status: 'success' },
-  inactive: { text: '禁用', status: 'default' },
-  banned: { text: '封禁', status: 'error' },
-}
 
 export default function UserList() {
   const [data, setData] = useState<User[]>([])

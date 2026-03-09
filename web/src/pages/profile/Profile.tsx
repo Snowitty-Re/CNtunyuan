@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Form, Input, Select, Button, Card, message, Spin, Row, Col } from 'antd'
+import { Form, Input, Select, Button, Card, message, Spin, Row, Col, Descriptions, Tag, Avatar } from 'antd'
+import { UserOutlined } from '@ant-design/icons'
 import { userApi } from '@/api/user'
 import { useAuthStore } from '@/store/auth'
+import { roleMap } from '@/constants'
 
 export default function Profile() {
   const [form] = Form.useForm()
@@ -9,7 +11,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [changingPwd, setChangingPwd] = useState(false)
-  const setUser = useAuthStore((s) => s.setUser)
+  const { user, setUser } = useAuthStore()
 
   useEffect(() => {
     userApi.getProfile().then((res) => {
@@ -22,9 +24,10 @@ export default function Profile() {
     try {
       const res = await userApi.updateProfile({
         nickname: values.nickname, email: values.email,
-        real_name: values.real_name, gender: values.gender,
-        address: values.address, emergency: values.emergency,
-        emergency_tel: values.emergency_tel, introduction: values.introduction,
+        real_name: values.real_name, id_card: values.id_card,
+        gender: values.gender, address: values.address,
+        emergency: values.emergency, emergency_tel: values.emergency_tel,
+        introduction: values.introduction,
       })
       setUser(res.data.data)
       message.success('保存成功')
@@ -37,7 +40,7 @@ export default function Profile() {
     setChangingPwd(true)
     try {
       await userApi.changePassword(values)
-      message.success('密码修改成功')
+      message.success('密码修改成功，请重新登录')
       pwdForm.resetFields()
     } finally {
       setChangingPwd(false)
@@ -46,9 +49,23 @@ export default function Profile() {
 
   if (loading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />
 
+  const r = user?.role ? roleMap[user.role] : null
+
   return (
     <div>
       <h2 style={{ marginBottom: 24, fontSize: 20, fontWeight: 600 }}>个人中心</h2>
+
+      <Card style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Avatar size={64} icon={<UserOutlined />} src={user?.avatar} />
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>{user?.nickname || '用户'}</div>
+            <div style={{ color: '#8f959e', marginTop: 4 }}>
+              {user?.phone} {r && <Tag color={r.color} style={{ marginLeft: 8 }}>{r.label}</Tag>}
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <Row gutter={24}>
         <Col xs={24} lg={14}>
@@ -61,7 +78,9 @@ export default function Profile() {
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="email" label="邮箱"><Input /></Form.Item>
+                  <Form.Item name="email" label="邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱' }]}>
+                    <Input />
+                  </Form.Item>
                 </Col>
               </Row>
               <Row gutter={16}>
@@ -70,13 +89,16 @@ export default function Profile() {
                 </Col>
                 <Col span={12}>
                   <Form.Item name="gender" label="性别">
-                    <Select allowClear>
+                    <Select allowClear placeholder="请选择">
                       <Select.Option value="male">男</Select.Option>
                       <Select.Option value="female">女</Select.Option>
                     </Select>
                   </Form.Item>
                 </Col>
               </Row>
+              <Form.Item name="id_card" label="身份证号">
+                <Input placeholder="用于实名认证" maxLength={18} />
+              </Form.Item>
               <Form.Item name="address" label="地址"><Input /></Form.Item>
               <Row gutter={16}>
                 <Col span={12}>
@@ -100,7 +122,7 @@ export default function Profile() {
               <Form.Item name="old_password" label="当前密码" rules={[{ required: true, message: '请输入当前密码' }]}>
                 <Input.Password />
               </Form.Item>
-              <Form.Item name="new_password" label="新密码" rules={[{ required: true, message: '请输入新密码' }, { min: 6, message: '至少6位' }]}>
+              <Form.Item name="new_password" label="新密码" rules={[{ required: true, message: '请输入新密码' }, { min: 8, message: '至少8位' }]}>
                 <Input.Password />
               </Form.Item>
               <Form.Item
@@ -122,6 +144,15 @@ export default function Profile() {
                 <Button type="primary" htmlType="submit" loading={changingPwd}>修改密码</Button>
               </Form.Item>
             </Form>
+          </Card>
+
+          <Card title="账号信息" style={{ marginTop: 24 }}>
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="手机号">{user?.phone}</Descriptions.Item>
+              <Descriptions.Item label="角色">{r ? <Tag color={r.color}>{r.label}</Tag> : '-'}</Descriptions.Item>
+              <Descriptions.Item label="组织">{user?.org_name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="注册时间">{user?.created_at?.slice(0, 10)}</Descriptions.Item>
+            </Descriptions>
           </Card>
         </Col>
       </Row>

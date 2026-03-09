@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Form, Input, Select, Button, Card, message, Spin, Space } from 'antd'
+import { Form, Input, Select, Button, Card, TreeSelect, message, Spin, Space } from 'antd'
 import { userApi } from '@/api/user'
-import dayjs from 'dayjs'
+import { orgApi } from '@/api/organization'
+import { PHONE_RULE } from '@/constants'
+import type { Organization } from '@/types'
 
 const roleOptions = [
   { value: 'volunteer', label: '志愿者' }, { value: 'manager', label: '管理者' },
@@ -12,15 +14,31 @@ const statusOptions = [
   { value: 'active', label: '正常' }, { value: 'inactive', label: '禁用' }, { value: 'banned', label: '封禁' },
 ]
 
+function buildTreeData(orgs: Organization[]): any[] {
+  return orgs.map((org) => ({
+    title: org.name,
+    value: org.id,
+    key: org.id,
+    children: org.children ? buildTreeData(org.children) : undefined,
+  }))
+}
+
 export default function UserForm() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [orgTree, setOrgTree] = useState<any[]>([])
   const isEdit = !!id
 
   useEffect(() => {
+    // Load org tree
+    orgApi.getTree().then((res) => {
+      const data = res.data.data
+      setOrgTree(buildTreeData(Array.isArray(data) ? data : [data]))
+    }).catch(() => {})
+
     if (id) {
       setLoading(true)
       userApi.getById(id).then((res) => {
@@ -57,22 +75,29 @@ export default function UserForm() {
           </Form.Item>
           {!isEdit && (
             <>
-              <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }]}>
-                <Input />
+              <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }, PHONE_RULE]}>
+                <Input maxLength={11} />
               </Form.Item>
-              <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }, { min: 6, message: '至少6位' }]}>
+              <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }, { min: 8, message: '至少8位' }]}>
                 <Input.Password />
               </Form.Item>
             </>
           )}
-          <Form.Item name="email" label="邮箱">
+          <Form.Item name="email" label="邮箱" rules={[{ type: 'email', message: '请输入正确的邮箱' }]}>
             <Input />
           </Form.Item>
           <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
             <Select options={roleOptions} />
           </Form.Item>
-          <Form.Item name="org_id" label="组织ID" rules={isEdit ? [] : [{ required: true, message: '请输入组织ID' }]}>
-            <Input />
+          <Form.Item name="org_id" label="所属组织" rules={isEdit ? [] : [{ required: true, message: '请选择组织' }]}>
+            <TreeSelect
+              treeData={orgTree}
+              placeholder="选择所属组织"
+              allowClear
+              showSearch
+              treeNodeFilterProp="title"
+              dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+            />
           </Form.Item>
           {isEdit && (
             <Form.Item name="status" label="状态">

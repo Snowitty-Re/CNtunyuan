@@ -1,18 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Table, Button, Tag, Badge, Space, Popconfirm, message, Card, Input } from 'antd'
+import { Table, Button, Tag, Badge, Space, Popconfirm, message, Card, Input, Select, Row, Col } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { orgApi } from '@/api/organization'
 import { usePermission } from '@/hooks/usePermission'
 import type { Organization, OrgQuery } from '@/types'
 import type { ColumnsType } from 'antd/es/table'
 
-const typeMap: Record<string, { label: string; color: string }> = {
-  root: { label: '总部', color: 'red' }, province: { label: '省级', color: 'orange' },
-  city: { label: '市级', color: 'blue' }, district: { label: '区级', color: 'cyan' },
-  street: { label: '街道', color: 'green' }, community: { label: '社区', color: 'lime' },
-  team: { label: '小组', color: 'default' },
-}
+import { orgTypeMap as typeMap } from '@/constants'
 
 export default function OrganizationList() {
   const [data, setData] = useState<Organization[]>([])
@@ -70,7 +65,16 @@ export default function OrganizationList() {
         {isAdmin && <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/organizations/new')}>新建组织</Button>}
       </div>
       <Card size="small" style={{ marginBottom: 16 }}>
-        <Input.Search placeholder="搜索组织名称" allowClear style={{ width: 300 }} onSearch={(v) => setQuery((q) => ({ ...q, keyword: v, page: 1 }))} />
+        <Row gutter={[12, 12]}>
+          <Col flex="auto">
+            <Input.Search placeholder="搜索组织名称" allowClear style={{ width: 300 }} onSearch={(v) => setQuery((q) => ({ ...q, keyword: v, page: 1 }))} />
+          </Col>
+          <Col>
+            <Select placeholder="类型" allowClear style={{ width: 100 }} onChange={(v) => setQuery((q) => ({ ...q, type: v, page: 1 }))}>
+              {Object.entries(typeMap).map(([k, v]) => <Select.Option key={k} value={k}>{v.label}</Select.Option>)}
+            </Select>
+          </Col>
+        </Row>
       </Card>
       <Table
         rowKey="id"

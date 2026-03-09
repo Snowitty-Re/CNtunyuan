@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Form, Input, Select, InputNumber, Button, Card, message, Spin, Space } from 'antd'
+import { Form, Input, Select, InputNumber, Button, Card, TreeSelect, message, Spin, Space } from 'antd'
 import { orgApi } from '@/api/organization'
+import type { Organization } from '@/types'
 
 const typeOptions = [
   { value: 'root', label: '总部' }, { value: 'province', label: '省级' },
@@ -10,15 +11,32 @@ const typeOptions = [
   { value: 'team', label: '小组' },
 ]
 
+function buildTreeData(orgs: Organization[]): any[] {
+  return orgs.map((org) => ({
+    title: org.name,
+    value: org.id,
+    key: org.id,
+    children: org.children ? buildTreeData(org.children) : undefined,
+  }))
+}
+
 export default function OrganizationForm() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [orgTree, setOrgTree] = useState<any[]>([])
   const isEdit = !!id
 
   useEffect(() => {
+    // Load org tree for parent selection
+    if (!isEdit) {
+      orgApi.getTree().then((res) => {
+        const data = res.data.data
+        setOrgTree(buildTreeData(Array.isArray(data) ? data : [data]))
+      }).catch(() => {})
+    }
     if (id) {
       setLoading(true)
       orgApi.getById(id).then((res) => form.setFieldsValue(res.data.data)).finally(() => setLoading(false))
@@ -63,15 +81,22 @@ export default function OrganizationForm() {
             <Input />
           </Form.Item>
           <Form.Item name="code" label="编码" rules={[{ required: true, message: '请输入编码' }]}>
-            <Input />
+            <Input placeholder="组织唯一编码" />
           </Form.Item>
           {!isEdit && (
             <>
               <Form.Item name="type" label="类型" rules={[{ required: true, message: '请选择类型' }]}>
                 <Select options={typeOptions} />
               </Form.Item>
-              <Form.Item name="parent_id" label="上级组织ID">
-                <Input placeholder="可选" />
+              <Form.Item name="parent_id" label="上级组织">
+                <TreeSelect
+                  treeData={orgTree}
+                  placeholder="选择上级组织（总部级可不选）"
+                  allowClear
+                  showSearch
+                  treeNodeFilterProp="title"
+                  dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                />
               </Form.Item>
             </>
           )}

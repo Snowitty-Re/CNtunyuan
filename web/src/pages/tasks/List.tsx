@@ -6,28 +6,8 @@ import { taskApi } from '@/api/task'
 import { usePermission } from '@/hooks/usePermission'
 import type { Task, TaskQuery } from '@/types'
 import type { ColumnsType } from 'antd/es/table'
+import { taskStatusMap as statusMap, taskTypeMap as typeMap, taskPriorityMap as priorityMap } from '@/constants'
 import dayjs from 'dayjs'
-
-const statusMap: Record<string, { label: string; color: string }> = {
-  draft: { label: '草稿', color: 'default' },
-  pending: { label: '待分配', color: 'gold' },
-  assigned: { label: '已分配', color: 'cyan' },
-  processing: { label: '进行中', color: 'blue' },
-  completed: { label: '已完成', color: 'green' },
-  cancelled: { label: '已取消', color: 'red' },
-  overdue: { label: '已逾期', color: 'magenta' },
-}
-
-const typeMap: Record<string, string> = {
-  search: '搜索', verify: '核实', assist: '协助', follow: '跟进', interview: '访谈', other: '其他',
-}
-
-const priorityMap: Record<string, { label: string; color: string }> = {
-  low: { label: '低', color: 'default' },
-  medium: { label: '中', color: 'blue' },
-  high: { label: '高', color: 'orange' },
-  urgent: { label: '紧急', color: 'red' },
-}
 
 export default function TaskList() {
   const [data, setData] = useState<Task[]>([])

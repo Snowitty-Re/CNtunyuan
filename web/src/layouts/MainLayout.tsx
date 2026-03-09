@@ -48,7 +48,7 @@ export default function MainLayout() {
   const userMenu: MenuProps = {
     items: [
       { key: 'profile', icon: <UserOutlined />, label: '个人中心', onClick: () => navigate('/profile') },
-      { key: 'settings', icon: <SettingOutlined />, label: '系统设置', onClick: () => navigate('/settings') },
+      { key: 'settings', icon: <SettingOutlined />, label: '系统设置', onClick: () => navigate('/profile') },
       { type: 'divider' },
       { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', danger: true, onClick: handleLogout },
     ],
