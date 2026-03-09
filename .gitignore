@@ -65,3 +65,4 @@ dump.rdb
 
 # Docker
 .dockerignore
+.claude/settings.local.json
