@@ -20,6 +20,7 @@
 | 模块 | 技术 |
 |------|------|
 | 后端 | Go 1.23+, Gin, GORM, PostgreSQL/MySQL, Redis, JWT |
+| Web 管理后台 | React 18, TypeScript, Vite, Ant Design 5, Zustand, React Router 6 |
 | API 文档 | Swagger UI (swaggo/swag 自动生成) |
 | 小程序 | 微信小程序原生开发 |
 
@@ -52,7 +53,24 @@ go run cmd/app/main.go
 - API 文档：http://localhost:8080/swagger/index.html
 - 健康检查：http://localhost:8080/api/v1/health
 
-### 3. 微信小程序
+### 3. 启动 Web 管理后台
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+访问 http://localhost:5173，使用默认账号登录。
+
+生产构建：
+
+```bash
+cd web
+npm run build    # 输出到 dist/
+```
+
+### 4. 微信小程序
 
 使用微信开发者工具打开 `mini-program` 目录。
 
@@ -66,6 +84,14 @@ CNtunyuan/
 │   ├── pkg/          # 公共包 (logger/response/middleware)
 │   ├── docs/         # Swagger 自动生成文档
 │   └── migrations/   # 数据库迁移
+├── web/              # React Web 管理后台
+│   ├── src/api/      # API 层 (Axios + 拦截器 + Token 刷新)
+│   ├── src/types/    # TypeScript 类型 (镜像后端 DTO)
+│   ├── src/pages/    # 25+ 页面 (9 大模块全覆盖)
+│   ├── src/components/ # 11 个共享组件
+│   ├── src/stores/   # Zustand 状态管理
+│   ├── src/router/   # 路由 + 权限守卫
+│   └── src/utils/    # 工具函数
 ├── mini-program/     # 微信小程序
 └── docker/           # Docker 部署配置
 ```

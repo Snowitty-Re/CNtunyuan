@@ -2,6 +2,63 @@
 
 本项目所有重大变更都将记录在此文件中。
 
+## [2.0.0] - 2026-03-11
+
+### Web 管理后台 (全新构建)
+
+基于 React 18 + TypeScript + Vite + Ant Design 5 全新搭建生产级 Web 管理后台，覆盖后端全部 67+ API 端点。
+
+#### 技术栈
+- React 18 + TypeScript 5 + Vite 5
+- Ant Design 5 (中文国际化)
+- Zustand 4 (状态管理)
+- React Router 6 (路由 + 懒加载)
+- Axios (请求拦截 + Token 自动刷新)
+- framer-motion (页面切换动画)
+
+#### 项目结构 (78 个源文件)
+- **类型层** (11 文件) - 完整镜像后端 DTO，覆盖 9 大模块
+- **API 层** (10 文件) - Axios 实例 + 拦截器 + 67+ 端点封装
+- **状态管理** - authStore (JWT 认证流) + appStore (UI 状态)
+- **共享组件** (11 个) - PageContainer, StatusTag, RoleTag, UrgencyTag, ConfirmButton, StatCard, AudioPlayer, OrgTreeSelect, UserSelect, FileUpload, EmptyState
+- **布局** - AdminLayout (侧边栏 + 头部 + 内容区) + BlankLayout
+
+#### 页面模块 (25 个页面)
+- **登录** - 管理员登录 + 忘记密码 (手机验证码两步流程)
+- **工作台** - 统计卡片 + 近7日趋势 + 最近活动
+- **用户管理** - 列表 (按角色/状态/组织筛选) + 详情 + 创建/编辑弹窗
+- **组织管理** - 列表 + 交互式树形视图 + 创建/编辑弹窗
+- **走失人员** - 列表 (丰富筛选器) + 详情 (轨迹时间线 + 标记找到/团圆) + 登记/编辑表单
+- **任务管理** - 列表 (标签页：全部/我的/待处理/已逾期) + 详情 (分配/开始/完成/取消/进度) + 表单
+- **方言库** - 列表 + 详情 (音频播放器 + 评论 + 点赞 + 精选) + 上传表单
+- **文件管理** - 文件浏览器 (拖拽上传) + 存储统计
+- **审计日志** - 日志列表 (综合筛选) + 详情 + 统计
+- **个人资料** - 查看/编辑 + 修改密码
+- **系统监控** - 系统健康仪表盘
+- **错误页** - 403/404/500
+
+#### 认证与权限
+- JWT 双 Token 认证 (access_token + refresh_token)
+- 401 响应自动刷新 Token 并重试请求
+- 菜单按角色动态显示 (super_admin > admin > manager > volunteer)
+- 路由级 AuthGuard + RoleGuard 权限守卫
+- 按钮级权限控制 (usePermission hook)
+
+#### 错误处理
+- 后端业务错误码 (1000-6099) 中文映射
+- Axios 响应拦截器统一处理 code 字段
+- HTTP 错误友好提示
+
+#### 构建优化
+- 代码分割: vendor (React) + antd + 45+ 懒加载页面 chunk
+- TypeScript 严格模式 0 错误
+- 生产构建 5s 完成
+
+### 文档更新
+- README.md 新增 Web 管理后台技术栈、启动说明、项目结构
+- CHANGELOG.md 新增 v2.0.0 变更记录
+- .gitignore 新增 tsbuildinfo/d.ts.map 排除
+
 ## [1.1.0] - 2026-03-10
 
 ### 安全加固

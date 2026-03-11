@@ -20,6 +20,9 @@ yarn.lock
 # Build
 dist/
 build/
+*.tsbuildinfo
+*.d.ts.map
+vite.config.d.ts
 
 # IDE
 .idea/

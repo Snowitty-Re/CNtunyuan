@@ -1,0 +1,12 @@
+export type UserRole = 'super_admin' | 'admin' | 'manager' | 'volunteer';
+export type UserStatus = 'active' | 'inactive' | 'banned';
+export type MissingPersonStatus = 'missing' | 'searching' | 'found' | 'reunited' | 'closed';
+export type UrgencyLevel = 'urgent' | 'high' | 'normal' | 'low';
+export type TaskStatus = 'draft' | 'pending' | 'assigned' | 'processing' | 'completed' | 'cancelled';
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type DialectStatus = 'pending' | 'active' | 'rejected';
+export type FileType = 'image' | 'audio' | 'video' | 'document' | 'other';
+export type AuditLogType = 'login' | 'logout' | 'create' | 'update' | 'delete' | 'query' | 'export' | 'upload' | 'download' | 'other';
+export type AuditLogStatus = 'success' | 'failure';
+export type OrgType = 'province' | 'city' | 'district' | 'station' | 'team';
+export type OrgStatus = 'active' | 'inactive';
