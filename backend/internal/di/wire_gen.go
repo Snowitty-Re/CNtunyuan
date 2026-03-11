@@ -187,6 +187,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 
 	// 启动定时任务调度器
 	scheduler := task.NewScheduler(taskRepo, mpRepo, userRepo, auditRepo)
+	scheduler.SetDatabaseConfig(&cfg.Database, &cfg.Backup)
 	if err := scheduler.Start(); err != nil {
 		logger.Error("Failed to start task scheduler", logger.Err(err))
 	}

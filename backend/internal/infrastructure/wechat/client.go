@@ -1,6 +1,10 @@
 package wechat
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 )
 
 // Client 微信小程序客户端
@@ -65,4 +70,215 @@ func (c *Client) Code2Session(code string) (*service.WechatSession, error) {
 		SessionKey: result.SessionKey,
 		UnionID:    result.UnionID,
 	}, nil
+}
+
+// DecryptedUserInfo 解密后的微信用户信息
+type DecryptedUserInfo struct {
+	OpenID    string `json:"openId"`
+	Nickname  string `json:"nickName"`
+	Gender    int    `json:"gender"`
+	City      string `json:"city"`
+	Province  string `json:"province"`
+	Country   string `json:"country"`
+	AvatarURL string `json:"avatarUrl"`
+	Language  string `json:"language"`
+	UnionID   string `json:"unionId"`
+	Watermark struct {
+		AppID     string `json:"appid"`
+		Timestamp int64  `json:"timestamp"`
+	} `json:"watermark"`
+}
+
+// DecryptUserInfo 解密微信用户信息
+// sessionKey: 从Code2Session获取的session_key
+// encryptedData: 前端wx.getUserInfo返回的encryptedData
+// iv: 前端wx.getUserInfo返回的iv
+func (c *Client) DecryptUserInfo(sessionKey, encryptedData, iv string) (*DecryptedUserInfo, error) {
+	plaintext, err := c.decrypt(sessionKey, encryptedData, iv)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt user info failed: %w", err)
+	}
+
+	var userInfo DecryptedUserInfo
+	if err := json.Unmarshal(plaintext, &userInfo); err != nil {
+		return nil, fmt.Errorf("parse user info failed: %w", err)
+	}
+
+	// 验证watermark中的appid
+	if userInfo.Watermark.AppID != c.appID {
+		logger.Warn("WeChat watermark appid mismatch",
+			logger.String("expected", c.appID),
+			logger.String("actual", userInfo.Watermark.AppID),
+		)
+		return nil, fmt.Errorf("watermark appid mismatch")
+	}
+
+	return &userInfo, nil
+}
+
+// DecryptedPhoneInfo 解密后的手机号信息
+type DecryptedPhoneInfo struct {
+	PhoneNumber     string `json:"phoneNumber"`
+	PurePhoneNumber string `json:"purePhoneNumber"`
+	CountryCode     string `json:"countryCode"`
+	Watermark       struct {
+		AppID     string `json:"appid"`
+		Timestamp int64  `json:"timestamp"`
+	} `json:"watermark"`
+}
+
+// DecryptPhoneNumber 解密微信手机号
+// sessionKey: 从Code2Session获取的session_key
+// encryptedData: 前端getPhoneNumber返回的encryptedData
+// iv: 前端getPhoneNumber返回的iv
+func (c *Client) DecryptPhoneNumber(sessionKey, encryptedData, iv string) (*DecryptedPhoneInfo, error) {
+	plaintext, err := c.decrypt(sessionKey, encryptedData, iv)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt phone number failed: %w", err)
+	}
+
+	var phoneInfo DecryptedPhoneInfo
+	if err := json.Unmarshal(plaintext, &phoneInfo); err != nil {
+		return nil, fmt.Errorf("parse phone info failed: %w", err)
+	}
+
+	// 验证watermark中的appid
+	if phoneInfo.Watermark.AppID != c.appID {
+		logger.Warn("WeChat watermark appid mismatch",
+			logger.String("expected", c.appID),
+			logger.String("actual", phoneInfo.Watermark.AppID),
+		)
+		return nil, fmt.Errorf("watermark appid mismatch")
+	}
+
+	return &phoneInfo, nil
+}
+
+// GetPhoneNumber 通过code获取手机号（新版API，推荐使用）
+// https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-info/phone-number/getPhoneNumber.html
+func (c *Client) GetPhoneNumber(accessToken, code string) (*DecryptedPhoneInfo, error) {
+	reqURL := fmt.Sprintf(
+		"https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=%s",
+		url.QueryEscape(accessToken),
+	)
+
+	bodyStr := fmt.Sprintf(`{"code":"%s"}`, code)
+	resp, err := c.httpClient.Post(reqURL, "application/json", bytes.NewBufferString(bodyStr))
+	if err != nil {
+		return nil, fmt.Errorf("wechat getPhoneNumber request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		ErrCode   int    `json:"errcode"`
+		ErrMsg    string `json:"errmsg"`
+		PhoneInfo struct {
+			PhoneNumber     string `json:"phoneNumber"`
+			PurePhoneNumber string `json:"purePhoneNumber"`
+			CountryCode     string `json:"countryCode"`
+		} `json:"phone_info"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode wechat response failed: %w", err)
+	}
+
+	if result.ErrCode != 0 {
+		return nil, fmt.Errorf("wechat getPhoneNumber error: code=%d, msg=%s", result.ErrCode, result.ErrMsg)
+	}
+
+	return &DecryptedPhoneInfo{
+		PhoneNumber:     result.PhoneInfo.PhoneNumber,
+		PurePhoneNumber: result.PhoneInfo.PurePhoneNumber,
+		CountryCode:     result.PhoneInfo.CountryCode,
+	}, nil
+}
+
+// GetAccessToken 获取接口调用凭据（用于服务端API调用）
+// https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/mp-access-token/getAccessToken.html
+func (c *Client) GetAccessToken() (string, int, error) {
+	reqURL := fmt.Sprintf(
+		"https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s",
+		url.QueryEscape(c.appID),
+		url.QueryEscape(c.appSecret),
+	)
+
+	resp, err := c.httpClient.Get(reqURL)
+	if err != nil {
+		return "", 0, fmt.Errorf("wechat getAccessToken request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+		ErrCode     int    `json:"errcode"`
+		ErrMsg      string `json:"errmsg"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", 0, fmt.Errorf("decode wechat response failed: %w", err)
+	}
+
+	if result.ErrCode != 0 {
+		return "", 0, fmt.Errorf("wechat getAccessToken error: code=%d, msg=%s", result.ErrCode, result.ErrMsg)
+	}
+
+	return result.AccessToken, result.ExpiresIn, nil
+}
+
+// decrypt AES-128-CBC解密微信加密数据
+func (c *Client) decrypt(sessionKey, encryptedData, iv string) ([]byte, error) {
+	keyBytes, err := base64.StdEncoding.DecodeString(sessionKey)
+	if err != nil {
+		return nil, fmt.Errorf("decode session key failed: %w", err)
+	}
+
+	dataBytes, err := base64.StdEncoding.DecodeString(encryptedData)
+	if err != nil {
+		return nil, fmt.Errorf("decode encrypted data failed: %w", err)
+	}
+
+	ivBytes, err := base64.StdEncoding.DecodeString(iv)
+	if err != nil {
+		return nil, fmt.Errorf("decode iv failed: %w", err)
+	}
+
+	block, err := aes.NewCipher(keyBytes)
+	if err != nil {
+		return nil, fmt.Errorf("create cipher failed: %w", err)
+	}
+
+	if len(dataBytes)%block.BlockSize() != 0 {
+		return nil, fmt.Errorf("encrypted data is not a multiple of block size")
+	}
+
+	mode := cipher.NewCBCDecrypter(block, ivBytes)
+	plaintext := make([]byte, len(dataBytes))
+	mode.CryptBlocks(plaintext, dataBytes)
+
+	// PKCS#7 去填充
+	plaintext, err = pkcs7Unpad(plaintext)
+	if err != nil {
+		return nil, fmt.Errorf("pkcs7 unpad failed: %w", err)
+	}
+
+	return plaintext, nil
+}
+
+// pkcs7Unpad 移除PKCS#7填充
+func pkcs7Unpad(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty data")
+	}
+	padding := int(data[len(data)-1])
+	if padding > len(data) || padding == 0 {
+		return nil, fmt.Errorf("invalid padding size")
+	}
+	for i := len(data) - padding; i < len(data); i++ {
+		if int(data[i]) != padding {
+			return nil, fmt.Errorf("invalid padding bytes")
+		}
+	}
+	return data[:len(data)-padding], nil
 }

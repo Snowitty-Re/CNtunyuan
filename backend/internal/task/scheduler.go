@@ -3,10 +3,18 @@ package task
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
@@ -18,6 +26,8 @@ type Scheduler struct {
 	mpRepo     repository.MissingPersonRepository
 	userRepo   repository.UserRepository
 	auditRepo  repository.AuditLogRepository
+	dbConfig   *config.DatabaseConfig
+	backupCfg  *config.BackupConfig
 	ticker     *time.Ticker
 	stopChan   chan struct{}
 	isRunning  atomic.Bool
@@ -38,6 +48,12 @@ func NewScheduler(
 		auditRepo: auditRepo,
 		stopChan:  make(chan struct{}),
 	}
+}
+
+// SetDatabaseConfig 设置数据库配置（用于备份）
+func (s *Scheduler) SetDatabaseConfig(dbCfg *config.DatabaseConfig, backupCfg *config.BackupConfig) {
+	s.dbConfig = dbCfg
+	s.backupCfg = backupCfg
 }
 
 // Start 启动定时任务
@@ -84,12 +100,12 @@ func (s *Scheduler) run() {
 		case <-s.ticker.C:
 			// 每分钟检查逾期任务
 			s.checkOverdueTasks()
-			
+
 			// 每小时更新统计（整点时）
 			if time.Now().Minute() == 0 {
 				s.updateStatistics()
 			}
-			
+
 		case <-s.stopChan:
 			return
 		}
@@ -105,15 +121,16 @@ func (s *Scheduler) runDailyTasks() {
 		if nextRun.Before(now) {
 			nextRun = nextRun.Add(24 * time.Hour)
 		}
-		
+
 		timer := time.NewTimer(nextRun.Sub(now))
-		
+
 		select {
 		case <-timer.C:
 			// 执行每日任务
 			s.cleanupOldLogs()
 			s.backupData()
-			
+			s.cleanupOldBackups()
+
 		case <-s.stopChan:
 			timer.Stop()
 			return
@@ -184,8 +201,18 @@ func (s *Scheduler) updateStatistics() {
 
 	logger.Info("Statistics update completed",
 		logger.Int64("total_users", userCount),
-		logger.Int64("total_cases", func() int64 { if mpStats != nil { return mpStats.Total }; return 0 }()),
-		logger.Int64("total_tasks", func() int64 { if taskStats != nil { return taskStats.Total }; return 0 }()),
+		logger.Int64("total_cases", func() int64 {
+			if mpStats != nil {
+				return mpStats.Total
+			}
+			return 0
+		}()),
+		logger.Int64("total_tasks", func() int64 {
+			if taskStats != nil {
+				return taskStats.Total
+			}
+			return 0
+		}()),
 	)
 }
 
@@ -205,9 +232,230 @@ func (s *Scheduler) cleanupOldLogs() {
 	logger.Info("Old logs cleanup completed", logger.Int64("deleted", count))
 }
 
-// backupData 备份数据
+// backupData 执行数据库备份
 func (s *Scheduler) backupData() {
-	logger.Info("Data backup reminder: application-level backup is not implemented. " +
-		"Use infrastructure-level tools (e.g., pg_dump for PostgreSQL, mysqldump for MySQL) " +
-		"configured via cron or your cloud provider's backup service.")
+	if s.dbConfig == nil || s.backupCfg == nil || !s.backupCfg.Enabled {
+		logger.Debug("Database backup is disabled or not configured, skipping")
+		return
+	}
+
+	logger.Info("Starting database backup")
+
+	// 确保备份目录存在
+	backupDir := s.backupCfg.BackupDir
+	if backupDir == "" {
+		backupDir = "./backups"
+	}
+	if err := os.MkdirAll(backupDir, 0750); err != nil {
+		logger.Error("Failed to create backup directory", logger.Err(err), logger.String("dir", backupDir))
+		return
+	}
+
+	// 生成备份文件名
+	timestamp := time.Now().Format("20060102_150405")
+	var backupFile string
+	var cmd *exec.Cmd
+
+	switch s.dbConfig.Type {
+	case config.DatabaseTypePostgres:
+		backupFile = filepath.Join(backupDir, fmt.Sprintf("cntuanyuan_pg_%s.sql.gz", timestamp))
+		cmd = s.buildPostgresBackupCmd(backupFile)
+	case config.DatabaseTypeMySQL:
+		backupFile = filepath.Join(backupDir, fmt.Sprintf("cntuanyuan_mysql_%s.sql.gz", timestamp))
+		cmd = s.buildMySQLBackupCmd(backupFile)
+	default:
+		logger.Warn("Unknown database type for backup", logger.String("type", string(s.dbConfig.Type)))
+		return
+	}
+
+	if cmd == nil {
+		logger.Warn("Backup command tool not found, skipping backup")
+		return
+	}
+
+	// 执行备份命令
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		logger.Error("Database backup failed",
+			logger.Err(err),
+			logger.String("output", string(output)),
+			logger.String("file", backupFile),
+		)
+		// 清理可能的部分文件
+		os.Remove(backupFile)
+		return
+	}
+
+	// 验证备份文件
+	info, err := os.Stat(backupFile)
+	if err != nil || info.Size() == 0 {
+		logger.Error("Backup file is empty or missing", logger.String("file", backupFile))
+		os.Remove(backupFile)
+		return
+	}
+
+	logger.Info("Database backup completed successfully",
+		logger.String("file", backupFile),
+		logger.Int64("size_bytes", info.Size()),
+	)
+}
+
+// buildPostgresBackupCmd 构建PostgreSQL备份命令
+func (s *Scheduler) buildPostgresBackupCmd(outputFile string) *exec.Cmd {
+	pgDump := "pg_dump"
+	if runtime.GOOS == "windows" {
+		pgDump = "pg_dump.exe"
+	}
+
+	// 检查pg_dump是否可用
+	if _, err := exec.LookPath(pgDump); err != nil {
+		logger.Warn("pg_dump not found in PATH, backup skipped")
+		return nil
+	}
+
+	sslMode := s.dbConfig.SSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s",
+		s.dbConfig.User, s.dbConfig.Password,
+		s.dbConfig.Host, s.dbConfig.Port,
+		s.dbConfig.Database, sslMode,
+	)
+
+	// pg_dump | gzip > file
+	if isGzipAvailable() {
+		shellCmd := fmt.Sprintf("%s --dbname=%q --no-owner --no-privileges --clean --if-exists | gzip > %q",
+			pgDump, dsn, outputFile)
+		return shellExec(shellCmd)
+	}
+
+	// 不压缩
+	outputFile = strings.TrimSuffix(outputFile, ".gz")
+	cmd := exec.Command(pgDump,
+		"--dbname="+dsn,
+		"--no-owner",
+		"--no-privileges",
+		"--clean",
+		"--if-exists",
+		"--file="+outputFile,
+	)
+	return cmd
+}
+
+// buildMySQLBackupCmd 构建MySQL备份命令
+func (s *Scheduler) buildMySQLBackupCmd(outputFile string) *exec.Cmd {
+	mysqldump := "mysqldump"
+	if runtime.GOOS == "windows" {
+		mysqldump = "mysqldump.exe"
+	}
+
+	// 检查mysqldump是否可用
+	if _, err := exec.LookPath(mysqldump); err != nil {
+		logger.Warn("mysqldump not found in PATH, backup skipped")
+		return nil
+	}
+
+	args := []string{
+		fmt.Sprintf("--host=%s", s.dbConfig.Host),
+		fmt.Sprintf("--port=%d", s.dbConfig.Port),
+		fmt.Sprintf("--user=%s", s.dbConfig.User),
+		fmt.Sprintf("--password=%s", s.dbConfig.Password),
+		"--single-transaction",
+		"--routines",
+		"--triggers",
+		"--set-gtid-purged=OFF",
+		s.dbConfig.Database,
+	}
+
+	if isGzipAvailable() {
+		shellCmd := fmt.Sprintf("%s %s | gzip > %q",
+			mysqldump, strings.Join(args, " "), outputFile)
+		return shellExec(shellCmd)
+	}
+
+	outputFile = strings.TrimSuffix(outputFile, ".gz")
+	args = append(args, fmt.Sprintf("--result-file=%s", outputFile))
+	return exec.Command(mysqldump, args...)
+}
+
+// cleanupOldBackups 清理过期备份文件
+func (s *Scheduler) cleanupOldBackups() {
+	if s.backupCfg == nil || !s.backupCfg.Enabled {
+		return
+	}
+
+	backupDir := s.backupCfg.BackupDir
+	if backupDir == "" {
+		backupDir = "./backups"
+	}
+
+	retention := s.backupCfg.Retention
+	if retention <= 0 {
+		retention = 7
+	}
+
+	cutoff := time.Now().AddDate(0, 0, -retention)
+
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		logger.Error("Failed to read backup directory", logger.Err(err))
+		return
+	}
+
+	// 收集并按时间排序
+	type backupFile struct {
+		name    string
+		modTime time.Time
+	}
+	var backups []backupFile
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasPrefix(name, "cntuanyuan_") {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		backups = append(backups, backupFile{name: name, modTime: info.ModTime()})
+	}
+
+	sort.Slice(backups, func(i, j int) bool {
+		return backups[i].modTime.Before(backups[j].modTime)
+	})
+
+	deleted := 0
+	for _, b := range backups {
+		if b.modTime.Before(cutoff) {
+			path := filepath.Join(backupDir, b.name)
+			if err := os.Remove(path); err != nil {
+				logger.Error("Failed to delete old backup", logger.Err(err), logger.String("file", path))
+			} else {
+				deleted++
+			}
+		}
+	}
+
+	if deleted > 0 {
+		logger.Info("Old backups cleaned up", logger.Int("deleted", deleted), logger.Int("retention_days", retention))
+	}
+}
+
+// isGzipAvailable 检查gzip是否可用
+func isGzipAvailable() bool {
+	_, err := exec.LookPath("gzip")
+	return err == nil
+}
+
+// shellExec 通过shell执行命令（支持管道）
+func shellExec(command string) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		return exec.Command("cmd", "/C", command)
+	}
+	return exec.Command("sh", "-c", command)
 }

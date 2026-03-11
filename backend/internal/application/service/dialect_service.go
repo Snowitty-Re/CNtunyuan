@@ -153,13 +153,14 @@ func (s *DialectAppService) Delete(ctx context.Context, id string) error {
 
 // UpdateStatus 更新状态
 func (s *DialectAppService) UpdateStatus(ctx context.Context, id string, status string) error {
-	if _, err := s.dialectRepo.FindByID(ctx, id); err != nil {
+	d, err := s.dialectRepo.FindByID(ctx, id)
+	if err != nil {
 		return ErrDialectNotFound
 	}
 
-	if err := s.dialectRepo.Update(ctx, &entity.Dialect{
-		Status: entity.DialectStatus(status),
-	}); err != nil {
+	d.Status = entity.DialectStatus(status)
+	if err := s.dialectRepo.Update(ctx, d); err != nil {
+		logger.Error("Failed to update dialect status", logger.Err(err), logger.String("dialect_id", id))
 		return err
 	}
 
@@ -195,17 +196,60 @@ func (s *DialectAppService) IncrementPlayCount(ctx context.Context, id string) e
 
 // Like 点赞
 func (s *DialectAppService) Like(ctx context.Context, dialectID string, userID string) error {
+	// 检查方言是否存在
+	if _, err := s.dialectRepo.FindByID(ctx, dialectID); err != nil {
+		return ErrDialectNotFound
+	}
+
+	// 检查是否已点赞
+	hasLiked, err := s.dialectRepo.HasLiked(ctx, dialectID, userID)
+	if err != nil {
+		logger.Error("Failed to check like status", logger.Err(err))
+		return err
+	}
+	if hasLiked {
+		return ErrAlreadyLiked
+	}
+
 	like := &entity.DialectLike{
 		ID:        uuid.New().String(),
 		DialectID: dialectID,
 		UserID:    userID,
 	}
-	return s.dialectRepo.AddLike(ctx, like)
+	if err := s.dialectRepo.AddLike(ctx, like); err != nil {
+		logger.Error("Failed to add like", logger.Err(err))
+		return err
+	}
+
+	// 增加点赞计数
+	if err := s.dialectRepo.IncrementLikeCount(ctx, dialectID); err != nil {
+		logger.Error("Failed to increment like count", logger.Err(err))
+	}
+
+	return nil
 }
 
 // Unlike 取消点赞
 func (s *DialectAppService) Unlike(ctx context.Context, dialectID string, userID string) error {
-	return s.dialectRepo.RemoveLike(ctx, dialectID, userID)
+	// 检查是否已点赞
+	hasLiked, err := s.dialectRepo.HasLiked(ctx, dialectID, userID)
+	if err != nil {
+		return err
+	}
+	if !hasLiked {
+		return ErrNotLiked
+	}
+
+	if err := s.dialectRepo.RemoveLike(ctx, dialectID, userID); err != nil {
+		return err
+	}
+
+	// 减少点赞计数
+	if err := s.dialectRepo.DecrementLikeCount(ctx, dialectID); err != nil {
+		logger.Error("Failed to decrement like count", logger.Err(err))
+	}
+
+	return nil
 }
 
 // HasLiked 是否已点赞

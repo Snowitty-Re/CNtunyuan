@@ -109,8 +109,10 @@ func (s *MissingPersonAppService) GetByID(ctx context.Context, id string) (*dto.
 		return nil, ErrMissingPersonNotFound
 	}
 
-	// 增加浏览次数
-	s.mpRepo.IncrementViews(ctx, id)
+	// 增加浏览次数（非关键操作，仅记录错误）
+	if err := s.mpRepo.IncrementViews(ctx, id); err != nil {
+		logger.Warn("Failed to increment views", logger.Err(err), logger.String("mp_id", id))
+	}
 
 	resp := dto.ToMissingPersonResponse(mp)
 	return &resp, nil

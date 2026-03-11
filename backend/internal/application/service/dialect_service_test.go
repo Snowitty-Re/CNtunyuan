@@ -612,7 +612,7 @@ func TestDialectAppService_Unlike(t *testing.T) {
 			name:    "unlike dialect without like",
 			dialID:  dialect.ID,
 			userID:  user.ID,
-			wantErr: false, // 不返回错误，只是没有删除记录
+			wantErr: true, // 未点赞时取消点赞应返回 ErrNotLiked
 		},
 	}
 

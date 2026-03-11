@@ -1,24 +1,25 @@
 # 团圆寻亲志愿者系统 (CNtunyuan)
 
-一个生产级别的寻亲志愿者管理系统，包含微信小程序端和后端API服务。
+一个生产级别的寻亲志愿者管理系统，包含微信小程序端和后端 API 服务。
 
 ## 功能特性
 
-- **志愿者管理** - 微信一键登录，组织架构（省/市/区/街道），RBAC权限控制
+- **志愿者管理** - 微信一键登录，组织架构（省/市/区/街道），RBAC 权限控制
 - **走失人员数据库** - 登记、照片上传、轨迹跟踪、关联方言、状态流转
-- **方言语音库** - 音频文件上传、区域标记、播放统计、精选管理
-- **任务管理** - 创建分配、人员选择器、进度追踪、逾期检测、操作日志
-- **文件存储** - 本地/OSS/COS，安全检查，图片和音频上传
-- **审计日志** - 全量API请求记录，敏感操作监控，日志清理
-- **数据统计** - 仪表盘、趋势分析、我的任务、实时统计
-- **组织树管理** - 层级选择器、树形结构、上下级关联
-- **Swagger API 文档** - 自动生成，完整覆盖所有接口
+- **方言语音库** - 音频文件上传、区域标记、播放统计、点赞评论、精选管理
+- **任务管理** - 创建分配、进度追踪、逾期自动检测、操作日志
+- **文件存储** - 本地/OSS/COS 多后端，ClamAV 病毒扫描
+- **短信服务** - 阿里云/腾讯云短信，验证码发送
+- **审计日志** - 全量 API 请求记录，敏感操作监控，定时清理
+- **数据库备份** - 定时自动备份（pg_dump/mysqldump），过期清理
+- **数据统计** - 仪表盘、趋势分析、个人统计
+- **Swagger API 文档** - 自动生成，67 个 API 端点完整覆盖
 
 ## 技术栈
 
 | 模块 | 技术 |
 |------|------|
-| 后端 | Go 1.23+, Gin, GORM, PostgreSQL, Redis, JWT |
+| 后端 | Go 1.23+, Gin, GORM, PostgreSQL/MySQL, Redis, JWT |
 | API 文档 | Swagger UI (swaggo/swag 自动生成) |
 | 小程序 | 微信小程序原生开发 |
 
@@ -66,21 +67,20 @@ CNtunyuan/
 │   ├── docs/         # Swagger 自动生成文档
 │   └── migrations/   # 数据库迁移
 ├── mini-program/     # 微信小程序
-├── docker/           # Docker 部署配置
-└── scripts/          # 运维脚本
+└── docker/           # Docker 部署配置
 ```
 
 ## API 模块
 
 | 模块 | API 路径 | 说明 |
 |------|---------|------|
-| 认证管理 | `/auth/*` | 登录、注册、微信登录、Token 刷新 |
+| 认证管理 | `/auth/*` | 登录、微信登录、Token 刷新、验证码、密码重置 |
 | 用户管理 | `/users/*` | 用户 CRUD、角色/状态管理 |
-| 个人中心 | `/profile/*` | 资料编辑、密码修改 |
-| 组织管理 | `/organizations/*` | 组织架构、树形结构 |
+| 个人中心 | `/profile/*` | 资料编辑、密码修改、个人统计 |
+| 组织管理 | `/organizations/*` | 组织架构、树形结构、层级路径 |
 | 案件管理 | `/missing-persons/*` | 走失人员登记、照片/轨迹、状态流转 |
 | 任务管理 | `/tasks/*` | 任务创建分配、进度追踪、操作日志 |
-| 方言管理 | `/dialects/*` | 方言音频上传、评论、精选 |
+| 方言管理 | `/dialects/*` | 方言音频上传、点赞评论、精选 |
 | 文件管理 | `/upload/*` | 文件上传下载、实体绑定 |
 | 仪表盘 | `/dashboard/*` | 数据统计、趋势分析 |
 | 审计日志 | `/audit/*` | 操作日志、统计、清理 |
@@ -100,19 +100,12 @@ CNtunyuan/
 
 | 文档 | 说明 |
 |------|------|
-| [backend/README.md](backend/README.md) | 后端开发指南 |
+| [backend/README.md](backend/README.md) | 后端开发指南（含完整 API 端点列表） |
 | [backend/REFACTORING.md](backend/REFACTORING.md) | Clean Architecture 设计文档 |
 | [backend/TESTING.md](backend/TESTING.md) | 单元测试文档 |
 | [backend/SWAGGER.md](backend/SWAGGER.md) | Swagger API 文档使用 |
 | [backend/migrations/README.md](backend/migrations/README.md) | 数据库迁移指南 |
-
-## 开发规范
-
-### 后端
-- Clean Architecture 分层架构 (Domain -> Application -> Infrastructure -> Interfaces)
-- 领域驱动设计 (DDD)，充血实体模型
-- 单元测试覆盖核心逻辑 (110+ 测试函数)
-- Swagger 注解自动生成 API 文档，运行 `swag init -g cmd/app/main.go -o docs --parseDependency --parseInternal`
+| [DEPLOY.md](DEPLOY.md) | 生产环境部署指南 |
 
 ## 默认账号
 

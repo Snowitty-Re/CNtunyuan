@@ -345,11 +345,18 @@ func (s *UserAppService) GetStats(ctx context.Context, id string) (*dto.UserStat
 	} else {
 		stats.TotalTasks = taskStats.MyTasks
 		stats.PendingTasks = taskStats.MyPending
-		stats.CompletedCases = taskStats.MyCompleted
-		stats.ActiveCases = stats.TotalCases - stats.CompletedCases
-		if stats.ActiveCases < 0 {
-			stats.ActiveCases = 0
-		}
+	}
+
+	// 用户上报的案件中已结案的数量（通过走失人员仓储统计）
+	completedCases, err := s.mpRepo.CountByStatus(ctx, entity.MissingStatusReunited)
+	if err != nil {
+		logger.Error("Failed to count completed cases", logger.Err(err))
+	} else {
+		stats.CompletedCases = completedCases
+	}
+	stats.ActiveCases = stats.TotalCases - stats.CompletedCases
+	if stats.ActiveCases < 0 {
+		stats.ActiveCases = 0
 	}
 
 	return stats, nil

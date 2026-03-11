@@ -23,6 +23,7 @@ type Config struct {
 	Notification NotificationConfig `mapstructure:"notification"`
 	System       SystemConfig       `mapstructure:"system"`
 	Security     SecurityConfig     `mapstructure:"security"`
+	Backup       BackupConfig       `mapstructure:"backup"`
 }
 
 // ServerConfig 服务器配置
@@ -209,6 +210,13 @@ type SystemConfig struct {
 	RateLimit         int    `mapstructure:"rate_limit"`
 }
 
+// BackupConfig 备份配置
+type BackupConfig struct {
+	Enabled   bool   `mapstructure:"enabled"`
+	BackupDir string `mapstructure:"backup_dir"` // 备份文件存放目录
+	Retention int    `mapstructure:"retention"`  // 保留天数
+}
+
 var globalConfig *Config
 
 // LoadConfig 加载配置
@@ -340,4 +348,9 @@ func setDefaults() {
 	// Security defaults
 	viper.SetDefault("security.max_login_attempts", 5)
 	viper.SetDefault("security.lockout_duration", 1800)
+
+	// Backup defaults
+	viper.SetDefault("backup.enabled", false)
+	viper.SetDefault("backup.backup_dir", "./backups")
+	viper.SetDefault("backup.retention", 7)
 }

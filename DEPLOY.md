@@ -84,6 +84,22 @@ go run cmd/app/main.go -check-db
 
 ### 数据备份
 
+系统内置自动备份功能，在 `config/config.yaml` 中启用：
+
+```yaml
+backup:
+  enabled: true           # 启用自动备份
+  backup_dir: ./backups   # 备份存储目录
+  retention: 7            # 保留天数（自动清理过期备份）
+```
+
+启用后，系统每日凌晨 3 点自动执行：
+- 数据库备份（pg_dump/mysqldump + gzip 压缩）
+- 过期备份文件清理
+- 旧审计日志清理（90 天前）
+
+手动备份：
+
 ```bash
 # 备份数据库
 docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres cntuanyuan > backup_$(date +%Y%m%d_%H%M%S).sql
@@ -115,7 +131,7 @@ docker-compose -f docker-compose.prod.yml exec backend tar xzf /tmp/uploads_back
 - [ ] 已配置 HTTPS（使用 Nginx 反向代理）
 - [ ] 文件上传目录已设置正确的权限
 - [ ] 已配置日志轮转防止磁盘占满
-- [ ] 已配置数据库备份计划
+- [ ] 已配置数据库备份（系统内置自动备份，见下方说明）
 
 ## 常见问题
 
@@ -179,47 +195,6 @@ http://localhost:8080/api/v1/metrics
 - API 响应时间 > 500ms
 - 错误率 > 1%
 - 磁盘使用率 > 80%
-
-## 常见问题修复
-
-### Token 刷新与登录掉出问题
-
-**症状**：修改密码、删除人员等操作后用户被踢出登录
-
-**原因**：前端未实现 Token 自动刷新机制
-
-**修复**：确保前端 `request.ts` 已实现：
-- 401 响应时自动调用 `/auth/refresh` 接口
-- 刷新成功后自动重试失败的请求
-- 并发请求队列管理
-
-### 数据展示问题
-
-**症状**：案件编号、头像等数据不显示
-
-**原因**：数据库缺少 `case_no` 字段和 `ty_missing_photos` 表
-
-**修复**：执行数据库迁移补充字段和表
-
-```sql
--- PostgreSQL 示例
-ALTER TABLE ty_missing_persons ADD COLUMN case_no VARCHAR(50) UNIQUE;
-
-CREATE TABLE IF NOT EXISTS ty_missing_photos (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    missing_person_id UUID NOT NULL,
-    url VARCHAR(500) NOT NULL,
-    type VARCHAR(20) NOT NULL DEFAULT 'normal',
-    is_primary BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE CASCADE
-);
-
--- 为现有数据生成 case_no
-UPDATE ty_missing_persons 
-SET case_no = 'CASE-' || TO_CHAR(created_at, 'YYYYMMDD') || '-' || SUBSTRING(id::text, 1, 4)
-WHERE case_no IS NULL;
-```
 
 ## 技术支持
 
