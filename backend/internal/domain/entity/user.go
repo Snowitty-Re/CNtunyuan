@@ -82,7 +82,7 @@ type User struct {
 	WxOpenID     string        `gorm:"column:wx_openid;size:100;uniqueIndex" json:"wx_openid,omitempty"`
 	WxUnionID    string        `gorm:"column:wx_unionid;size:100" json:"wx_unionid,omitempty"`
 	Org          *Organization `gorm:"foreignKey:OrgID" json:"org,omitempty"`
-	Permissions  []Permission  `gorm:"many2many:user_permissions;" json:"permissions,omitempty"`
+	Permissions  []Permission  `gorm:"many2many:ty_user_permissions;" json:"permissions,omitempty"`
 }
 
 // TableName 表名
@@ -243,13 +243,12 @@ func isValidRole(role Role) bool {
 
 // Permission 权限
 type Permission struct {
-	ID          string `gorm:"type:uuid;primaryKey" json:"id"`
+	BaseEntity
 	Name        string `gorm:"size:100;uniqueIndex;not null" json:"name"`
 	Code        string `gorm:"size:100;uniqueIndex;not null" json:"code"`
 	Description string `gorm:"size:255" json:"description,omitempty"`
 	Resource    string `gorm:"size:100;not null" json:"resource"`
 	Action      string `gorm:"size:50;not null" json:"action"`
-	BaseEntity  `json:"-"`
 }
 
 // TableName 表名

@@ -48,7 +48,7 @@ type AuditLog struct {
 	ResponseCode  int            `json:"response_code,omitempty"`                  // 响应状态码
 	ResponseBody  string         `gorm:"type:text" json:"response_body,omitempty"` // 响应体（简化）
 	UserAgent     string         `gorm:"size:500" json:"user_agent,omitempty"`     // 用户代理
-	Duration      int64          `json:"duration_ms,omitempty"`                    // 执行时长（毫秒）
+	Duration      int64          `gorm:"column:duration_ms" json:"duration_ms,omitempty"`                    // 执行时长（毫秒）
 	Status        AuditLogStatus `gorm:"size:20;not null" json:"status"`           // 状态
 	ErrorMessage  string         `gorm:"type:text" json:"error_message,omitempty"` // 错误信息
 	TraceID       string         `gorm:"size:100;index" json:"trace_id,omitempty"` // 追踪ID

@@ -137,7 +137,7 @@ func (o *Organization) calculateLevel() int {
 
 // OrgStats 组织统计
 type OrgStats struct {
-	ID               string `gorm:"type:uuid;primaryKey" json:"id"`
+	BaseEntity
 	OrgID            string `gorm:"type:uuid;uniqueIndex;not null" json:"org_id"`
 	TotalVolunteers  int    `json:"total_volunteers"`
 	ActiveVolunteers int    `json:"active_volunteers"`
@@ -146,7 +146,6 @@ type OrgStats struct {
 	CompletedCases   int    `json:"completed_cases"`
 	TotalTasks       int    `json:"total_tasks"`
 	PendingTasks     int    `json:"pending_tasks"`
-	BaseEntity
 }
 
 // TableName 表名

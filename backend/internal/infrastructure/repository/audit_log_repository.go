@@ -140,14 +140,13 @@ func (r *AuditLogRepositoryImpl) GetStats(ctx context.Context, startTime, endTim
 func (r *AuditLogRepositoryImpl) GetUserActivity(ctx context.Context, userID string, days int) ([]*repository.UserActivityItem, error) {
 	var results []*repository.UserActivityItem
 
-	// 按日期分组统计
-	err := r.db.WithContext(ctx).Raw(`
-		SELECT DATE(created_at) as date, COUNT(*) as count
-		FROM ty_audit_logs
-		WHERE user_id = ? AND created_at >= ?
-		GROUP BY DATE(created_at)
-		ORDER BY date DESC
-	`, userID, time.Now().AddDate(0, 0, -days)).Scan(&results).Error
+	// 使用 GORM 查询替代硬编码表名
+	err := r.db.WithContext(ctx).Model(&entity.AuditLog{}).
+		Select("DATE(created_at) as date, COUNT(*) as count").
+		Where("user_id = ? AND created_at >= ?", userID, time.Now().AddDate(0, 0, -days)).
+		Group("DATE(created_at)").
+		Order("date DESC").
+		Scan(&results).Error
 
 	if err != nil {
 		return nil, err

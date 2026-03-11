@@ -155,11 +155,27 @@ func AutoMigrate(db *gorm.DB) error {
 
 	// 迁移所有实体
 	err := db.AutoMigrate(
-		&entity.User{},
+		// 核心实体
 		&entity.Organization{},
+		&entity.OrgStats{},
+		&entity.User{},
+		&entity.Permission{},
+		&entity.UserPermission{},
+		// 走失人员相关
 		&entity.MissingPerson{},
-		&entity.Dialect{},
+		&entity.MissingPersonTrack{},
+		&entity.MissingPhoto{},
+		// 任务相关
 		&entity.Task{},
+		&entity.TaskAttachment{},
+		&entity.TaskLog{},
+		&entity.TaskComment{},
+		// 方言相关
+		&entity.Dialect{},
+		&entity.DialectComment{},
+		&entity.DialectLike{},
+		&entity.DialectPlayLog{},
+		// 文件和日志
 		&entity.File{},
 		&entity.AuditLog{},
 	)
