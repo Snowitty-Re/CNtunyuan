@@ -51,6 +51,9 @@ type UserRepository interface {
 
 	// ExistsEmail 检查邮箱是否存在
 	ExistsEmail(ctx context.Context, email string) (bool, error)
+
+	// CountByDateRange 按日期范围统计新增用户
+	CountByDateRange(ctx context.Context, start, end string) (int64, error)
 }
 
 // UserQuery 用户查询参数

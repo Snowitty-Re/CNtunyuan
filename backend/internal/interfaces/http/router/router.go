@@ -2,9 +2,11 @@ package router
 
 import (
 	"net/http"
+	"strings"
 
 	_ "github.com/Snowitty-Re/CNtunyuan/docs"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
+	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	pkgmiddleware "github.com/Snowitty-Re/CNtunyuan/pkg/middleware"
@@ -58,8 +60,16 @@ func NewRouter(
 	// 3. 安全响应头中间件
 	engine.Use(pkgmiddleware.SecurityHeadersMiddleware())
 
-	// 4. CORS 中间件
-	engine.Use(pkgmiddleware.CORSMiddleware())
+	// 4. CORS 中间件（从配置读取允许的源）
+	var corsOrigins []string
+	cfg := config.GetConfig()
+	if cfg != nil && cfg.Server.CORSOrigins != "" {
+		corsOrigins = strings.Split(cfg.Server.CORSOrigins, ",")
+		for i := range corsOrigins {
+			corsOrigins[i] = strings.TrimSpace(corsOrigins[i])
+		}
+	}
+	engine.Use(pkgmiddleware.CORSMiddleware(corsOrigins...))
 
 	// 5. 请求大小限制（50MB）
 	engine.Use(pkgmiddleware.RequestSizeMiddleware(50 * 1024 * 1024))

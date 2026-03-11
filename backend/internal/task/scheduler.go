@@ -165,11 +165,28 @@ func (s *Scheduler) checkOverdueTasks() {
 // updateStatistics 更新统计数据
 func (s *Scheduler) updateStatistics() {
 	logger.Info("Running statistics update")
-	
-	// 更新用户、案件、任务统计
-	// 这里可以实现复杂的统计逻辑
-	
-	logger.Info("Statistics update completed")
+	ctx := context.Background()
+
+	userCount, err := s.userRepo.Count(ctx)
+	if err != nil {
+		logger.Error("Failed to count users", logger.Err(err))
+	}
+
+	mpStats, err := s.mpRepo.GetStats(ctx)
+	if err != nil {
+		logger.Error("Failed to get missing person stats", logger.Err(err))
+	}
+
+	taskStats, err := s.taskRepo.GetStats(ctx, "")
+	if err != nil {
+		logger.Error("Failed to get task stats", logger.Err(err))
+	}
+
+	logger.Info("Statistics update completed",
+		logger.Int64("total_users", userCount),
+		logger.Int64("total_cases", func() int64 { if mpStats != nil { return mpStats.Total }; return 0 }()),
+		logger.Int64("total_tasks", func() int64 { if taskStats != nil { return taskStats.Total }; return 0 }()),
+	)
 }
 
 // cleanupOldLogs 清理旧日志
@@ -190,10 +207,7 @@ func (s *Scheduler) cleanupOldLogs() {
 
 // backupData 备份数据
 func (s *Scheduler) backupData() {
-	logger.Info("Running data backup")
-	
-	// 这里可以实现数据备份逻辑
-	// 如：导出数据库、上传云存储等
-	
-	logger.Info("Data backup completed")
+	logger.Info("Data backup reminder: application-level backup is not implemented. " +
+		"Use infrastructure-level tools (e.g., pg_dump for PostgreSQL, mysqldump for MySQL) " +
+		"configured via cron or your cloud provider's backup service.")
 }

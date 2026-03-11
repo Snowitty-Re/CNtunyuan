@@ -1,6 +1,9 @@
 //go:build wireinject
 // +build wireinject
 
+// Package di 提供依赖注入容器。
+// 注意：本项目的 DI 容器由 wire_gen.go 手动维护，本文件仅为 wire 模板参考。
+// 实际的依赖装配请直接修改 wire_gen.go 中的 NewContainer 函数。
 package di
 
 import (

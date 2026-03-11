@@ -69,6 +69,9 @@ type TaskRepository interface {
 
 	// CountByDateRange 按日期范围统计
 	CountByDateRange(ctx context.Context, start, end string) (int64, error)
+
+	// CountCompletedByDateRange 按日期范围统计已完成任务
+	CountCompletedByDateRange(ctx context.Context, start, end string) (int64, error)
 }
 
 // TaskQuery 任务查询参数

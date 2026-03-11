@@ -77,6 +77,9 @@ type DialectListRequest struct {
 // DialectListResponse 方言列表响应
 type DialectListResponse = PageResult[DialectResponse]
 
+// DialectCommentListResponse 方言评论列表响应
+type DialectCommentListResponse = PageResult[DialectCommentResponse]
+
 // UpdateDialectStatusRequest 更新状态请求
 type UpdateDialectStatusRequest struct {
 	Status string `json:"status" binding:"required"`

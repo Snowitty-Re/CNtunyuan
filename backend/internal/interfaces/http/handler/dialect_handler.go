@@ -495,7 +495,7 @@ func (h *DialectHandler) AddComment(c *gin.Context) {
 // @Param id path string true "方言ID"
 // @Param page query int false "页码，默认为1" default(1)
 // @Param page_size query int false "每页数量，默认为10" default(10)
-// @Success 200 {object} response.Response{data=repository.PageResult[dto.DialectCommentResponse]} "获取成功"
+// @Success 200 {object} response.Response{data=dto.DialectCommentListResponse} "获取成功"
 // @Failure 400 {object} response.Response "请求参数错误"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
@@ -528,7 +528,7 @@ func (h *DialectHandler) GetComments(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Param page query int false "页码，默认为1" default(1)
 // @Param page_size query int false "每页数量，默认为10" default(10)
-// @Success 200 {object} response.Response{data=repository.PageResult[dto.DialectResponse]} "获取成功"
+// @Success 200 {object} response.Response{data=dto.DialectListResponse} "获取成功"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /dialects/featured [get]

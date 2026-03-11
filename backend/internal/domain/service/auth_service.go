@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -56,11 +58,12 @@ type SMSProvider interface {
 
 // AuthService auth service
 type AuthService struct {
-	userRepo     repository.UserRepository
-	tokenService TokenService
-	cache        cache.Cache
-	wechatClient WechatClient
-	smsService   SMSProvider
+	userRepo       repository.UserRepository
+	tokenService   TokenService
+	cache          cache.Cache
+	wechatClient   WechatClient
+	smsService     SMSProvider
+	securityConfig *config.SecurityConfig
 }
 
 // NewAuthService create auth service
@@ -78,6 +81,11 @@ func NewAuthService(
 	}
 }
 
+// SetSecurityConfig 设置安全配置
+func (s *AuthService) SetSecurityConfig(cfg *config.SecurityConfig) {
+	s.securityConfig = cfg
+}
+
 // SetSMSService 设置短信服务（用于依赖注入）
 func (s *AuthService) SetSMSService(smsService SMSProvider) {
 	s.smsService = smsService
@@ -85,10 +93,16 @@ func (s *AuthService) SetSMSService(smsService SMSProvider) {
 
 // Login login
 func (s *AuthService) Login(ctx context.Context, creds valueobject.LoginCredentials, ip string) (*valueobject.LoginResult, *entity.User, error) {
+	// Check login lockout
+	if s.isLoginLocked(ctx, creds.Username) {
+		return nil, nil, errors.New(errors.CodeAccountLocked, "登录尝试次数过多，账户已临时锁定")
+	}
+
 	// Find user
 	user, err := s.userRepo.FindByPhoneOrNickname(ctx, creds.Username)
 	if err != nil {
 		logger.Warn("Login failed - user not found", logger.String("username", creds.Username))
+		s.recordFailedLogin(ctx, creds.Username)
 		return nil, nil, errors.ErrInvalidPassword
 	}
 
@@ -103,8 +117,12 @@ func (s *AuthService) Login(ctx context.Context, creds valueobject.LoginCredenti
 	// Verify password
 	if !user.CheckPassword(creds.Password) {
 		logger.Warn("Login failed - wrong password", logger.String("username", creds.Username))
+		s.recordFailedLogin(ctx, creds.Username)
 		return nil, nil, errors.ErrInvalidPassword
 	}
+
+	// Clear failed login attempts on success
+	s.clearLoginAttempts(ctx, creds.Username)
 
 	// Record login
 	user.RecordLogin(ip)
@@ -404,4 +422,102 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, phone string) error {
 
 	_, err := s.smsService.SendVerifyCode(ctx, phone)
 	return err
+}
+
+// ResetPassword 重置密码（通过短信验证码）
+func (s *AuthService) ResetPassword(ctx context.Context, phone, code, newPassword string) error {
+	// 验证验证码
+	if s.smsService == nil {
+		defaultSMS := sms.NewService(&config.SMSConfig{}, s.cache)
+		s.smsService = defaultSMS
+	}
+
+	if !s.smsService.VerifyCode(ctx, phone, code) {
+		return errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
+	}
+
+	// 查找用户
+	user, err := s.userRepo.FindByPhone(ctx, phone)
+	if err != nil {
+		return errors.ErrUserNotFound
+	}
+
+	// 设置新密码
+	if err := user.SetPassword(newPassword); err != nil {
+		return errors.Wrap(err, errors.CodeInvalidParam, "密码格式不正确")
+	}
+
+	// 更新用户
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return errors.Wrap(err, errors.CodeInternal, "更新密码失败")
+	}
+
+	logger.Info("Password reset success", logger.String("user_id", user.ID))
+	return nil
+}
+
+// isLoginLocked 检查登录是否被锁定
+func (s *AuthService) isLoginLocked(ctx context.Context, username string) bool {
+	if s.cache == nil {
+		return false
+	}
+	key := fmt.Sprintf("login_lock:%s", username)
+	exists, err := s.cache.Exists(ctx, key)
+	if err != nil {
+		return false
+	}
+	return exists
+}
+
+// recordFailedLogin 记录登录失败
+func (s *AuthService) recordFailedLogin(ctx context.Context, username string) {
+	if s.cache == nil {
+		return
+	}
+
+	maxAttempts := 5
+	lockoutDuration := 1800
+	if s.securityConfig != nil {
+		if s.securityConfig.MaxLoginAttempts > 0 {
+			maxAttempts = s.securityConfig.MaxLoginAttempts
+		}
+		if s.securityConfig.LockoutDuration > 0 {
+			lockoutDuration = s.securityConfig.LockoutDuration
+		}
+	}
+
+	attemptsKey := fmt.Sprintf("login_attempts:%s", username)
+	var attempts int
+	if err := s.cache.Get(ctx, attemptsKey, &attempts); err != nil {
+		attempts = 0
+	}
+	attempts++
+
+	// Store attempts with a window equal to lockout duration
+	window := time.Duration(lockoutDuration) * time.Second
+	if err := s.cache.Set(ctx, attemptsKey, attempts, window); err != nil {
+		logger.Error("Failed to record login attempt", logger.Err(err))
+		return
+	}
+
+	if attempts >= maxAttempts {
+		lockKey := fmt.Sprintf("login_lock:%s", username)
+		if err := s.cache.Set(ctx, lockKey, true, window); err != nil {
+			logger.Error("Failed to set login lock", logger.Err(err))
+		}
+		logger.Warn("Account locked due to too many failed login attempts",
+			logger.String("username", username),
+			logger.Int("attempts", attempts),
+		)
+	}
+}
+
+// clearLoginAttempts 清除登录失败记录
+func (s *AuthService) clearLoginAttempts(ctx context.Context, username string) {
+	if s.cache == nil {
+		return
+	}
+	attemptsKey := fmt.Sprintf("login_attempts:%s", username)
+	lockKey := fmt.Sprintf("login_lock:%s", username)
+	s.cache.Delete(ctx, attemptsKey, lockKey)
 }

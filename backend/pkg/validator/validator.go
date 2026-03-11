@@ -193,3 +193,17 @@ func TruncateString(s string, maxLen int) string {
 
 	return string(runes[:maxLen])
 }
+
+// SanitizePagination 校验并修正分页参数
+func SanitizePagination(page, pageSize int) (int, int) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	return page, pageSize
+}

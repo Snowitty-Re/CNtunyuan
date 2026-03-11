@@ -38,6 +38,29 @@ func (h *AuditHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *m
 	}
 }
 
+// AuditPaginatedResult 审计日志分页结果（Swagger用）
+// @Description 审计日志分页查询结果
+type AuditPaginatedResult struct {
+	Items    []entity.AuditLog `json:"items"`     // 日志列表
+	Total    int64             `json:"total"`      // 总数
+	Page     int               `json:"page"`       // 当前页
+	PageSize int               `json:"page_size"`  // 每页数量
+}
+
+// AuditUserActivityItem 用户活动项（Swagger用）
+// @Description 用户活动统计项
+type AuditUserActivityItem struct {
+	Date  string `json:"date" example:"2024-01-01"`  // 日期
+	Count int64  `json:"count" example:"15"`          // 操作次数
+}
+
+// AuditModuleStatItem 模块统计项（Swagger用）
+// @Description 模块操作统计项
+type AuditModuleStatItem struct {
+	Module string `json:"module" example:"用户管理"` // 模块名称
+	Count  int64  `json:"count" example:"42"`       // 操作次数
+}
+
 // ListRequest 列表查询请求
 type ListRequest struct {
 	Page      int    `form:"page" binding:"min=1"`
@@ -71,7 +94,7 @@ type ListRequest struct {
 // @Param end_time query string false "结束时间，格式：2006-01-02"
 // @Param keyword query string false "关键词搜索"
 // @Param request_ip query string false "请求IP地址"
-// @Success 200 {object} response.Response{data=repository.PaginatedResult} "成功"
+// @Success 200 {object} response.Response{data=AuditPaginatedResult} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
@@ -211,7 +234,7 @@ func (h *AuditHandler) GetStats(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Param userId path string true "用户ID"
 // @Param days query int false "天数范围，默认7天，最大90天" default(7) minimum(1) maximum(90)
-// @Success 200 {object} response.Response{data=[]repository.UserActivityItem} "成功"
+// @Success 200 {object} response.Response{data=[]AuditUserActivityItem} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"
@@ -247,7 +270,7 @@ func (h *AuditHandler) GetUserActivity(c *gin.Context) {
 // @Security ApiKeyAuth
 // @Param start_time query string false "开始时间，格式：2006-01-02"
 // @Param end_time query string false "结束时间，格式：2006-01-02"
-// @Success 200 {object} response.Response{data=[]repository.ModuleStatItem} "成功"
+// @Success 200 {object} response.Response{data=[]AuditModuleStatItem} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 401 {object} response.Response "未授权"
 // @Failure 500 {object} response.Response "服务器内部错误"

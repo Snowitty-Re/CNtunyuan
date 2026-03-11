@@ -220,12 +220,33 @@ func (s *DashboardService) GetTrendData(ctx context.Context, days int) ([]TrendD
 		}
 		trend.NewCases = newCases
 
+		// 当日解决案件
+		resolvedCases, err := s.mpRepo.CountResolvedByDateRange(ctx, dayStart, dayEnd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count resolved cases for %s: %w", dateStr, err)
+		}
+		trend.ResolvedCases = resolvedCases
+
 		// 当日新增任务
 		newTasks, err := s.taskRepo.CountByDateRange(ctx, dayStart, dayEnd)
 		if err != nil {
 			return nil, fmt.Errorf("failed to count new tasks for %s: %w", dateStr, err)
 		}
 		trend.NewTasks = newTasks
+
+		// 当日完成任务
+		completedTasks, err := s.taskRepo.CountCompletedByDateRange(ctx, dayStart, dayEnd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count completed tasks for %s: %w", dateStr, err)
+		}
+		trend.CompletedTasks = completedTasks
+
+		// 当日新增用户
+		newUsers, err := s.userRepo.CountByDateRange(ctx, dayStart, dayEnd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to count new users for %s: %w", dateStr, err)
+		}
+		trend.NewUsers = newUsers
 
 		trends = append(trends, trend)
 	}

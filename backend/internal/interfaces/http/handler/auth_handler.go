@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
+	"github.com/Snowitty-Re/CNtunyuan/internal/config"
+	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/valueobject"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
@@ -83,6 +85,14 @@ type SendCodeResponse struct {
 	Expire  int    `json:"expire" example:"300"`                                         // 验证码有效期（秒）
 }
 
+// ResetPasswordRequest 重置密码请求
+// @Description 重置密码请求参数
+type ResetPasswordRequest struct {
+	Phone       string `json:"phone" binding:"required" example:"13800138000"`           // 手机号
+	Code        string `json:"code" binding:"required" example:"123456"`                 // 验证码
+	NewPassword string `json:"new_password" binding:"required,min=8" example:"newpass123"` // 新密码
+}
+
 // RegisterRoutes register routes
 func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 	auth := router.Group("/auth")
@@ -94,6 +104,7 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 		auth.POST("/wechat-login", h.WechatLogin)
 		auth.POST("/bind-phone", h.authMiddleware.Required(), h.BindPhone)
 		auth.POST("/send-code", h.SendVerifyCode)
+		auth.POST("/reset-password", h.ResetPassword)
 
 		// Protected routes
 		auth.GET("/me", h.authMiddleware.Required(), h.GetCurrentUser)
@@ -114,6 +125,11 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 // @Failure      500      {object}  response.Response  "服务器内部错误"
 // @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
+	h.doLogin(c, false)
+}
+
+// doLogin 通用登录逻辑
+func (h *AuthHandler) doLogin(c *gin.Context, requireAdmin bool) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, validator.ValidateStruct(&req))
@@ -141,10 +157,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		case errors.IsCode(err, errors.CodeAccountDisabled):
 			response.Error(c, errors.ErrAccountDisabled)
 		case errors.IsCode(err, errors.CodeAccountLocked):
-			response.Error(c, errors.ErrAccountLocked)
+			response.Error(c, err)
 		default:
 			response.Error(c, err)
 		}
+		return
+	}
+
+	// 管理员登录需要校验角色
+	if requireAdmin && !entity.HasRole(user.Role, entity.RoleAdmin) {
+		response.Error(c, errors.New(errors.CodeForbidden, "无管理员权限"))
 		return
 	}
 
@@ -171,7 +193,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Failure      500      {object}  response.Response  "服务器内部错误"
 // @Router       /auth/admin-login [post]
 func (h *AuthHandler) AdminLogin(c *gin.Context) {
-	h.Login(c)
+	h.doLogin(c, true)
 }
 
 // RefreshToken 刷新访问令牌
@@ -414,8 +436,50 @@ func (h *AuthHandler) SendVerifyCode(c *gin.Context) {
 		return
 	}
 
+	codeExpiry := 300
+	cfg := config.GetConfig()
+	if cfg != nil && cfg.SMS.CodeExpiry > 0 {
+		codeExpiry = cfg.SMS.CodeExpiry
+	}
+
 	response.Success(c, gin.H{
 		"message": "验证码已发送",
-		"expire":  300, // 5分钟有效期
+		"expire":  codeExpiry,
+	})
+}
+
+// ResetPassword 重置密码
+// @Summary      重置密码
+// @Description  通过手机验证码重置密码，用于忘记密码场景
+// @Tags         Authentication
+// @Accept       json
+// @Produce      json
+// @Param        request  body      ResetPasswordRequest  true  "重置密码请求参数"
+// @Success      200      {object}  response.Response  "重置成功"
+// @Failure      400      {object}  response.Response  "参数错误"
+// @Failure      404      {object}  response.Response  "用户不存在"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /auth/reset-password [post]
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, validator.ValidateStruct(&req))
+		return
+	}
+
+	// 验证手机号格式
+	if !validator.IsValidPhone(req.Phone) {
+		response.Error(c, errors.New(errors.CodeInvalidParam, "手机号格式不正确"))
+		return
+	}
+
+	if err := h.authService.ResetPassword(c.Request.Context(), req.Phone, req.Code, req.NewPassword); err != nil {
+		logger.Error("Reset password failed", logger.Err(err))
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"message": "密码重置成功",
 	})
 }

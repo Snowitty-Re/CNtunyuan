@@ -251,3 +251,12 @@ func (r *UserRepositoryImpl) ExistsEmail(ctx context.Context, email string) (boo
 		Count(&count).Error
 	return count > 0, err
 }
+
+// CountByDateRange 按日期范围统计新增用户
+func (r *UserRepositoryImpl) CountByDateRange(ctx context.Context, start, end string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.User{}).
+		Where("created_at >= ? AND created_at <= ?", start, end).
+		Count(&count).Error
+	return count, err
+}

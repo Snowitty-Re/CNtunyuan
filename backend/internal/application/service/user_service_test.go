@@ -15,7 +15,9 @@ import (
 func setupUserTest(t *testing.T) (*UserAppService, *testutil.TestDB) {
 	tdb := testutil.NewTestDB(t)
 	userRepo := repository.NewUserRepository(tdb.DB)
-	service := NewUserAppService(userRepo)
+	taskRepo := repository.NewTaskRepository(tdb.DB)
+	mpRepo := repository.NewMissingPersonRepository(tdb.DB)
+	service := NewUserAppService(userRepo, taskRepo, mpRepo)
 	return service, tdb
 }
 

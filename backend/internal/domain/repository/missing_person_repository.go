@@ -43,6 +43,12 @@ type MissingPersonRepository interface {
 	// CountByDateRange 按日期范围统计
 	CountByDateRange(ctx context.Context, start, end string) (int64, error)
 
+	// CountResolvedByDateRange 按日期范围统计已解决案件数
+	CountResolvedByDateRange(ctx context.Context, start, end string) (int64, error)
+
+	// CountByReporter 统计用户上报的案件数
+	CountByReporter(ctx context.Context, reporterID string) (int64, error)
+
 	// IncrementViews 增加浏览次数
 	IncrementViews(ctx context.Context, id string) error
 }

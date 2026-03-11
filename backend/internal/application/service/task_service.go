@@ -8,6 +8,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/validator"
 )
 
 var (
@@ -85,6 +86,8 @@ func (s *TaskAppService) GetByID(ctx context.Context, id string) (*dto.TaskRespo
 
 // List 列表查询
 func (s *TaskAppService) List(ctx context.Context, req *dto.TaskListRequest) (*dto.TaskListResponse, error) {
+	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
+
 	query := repository.NewTaskQuery()
 	query.Page = req.Page
 	query.PageSize = req.PageSize

@@ -68,11 +68,8 @@ cd backend
 # 安装 swag 工具
 go install github.com/swaggo/swag/cmd/swag@latest
 
-# 生成文档
-swag init -g cmd/app/main.go
-
-# 指定输出目录
-swag init -g cmd/app/main.go -o docs
+# 生成文档（需要 --parseDependency 和 --parseInternal 参数以正确解析所有类型）
+swag init -g cmd/app/main.go -o docs --parseDependency --parseInternal
 ```
 
 ## Swagger 注释规范

@@ -88,6 +88,13 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password" binding:"required,min=8"`
 }
 
+// ResetPasswordRequest 重置密码请求
+type ResetPasswordRequest struct {
+	Phone       string `json:"phone" binding:"required"`
+	Code        string `json:"code" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
 // UpdateProfileRequest 更新资料请求
 type UpdateProfileRequest struct {
 	Nickname     string `json:"nickname"`

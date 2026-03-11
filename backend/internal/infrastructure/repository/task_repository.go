@@ -396,6 +396,16 @@ func (r *TaskRepositoryImpl) CountByDateRange(ctx context.Context, start, end st
 	return count, err
 }
 
+// CountCompletedByDateRange 按日期范围统计已完成任务
+func (r *TaskRepositoryImpl) CountCompletedByDateRange(ctx context.Context, start, end string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.Task{}).
+		Where("status = ? AND completed_at >= ? AND completed_at <= ?",
+			entity.TaskStatusCompleted, start, end).
+		Count(&count).Error
+	return count, err
+}
+
 // FindOverdueTasks 查找所有活跃且已逾期的任务（用于自动标记）
 func (r *TaskRepositoryImpl) FindOverdueTasks(ctx context.Context) ([]entity.Task, error) {
 	var tasks []entity.Task

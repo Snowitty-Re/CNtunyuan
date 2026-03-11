@@ -8,6 +8,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/validator"
 )
 
 var (
@@ -22,11 +23,21 @@ var (
 // UserAppService user application service
 type UserAppService struct {
 	userRepo repository.UserRepository
+	taskRepo repository.TaskRepository
+	mpRepo   repository.MissingPersonRepository
 }
 
 // NewUserAppService create user application service
-func NewUserAppService(userRepo repository.UserRepository) *UserAppService {
-	return &UserAppService{userRepo: userRepo}
+func NewUserAppService(
+	userRepo repository.UserRepository,
+	taskRepo repository.TaskRepository,
+	mpRepo repository.MissingPersonRepository,
+) *UserAppService {
+	return &UserAppService{
+		userRepo: userRepo,
+		taskRepo: taskRepo,
+		mpRepo:   mpRepo,
+	}
 }
 
 // Create create user
@@ -163,6 +174,8 @@ func (s *UserAppService) GetByPhone(ctx context.Context, phone string) (*dto.Use
 
 // List user list
 func (s *UserAppService) List(ctx context.Context, req *dto.UserListRequest) (*dto.UserListResponse, error) {
+	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
+
 	query := repository.NewUserQuery()
 	query.Page = req.Page
 	query.PageSize = req.PageSize
@@ -315,7 +328,31 @@ func (s *UserAppService) GetProfile(ctx context.Context, id string) (*dto.UserPr
 
 // GetStats get stats
 func (s *UserAppService) GetStats(ctx context.Context, id string) (*dto.UserStatsResponse, error) {
-	return &dto.UserStatsResponse{}, nil
+	stats := &dto.UserStatsResponse{}
+
+	// 用户上报的案件数
+	totalCases, err := s.mpRepo.CountByReporter(ctx, id)
+	if err != nil {
+		logger.Error("Failed to count cases by reporter", logger.Err(err))
+	} else {
+		stats.TotalCases = totalCases
+	}
+
+	// 用户的任务统计
+	taskStats, err := s.taskRepo.GetStats(ctx, id)
+	if err != nil {
+		logger.Error("Failed to get task stats for user", logger.Err(err))
+	} else {
+		stats.TotalTasks = taskStats.MyTasks
+		stats.PendingTasks = taskStats.MyPending
+		stats.CompletedCases = taskStats.MyCompleted
+		stats.ActiveCases = stats.TotalCases - stats.CompletedCases
+		if stats.ActiveCases < 0 {
+			stats.ActiveCases = 0
+		}
+	}
+
+	return stats, nil
 }
 
 // canModify check if can modify user

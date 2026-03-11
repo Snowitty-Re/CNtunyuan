@@ -7,9 +7,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/valueobject"
 	repoImpl "github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/repository"
+	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/sms"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/utils"
 	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
@@ -63,7 +65,25 @@ func NewMockCache() *MockCache {
 }
 
 func (m *MockCache) Get(ctx context.Context, key string, dest interface{}) error {
-	return errors.New("key not found")
+	val, exists := m.data[key]
+	if !exists {
+		return errors.New("key not found")
+	}
+	// Simple type assertion for string values (used in verify code)
+	if s, ok := val.(string); ok {
+		if sp, ok := dest.(*string); ok {
+			*sp = s
+			return nil
+		}
+	}
+	// For int values (used in login attempts)
+	if i, ok := val.(int); ok {
+		if ip, ok := dest.(*int); ok {
+			*ip = i
+			return nil
+		}
+	}
+	return errors.New("type mismatch")
 }
 
 func (m *MockCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
@@ -763,10 +783,15 @@ func TestAuthService_WechatLogin_WithDisabledUser(t *testing.T) {
 }
 
 func TestAuthService_BindPhone(t *testing.T) {
-	service, tdb, mockTokenService, _, _ := setupAuthTest(t)
+	service, tdb, mockTokenService, mockCache, _ := setupAuthTest(t)
 	defer tdb.Close()
 
 	createTestOrg(t, tdb)
+
+	// Set up SMS service with dev mode for testing
+	devSMSConfig := &config.SMSConfig{DevMode: true}
+	devSMS := sms.NewService(devSMSConfig, mockCache)
+	service.SetSMSService(devSMS)
 
 	mockTokenService.generateTokenPairFunc = func(ctx context.Context, user *entity.User) (*TokenPair, error) {
 		return &TokenPair{
@@ -814,7 +839,7 @@ func TestAuthService_BindPhone(t *testing.T) {
 			name:    "bind phone to existing user with valid code",
 			userID:  tempUser.ID,
 			phone:   "13800138003",
-			code:    "123456", // Development code
+			code:    "", // Will be set after sending verify code
 			wantErr: false,
 		},
 		{
@@ -835,6 +860,13 @@ func TestAuthService_BindPhone(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Send verify code first if code is empty (needs to be generated)
+			if tt.code == "" && !tt.wantErr {
+				code, err := devSMS.SendVerifyCode(Context(), tt.phone)
+				require.NoError(t, err)
+				tt.code = code
+			}
+
 			result, err := service.BindPhone(Context(), tt.userID, tt.phone, tt.code)
 
 			if tt.wantErr {
@@ -859,8 +891,13 @@ func TestAuthService_BindPhone(t *testing.T) {
 }
 
 func TestAuthService_SendVerifyCode(t *testing.T) {
-	service, tdb, _, _, _ := setupAuthTest(t)
+	service, tdb, _, mockCache, _ := setupAuthTest(t)
 	defer tdb.Close()
+
+	// Set up SMS service with dev mode for testing
+	devSMSConfig := &config.SMSConfig{DevMode: true}
+	devSMS := sms.NewService(devSMSConfig, mockCache)
+	service.SetSMSService(devSMS)
 
 	// This test mainly verifies the method doesn't panic
 	// The actual SMS sending is mocked

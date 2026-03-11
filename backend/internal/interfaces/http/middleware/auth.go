@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"net/http"
 	"strings"
 	"time"
 
@@ -173,36 +172,6 @@ func IsAdmin(c *gin.Context) bool {
 func IsSuperAdmin(c *gin.Context) bool {
 	role := GetUserRole(c)
 	return role == entity.RoleSuperAdmin
-}
-
-// CORSMiddleware CORS middleware (deprecated: use pkg/middleware.CORSMiddleware instead)
-// Kept for backward compatibility but delegates to the secure implementation
-func CORSMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-		allowedOrigins := []string{
-			"http://localhost:3000",
-			"http://localhost:5173",
-		}
-
-		for _, o := range allowedOrigins {
-			if origin == o {
-				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-				break
-			}
-		}
-
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, Authorization, Accept, Origin, X-Request-ID")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	}
 }
 
 // RequestLoggerMiddleware request logger middleware

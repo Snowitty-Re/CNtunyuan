@@ -41,7 +41,7 @@ func NewService(cfg *config.SMSConfig, cache cache.Cache) Service {
 	s := &smsService{
 		config:  cfg,
 		cache:   cache,
-		devMode: cfg.AliyunAccessKeyID == "" && cfg.TencentSecretID == "",
+		devMode: cfg.DevMode,
 	}
 
 	// 根据配置选择提供商
@@ -63,10 +63,16 @@ func (s *smsService) SendVerifyCode(ctx context.Context, phone string) (string, 
 	// 生成6位验证码
 	code := generateVerifyCode()
 
-	// 缓存验证码，5分钟有效期
+	// 计算验证码有效期
+	expiry := 5 * time.Minute
+	if s.config.CodeExpiry > 0 {
+		expiry = time.Duration(s.config.CodeExpiry) * time.Second
+	}
+
+	// 缓存验证码
 	if s.cache != nil {
 		key := fmt.Sprintf("verify_code:%s", phone)
-		if err := s.cache.Set(ctx, key, code, 5*time.Minute); err != nil {
+		if err := s.cache.Set(ctx, key, code, expiry); err != nil {
 			logger.Error("Failed to cache verify code", logger.Err(err))
 		}
 	}
@@ -80,15 +86,18 @@ func (s *smsService) SendVerifyCode(ctx context.Context, phone string) (string, 
 		return code, nil
 	}
 
+	// 生产模式：必须有 provider
+	if s.provider == nil {
+		return "", fmt.Errorf("SMS provider not configured and dev mode is disabled")
+	}
+
 	// 生产模式：调用短信服务发送
-	if s.provider != nil {
-		params := map[string]string{
-			"code": code,
-		}
-		if err := s.provider.SendSMS(ctx, phone, s.config.SignName, "verify_code", params); err != nil {
-			logger.Error("Failed to send SMS", logger.Err(err), logger.String("phone", phone))
-			return "", err
-		}
+	params := map[string]string{
+		"code": code,
+	}
+	if err := s.provider.SendSMS(ctx, phone, s.config.SignName, "verify_code", params); err != nil {
+		logger.Error("Failed to send SMS", logger.Err(err), logger.String("phone", phone))
+		return "", err
 	}
 
 	logger.Info("Verify code sent", logger.String("phone", phone))
@@ -99,11 +108,6 @@ func (s *smsService) SendVerifyCode(ctx context.Context, phone string) (string, 
 func (s *smsService) VerifyCode(ctx context.Context, phone, code string) bool {
 	if code == "" {
 		return false
-	}
-
-	// 开发模式特殊验证码
-	if s.devMode && code == "123456" {
-		return true
 	}
 
 	if s.cache == nil {

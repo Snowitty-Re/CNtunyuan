@@ -11,6 +11,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/validator"
 	"github.com/google/uuid"
 )
 
@@ -19,11 +20,11 @@ var (
 	ErrInvalidStatus         = errors.New("invalid status")
 )
 
-// generateCaseNo 生成案件编号 (格式: CASE-YYYYMMDD-XXXX)
+// generateCaseNo 生成案件编号 (格式: CASE-YYYYMMDD-XXXXXXXX)
 func generateCaseNo() string {
 	now := time.Now()
 	dateStr := now.Format("20060102")
-	randomStr := uuid.New().String()[:4]
+	randomStr := uuid.New().String()[:8]
 	return fmt.Sprintf("CASE-%s-%s", dateStr, strings.ToUpper(randomStr))
 }
 
@@ -35,6 +36,23 @@ type MissingPersonAppService struct {
 // NewMissingPersonAppService 创建走失人员应用服务
 func NewMissingPersonAppService(mpRepo repository.MissingPersonRepository) *MissingPersonAppService {
 	return &MissingPersonAppService{mpRepo: mpRepo}
+}
+
+// createWithRetry 创建走失人员记录，遇到案件编号冲突时重试
+func (s *MissingPersonAppService) createWithRetry(ctx context.Context, mp *entity.MissingPerson) error {
+	for attempt := 0; attempt < 3; attempt++ {
+		err := s.mpRepo.Create(ctx, mp)
+		if err == nil {
+			return nil
+		}
+		// If unique constraint violation on case number, regenerate and retry
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			mp.CaseNo = generateCaseNo()
+			continue
+		}
+		return err
+	}
+	return fmt.Errorf("failed to create missing person after retries")
 }
 
 // Create 创建走失人员
@@ -73,7 +91,7 @@ func (s *MissingPersonAppService) Create(ctx context.Context, req *dto.CreateMis
 		mp.Urgency = entity.UrgencyLevelMedium
 	}
 
-	if err := s.mpRepo.Create(ctx, mp); err != nil {
+	if err := s.createWithRetry(ctx, mp); err != nil {
 		logger.Error("Failed to create missing person", logger.Err(err))
 		return nil, err
 	}
@@ -100,6 +118,8 @@ func (s *MissingPersonAppService) GetByID(ctx context.Context, id string) (*dto.
 
 // List 列表查询
 func (s *MissingPersonAppService) List(ctx context.Context, req *dto.MissingPersonListRequest) (*dto.MissingPersonListResponse, error) {
+	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
+
 	query := repository.NewMissingPersonQuery()
 	query.Page = req.Page
 	query.PageSize = req.PageSize

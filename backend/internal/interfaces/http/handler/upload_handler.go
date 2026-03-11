@@ -39,7 +39,7 @@ func (h *UploadHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *
 		upload.GET("/entity/:type/:id", h.GetFilesByEntity)
 		upload.DELETE("/:id", h.Delete)
 		upload.PUT("/:id/bind", h.BindToEntity)
-		upload.GET("/stats", h.GetStats)
+		upload.GET("/stats", middleware.RequireAdmin(), h.GetStats)
 	}
 }
 

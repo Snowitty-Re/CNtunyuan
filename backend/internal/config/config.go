@@ -22,6 +22,7 @@ type Config struct {
 	Log          LogConfig          `mapstructure:"log"`
 	Notification NotificationConfig `mapstructure:"notification"`
 	System       SystemConfig       `mapstructure:"system"`
+	Security     SecurityConfig     `mapstructure:"security"`
 }
 
 // ServerConfig 服务器配置
@@ -32,6 +33,13 @@ type ServerConfig struct {
 	ReadTimeout    int    `mapstructure:"read_timeout"`
 	WriteTimeout   int    `mapstructure:"write_timeout"`
 	MaxHeaderBytes int    `mapstructure:"max_header_bytes"`
+	CORSOrigins    string `mapstructure:"cors_origins"`
+}
+
+// SecurityConfig 安全配置
+type SecurityConfig struct {
+	MaxLoginAttempts int `mapstructure:"max_login_attempts"`
+	LockoutDuration  int `mapstructure:"lockout_duration"` // 锁定时长（秒）
 }
 
 // DatabaseType 数据库类型
@@ -139,6 +147,8 @@ type StorageConfig struct {
 type SMSConfig struct {
 	Provider           string `mapstructure:"provider"`
 	SignName           string `mapstructure:"sign_name"`
+	DevMode            bool   `mapstructure:"dev_mode"`
+	CodeExpiry         int    `mapstructure:"code_expiry"` // 验证码有效期（秒）
 	AliyunAccessKeyID  string `mapstructure:"aliyun_access_key_id"`
 	AliyunAccessSecret string `mapstructure:"aliyun_access_key_secret"`
 	TencentSecretID    string `mapstructure:"tencent_secret_id"`
@@ -260,6 +270,7 @@ func setDefaults() {
 	viper.SetDefault("server.read_timeout", 30)
 	viper.SetDefault("server.write_timeout", 30)
 	viper.SetDefault("server.max_header_bytes", 1048576)
+	viper.SetDefault("server.cors_origins", "http://localhost:3000,http://localhost:5173")
 
 	// Database defaults
 	viper.SetDefault("database.type", "postgres")
@@ -293,6 +304,8 @@ func setDefaults() {
 	// SMS defaults
 	viper.SetDefault("sms.provider", "aliyun")
 	viper.SetDefault("sms.sign_name", "团圆寻亲")
+	viper.SetDefault("sms.dev_mode", false)
+	viper.SetDefault("sms.code_expiry", 300)
 
 	// Email defaults
 	viper.SetDefault("email.enabled", false)
@@ -323,4 +336,8 @@ func setDefaults() {
 	viper.SetDefault("system.enable_wechat_login", true)
 	viper.SetDefault("system.enable_sms_login", false)
 	viper.SetDefault("system.rate_limit", 100)
+
+	// Security defaults
+	viper.SetDefault("security.max_login_attempts", 5)
+	viper.SetDefault("security.lockout_duration", 1800)
 }

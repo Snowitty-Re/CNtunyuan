@@ -7,6 +7,7 @@ server:
   read_timeout: 30
   write_timeout: 30
   max_header_bytes: 1048576
+  cors_origins: "http://localhost:3000,http://localhost:5173"  # 逗号分隔的允许源列表
 
 database:
   type: "postgres"  # 数据库类型: postgres/mysql
@@ -62,6 +63,8 @@ storage:
 sms:
   provider: "aliyun"    # aliyun/tencent
   sign_name: "团圆寻亲"
+  dev_mode: false       # 开发模式（true时不实际发送短信）
+  code_expiry: 300      # 验证码有效期（秒）
   aliyun_access_key_id: ""
   aliyun_access_secret: ""
   tencent_secret_id: ""
@@ -110,3 +113,7 @@ system:
   enable_sms_login: false
   admin_ips: ""
   rate_limit: 100
+
+security:
+  max_login_attempts: 5     # 最大登录失败次数
+  lockout_duration: 1800    # 锁定时长（秒），默认30分钟

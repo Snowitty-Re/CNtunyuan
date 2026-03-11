@@ -291,6 +291,25 @@ func (r *MissingPersonRepositoryImpl) IncrementViews(ctx context.Context, id str
 	return r.db.WithContext(ctx).Model(&entity.MissingPerson{}).Where("id = ?", id).UpdateColumn("views", gorm.Expr("views + 1")).Error
 }
 
+// CountResolvedByDateRange 按日期范围统计已解决案件数
+func (r *MissingPersonRepositoryImpl) CountResolvedByDateRange(ctx context.Context, start, end string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.MissingPerson{}).
+		Where("status IN (?, ?) AND updated_at >= ? AND updated_at <= ?",
+			entity.MissingStatusFound, entity.MissingStatusReunited, start, end).
+		Count(&count).Error
+	return count, err
+}
+
+// CountByReporter 统计用户上报的案件数
+func (r *MissingPersonRepositoryImpl) CountByReporter(ctx context.Context, reporterID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.MissingPerson{}).
+		Where("reporter_id = ?", reporterID).
+		Count(&count).Error
+	return count, err
+}
+
 // FindByID 根据ID查找
 func (r *MissingPersonRepositoryImpl) FindByID(ctx context.Context, id string) (*entity.MissingPerson, error) {
 	var person entity.MissingPerson

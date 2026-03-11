@@ -306,15 +306,16 @@ func UserRateLimitMiddleware(rps float64, burst int) gin.HandlerFunc {
 }
 
 // CORSMiddleware CORS 中间件
-func CORSMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		origin := c.Request.Header.Get("Origin")
-
-		// 允许的源（生产环境应该配置具体域名）
-		allowedOrigins := []string{
+func CORSMiddleware(allowedOrigins ...string) gin.HandlerFunc {
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = []string{
 			"http://localhost:3000",
 			"http://localhost:5173",
 		}
+	}
+
+	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
 
 		allowed := false
 		for _, o := range allowedOrigins {

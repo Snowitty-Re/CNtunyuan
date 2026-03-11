@@ -22,6 +22,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/router"
+	"github.com/Snowitty-Re/CNtunyuan/internal/task"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -125,9 +126,10 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	// 创建短信服务并注入到认证服务
 	smsService := sms.NewService(&cfg.SMS, redisCache)
 	authService.SetSMSService(smsService)
+	authService.SetSecurityConfig(&cfg.Security)
 
 	// 创建应用服务
-	userService := service.NewUserAppService(userRepo)
+	userService := service.NewUserAppService(userRepo, taskRepo, mpRepo)
 	orgService := service.NewOrganizationAppService(orgRepo)
 	mpService := service.NewMissingPersonAppService(mpRepo)
 	dialectService := service.NewDialectAppService(dialectRepo)
@@ -184,10 +186,10 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	r.Setup()
 
 	// 启动定时任务调度器
-	// scheduler := task.NewScheduler(taskRepo, mpRepo, userRepo, auditRepo)
-	// if err := scheduler.Start(); err != nil {
-	// 	logger.Error("Failed to start task scheduler", logger.Err(err))
-	// }
+	scheduler := task.NewScheduler(taskRepo, mpRepo, userRepo, auditRepo)
+	if err := scheduler.Start(); err != nil {
+		logger.Error("Failed to start task scheduler", logger.Err(err))
+	}
 
 	return &Container{
 		Config:               cfg,
