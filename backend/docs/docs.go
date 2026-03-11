@@ -8573,8 +8573,6 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "团圆寻亲志愿者系统后端 API 文档",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
-	LeftDelim:        "{{",
-	RightDelim:       "}}",
 }
 
 func init() {
