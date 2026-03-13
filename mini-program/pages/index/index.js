@@ -438,7 +438,7 @@ Page({
    * 查看地图
    */
   onViewMap() {
-    wx.switchTab({ url: '/pages/map/index' })
+    wx.navigateTo({ url: '/pages/map/index' })
   },
 
   /**

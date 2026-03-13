@@ -1,233 +1,284 @@
 <view class="task-detail-page">
   <!-- 加载中 -->
   <view class="loading-wrapper" wx:if="{{loading}}">
-    <view class="spinner"></view>
-    <text>加载中...</text>
+    <view class="loading-ring">
+      <view class="ring-segment"></view>
+    </view>
+    <text class="loading-text">加载中...</text>
   </view>
 
   <!-- 内容区 -->
   <block wx:elif="{{task}}">
-    <scroll-view class="content" scroll-y enhanced show-scrollbar="{{false}}">
-      <!-- 任务头部卡片 -->
-      <view class="header-card">
-        <view class="header-tags">
-          <view class="status-badge status-{{task.status}}">
-            {{statusMap[task.status] || task.status}}
+    <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+
+      <!-- 状态流程条 -->
+      <view class="status-flow-bar">
+        <view class="flow-bg-decor"></view>
+        <view class="flow-steps">
+          <view class="flow-step {{task.status === 'pending' || task.status === 'processing' || task.status === 'completed' ? 'done' : ''}} {{task.status === 'pending' ? 'current' : ''}}">
+            <view class="step-dot">
+              <view class="dot-fill"></view>
+            </view>
+            <text class="step-label">待分配</text>
           </view>
-          <view class="priority-badge priority-{{task.priority}}">
-            {{priorityMap[task.priority]}}
+          <view class="flow-connector {{task.status === 'processing' || task.status === 'completed' ? 'done' : ''}}">
+            <view class="connector-fill"></view>
+          </view>
+          <view class="flow-step {{task.status === 'processing' || task.status === 'completed' ? 'done' : ''}} {{task.status === 'processing' ? 'current' : ''}}">
+            <view class="step-dot">
+              <view class="dot-fill"></view>
+            </view>
+            <text class="step-label">进行中</text>
+          </view>
+          <view class="flow-connector {{task.status === 'completed' ? 'done' : ''}}">
+            <view class="connector-fill"></view>
+          </view>
+          <view class="flow-step {{task.status === 'completed' ? 'done' : ''}} {{task.status === 'completed' ? 'current' : ''}}">
+            <view class="step-dot">
+              <view class="dot-fill"></view>
+            </view>
+            <text class="step-label">已完成</text>
           </view>
         </view>
-        <view class="task-title">{{task.title}}</view>
-        <view class="task-meta">
-          <text class="meta-item">创建时间：{{task.created_at}}</text>
-          <text class="meta-item overdue" wx:if="{{task.isOverdue}}">已逾期</text>
+        <!-- 取消状态特殊显示 -->
+        <view class="cancelled-badge" wx:if="{{task.status === 'cancelled'}}">
+          <text class="cancelled-text">已取消</text>
         </view>
       </view>
 
-      <!-- 任务信息 -->
-      <view class="section-card">
-        <view class="section-title">
-          <text class="title-icon">📋</text>
-          <text>任务信息</text>
+      <!-- 标题卡片 -->
+      <view class="title-card">
+        <view class="title-card-header">
+          <view class="title-badges">
+            <view class="badge-status badge-{{task.status}}">{{statusMap[task.status] || task.status}}</view>
+            <view class="badge-priority badge-pri-{{task.priority}}">{{priorityMap[task.priority]}}</view>
+          </view>
+          <text class="overdue-flag" wx:if="{{task.isOverdue}}">已逾期</text>
         </view>
-        <view class="info-list">
-          <view class="info-item">
-            <text class="label">任务编号</text>
-            <text class="value">{{task.code || task.id}}</text>
+        <text class="title-text">{{task.title}}</text>
+        <text class="title-time">创建于 {{task.created_at}}</text>
+      </view>
+
+      <!-- 任务信息卡片 -->
+      <view class="info-card">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-blue">
+            <text class="section-icon-char">i</text>
           </view>
-          <view class="info-item" wx:if="{{task.deadline}}">
-            <text class="label">截止时间</text>
-            <text class="value {{task.isOverdue ? 'overdue' : ''}}">{{task.deadline}}</text>
+          <text class="section-heading">任务信息</text>
+        </view>
+        <view class="info-rows">
+          <view class="info-row">
+            <text class="info-key">任务编号</text>
+            <text class="info-val">{{task.code || task.id}}</text>
           </view>
-          <view class="info-item" wx:if="{{task.address}}">
-            <text class="label">任务地点</text>
-            <view class="value location" bindtap="viewLocation">
-              <text class="iconfont icon-location"></text>
-              <text class="location-text">{{task.address}}</text>
+          <view class="info-row" wx:if="{{task.deadline}}">
+            <text class="info-key">截止时间</text>
+            <text class="info-val {{task.isOverdue ? 'val-danger' : ''}}">{{task.deadline}}</text>
+          </view>
+          <view class="info-row" wx:if="{{task.address}}">
+            <text class="info-key">任务地点</text>
+            <view class="info-val info-val-link" bindtap="viewLocation">
+              <text class="link-text">{{task.address}}</text>
+              <text class="link-arrow">></text>
             </view>
           </view>
         </view>
       </view>
 
-      <!-- 执行人信息 -->
-      <view class="section-card" wx:if="{{task.assignee}}">
-        <view class="section-title">
-          <text class="title-icon">👤</text>
-          <text>执行人</text>
-        </view>
-        <view class="assignee-card" bindtap="viewAssignee">
-          <image class="avatar" src="{{task.assignee.avatar || '/assets/images/default-avatar.png'}}" mode="aspectFill" />
-          <view class="info">
-            <view class="name">{{task.assignee.nickname || task.assignee.name}}</view>
-            <view class="phone" wx:if="{{task.assignee.phone}}">{{task.assignee.phone}}</view>
+      <!-- 执行人卡片 -->
+      <view class="info-card" wx:if="{{task.assignee}}">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-green">
+            <text class="section-icon-char">U</text>
           </view>
-          <text class="iconfont icon-arrow-right"></text>
+          <text class="section-heading">执行人</text>
         </view>
-      </view>
-      <view class="section-card" wx:elif="{{task.status === 'pending'}}">
-        <view class="section-title">
-          <text class="title-icon">👤</text>
-          <text>执行人</text>
-        </view>
-        <view class="unassigned-tip">
-          <text class="iconfont icon-info"></text>
-          <text>暂无执行人，等待分配</text>
-        </view>
-      </view>
-
-      <!-- 任务描述 -->
-      <view class="section-card">
-        <view class="section-title">
-          <text class="title-icon">📝</text>
-          <text>任务描述</text>
-        </view>
-        <view class="description">{{task.description || '暂无描述'}}</view>
-      </view>
-
-      <!-- 进度信息 -->
-      <view class="section-card" wx:if="{{task.progress !== undefined && task.progress !== null}}">
-        <view class="section-title">
-          <text class="title-icon">📊</text>
-          <text>当前进度</text>
-        </view>
-        <view class="progress-wrapper">
-          <view class="progress-bar">
-            <view class="progress-fill" style="width: {{task.progress}}%"></view>
+        <view class="assignee-row" bindtap="viewAssignee">
+          <image class="assignee-avatar" src="{{task.assignee.avatar || '/assets/images/default-avatar.png'}}" mode="aspectFill" />
+          <view class="assignee-info">
+            <text class="assignee-name">{{task.assignee.nickname || task.assignee.name}}</text>
+            <text class="assignee-phone" wx:if="{{task.assignee.phone}}">{{task.assignee.phone}}</text>
           </view>
-          <view class="progress-info">
-            <text class="progress-text">{{task.progress}}%</text>
-            <text class="progress-status" wx:if="{{task.progress === 100}}">已完成</text>
+          <view class="assignee-arrow">
+            <text class="arrow-char">></text>
           </view>
         </view>
       </view>
-
-      <!-- 关联案件 -->
-      <view class="section-card" wx:if="{{task.missing_person_id}}">
-        <view class="section-title">
-          <text class="title-icon">🔗</text>
-          <text>关联案件</text>
+      <view class="info-card" wx:elif="{{task.status === 'pending'}}">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-green">
+            <text class="section-icon-char">U</text>
+          </view>
+          <text class="section-heading">执行人</text>
         </view>
-        <view class="case-card" bindtap="goToCase">
-          <view class="case-info">
-            <image class="case-avatar" src="{{(task.missing_person && task.missing_person.photo) || '/assets/images/default-avatar.png'}}" mode="aspectFill" />
-            <view class="case-detail">
-              <view class="case-name">{{(task.missing_person && task.missing_person.name) || '查看案件详情'}}</view>
-              <view class="case-desc" wx:if="{{task.missing_person}}">
-                {{task.missing_person.age}}岁 · {{task.missing_person.last_seen_location}}
-              </view>
+        <view class="unassigned-notice">
+          <view class="notice-icon-box">
+            <text class="notice-icon-char">?</text>
+          </view>
+          <text class="notice-text">暂无执行人，等待分配</text>
+        </view>
+      </view>
+
+      <!-- 任务描述卡片 -->
+      <view class="info-card">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-orange">
+            <text class="section-icon-char">D</text>
+          </view>
+          <text class="section-heading">任务描述</text>
+        </view>
+        <view class="desc-content">{{task.description || '暂无描述'}}</view>
+      </view>
+
+      <!-- 进度卡片 -->
+      <view class="info-card" wx:if="{{task.progress !== undefined && task.progress !== null}}">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-purple">
+            <text class="section-icon-char">%</text>
+          </view>
+          <text class="section-heading">当前进度</text>
+        </view>
+        <view class="progress-display">
+          <view class="progress-track">
+            <view class="progress-fill" style="width: {{task.progress}}%">
+              <view class="progress-glow"></view>
             </view>
           </view>
-          <text class="iconfont icon-arrow-right"></text>
+          <view class="progress-meta">
+            <text class="progress-percent">{{task.progress}}%</text>
+            <text class="progress-done-label" wx:if="{{task.progress === 100}}">已完成</text>
+          </view>
         </view>
       </view>
 
-      <!-- 任务日志 -->
-      <view class="section-card">
-        <view class="section-title">
-          <text class="title-icon">📜</text>
-          <text>操作记录</text>
+      <!-- 关联案件卡片 -->
+      <view class="info-card" wx:if="{{task.missing_person_id}}">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-yellow">
+            <text class="section-icon-char">L</text>
+          </view>
+          <text class="section-heading">关联案件</text>
         </view>
-        <view class="logs-list">
-          <view class="log-item" wx:for="{{logs}}" wx:key="id">
-            <view class="log-dot"></view>
-            <view class="log-content">
-              <view class="log-header">
-                <text class="log-action">{{item.action}}</text>
-                <text class="log-time">{{item.created_at}}</text>
+        <view class="case-link-card" bindtap="goToCase">
+          <image class="case-photo" src="{{(task.missing_person && task.missing_person.photo) || '/assets/images/default-avatar.png'}}" mode="aspectFill" />
+          <view class="case-info-col">
+            <text class="case-person-name">{{(task.missing_person && task.missing_person.name) || '查看案件详情'}}</text>
+            <text class="case-detail-text" wx:if="{{task.missing_person}}">
+              {{task.missing_person.age}}岁 / {{task.missing_person.missing_location || '未知地点'}}
+            </text>
+          </view>
+          <view class="case-go-arrow">
+            <text class="arrow-char">></text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 操作记录 - 时间线 -->
+      <view class="info-card timeline-card">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-gray">
+            <text class="section-icon-char">H</text>
+          </view>
+          <text class="section-heading">操作记录</text>
+          <text class="log-count" wx:if="{{logs.length > 0}}">{{logs.length}}条</text>
+        </view>
+
+        <view class="timeline" wx:if="{{logs.length > 0}}">
+          <view class="timeline-track"></view>
+          <view class="timeline-item" wx:for="{{logs}}" wx:key="id">
+            <view class="tl-dot-wrap">
+              <view class="tl-dot {{index === 0 ? 'tl-dot-active' : ''}}"></view>
+            </view>
+            <view class="tl-content">
+              <view class="tl-header">
+                <text class="tl-action">{{item.action}}</text>
+                <text class="tl-time">{{item.created_at}}</text>
               </view>
-              <view class="log-desc" wx:if="{{item.description}}">{{item.description}}</view>
-              <view class="log-user" wx:if="{{item.operator}}">
+              <text class="tl-desc" wx:if="{{item.description}}">{{item.description}}</text>
+              <text class="tl-operator" wx:if="{{item.operator}}">
                 操作人：{{item.operator.nickname || item.operator.name}}
-              </view>
+              </text>
             </view>
           </view>
-          <view class="empty-logs" wx:if="{{logs.length === 0}}">
-            <text>暂无操作记录</text>
-          </view>
+        </view>
+
+        <view class="empty-logs" wx:if="{{logs.length === 0}}">
+          <text class="empty-logs-text">暂无操作记录</text>
         </view>
       </view>
 
       <!-- 底部留白 -->
-      <view class="safe-bottom" style="height: 160rpx;"></view>
+      <view style="height: 180rpx;"></view>
     </scroll-view>
 
     <!-- 底部操作栏 -->
-    <view class="action-bar" wx:if="{{task.status !== 'completed' && task.status !== 'cancelled'}}">
-      <!-- 管理者操作 -->
-      <block wx:if="{{isManager}}">
-        <!-- 待分配状态：分配任务、取消任务 -->
-        <block wx:if="{{task.status === 'pending'}}">
-          <view class="action-group">
-            <button class="action-btn secondary" bindtap="cancelTask" loading="{{actionLoading}}">
-              取消任务
-            </button>
-            <button class="action-btn primary" bindtap="assignTask" loading="{{actionLoading}}">
-              分配任务
-            </button>
-          </view>
+    <view class="bottom-action-bar" wx:if="{{task.status !== 'completed' && task.status !== 'cancelled'}}">
+      <view class="action-bar-inner">
+        <!-- 管理者操作 -->
+        <block wx:if="{{isManager}}">
+          <block wx:if="{{task.status === 'pending'}}">
+            <view class="bar-btn-group">
+              <button class="bar-btn btn-outline" bindtap="cancelTask" loading="{{actionLoading}}">取消任务</button>
+              <button class="bar-btn btn-primary" bindtap="assignTask" loading="{{actionLoading}}">分配任务</button>
+            </view>
+          </block>
+          <block wx:elif="{{task.status === 'processing'}}">
+            <button class="bar-btn btn-danger full-width" bindtap="cancelTask" loading="{{actionLoading}}">取消任务</button>
+          </block>
         </block>
-        <!-- 进行中状态：可取消 -->
-        <block wx:elif="{{task.status === 'processing'}}">
-          <button class="action-btn warning" bindtap="cancelTask" loading="{{actionLoading}}">
-            取消任务
-          </button>
-        </block>
-      </block>
 
-      <!-- 执行人操作 -->
-      <block wx:if="{{isAssignee}}">
-        <!-- 待分配/已分配状态：开始任务 -->
-        <block wx:if="{{task.status === 'pending'}}">
-          <button class="action-btn primary" bindtap="startTask" loading="{{actionLoading}}">
-            开始任务
-          </button>
+        <!-- 执行人操作 -->
+        <block wx:if="{{isAssignee}}">
+          <block wx:if="{{task.status === 'pending'}}">
+            <button class="bar-btn btn-primary full-width" bindtap="startTask" loading="{{actionLoading}}">开始任务</button>
+          </block>
+          <block wx:elif="{{task.status === 'processing'}}">
+            <view class="bar-btn-group">
+              <button class="bar-btn btn-outline" bindtap="showProgressModal" loading="{{actionLoading}}">更新进度</button>
+              <button class="bar-btn btn-success" bindtap="completeTask" loading="{{actionLoading}}">完成任务</button>
+            </view>
+          </block>
         </block>
-        <!-- 进行中状态：更新进度、完成任务 -->
-        <block wx:elif="{{task.status === 'processing'}}">
-          <view class="action-group">
-            <button class="action-btn secondary" bindtap="showProgressModal" loading="{{actionLoading}}">
-              更新进度
-            </button>
-            <button class="action-btn success" bindtap="completeTask" loading="{{actionLoading}}">
-              完成任务
-            </button>
-          </view>
-        </block>
-      </block>
 
-      <!-- 非执行人提示 -->
-      <block wx:if="{{!isAssignee && !isManager && task.status === 'pending'}}">
-        <button class="action-btn disabled" disabled>
-          等待分配
-        </button>
-      </block>
+        <!-- 非执行人提示 -->
+        <block wx:if="{{!isAssignee && !isManager && task.status === 'pending'}}">
+          <button class="bar-btn btn-disabled full-width" disabled>等待分配</button>
+        </block>
+      </view>
     </view>
   </block>
 
   <!-- 进度更新弹窗 -->
-  <view class="modal" wx:if="{{showProgressModal}}" bindtap="hideProgressModal">
-    <view class="modal-content" catchtap="stopPropagation">
-      <view class="modal-header">
+  <view class="modal-overlay" wx:if="{{showProgressModal}}" bindtap="hideProgressModal">
+    <view class="modal-box" catchtap="stopPropagation">
+      <view class="modal-top">
         <text class="modal-title">更新进度</text>
-        <text class="modal-close" bindtap="hideProgressModal">×</text>
+        <view class="modal-close-btn" bindtap="hideProgressModal">
+          <text class="close-x">x</text>
+        </view>
       </view>
       <view class="modal-body">
-        <view class="progress-value">{{progressInput}}%</view>
-        <slider 
-          value="{{progressInput}}" 
-          min="0" 
-          max="100" 
+        <text class="modal-progress-val">{{progressInput}}%</text>
+        <view class="modal-progress-ring">
+          <view class="ring-track"></view>
+        </view>
+        <slider
+          value="{{progressInput}}"
+          min="0"
+          max="100"
           step="5"
           activeColor="#FF8C42"
-          block-size="24"
+          backgroundColor="#F0E6DD"
+          block-size="28"
+          block-color="#FF8C42"
           bindchange="onProgressChange"
         />
-        <view class="progress-hint">拖动滑块调整任务进度</view>
+        <text class="modal-hint">拖动滑块调整任务进度</text>
       </view>
-      <view class="modal-footer">
-        <button class="btn secondary" bindtap="hideProgressModal">取消</button>
-        <button class="btn primary" bindtap="submitProgress" loading="{{actionLoading}}">确定</button>
+      <view class="modal-actions">
+        <button class="modal-btn modal-btn-cancel" bindtap="hideProgressModal">取消</button>
+        <button class="modal-btn modal-btn-confirm" bindtap="submitProgress" loading="{{actionLoading}}">确定</button>
       </view>
     </view>
   </view>

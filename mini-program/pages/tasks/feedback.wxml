@@ -1,71 +1,116 @@
-<view class="container">
-  <view class="task-info" wx:if="{{task}}">
-    <text class="task-title">{{task.title}}</text>
-    <text class="task-desc">{{task.description}}</text>
+<view class="feedback-page">
+  <!-- 任务信息头部 -->
+  <view class="task-banner" wx:if="{{task}}">
+    <view class="banner-decor"></view>
+    <view class="banner-content">
+      <text class="banner-label">提交反馈</text>
+      <text class="banner-title">{{task.title}}</text>
+      <text class="banner-desc" wx:if="{{task.description}}">{{task.description}}</text>
+    </view>
   </view>
 
-  <view class="form-section">
-    <view class="form-group">
-      <view class="form-label required">反馈内容</view>
-      <textarea 
-        class="form-textarea"
-        placeholder="请详细描述任务执行情况、遇到的问题和解决方案..."
-        maxlength="500"
-        value="{{feedback}}"
-        bindinput="onFeedbackInput"
-      />
-      <view class="word-count">{{feedback.length}}/500</view>
+  <!-- 表单区域 -->
+  <view class="form-area">
+    <!-- 反馈内容 -->
+    <view class="form-card">
+      <view class="form-card-header">
+        <view class="form-icon-box icon-orange">
+          <text class="form-icon-char">F</text>
+        </view>
+        <text class="form-card-title">反馈内容</text>
+        <text class="form-required-tag">必填</text>
+      </view>
+      <view class="textarea-container">
+        <textarea
+          class="form-textarea"
+          placeholder="请详细描述任务执行情况、遇到的问题和解决方案..."
+          placeholder-class="placeholder-style"
+          maxlength="500"
+          value="{{feedback}}"
+          bindinput="onFeedbackInput"
+          auto-height
+        />
+        <view class="textarea-footer">
+          <view class="char-progress">
+            <view class="char-progress-fill" style="width: {{(feedback.length || 0) / 5}}%"></view>
+          </view>
+          <text class="char-count">{{feedback.length || 0}}/500</text>
+        </view>
+      </view>
     </view>
 
-    <view class="form-group">
-      <view class="form-label">任务结果</view>
-      <textarea 
-        class="form-textarea"
-        placeholder="请简要说明任务最终结果..."
-        maxlength="200"
-        value="{{result}}"
-        bindinput="onResultInput"
-      />
+    <!-- 任务结果 -->
+    <view class="form-card">
+      <view class="form-card-header">
+        <view class="form-icon-box icon-green">
+          <text class="form-icon-char">R</text>
+        </view>
+        <text class="form-card-title">任务结果</text>
+        <text class="form-optional-tag">选填</text>
+      </view>
+      <view class="textarea-container">
+        <textarea
+          class="form-textarea form-textarea-short"
+          placeholder="请简要说明任务最终结果..."
+          placeholder-class="placeholder-style"
+          maxlength="200"
+          value="{{result}}"
+          bindinput="onResultInput"
+          auto-height
+        />
+      </view>
     </view>
 
-    <view class="form-group">
-      <view class="form-label">上传图片</view>
-      <view class="image-list">
-        <view 
-          class="image-item"
+    <!-- 上传图片 -->
+    <view class="form-card">
+      <view class="form-card-header">
+        <view class="form-icon-box icon-blue">
+          <text class="form-icon-char">P</text>
+        </view>
+        <text class="form-card-title">上传图片</text>
+        <text class="form-optional-tag">选填</text>
+      </view>
+      <view class="photo-grid">
+        <view
+          class="photo-item"
           wx:for="{{photos}}"
           wx:key="index"
         >
-          <image 
-            src="{{item}}" 
+          <image
+            class="photo-img"
+            src="{{item}}"
             mode="aspectFill"
             data-url="{{item}}"
             bindtap="previewImage"
           />
-          <text 
-            class="delete-icon"
+          <view
+            class="photo-delete"
             data-index="{{index}}"
             catchtap="deleteImage"
-          >×</text>
+          >
+            <text class="delete-char">x</text>
+          </view>
         </view>
-        
-        <view class="upload-btn" bindtap="chooseImage" wx:if="{{photos.length < 9}}">
-          <text class="upload-icon">+</text>
-          <text class="upload-text">{{photos.length}}/9</text>
+
+        <view class="photo-add" bindtap="chooseImage" wx:if="{{photos.length < 9}}">
+          <view class="add-icon-wrap">
+            <text class="add-icon-char">+</text>
+          </view>
+          <text class="add-count">{{photos.length}}/9</text>
         </view>
       </view>
     </view>
   </view>
 
-  <view class="submit-section">
-    <button 
-      class="submit-btn"
-      type="primary"
+  <!-- 提交按钮 -->
+  <view class="submit-area">
+    <button
+      class="submit-btn {{loading ? 'btn-loading' : ''}}"
       bindtap="submitFeedback"
-      loading="{{loading}}"
       disabled="{{loading}}"
     >
-      提交反馈
+      <view class="btn-loading-ring" wx:if="{{loading}}"></view>
+      <text class="btn-label">{{loading ? '提交中...' : '提交反馈'}}</text>
     </button>
   </view>
 </view>

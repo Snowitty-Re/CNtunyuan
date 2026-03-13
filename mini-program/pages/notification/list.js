@@ -1,10 +1,12 @@
+const services = require('../../services/index')
+const { formatTimeAgo } = require('../../utils/util')
+
+const STORAGE_KEY = 'notification_read_status'
+
 Page({
   data: {
     notifications: [],
     loading: false,
-    hasMore: true,
-    page: 1,
-    pageSize: 20,
     unreadCount: 0
   },
 
@@ -16,30 +18,84 @@ Page({
     this.loadNotifications()
   },
 
-  // 加载通知列表
-  async loadNotifications(refresh = false) {
+  onPullDownRefresh() {
+    this.loadNotifications().finally(() => {
+      wx.stopPullDownRefresh()
+    })
+  },
+
+  // 加载通知（从任务和案件动态生成本地通知）
+  async loadNotifications() {
     if (this.data.loading) return
-    
-    const page = refresh ? 1 : this.data.page
-    
     this.setData({ loading: true })
-    
+
     try {
-      // TODO: 接入后端通知API
-      // const result = await services.notification.getList({
-      //   page,
-      //   page_size: this.data.pageSize
-      // })
-      
-      // 模拟数据
-      const mockData = this.getMockNotifications()
-      
+      const notifications = []
+      const readStatus = wx.getStorageSync(STORAGE_KEY) || {}
+
+      // 获取最近任务变更作为通知
+      try {
+        const taskResult = await services.task.getMyTasks({ page: 1, page_size: 10 })
+        const tasks = taskResult.list || taskResult || []
+        tasks.forEach(task => {
+          notifications.push({
+            id: `task_${task.id}`,
+            type: 'task',
+            title: this.getTaskNotificationTitle(task),
+            content: task.title || '任务更新',
+            is_read: !!readStatus[`task_${task.id}`],
+            created_at: task.updated_at || task.created_at,
+            target_url: `/pages/tasks/detail?id=${task.id}`
+          })
+        })
+      } catch (e) {
+        console.log('获取任务通知失败:', e)
+      }
+
+      // 获取最近案件变更作为通知
+      try {
+        const caseResult = await services.missingPerson.getList({ page: 1, page_size: 5 })
+        const cases = caseResult.list || caseResult || []
+        cases.forEach(item => {
+          if (item.status === 'found' || item.status === 'reunited') {
+            notifications.push({
+              id: `case_${item.id}`,
+              type: 'case',
+              title: item.status === 'found' ? '案件有新进展' : '团圆喜讯',
+              content: `${item.name} - ${item.status === 'found' ? '已找到' : '已团圆'}`,
+              is_read: !!readStatus[`case_${item.id}`],
+              created_at: item.updated_at || item.created_at,
+              target_url: `/pages/cases/detail?id=${item.id}`
+            })
+          }
+        })
+      } catch (e) {
+        console.log('获取案件通知失败:', e)
+      }
+
+      // 添加系统欢迎通知
+      notifications.push({
+        id: 'system_welcome',
+        type: 'system',
+        title: '系统通知',
+        content: '欢迎使用团圆寻亲志愿者系统，通知功能即将全面接入',
+        is_read: !!readStatus['system_welcome'],
+        created_at: new Date().toISOString(),
+        target_url: ''
+      })
+
+      // 按时间排序
+      notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+      // 格式化时间
+      notifications.forEach(n => {
+        n.timeAgo = formatTimeAgo(n.created_at)
+      })
+
       this.setData({
-        notifications: refresh ? mockData : [...this.data.notifications, ...mockData],
-        page: page + 1,
-        hasMore: mockData.length === this.data.pageSize,
+        notifications,
         loading: false,
-        unreadCount: mockData.filter(n => !n.is_read).length
+        unreadCount: notifications.filter(n => !n.is_read).length
       })
     } catch (error) {
       console.error('加载通知失败:', error)
@@ -47,120 +103,67 @@ Page({
     }
   },
 
-  // 模拟数据
-  getMockNotifications() {
-    const types = ['task', 'case', 'system']
-    const titles = ['新任务分配', '案件状态更新', '系统通知']
-    const contents = [
-      '您有一个新的寻人任务待处理',
-      '您关注的案件有了新的进展',
-      '欢迎使用团圆寻亲志愿者系统'
-    ]
-    
-    return Array.from({ length: 10 }, (_, i) => ({
-      id: `notification_${i}`,
-      type: types[i % 3],
-      title: titles[i % 3],
-      content: contents[i % 3],
-      is_read: i > 2,
-      created_at: new Date(Date.now() - i * 3600000).toISOString()
-    }))
-  },
-
-  // 下拉刷新
-  onPullDownRefresh() {
-    this.loadNotifications(true).finally(() => {
-      wx.stopPullDownRefresh()
-    })
-  },
-
-  // 加载更多
-  onReachBottom() {
-    if (this.data.hasMore && !this.data.loading) {
-      this.loadNotifications()
+  // 获取任务通知标题
+  getTaskNotificationTitle(task) {
+    const statusMap = {
+      pending: '新任务待处理',
+      assigned: '任务已分配给您',
+      processing: '任务进行中',
+      completed: '任务已完成',
+      cancelled: '任务已取消'
     }
+    return statusMap[task.status] || '任务更新'
   },
 
   // 点击通知
   onNotificationTap(e) {
     const notification = e.currentTarget.dataset.item
-    
-    // 标记为已读
     this.markAsRead(notification.id)
-    
-    // 根据类型跳转
-    switch (notification.type) {
-      case 'task':
-        wx.navigateTo({ url: '/pages/tasks/my' })
-        break
-      case 'case':
-        wx.navigateTo({ url: '/pages/cases/list' })
-        break
+
+    if (notification.target_url) {
+      wx.navigateTo({ url: notification.target_url })
     }
   },
 
   // 标记为已读
-  async markAsRead(id) {
+  markAsRead(id) {
+    const readStatus = wx.getStorageSync(STORAGE_KEY) || {}
+    readStatus[id] = true
+    wx.setStorageSync(STORAGE_KEY, readStatus)
+
     const notifications = this.data.notifications.map(n => {
-      if (n.id === id) {
-        return { ...n, is_read: true }
-      }
+      if (n.id === id) return { ...n, is_read: true }
       return n
     })
-    
-    this.setData({ 
+
+    this.setData({
       notifications,
       unreadCount: notifications.filter(n => !n.is_read).length
     })
-    
-    // TODO: 调用后端API标记已读
   },
 
   // 全部标记为已读
-  async markAllAsRead() {
-    const notifications = this.data.notifications.map(n => ({
-      ...n,
-      is_read: true
-    }))
-    
-    this.setData({ 
-      notifications,
-      unreadCount: 0
+  markAllAsRead() {
+    const readStatus = wx.getStorageSync(STORAGE_KEY) || {}
+    this.data.notifications.forEach(n => {
+      readStatus[n.id] = true
     })
-    
-    wx.showToast({
-      title: '已标记为已读',
-      icon: 'success'
-    })
-  },
+    wx.setStorageSync(STORAGE_KEY, readStatus)
 
-  // 删除通知
-  async deleteNotification(e) {
-    const id = e.currentTarget.dataset.id
-    
-    const confirm = await wx.showModal({
-      title: '确认删除',
-      content: '确定要删除这条通知吗？'
-    })
-    
-    if (confirm.confirm) {
-      const notifications = this.data.notifications.filter(n => n.id !== id)
-      this.setData({ notifications })
-    }
+    const notifications = this.data.notifications.map(n => ({ ...n, is_read: true }))
+    this.setData({ notifications, unreadCount: 0 })
+    wx.showToast({ title: '已全部标记已读', icon: 'success' })
   },
 
   // 清空所有通知
   async clearAll() {
-    const confirm = await wx.showModal({
+    const res = await wx.showModal({
       title: '确认清空',
       content: '确定要清空所有通知吗？'
     })
-    
-    if (confirm.confirm) {
-      this.setData({ 
-        notifications: [],
-        unreadCount: 0
-      })
+    if (res.confirm) {
+      wx.removeStorageSync(STORAGE_KEY)
+      this.setData({ notifications: [], unreadCount: 0 })
     }
   }
 })

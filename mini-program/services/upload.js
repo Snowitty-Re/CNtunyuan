@@ -15,13 +15,13 @@ module.exports = {
   },
 
   /**
-   * 批量上传
+   * 批量上传（逐个调用单文件上传接口）
    * @param {Array} filePaths 文件路径数组
    * @param {Object} formData 附加数据
    */
   uploadBatch(filePaths, formData = {}) {
-    const uploadPromises = filePaths.map(path => 
-      uploadFile('/upload/batch', path, 'files', formData)
+    const uploadPromises = filePaths.map(path =>
+      uploadFile('/upload', path, 'file', formData)
     )
     return Promise.all(uploadPromises)
   },
@@ -32,6 +32,31 @@ module.exports = {
    */
   getById(id) {
     return get(`/upload/${id}`)
+  },
+
+  /**
+   * 下载文件
+   * @param {String} id 文件ID
+   */
+  download(id) {
+    return new Promise((resolve, reject) => {
+      const token = wx.getStorageSync('token') || ''
+      const API_BASE_URL = 'https://cntuanyuan.com/api/v1'
+      wx.downloadFile({
+        url: `${API_BASE_URL}/upload/${id}/download`,
+        header: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        success: (res) => {
+          if (res.statusCode === 200) {
+            resolve(res.tempFilePath)
+          } else {
+            reject(new Error(`Download failed: ${res.statusCode}`))
+          }
+        },
+        fail: reject
+      })
+    })
   },
 
   /**

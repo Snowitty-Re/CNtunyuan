@@ -170,6 +170,26 @@
 /* 停止按钮 */
 .icon-stop::before { content: "⏹️"; }
 
+/* 箭头下 */
+.icon-arrow-down::before,
+.iconfont.icon-arrow-down::before { content: "↓"; }
+
+/* 心 */
+.icon-heart::before,
+.iconfont.icon-heart::before { content: "❤️"; }
+
+/* 复制 */
+.icon-copy::before,
+.iconfont.icon-copy::before { content: "📋"; }
+
+/* 列表 */
+.icon-list::before,
+.iconfont.icon-list::before { content: "📃"; }
+
+/* 导航 */
+.icon-navigation::before,
+.iconfont.icon-navigation::before { content: "🧭"; }
+
 /* 额外图标 */
 .icon-case::before,
 .iconfont.icon-case::before { content: "📋"; }

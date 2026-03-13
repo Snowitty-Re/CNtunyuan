@@ -6,17 +6,17 @@ Page({
       {
         group: '通用',
         items: [
-          { icon: '&#xe6b0;', title: '消息通知', type: 'switch', key: 'notification' },
-          { icon: '&#xe6b1;', title: '清除缓存', type: 'action', key: 'clearCache' }
+          { icon: 'notification', title: '消息通知', type: 'switch', key: 'notification' },
+          { icon: 'delete', title: '清除缓存', type: 'action', key: 'clearCache' }
         ]
       },
       {
         group: '关于',
         items: [
-          { icon: '&#xe6b2;', title: '帮助中心', type: 'navigate', url: '/pages/settings/help' },
-          { icon: '&#xe6b3;', title: '关于我们', type: 'navigate', url: '/pages/settings/about' },
-          { icon: '&#xe6b4;', title: '用户协议', type: 'navigate', url: '/pages/settings/agreement' },
-          { icon: '&#xe6b5;', title: '隐私政策', type: 'navigate', url: '/pages/settings/privacy' }
+          { icon: 'help', title: '帮助中心', type: 'navigate', url: '/pages/settings/help' },
+          { icon: 'info', title: '关于我们', type: 'navigate', url: '/pages/settings/about' },
+          { icon: 'file', title: '用户协议', type: 'navigate', url: '/pages/settings/agreement' },
+          { icon: 'settings', title: '隐私政策', type: 'navigate', url: '/pages/settings/privacy' }
         ]
       }
     ],
@@ -63,15 +63,23 @@ Page({
   async handleAction(key) {
     switch (key) {
       case 'clearCache':
-        const confirm = await showConfirm('清除缓存', '确定要清除本地缓存吗？')
+        const confirm = await showConfirm('清除缓存', '确定要清除本地缓存吗？（登录信息将保留）')
         if (confirm) {
           try {
+            // 保留登录相关数据
+            const token = wx.getStorageSync('token')
+            const refreshToken = wx.getStorageSync('refresh_token')
+            const userInfo = wx.getStorageSync('userInfo')
             wx.clearStorageSync()
+            // 恢复登录数据
+            if (token) wx.setStorageSync('token', token)
+            if (refreshToken) wx.setStorageSync('refresh_token', refreshToken)
+            if (userInfo) wx.setStorageSync('userInfo', userInfo)
             wx.showToast({
               title: '清除成功',
               icon: 'success'
             })
-            this.setData({ cacheSize: '0MB' })
+            this.calculateCacheSize()
           } catch (e) {
             wx.showToast({
               title: '清除失败',

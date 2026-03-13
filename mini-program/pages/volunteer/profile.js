@@ -188,17 +188,13 @@ Page({
     if (!confirm) return
     
     try {
-      // 调用退出登录接口
-      await userService.logout?.().catch(() => {})
+      await app.logout()
     } catch (error) {
       console.error('退出登录接口调用失败:', error)
+      // 即使API调用失败，也清除本地数据
+      app.clearLoginData()
     }
-    
-    // 清除本地数据
-    wx.clearStorageSync()
-    app.globalData.token = null
-    app.globalData.userInfo = null
-    
+
     // 跳转到登录页
     wx.reLaunch({ url: '/pages/login/index' })
   }

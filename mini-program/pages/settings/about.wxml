@@ -1,32 +1,57 @@
-<view class="container">
-  <view class="header">
-    <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
-    <text class="app-name">{{appInfo.name}}</text>
-    <text class="version">版本 {{version}}</text>
-    <text class="slogan">{{appInfo.slogan}}</text>
+<view class="about-page">
+  <!-- 顶部品牌区 -->
+  <view class="brand-section">
+    <view class="brand-bg">
+      <view class="brand-orb orb-1"></view>
+      <view class="brand-orb orb-2"></view>
+    </view>
+    <view class="brand-content">
+      <view class="logo-wrapper">
+        <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
+      </view>
+      <text class="app-name">{{appInfo.name}}</text>
+      <view class="version-badge">v{{version}}</view>
+      <text class="slogan">{{appInfo.slogan}}</text>
+    </view>
   </view>
 
-  <view class="intro-section">
+  <!-- 简介 -->
+  <view class="intro-card">
+    <view class="card-header">
+      <view class="card-dot"></view>
+      <text class="card-title">平台简介</text>
+    </view>
     <text class="intro-text">{{appInfo.description}}</text>
   </view>
 
-  <view class="features-section">
-    <view class="section-title">核心功能</view>
+  <!-- 核心功能 -->
+  <view class="features-card">
+    <view class="card-header">
+      <view class="card-dot"></view>
+      <text class="card-title">核心功能</text>
+    </view>
     <view class="features-grid">
       <view class="feature-item" wx:for="{{features}}" wx:key="index">
-        <text class="feature-icon">{{item.icon}}</text>
+        <view class="feature-icon-circle">
+          <text class="feature-icon">{{item.icon}}</text>
+        </view>
         <text class="feature-title">{{item.title}}</text>
         <text class="feature-desc">{{item.desc}}</text>
       </view>
     </view>
   </view>
 
+  <!-- 检查更新 -->
   <view class="action-section">
-    <button class="update-btn" bindtap="checkUpdate">检查更新</button>
+    <button class="update-btn" bindtap="checkUpdate" hover-class="update-hover">
+      <text class="iconfont icon-refresh"></text>
+      <text>检查更新</text>
+    </button>
   </view>
 
+  <!-- 底部 -->
   <view class="footer">
-    <text>© 2024 团圆寻亲志愿者系统</text>
-    <text>All Rights Reserved</text>
+    <text class="copyright">2024 团圆寻亲志愿者系统</text>
+    <text class="rights">All Rights Reserved</text>
   </view>
 </view>

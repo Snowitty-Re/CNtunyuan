@@ -1,30 +1,51 @@
-<view class="container">
+<view class="help-page">
+  <!-- 顶部 -->
   <view class="page-header">
-    <text class="page-title">帮助中心</text>
+    <view class="header-bg">
+      <view class="header-orb"></view>
+    </view>
+    <view class="header-content">
+      <text class="page-title">帮助中心</text>
+      <text class="page-subtitle">常见问题与使用指南</text>
+    </view>
   </view>
 
+  <!-- FAQ列表 -->
   <view class="faq-section">
-    <view 
-      class="faq-item"
+    <view
+      class="faq-card {{item.expanded ? 'expanded' : ''}}"
       wx:for="{{faqList}}"
       wx:key="index"
       data-index="{{index}}"
       bindtap="toggleFaq"
     >
       <view class="faq-question">
-        <text class="q-mark">Q</text>
+        <view class="q-badge">Q</view>
         <text class="question-text">{{item.question}}</text>
-        <text class="arrow {{item.expanded ? 'up' : ''}}">▼</text>
+        <view class="expand-icon {{item.expanded ? 'rotated' : ''}}">
+          <text class="iconfont icon-arrow-down"></text>
+        </view>
       </view>
-      <view class="faq-answer" wx:if="{{item.expanded}}">
-        <text class="a-mark">A</text>
-        <text class="answer-text">{{item.answer}}</text>
+      <view class="faq-answer {{item.expanded ? 'show' : ''}}">
+        <view class="answer-content">
+          <view class="a-badge">A</view>
+          <text class="answer-text">{{item.answer}}</text>
+        </view>
       </view>
     </view>
   </view>
 
+  <!-- 联系客服 -->
   <view class="contact-section">
-    <text class="contact-title">还有其他问题？</text>
-    <button class="contact-btn" bindtap="contactService">联系客服</button>
+    <view class="contact-card">
+      <text class="contact-title">还有其他问题？</text>
+      <text class="contact-desc">我们的客服团队随时为您服务</text>
+      <button class="contact-btn" bindtap="contactService" hover-class="contact-hover">
+        <text class="iconfont icon-phone"></text>
+        <text>联系客服</text>
+      </button>
+    </view>
   </view>
+
+  <view class="safe-bottom"></view>
 </view>

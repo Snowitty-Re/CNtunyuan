@@ -52,12 +52,64 @@ Page({
     
     // 状态
     submitting: false,
-    uploadProgress: 0
+    uploadProgress: 0,
+
+    // 编辑模式
+    isEdit: false,
+    editId: ''
   },
 
-  onLoad() {
-    // 设置默认失踪时间为当前时间
-    this.setDefaultMissingTime()
+  onLoad(options) {
+    if (options.id) {
+      // 编辑模式
+      this.setData({ isEdit: true, editId: options.id })
+      wx.setNavigationBarTitle({ title: '编辑案件' })
+      this.loadCaseData(options.id)
+    } else {
+      // 设置默认失踪时间为当前时间
+      this.setDefaultMissingTime()
+    }
+  },
+
+  /**
+   * 加载案件数据（编辑模式）
+   */
+  async loadCaseData(id) {
+    try {
+      showLoading('加载中...')
+      const data = await missingPersonService.getById(id)
+      hideLoading()
+
+      const genderIndex = GENDER_OPTIONS.findIndex(g => g.value === data.gender)
+      const caseTypeIndex = CASE_TYPE_OPTIONS.findIndex(c => c.value === data.case_type)
+
+      this.setData({
+        form: {
+          name: data.name || '',
+          gender: data.gender || 'male',
+          age: data.age ? String(data.age) : '',
+          height: data.height ? String(data.height) : '',
+          caseType: data.case_type || 'elderly',
+          missingTime: data.missing_time ? formatDate(data.missing_time, 'YYYY-MM-DD HH:mm') : '',
+          missingLocation: data.missing_location || '',
+          latitude: data.missing_latitude || '',
+          longitude: data.missing_longitude || '',
+          description: data.missing_detail || '',
+          appearance: data.appearance || '',
+          clothing: data.clothing || '',
+          specialFeatures: data.special_features || '',
+          contactName: data.contact_name || '',
+          contactRelation: data.contact_relation || '',
+          contactPhone: data.contact_phone || ''
+        },
+        genderLabel: genderIndex >= 0 ? GENDER_OPTIONS[genderIndex].label : '男',
+        caseTypeLabel: caseTypeIndex >= 0 ? CASE_TYPE_OPTIONS[caseTypeIndex].label : '老人走失'
+      })
+    } catch (error) {
+      hideLoading()
+      showError('加载案件信息失败')
+      console.error('加载案件失败:', error)
+    }
   },
 
   /**
@@ -339,10 +391,14 @@ Page({
         photos: photoUrls
       }
 
-      await missingPersonService.create(submitData)
-      
+      if (this.data.isEdit) {
+        await missingPersonService.update(this.data.editId, submitData)
+      } else {
+        await missingPersonService.create(submitData)
+      }
+
       hideLoading()
-      showSuccess('登记成功')
+      showSuccess(this.data.isEdit ? '更新成功' : '登记成功')
       
       // 延迟返回并刷新列表
       setTimeout(() => {

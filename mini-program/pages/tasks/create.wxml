@@ -1,139 +1,185 @@
 <view class="create-task-page">
   <!-- 加载中 -->
   <view class="loading-wrapper" wx:if="{{loading}}">
-    <view class="spinner"></view>
-    <text>加载中...</text>
+    <view class="loading-ring"></view>
+    <text class="loading-text">加载中...</text>
   </view>
 
   <!-- 表单 -->
-  <scroll-view class="form-container" scroll-y enhanced show-scrollbar="{{false}}" wx:else>
+  <scroll-view class="form-scroll" scroll-y enhanced show-scrollbar="{{false}}" wx:else>
+
+    <!-- 页面头部 -->
+    <view class="page-header">
+      <view class="header-decor"></view>
+      <text class="page-title">创建新任务</text>
+      <text class="page-desc">填写任务信息，分配给合适的执行人</text>
+    </view>
+
+    <!-- 基本信息区 -->
     <view class="form-section">
-      <view class="section-title">基本信息</view>
-      
+      <view class="section-label">
+        <view class="section-label-bar"></view>
+        <text class="section-label-text">基本信息</text>
+      </view>
+
       <!-- 任务标题 -->
-      <view class="form-item">
-        <view class="label required">任务标题</view>
-        <input 
-          class="input"
-          placeholder="请输入任务标题"
-          value="{{form.title}}"
-          data-field="title"
-          bindinput="onInput"
-          maxlength="100"
-        />
+      <view class="field-group">
+        <view class="field-label">
+          <text class="required-mark">*</text>
+          <text class="label-text">任务标题</text>
+        </view>
+        <view class="field-input-wrap">
+          <input
+            class="field-input"
+            placeholder="请输入任务标题"
+            placeholder-class="placeholder-style"
+            value="{{form.title}}"
+            data-field="title"
+            bindinput="onInput"
+            maxlength="100"
+          />
+        </view>
       </view>
-      
+
       <!-- 任务描述 -->
-      <view class="form-item">
-        <view class="label required">任务描述</view>
-        <textarea 
-          class="textarea"
-          placeholder="请详细描述任务内容、要求等信息"
-          value="{{form.description}}"
-          data-field="description"
-          bindinput="onInput"
-          maxlength="500"
-          auto-height
-        />
-        <view class="textarea-counter">{{form.description.length || 0}}/500</view>
+      <view class="field-group">
+        <view class="field-label">
+          <text class="required-mark">*</text>
+          <text class="label-text">任务描述</text>
+        </view>
+        <view class="field-textarea-wrap">
+          <textarea
+            class="field-textarea"
+            placeholder="请详细描述任务内容、要求等信息"
+            placeholder-class="placeholder-style"
+            value="{{form.description}}"
+            data-field="description"
+            bindinput="onInput"
+            maxlength="500"
+            auto-height
+          />
+          <text class="char-counter">{{form.description.length || 0}}/500</text>
+        </view>
       </view>
-      
+
       <!-- 优先级 -->
-      <view class="form-item">
-        <view class="label required">优先级</view>
+      <view class="field-group">
+        <view class="field-label">
+          <text class="required-mark">*</text>
+          <text class="label-text">优先级</text>
+        </view>
         <picker bindchange="onPriorityChange" range="{{priorities}}" range-key="label" value="{{priorityIndex}}">
-          <view class="picker-value">
-            <view class="priority-display priority-{{form.priority}}">
-              {{priorities[priorityIndex].label}}
+          <view class="field-picker">
+            <view class="priority-chip priority-chip-{{form.priority}}">
+              <view class="priority-dot priority-dot-{{form.priority}}"></view>
+              <text class="priority-chip-text">{{priorities[priorityIndex].label}}</text>
             </view>
-            <text class="iconfont icon-arrow-right"></text>
+            <text class="picker-arrow">></text>
           </view>
         </picker>
       </view>
-      
+
       <!-- 截止日期 -->
-      <view class="form-item">
-        <view class="label required">截止日期</view>
+      <view class="field-group">
+        <view class="field-label">
+          <text class="required-mark">*</text>
+          <text class="label-text">截止日期</text>
+        </view>
         <picker mode="date" bindchange="onDateChange" value="{{form.deadline}}" start="{{minDate}}">
-          <view class="picker-value {{form.deadline ? '' : 'placeholder'}}">
-            <text>{{form.deadline || '请选择截止日期'}}</text>
-            <text class="iconfont icon-arrow-right"></text>
+          <view class="field-picker {{form.deadline ? '' : 'picker-empty'}}">
+            <view class="date-display" wx:if="{{form.deadline}}">
+              <view class="date-icon-box">
+                <text class="date-icon-char">D</text>
+              </view>
+              <text class="date-text">{{form.deadline}}</text>
+            </view>
+            <text class="picker-placeholder" wx:else>请选择截止日期</text>
+            <text class="picker-arrow">></text>
           </view>
         </picker>
       </view>
     </view>
 
+    <!-- 关联信息区 -->
     <view class="form-section">
-      <view class="section-title">关联信息</view>
-      
+      <view class="section-label">
+        <view class="section-label-bar"></view>
+        <text class="section-label-text">关联信息</text>
+      </view>
+
       <!-- 关联案件 -->
-      <view class="form-item">
-        <view class="label">关联案件</view>
+      <view class="field-group">
+        <view class="field-label">
+          <text class="label-text">关联案件</text>
+          <text class="label-optional">选填</text>
+        </view>
         <picker bindchange="onCaseChange" range="{{cases}}" range-key="name" value="{{caseIndex}}">
-          <view class="picker-value {{form.missing_person_id ? '' : 'placeholder'}}">
+          <view class="field-picker {{form.missing_person_id ? '' : 'picker-empty'}}">
             <block wx:if="{{form.missing_person_id}}">
-              <view class="case-display">
-                <text class="case-name">{{cases[caseIndex].name}}</text>
-                <text class="case-info" wx:if="{{cases[caseIndex].age}}">{{cases[caseIndex].age}}岁</text>
+              <view class="selected-case">
+                <view class="case-badge">
+                  <text class="case-badge-char">案</text>
+                </view>
+                <text class="selected-case-name">{{cases[caseIndex].name}}</text>
+                <text class="selected-case-age" wx:if="{{cases[caseIndex].age}}">{{cases[caseIndex].age}}岁</text>
               </view>
             </block>
-            <block wx:else>
-              <text>请选择关联案件（可选）</text>
-            </block>
-            <text class="iconfont icon-arrow-right"></text>
+            <text class="picker-placeholder" wx:else>请选择关联案件（可选）</text>
+            <text class="picker-arrow">></text>
           </view>
         </picker>
       </view>
-      
+
       <!-- 分配执行人 -->
-      <view class="form-item">
-        <view class="label">分配执行人</view>
+      <view class="field-group">
+        <view class="field-label">
+          <text class="label-text">分配执行人</text>
+          <text class="label-optional">选填</text>
+        </view>
         <picker bindchange="onUserChange" range="{{users}}" range-key="nickname" value="{{userIndex}}">
-          <view class="picker-value {{form.assignee_id ? '' : 'placeholder'}}">
+          <view class="field-picker {{form.assignee_id ? '' : 'picker-empty'}}">
             <block wx:if="{{form.assignee_id}}">
-              <view class="user-display">
-                <image class="user-avatar" src="{{users[userIndex].avatar || '/assets/images/default-avatar.png'}}" mode="aspectFill" />
-                <text class="user-name">{{users[userIndex].nickname || users[userIndex].name}}</text>
+              <view class="selected-user">
+                <image class="selected-user-avatar" src="{{users[userIndex].avatar || '/assets/images/default-avatar.png'}}" mode="aspectFill" />
+                <text class="selected-user-name">{{users[userIndex].nickname || users[userIndex].name}}</text>
               </view>
             </block>
-            <block wx:else>
-              <text>请选择执行人（可选）</text>
-            </block>
-            <text class="iconfont icon-arrow-right"></text>
+            <text class="picker-placeholder" wx:else>请选择执行人（可选）</text>
+            <text class="picker-arrow">></text>
           </view>
         </picker>
       </view>
     </view>
 
     <!-- 提示信息 -->
-    <view class="tips-section">
-      <view class="tip-item">
-        <text class="iconfont icon-info"></text>
-        <text class="tip-text">创建任务后，被分配的执行人将收到通知</text>
+    <view class="tips-box">
+      <view class="tip-row">
+        <view class="tip-bullet"></view>
+        <text class="tip-content">创建任务后，被分配的执行人将收到通知</text>
       </view>
-      <view class="tip-item">
-        <text class="iconfont icon-info"></text>
-        <text class="tip-text">未分配执行人的任务将显示在任务中心等待领取</text>
+      <view class="tip-row">
+        <view class="tip-bullet"></view>
+        <text class="tip-content">未分配执行人的任务将显示在任务中心等待领取</text>
       </view>
     </view>
 
     <!-- 底部留白 -->
-    <view class="safe-bottom" style="height: 180rpx;"></view>
+    <view style="height: 200rpx;"></view>
   </scroll-view>
 
-  <!-- 底部按钮 -->
-  <view class="footer" wx:if="{{!loading}}">
-    <button 
-      class="submit-btn {{submitting ? 'loading' : ''}}" 
-      bindtap="submit" 
+  <!-- 底部提交按钮 -->
+  <view class="submit-footer" wx:if="{{!loading}}">
+    <button
+      class="submit-btn {{submitting ? 'submitting' : ''}}"
+      bindtap="submit"
       disabled="{{submitting}}"
     >
       <block wx:if="{{submitting}}">
-        <view class="btn-spinner"></view>
-        <text>创建中...</text>
+        <view class="btn-loading-ring"></view>
+        <text class="btn-text">创建中...</text>
       </block>
       <block wx:else>
-        创建任务
+        <text class="btn-text">创建任务</text>
       </block>
     </button>
   </view>

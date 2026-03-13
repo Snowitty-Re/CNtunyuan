@@ -102,7 +102,7 @@ Page({
           latitude: data.missing_latitude,
           longitude: data.missing_longitude,
           title: '走失地点',
-          iconPath: '/assets/images/marker.png',
+          iconPath: '/assets/images/marker_red.png',
           width: 40,
           height: 40
         })
@@ -181,8 +181,27 @@ Page({
    */
   addTrack() {
     const { id } = this.data
-    wx.navigateTo({
-      url: `/pages/cases/track?id=${id}`
+    wx.showModal({
+      title: '添加线索',
+      editable: true,
+      placeholderText: '请输入线索描述...',
+      success: async (res) => {
+        if (res.confirm && res.content && res.content.trim()) {
+          try {
+            showLoading('提交中...')
+            await missingPersonService.addTrack(id, {
+              description: res.content.trim(),
+              track_time: new Date().toISOString()
+            })
+            hideLoading()
+            showSuccess('线索添加成功')
+            this.loadTracks()
+          } catch (error) {
+            hideLoading()
+            wx.showToast({ title: '添加失败', icon: 'none' })
+          }
+        }
+      }
     })
   },
 
@@ -278,7 +297,7 @@ Page({
   editCase() {
     const { id } = this.data
     wx.navigateTo({
-      url: `/pages/cases/edit?id=${id}`
+      url: `/pages/cases/create?id=${id}`
     })
   },
 

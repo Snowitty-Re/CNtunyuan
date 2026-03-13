@@ -7,7 +7,8 @@ const STATUS_MAP = {
   'missing': { label: '失踪中', color: '#ff4d4f' },
   'searching': { label: '寻找中', color: '#1890ff' },
   'found': { label: '已找到', color: '#52c41a' },
-  'reunited': { label: '已团圆', color: '#52c41a' }
+  'reunited': { label: '已团圆', color: '#52c41a' },
+  'closed': { label: '已结案', color: '#999' }
 }
 
 // 案件类型映射
@@ -40,7 +41,8 @@ Page({
       { value: 'missing', label: '失踪中' },
       { value: 'searching', label: '寻找中' },
       { value: 'found', label: '已找到' },
-      { value: 'reunited', label: '已团圆' }
+      { value: 'reunited', label: '已团圆' },
+      { value: 'closed', label: '已结案' }
     ],
     
     // 映射常量

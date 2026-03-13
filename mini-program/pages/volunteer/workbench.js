@@ -40,6 +40,7 @@ Page({
       low: '低'
     },
     statusMap: {
+      draft: '草稿',
       pending: '待处理',
       assigned: '已分配',
       processing: '进行中',

@@ -10,7 +10,11 @@ Component({
     },
     type: {
       type: String,
-      value: 'default' // default, circle, bounce
+      value: 'default' // default, circle, bounce, skeleton
+    },
+    rows: {
+      type: Number,
+      value: 3
     },
     fullScreen: {
       type: Boolean,

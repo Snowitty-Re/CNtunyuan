@@ -16,8 +16,11 @@ const { request, uploadFile } = require('./utils/request')
 // 【强制使用生产环境配置】
 // 修改下面的 API_URL 为你的实际域名
 // ============================================
-const API_URL = 'https://cntuanyuan.com/api/v1'
-const WS_URL = 'wss://cntuanyuan.com/ws'
+// const API_URL = 'https://cntuanyuan.com/api/v1'
+// const WS_URL = 'wss://cntuanyuan.com/ws'
+
+const API_URL = 'http://localhost:8080/api/v1'
+const WS_URL = 'wss://localhost:8080/ws'
 
 App({
   globalData: {

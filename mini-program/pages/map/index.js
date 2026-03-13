@@ -90,17 +90,17 @@ Page({
   // 生成地图标记
   generateMarkers(cases) {
     return cases
-      .filter(item => item.last_seen_latitude && item.last_seen_longitude)
+      .filter(item => item.missing_latitude && item.missing_longitude)
       .map((item, index) => ({
         id: index,
-        latitude: parseFloat(item.last_seen_latitude),
-        longitude: parseFloat(item.last_seen_longitude),
+        latitude: parseFloat(item.missing_latitude),
+        longitude: parseFloat(item.missing_longitude),
         title: item.name,
         iconPath: this.getMarkerIcon(item.status),
         width: 40,
         height: 40,
         callout: {
-          content: `${item.name}\n${item.last_seen_location || '未知位置'}`,
+          content: `${item.name}\n${this.getLocationText(item)}`,
           color: '#333',
           fontSize: 14,
           borderRadius: 8,
@@ -115,12 +115,22 @@ Page({
   // 获取标记图标
   getMarkerIcon(status) {
     const iconMap = {
-      'missing': '/assets/icons/marker_red.png',
-      'searching': '/assets/icons/marker_orange.png',
-      'found': '/assets/icons/marker_green.png',
-      'reunited': '/assets/icons/marker_blue.png'
+      'missing': '/assets/images/marker_red.png',
+      'searching': '/assets/images/marker_orange.png',
+      'found': '/assets/images/marker_green.png',
+      'reunited': '/assets/images/marker_blue.png'
     }
-    return iconMap[status] || '/assets/icons/marker_red.png'
+    return iconMap[status] || '/assets/images/marker_red.png'
+  },
+
+  // 拼接位置信息
+  getLocationText(item) {
+    const parts = []
+    if (item.province) parts.push(item.province)
+    if (item.city) parts.push(item.city)
+    if (item.district) parts.push(item.district)
+    if (item.address) parts.push(item.address)
+    return parts.length > 0 ? parts.join(' ') : '未知位置'
   },
 
   // 标记点击事件
@@ -191,8 +201,8 @@ Page({
     
     // 本地筛选
     const filtered = cases.filter(item => 
-      item.name.includes(keyword) || 
-      (item.last_seen_location && item.last_seen_location.includes(keyword))
+      item.name.includes(keyword) ||
+      (this.getLocationText(item).includes(keyword))
     )
     
     const markers = this.generateMarkers(filtered)
@@ -207,16 +217,16 @@ Page({
   navigateToLocation(e) {
     const item = e.currentTarget.dataset.item
     
-    if (!item.last_seen_latitude || !item.last_seen_longitude) {
+    if (!item.missing_latitude || !item.missing_longitude) {
       showToast('该案件没有位置信息')
       return
     }
     
     wx.openLocation({
-      latitude: parseFloat(item.last_seen_latitude),
-      longitude: parseFloat(item.last_seen_longitude),
+      latitude: parseFloat(item.missing_latitude),
+      longitude: parseFloat(item.missing_longitude),
       name: item.name,
-      address: item.last_seen_location || '未知位置'
+      address: this.getLocationText(item)
     })
   },
 

@@ -1,226 +1,208 @@
 <view class="home-page">
-  <!-- 顶部欢迎区域 -->
-  <view class="hero-section">
-    <view class="hero-bg">
-      <view class="gradient-orb orb-1"></view>
-      <view class="gradient-orb orb-2"></view>
-    </view>
-    <view class="hero-content">
-      <view class="greeting">
-        <text class="greeting-icon">👋</text>
-        <text class="greeting-text">{{greeting}}，欢迎回来</text>
+  <!-- 顶部问候区域 - 渐变橙色背景 -->
+  <view class="greeting-header">
+    <view class="greeting-bg"></view>
+    <view class="greeting-content">
+      <view class="greeting-row">
+        <view class="greeting-text-wrap">
+          <text class="greeting-hello">{{greeting}}</text>
+          <text class="greeting-welcome">欢迎使用团圆寻亲平台</text>
+        </view>
+        <view class="greeting-logo">
+          <image src="/assets/images/logo.png" mode="aspectFit" class="logo-img" />
+        </view>
       </view>
-      <view class="hero-title">团圆寻亲</view>
-      <view class="hero-subtitle">用爱点亮回家路</view>
+    </view>
+    <view class="greeting-wave">
+      <view class="wave-shape"></view>
     </view>
   </view>
 
-  <!-- 快捷入口按钮 -->
+  <!-- 统计数据卡片 2x2 网格 -->
+  <view class="stats-grid">
+    <view class="stat-card" bindtap="onStatCardTap" data-type="cases" hover-class="stat-card--hover">
+      <view class="stat-icon-circle orange-bg">
+        <text class="iconfont icon-people"></text>
+      </view>
+      <text class="stat-number">{{stats.totalCases || 0}}</text>
+      <text class="stat-label">走失人员</text>
+    </view>
+    <view class="stat-card" bindtap="onStatCardTap" data-type="resolved" hover-class="stat-card--hover">
+      <view class="stat-icon-circle green-bg">
+        <text class="iconfont icon-success"></text>
+      </view>
+      <text class="stat-number">{{stats.resolvedCases || 0}}</text>
+      <text class="stat-label">已找到</text>
+    </view>
+    <view class="stat-card" bindtap="onStatCardTap" data-type="volunteers" hover-class="stat-card--hover">
+      <view class="stat-icon-circle blue-bg">
+        <text class="iconfont icon-volunteer"></text>
+      </view>
+      <text class="stat-number">{{stats.volunteers || 0}}</text>
+      <text class="stat-label">志愿者</text>
+    </view>
+    <view class="stat-card" bindtap="onStatCardTap" data-type="dialects" hover-class="stat-card--hover">
+      <view class="stat-icon-circle purple-bg">
+        <text class="iconfont icon-audio"></text>
+      </view>
+      <text class="stat-number">{{stats.dialects || 0}}</text>
+      <text class="stat-label">方言录音</text>
+    </view>
+  </view>
+
+  <!-- 快捷操作按钮 - 一行四个 -->
   <view class="quick-actions">
-    <view class="action-btn" bindtap="onCreateCase">
-      <view class="action-icon primary">
+    <view class="action-item" bindtap="onCreateCase" hover-class="action-item--hover">
+      <view class="action-circle action-circle--orange">
         <text class="iconfont icon-add"></text>
       </view>
-      <text class="action-text">发布案件</text>
+      <text class="action-label">发布案件</text>
     </view>
-    <view class="action-btn" bindtap="onRecordDialect">
-      <view class="action-icon secondary">
+    <view class="action-item" bindtap="onRecordDialect" hover-class="action-item--hover">
+      <view class="action-circle action-circle--green">
         <text class="iconfont icon-mic"></text>
       </view>
-      <text class="action-text">录制方言</text>
+      <text class="action-label">录制方言</text>
     </view>
-    <view class="action-btn" bindtap="onViewMap">
-      <view class="action-icon tertiary">
+    <view class="action-item" bindtap="onViewMap" hover-class="action-item--hover">
+      <view class="action-circle action-circle--teal">
         <text class="iconfont icon-location"></text>
       </view>
-      <text class="action-text">查看地图</text>
+      <text class="action-label">查看地图</text>
     </view>
-    <view class="action-btn" bindtap="onMyTasks">
-      <view class="action-icon quaternary">
+    <view class="action-item" bindtap="onMyTasks" hover-class="action-item--hover">
+      <view class="action-circle action-circle--purple">
         <text class="iconfont icon-task"></text>
       </view>
-      <text class="action-text">我的任务</text>
-    </view>
-  </view>
-
-  <!-- 统计数据卡片 -->
-  <view class="stats-section">
-    <view class="stats-header">
-      <text class="section-title">数据统计</text>
-      <text class="update-time">实时更新</text>
-    </view>
-    <view class="stats-grid">
-      <view class="stat-card" bindtap="onStatCardTap" data-type="cases">
-        <view class="stat-icon orange">
-          <text class="iconfont icon-people"></text>
-        </view>
-        <view class="stat-info">
-          <text class="stat-value">{{stats.totalCases}}</text>
-          <text class="stat-label">走失人员</text>
-        </view>
-      </view>
-      <view class="stat-card" bindtap="onStatCardTap" data-type="resolved">
-        <view class="stat-icon green">
-          <text class="iconfont icon-success"></text>
-        </view>
-        <view class="stat-info">
-          <text class="stat-value">{{stats.resolvedCases}}</text>
-          <text class="stat-label">已找到</text>
-        </view>
-      </view>
-      <view class="stat-card" bindtap="onStatCardTap" data-type="volunteers">
-        <view class="stat-icon blue">
-          <text class="iconfont icon-volunteer"></text>
-        </view>
-        <view class="stat-info">
-          <text class="stat-value">{{stats.volunteers}}</text>
-          <text class="stat-label">志愿者</text>
-        </view>
-      </view>
-      <view class="stat-card" bindtap="onStatCardTap" data-type="dialects">
-        <view class="stat-icon purple">
-          <text class="iconfont icon-audio"></text>
-        </view>
-        <view class="stat-info">
-          <text class="stat-value">{{stats.dialects}}</text>
-          <text class="stat-label">方言录音</text>
-        </view>
-      </view>
+      <text class="action-label">我的任务</text>
     </view>
   </view>
 
   <!-- 最新案件 -->
-  <view class="content-section">
-    <view class="section-header">
-      <view class="section-title-wrapper">
+  <view class="section">
+    <view class="section-head">
+      <view class="section-title-group">
         <text class="section-title">最新案件</text>
-        <text class="section-subtitle">助力团圆，我们在行动</text>
+        <text class="section-desc">助力团圆，我们在行动</text>
       </view>
-      <view class="more-link" bindtap="goToCases">
-        <text>更多</text>
+      <view class="section-more" bindtap="goToCases" hover-class="section-more--hover">
+        <text>查看全部</text>
         <text class="iconfont icon-arrow-right"></text>
       </view>
     </view>
 
-    <!-- 案件加载状态 -->
-    <view class="loading-state" wx:if="{{casesLoading}}">
-      <view class="loading-spinner"></view>
-      <text class="loading-text">加载中...</text>
+    <!-- 加载中 -->
+    <view class="state-box" wx:if="{{casesLoading}}">
+      <view class="spinner"></view>
+      <text class="state-text">正在加载...</text>
     </view>
 
-    <!-- 案件错误状态 -->
-    <view class="error-state" wx:elif="{{casesError}}">
-      <text class="error-icon">⚠️</text>
-      <text class="error-text">加载失败</text>
-      <view class="retry-btn" bindtap="retryLoadCases">点击重试</view>
+    <!-- 错误 -->
+    <view class="state-box" wx:elif="{{casesError}}">
+      <view class="state-error-icon">!</view>
+      <text class="state-text">加载失败，请重试</text>
+      <view class="state-retry-btn" bindtap="retryLoadCases" hover-class="state-retry-btn--hover">重新加载</view>
     </view>
 
-    <!-- 案件空状态 -->
-    <view class="empty-state" wx:elif="{{recentCases.length === 0}}">
-      <view class="empty-icon">
+    <!-- 空 -->
+    <view class="state-box" wx:elif="{{recentCases.length === 0}}">
+      <view class="state-empty-icon">
         <text class="iconfont icon-empty"></text>
       </view>
-      <text class="empty-text">暂无案件信息</text>
+      <text class="state-text">暂无案件信息</text>
     </view>
 
-    <!-- 案件列表 -->
-    <scroll-view class="case-scroll" scroll-x enhanced show-scrollbar="{{false}}" wx:else>
-      <view class="case-list">
-        <view class="case-card" wx:for="{{recentCases}}" wx:key="id" bindtap="goToCaseDetail" data-id="{{item.id}}">
-          <view class="case-image-wrapper">
-            <image class="case-image" src="{{item.photoUrl}}" mode="aspectFill" lazy-load />
-            <view class="case-status status-{{item.status}}">{{statusText[item.status]}}</view>
+    <!-- 案件横向滚动卡片 -->
+    <scroll-view class="cases-scroll" scroll-x enhanced show-scrollbar="{{false}}" wx:else>
+      <view class="cases-row">
+        <view class="case-card" wx:for="{{recentCases}}" wx:key="id" bindtap="goToCaseDetail" data-id="{{item.id}}" hover-class="case-card--hover">
+          <view class="case-photo-wrap">
+            <image class="case-photo" src="{{item.photoUrl}}" mode="aspectFill" lazy-load />
+            <view class="case-tag tag-{{item.status}}">{{statusText[item.status] || '未知'}}</view>
           </view>
-          <view class="case-info">
-            <view class="case-header">
+          <view class="case-body">
+            <view class="case-name-row">
               <text class="case-name">{{item.name}}</text>
-              <text class="case-meta" wx:if="{{item.age}}">{{item.age}}岁</text>
+              <text class="case-age" wx:if="{{item.age}}">{{item.age}}岁 {{item.gender}}</text>
             </view>
-            <text class="case-location">
+            <view class="case-loc">
               <text class="iconfont icon-location"></text>
-              {{item.missingLocation}}
-            </text>
-            <text class="case-time">{{item.missingTime}}</text>
+              <text class="case-loc-text">{{item.missingLocation}}</text>
+            </view>
+            <view class="case-time">
+              <text class="iconfont icon-task"></text>
+              <text>{{item.missingTime}}</text>
+            </view>
           </view>
         </view>
       </view>
     </scroll-view>
   </view>
 
-  <!-- 最新方言 -->
-  <view class="content-section">
-    <view class="section-header">
-      <view class="section-title-wrapper">
+  <!-- 方言录音 -->
+  <view class="section">
+    <view class="section-head">
+      <view class="section-title-group">
         <text class="section-title">方言录音</text>
-        <text class="section-subtitle">乡音寻亲，传递希望</text>
+        <text class="section-desc">乡音寻亲，传递希望</text>
       </view>
-      <view class="more-link" bindtap="goToDialects">
-        <text>更多</text>
+      <view class="section-more" bindtap="goToDialects" hover-class="section-more--hover">
+        <text>查看全部</text>
         <text class="iconfont icon-arrow-right"></text>
       </view>
     </view>
 
-    <!-- 方言加载状态 -->
-    <view class="loading-state" wx:if="{{dialectsLoading}}">
-      <view class="loading-spinner"></view>
-      <text class="loading-text">加载中...</text>
+    <!-- 加载中 -->
+    <view class="state-box" wx:if="{{dialectsLoading}}">
+      <view class="spinner"></view>
+      <text class="state-text">正在加载...</text>
     </view>
 
-    <!-- 方言错误状态 -->
-    <view class="error-state" wx:elif="{{dialectsError}}">
-      <text class="error-icon">⚠️</text>
-      <text class="error-text">加载失败</text>
-      <view class="retry-btn" bindtap="retryLoadDialects">点击重试</view>
+    <!-- 错误 -->
+    <view class="state-box" wx:elif="{{dialectsError}}">
+      <view class="state-error-icon">!</view>
+      <text class="state-text">加载失败，请重试</text>
+      <view class="state-retry-btn" bindtap="retryLoadDialects" hover-class="state-retry-btn--hover">重新加载</view>
     </view>
 
-    <!-- 方言空状态 -->
-    <view class="empty-state" wx:elif="{{recentDialects.length === 0}}">
-      <view class="empty-icon">
+    <!-- 空 -->
+    <view class="state-box" wx:elif="{{recentDialects.length === 0}}">
+      <view class="state-empty-icon">
         <text class="iconfont icon-empty"></text>
       </view>
-      <text class="empty-text">暂无方言录音</text>
-      <view class="empty-action" bindtap="onRecordDialect">立即录制</view>
+      <text class="state-text">暂无方言录音</text>
+      <view class="state-action-btn" bindtap="onRecordDialect">立即录制</view>
     </view>
 
-    <!-- 方言列表 -->
+    <!-- 方言列表卡片 -->
     <view class="dialect-list" wx:else>
-      <view class="dialect-card" wx:for="{{recentDialects}}" wx:key="id" bindtap="goToDialectDetail" data-id="{{item.id}}">
-        <view class="dialect-play">
-          <view class="play-btn">
+      <view class="dialect-card" wx:for="{{recentDialects}}" wx:key="id" bindtap="goToDialectDetail" data-id="{{item.id}}" hover-class="dialect-card--hover">
+        <view class="dialect-left">
+          <view class="dialect-play-btn">
             <text class="iconfont icon-play"></text>
           </view>
-          <view class="wave-animation">
-            <view class="wave-bar" style="animation-delay: 0s"></view>
-            <view class="wave-bar" style="animation-delay: 0.1s"></view>
-            <view class="wave-bar" style="animation-delay: 0.2s"></view>
-            <view class="wave-bar" style="animation-delay: 0.3s"></view>
-            <view class="wave-bar" style="animation-delay: 0.4s"></view>
-          </view>
         </view>
-        <view class="dialect-info">
+        <view class="dialect-center">
           <text class="dialect-title text-ellipsis">{{item.title}}</text>
-          <text class="dialect-location" wx:if="{{item.province || item.city}}">
+          <text class="dialect-region" wx:if="{{item.province || item.city}}">
             <text class="iconfont icon-location"></text>
             {{item.province}} {{item.city}}
           </text>
-          <view class="dialect-stats">
-            <text class="stat-item">
-              <text class="iconfont icon-play"></text>
-              {{item.playCount}}
-            </text>
-            <text class="stat-item">
-              <text class="iconfont icon-like"></text>
-              {{item.likeCount}}
-            </text>
-            <text class="stat-item time">
-              {{item.createdAt}}
-            </text>
+        </view>
+        <view class="dialect-right">
+          <view class="dialect-meta-item">
+            <text class="iconfont icon-play"></text>
+            <text>{{item.playCount}}</text>
+          </view>
+          <view class="dialect-meta-item">
+            <text class="iconfont icon-like"></text>
+            <text>{{item.likeCount}}</text>
           </view>
         </view>
       </view>
     </view>
   </view>
 
-  <!-- 底部安全区域 -->
+  <!-- 底部安全区 -->
   <view class="safe-bottom"></view>
 </view>

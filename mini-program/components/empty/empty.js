@@ -12,9 +12,13 @@ Component({
       type: String,
       value: ''
     },
+    icon: {
+      type: String,
+      value: 'empty'
+    },
     image: {
       type: String,
-      value: '/assets/empty.png'
+      value: ''
     },
     buttonText: {
       type: String,

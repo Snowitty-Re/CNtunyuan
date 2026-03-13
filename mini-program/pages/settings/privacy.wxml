@@ -1,6 +1,20 @@
-<view class="container">
-  <view class="content">
-    <text class="title">{{title}}</text>
-    <text class="text-content">{{content}}</text>
+<view class="document-page">
+  <view class="doc-header">
+    <view class="header-bg"></view>
+    <view class="header-content">
+      <view class="doc-icon-circle">
+        <text class="iconfont icon-settings"></text>
+      </view>
+      <text class="doc-title">{{title}}</text>
+      <text class="doc-date">最后更新：2024年1月</text>
+    </view>
   </view>
+
+  <view class="doc-body">
+    <view class="doc-card">
+      <text class="doc-content">{{content}}</text>
+    </view>
+  </view>
+
+  <view class="safe-bottom"></view>
 </view>

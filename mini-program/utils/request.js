@@ -4,8 +4,8 @@
  */
 
 // 生产环境 API 地址 - 统一配置在这里
-const API_BASE_URL = 'https://cntuanyuan.com/api/v1'
-
+// const API_BASE_URL = 'https://cntuanyuan.com/api/v1'
+const API_BASE_URL = 'http://localhost:8080/api/v1'
 // 请求队列（用于 token 刷新时暂存请求）
 let requestQueue = []
 let isRefreshing = false

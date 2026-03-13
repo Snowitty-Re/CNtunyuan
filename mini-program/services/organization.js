@@ -53,26 +53,27 @@ module.exports = {
   },
 
   /**
-   * 获取当前用户的组织
+   * 获取子组织
+   * @param {String} id 组织ID
    */
-  getMyOrganization() {
-    return get('/organizations/my')
+  getChildren(id) {
+    return get(`/organizations/${id}/children`)
   },
 
   /**
-   * 获取组织成员
+   * 获取组织路径
    * @param {String} id 组织ID
-   * @param {Object} params 分页参数
    */
-  getMembers(id, params = {}) {
-    return get(`/organizations/${id}/members`, params)
+  getPath(id) {
+    return get(`/organizations/${id}/path`)
   },
 
   /**
-   * 获取组织统计
+   * 移动组织
    * @param {String} id 组织ID
+   * @param {Object} data 移动数据 { parent_id }
    */
-  getStats(id) {
-    return get(`/organizations/${id}/stats`)
+  move(id, data) {
+    return put(`/organizations/${id}/move`, data)
   }
 }

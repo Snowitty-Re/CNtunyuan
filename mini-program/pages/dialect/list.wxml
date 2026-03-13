@@ -1,101 +1,163 @@
-<view class="container">
-  <!-- 顶部筛选栏 -->
-  <view class="filter-bar">
-    <view class="region-picker">
-      <picker mode="selector" range="{{regionOptions}}" range-key="name" value="{{selectedRegionIndex}}" bindchange="onRegionChange">
-        <view class="picker-content">
-          <text class="picker-text">{{regionOptions[selectedRegionIndex].name}}</text>
-          <view class="picker-arrow"></view>
+<view class="page">
+  <!-- Header with decorative background -->
+  <view class="page-header">
+    <view class="header-bg"></view>
+    <view class="header-content">
+      <view class="header-title-row">
+        <view class="header-icon-wrap">
+          <view class="header-sound-wave">
+            <view class="hw-bar hw-bar-1"></view>
+            <view class="hw-bar hw-bar-2"></view>
+            <view class="hw-bar hw-bar-3"></view>
+            <view class="hw-bar hw-bar-4"></view>
+            <view class="hw-bar hw-bar-5"></view>
+          </view>
         </view>
-      </picker>
-    </view>
-    <view class="filter-info">
-      <text class="filter-count">共 {{dialects.length}} 条</text>
+        <view class="header-text">
+          <text class="header-title">方言录音库</text>
+          <text class="header-subtitle">共收录 {{dialects.length}} 条方言</text>
+        </view>
+      </view>
     </view>
   </view>
 
-  <!-- 方言列表 -->
+  <!-- Region filter -->
+  <view class="filter-section">
+    <picker mode="selector" range="{{regionOptions}}" range-key="name" value="{{selectedRegionIndex}}" bindchange="onRegionChange">
+      <view class="region-picker-btn">
+        <view class="region-picker-pin"></view>
+        <text class="region-picker-text">{{regionOptions[selectedRegionIndex].name}}</text>
+        <view class="region-picker-arrow"></view>
+      </view>
+    </picker>
+    <view class="filter-count-badge">
+      <text>{{dialects.length}} 条录音</text>
+    </view>
+  </view>
+
+  <!-- Dialect list -->
   <view class="dialect-list">
     <block wx:for="{{dialects}}" wx:key="id">
       <view class="dialect-card" bindtap="goToDetail" data-id="{{item.id}}">
-        <!-- 播放按钮区域 -->
-        <view class="play-section">
-          <view class="play-btn {{playingId === item.id ? 'playing' : ''}}" 
-                catchtap="togglePlay" 
-                data-id="{{item.id}}" 
-                data-url="{{item.audio_url}}">
-            <view class="play-icon">
-              <view wx:if="{{playingId !== item.id}}" class="icon-play"></view>
-              <view wx:else class="icon-pause">
-                <view class="pause-bar"></view>
-                <view class="pause-bar"></view>
-              </view>
-            </view>
-          </view>
-          <view class="duration">{{formatTime(item.duration)}}</view>
+        <!-- Decorative wave pattern -->
+        <view class="card-wave-decoration">
+          <view class="wave-line wave-line-1"></view>
+          <view class="wave-line wave-line-2"></view>
+          <view class="wave-line wave-line-3"></view>
         </view>
 
-        <!-- 内容区域 -->
-        <view class="content-section">
-          <view class="dialect-header">
-            <text class="dialect-title">{{item.title || '方言录音'}}</text>
-            <view class="featured-tag" wx:if="{{item.is_featured}}">精选</view>
+        <!-- Top row: title + featured badge -->
+        <view class="card-top">
+          <text class="card-title">{{item.title || '方言录音'}}</text>
+          <view class="featured-badge" wx:if="{{item.is_featured}}">
+            <view class="featured-star"></view>
+            <text>精选</text>
           </view>
-          
-          <view class="dialect-desc" wx:if="{{item.description}}">{{item.description}}</view>
-          
-          <view class="dialect-tags" wx:if="{{item.tags && item.tags.length > 0}}">
-            <text class="tag" wx:for="{{item.tags}}" wx:key="index" wx:for-item="tag">{{tag}}</text>
-          </view>
-          
-          <view class="dialect-meta">
-            <view class="meta-item region">
-              <text class="meta-icon">📍</text>
-              <text class="meta-text">{{item.region || item.province || '未知地区'}}</text>
-            </view>
-            <view class="meta-stats">
-              <view class="stat-item">
-                <text class="stat-icon">▶</text>
-                <text class="stat-num">{{formatPlayCount(item.play_count)}}</text>
+        </view>
+
+        <!-- Description -->
+        <view class="card-desc" wx:if="{{item.description}}">
+          <text>{{item.description}}</text>
+        </view>
+
+        <!-- Audio player row -->
+        <view class="card-player">
+          <view
+            class="play-btn {{playingId === item.id ? 'playing' : ''}}"
+            catchtap="togglePlay"
+            data-id="{{item.id}}"
+            data-url="{{item.audio_url}}"
+          >
+            <view class="play-btn-inner">
+              <view wx:if="{{playingId !== item.id}}" class="icon-play-triangle"></view>
+              <view wx:else class="icon-pause-bars">
+                <view class="p-bar"></view>
+                <view class="p-bar"></view>
               </view>
-              <view class="stat-item">
-                <text class="stat-icon">❤</text>
-                <text class="stat-num">{{formatPlayCount(item.like_count)}}</text>
-              </view>
+            </view>
+            <!-- Pulse rings when playing -->
+            <view class="pulse-ring pulse-ring-1" wx:if="{{playingId === item.id}}"></view>
+            <view class="pulse-ring pulse-ring-2" wx:if="{{playingId === item.id}}"></view>
+          </view>
+
+          <!-- Sound wave visualization -->
+          <view class="card-sound-bars">
+            <view class="s-bar {{playingId === item.id ? 'animating' : ''}}" wx:for="{{12}}" wx:key="index" wx:for-item="barItem" style="animation-delay: {{index * 0.08}}s; height: {{20 + (index % 3) * 16}}rpx;"></view>
+          </view>
+
+          <view class="card-duration">
+            <text>{{formatTime(item.duration)}}</text>
+          </view>
+        </view>
+
+        <!-- Tags -->
+        <view class="card-tags" wx:if="{{item.tags && item.tags.length > 0}}">
+          <view class="tag-chip" wx:for="{{item.tags}}" wx:key="index" wx:for-item="tag">
+            <text>#{{tag}}</text>
+          </view>
+        </view>
+
+        <!-- Meta row: region + stats -->
+        <view class="card-meta">
+          <view class="meta-region">
+            <view class="region-pin"></view>
+            <text>{{item.region || item.province || '未知地区'}}</text>
+          </view>
+          <view class="meta-stats">
+            <view class="stat">
+              <view class="stat-icon-play"></view>
+              <text>{{formatPlayCount(item.play_count)}}</text>
+            </view>
+            <view class="stat">
+              <view class="stat-icon-heart"></view>
+              <text>{{formatPlayCount(item.like_count)}}</text>
             </view>
           </view>
-          
-          <view class="dialect-footer">
-            <view class="collector-info">
-              <image class="collector-avatar" src="{{(item.collector && item.collector.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
-              <text class="collector-name">{{(item.collector && item.collector.nickname) || '志愿者'}}</text>
-            </view>
-            <text class="create-time">{{formatTimeAgo(item.created_at)}}</text>
+        </view>
+
+        <!-- Footer: collector info + time -->
+        <view class="card-footer">
+          <view class="collector">
+            <image class="collector-avatar" src="{{(item.collector && item.collector.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
+            <text class="collector-name">{{(item.collector && item.collector.nickname) || '志愿者'}}</text>
           </view>
+          <text class="card-time">{{formatTimeAgo(item.created_at)}}</text>
         </view>
       </view>
     </block>
 
-    <!-- 空状态 -->
+    <!-- Empty state -->
     <view class="empty-state" wx:if="{{dialects.length === 0 && !loading}}">
-      <view class="empty-icon">🎙️</view>
-      <text class="empty-text">暂无方言录音</text>
-      <text class="empty-subtext">点击下方按钮添加第一条方言</text>
+      <view class="empty-mic">
+        <view class="empty-mic-body"></view>
+        <view class="empty-mic-base"></view>
+        <view class="empty-mic-stand"></view>
+      </view>
+      <text class="empty-title">暂无方言录音</text>
+      <text class="empty-desc">点击右下角按钮，录制第一条方言</text>
     </view>
 
-    <!-- 加载更多 -->
+    <!-- Load more -->
     <view class="load-more" wx:if="{{dialects.length > 0}}">
-      <text wx:if="{{loading}}">加载中...</text>
-      <text wx:elif="{{noMore}}">没有更多了</text>
-      <text wx:else>上拉加载更多</text>
+      <view class="load-more-inner">
+        <view class="loading-dots" wx:if="{{loading}}">
+          <view class="dot dot-1"></view>
+          <view class="dot dot-2"></view>
+          <view class="dot dot-3"></view>
+        </view>
+        <text wx:elif="{{noMore}}" class="load-more-text">-- 已展示全部 --</text>
+        <text wx:else class="load-more-text">上拉加载更多</text>
+      </view>
     </view>
   </view>
 
-  <!-- 创建按钮 -->
-  <view class="create-btn-wrapper">
-    <view class="create-btn {{animateCreateBtn ? 'animate' : ''}}" bindtap="goToCreate">
-      <view class="create-icon">+</view>
-      <text class="create-text">录方言</text>
+  <!-- Floating create button -->
+  <view class="fab-wrapper">
+    <view class="fab {{animateCreateBtn ? 'animate' : ''}}" bindtap="goToCreate">
+      <view class="fab-icon">
+        <view class="fab-mic-icon"></view>
+      </view>
+      <text class="fab-label">录方言</text>
     </view>
   </view>
 </view>

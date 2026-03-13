@@ -1,52 +1,82 @@
-<view class="container">
-  <view class="header">
-    <text class="header-title">消息通知</text>
-    <view class="header-actions">
-      <text class="action-text" bindtap="markAllAsRead">全部已读</text>
-      <text class="action-text" bindtap="clearAll">清空</text>
+<view class="notification-page">
+  <!-- 顶部 -->
+  <view class="page-header">
+    <view class="header-bg">
+      <view class="header-orb"></view>
+    </view>
+    <view class="header-content">
+      <view class="header-top">
+        <view class="title-row">
+          <text class="page-title">消息通知</text>
+          <view class="unread-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}</view>
+        </view>
+        <view class="header-actions">
+          <view class="action-chip" bindtap="markAllAsRead" hover-class="chip-hover">
+            <text class="iconfont icon-check"></text>
+            <text>全部已读</text>
+          </view>
+          <view class="action-chip danger" bindtap="clearAll" hover-class="chip-hover">
+            <text class="iconfont icon-delete"></text>
+            <text>清空</text>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 
-  <view class="notification-list">
+  <!-- 通知列表 -->
+  <view class="notification-body">
     <block wx:if="{{notifications.length > 0}}">
-      <view 
-        class="notification-item {{item.is_read ? 'read' : 'unread'}}"
+      <view
+        class="notification-card {{item.is_read ? '' : 'unread'}}"
         wx:for="{{notifications}}"
         wx:key="id"
         data-item="{{item}}"
         bindtap="onNotificationTap"
+        hover-class="card-hover"
       >
-        <view class="notification-icon type-{{item.type}}">
-          <text wx:if="{{item.type === 'task'}}">&#xe6b6;</text>
-          <text wx:if="{{item.type === 'case'}}">&#xe6b7;</text>
-          <text wx:if="{{item.type === 'system'}}">&#xe6b8;</text>
+        <!-- 未读指示器 -->
+        <view class="unread-indicator" wx:if="{{!item.is_read}}"></view>
+
+        <!-- 类型图标 -->
+        <view class="type-icon type-{{item.type}}">
+          <text class="iconfont icon-task" wx:if="{{item.type === 'task'}}"></text>
+          <text class="iconfont icon-case" wx:if="{{item.type === 'case'}}"></text>
+          <text class="iconfont icon-notification" wx:if="{{item.type === 'system'}}"></text>
         </view>
+
+        <!-- 内容 -->
         <view class="notification-content">
-          <view class="notification-header">
+          <view class="notification-title-row">
             <text class="notification-title">{{item.title}}</text>
-            <text class="notification-time">{{item.created_at}}</text>
+            <text class="notification-time">{{item.timeAgo}}</text>
           </view>
           <text class="notification-desc">{{item.content}}</text>
         </view>
-        <view class="notification-status">
-          <view class="unread-dot" wx:if="{{!item.is_read}}"></view>
-          <text 
-            class="delete-btn"
-            data-id="{{item.id}}"
-            catchtap="deleteNotification"
-          >×</text>
+
+        <!-- 箭头 -->
+        <view class="notification-arrow" wx:if="{{item.target_url}}">
+          <text class="iconfont icon-arrow-right"></text>
         </view>
       </view>
     </block>
-    
+
+    <!-- 空状态 -->
     <view class="empty-state" wx:else>
-      <text class="empty-icon">&#xe6b9;</text>
-      <text class="empty-text">暂无通知</text>
+      <view class="empty-illustration">
+        <view class="empty-circle"></view>
+        <text class="iconfont icon-notification"></text>
+      </view>
+      <text class="empty-title">暂无通知</text>
+      <text class="empty-desc">新消息会在这里显示</text>
     </view>
   </view>
 
-  <view class="load-more" wx:if="{{notifications.length > 0}}">
-    <text wx:if="{{loading}}">加载中...</text>
-    <text wx:elif="{{!hasMore}}">没有更多了</text>
+  <!-- 加载状态 -->
+  <view class="load-footer" wx:if="{{notifications.length > 0}}">
+    <text wx:if="{{loading}}" class="load-text">加载中...</text>
+    <text wx:else class="load-text">已全部加载</text>
   </view>
+
+  <view class="safe-bottom"></view>
 </view>

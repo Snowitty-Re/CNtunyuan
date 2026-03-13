@@ -2,28 +2,34 @@
 
 /* 全局样式 */
 page {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  color: #333;
-  background-color: #f5f7fa;
-  font-size: 28rpx;
-  line-height: 1.6;
-}
-
-/* 主题色变量 */
-:root {
-  --primary-color: #FF8C42;
+  --primary: #FF8C42;
   --primary-dark: #E67E22;
   --primary-light: #FFF7E6;
+  --success: #52c41a;
+  --danger: #ff4d4f;
+  --warning: #faad14;
+  --info: #1890ff;
+  --text: #333;
+  --text-secondary: #666;
+  --text-tertiary: #999;
+  --bg: #FDF8F3;
+  --bg-card: #fff;
+  --border-color: #e8e9eb;
+  --card-radius: 16rpx;
+  --spacing: 24rpx;
+  --primary-color: #FF8C42;
   --success-color: #52C41A;
   --warning-color: #FAAD14;
   --error-color: #FF4D4F;
   --info-color: #1890FF;
   --text-primary: #1f2329;
-  --text-secondary: #646a73;
-  --text-tertiary: #999;
-  --border-color: #e8e9eb;
-  --bg-primary: #f5f7fa;
+  --bg-primary: #FDF8F3;
   --bg-secondary: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  color: #333;
+  background-color: #FDF8F3;
+  font-size: 28rpx;
+  line-height: 1.6;
 }
 
 /* 安全区域适配 */

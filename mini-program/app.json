@@ -12,6 +12,7 @@
     "pages/tasks/detail",
     "pages/tasks/create",
     "pages/tasks/my",
+    "pages/tasks/feedback",
     "pages/volunteer/profile",
     "pages/volunteer/edit-profile",
     "pages/volunteer/workbench",

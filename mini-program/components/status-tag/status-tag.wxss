@@ -1,0 +1,33 @@
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.status-tag.primary {
+  background: #FFF7E6;
+  color: #FF8C42;
+}
+.status-tag.success {
+  background: #E6F7E6;
+  color: #52C41A;
+}
+.status-tag.warning {
+  background: #FFF7E6;
+  color: #FAAD14;
+}
+.status-tag.danger {
+  background: #FFE5E5;
+  color: #FF4D4F;
+}
+.status-tag.info {
+  background: #E6F4FF;
+  color: #1890FF;
+}
+.status-tag.default {
+  background: #F5F5F5;
+  color: #999;
+}
