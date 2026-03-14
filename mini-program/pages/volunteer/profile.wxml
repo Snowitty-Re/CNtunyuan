@@ -25,14 +25,9 @@
         <view class="user-realname" wx:if="{{userInfo.realName}}">
           <text class="realname-text">{{userInfo.realName}}</text>
         </view>
-        <view class="user-org" wx:if="{{userInfo.org}}">
+        <view class="user-org" wx:if="{{userInfo.orgName}}">
           <text class="iconfont icon-org"></text>
-          <text>{{userInfo.org.name}}</text>
-        </view>
-        <view class="user-points">
-          <text class="iconfont icon-star"></text>
-          <text class="points-num">{{stats.points}}</text>
-          <text class="points-label">积分</text>
+          <text>{{userInfo.orgName}}</text>
         </view>
       </view>
     </view>
@@ -41,23 +36,23 @@
   <!-- 统计卡片 -->
   <view class="stats-card">
     <view class="stat-item" bindtap="onStatTap" data-type="task" hover-class="stat-hover">
-      <text class="stat-value">{{stats.taskCount}}</text>
+      <text class="stat-value">{{stats.totalTasks}}</text>
       <text class="stat-label">我的任务</text>
     </view>
     <view class="stat-divider"></view>
     <view class="stat-item" bindtap="onStatTap" data-type="case" hover-class="stat-hover">
-      <text class="stat-value">{{stats.caseCount}}</text>
-      <text class="stat-label">我的案件</text>
+      <text class="stat-value">{{stats.totalCases}}</text>
+      <text class="stat-label">相关案件</text>
     </view>
     <view class="stat-divider"></view>
-    <view class="stat-item" bindtap="onStatTap" data-type="dialect" hover-class="stat-hover">
-      <text class="stat-value">{{stats.dialectCount}}</text>
-      <text class="stat-label">方言录音</text>
+    <view class="stat-item" bindtap="onStatTap" data-type="activeCase" hover-class="stat-hover">
+      <text class="stat-value">{{stats.activeCases}}</text>
+      <text class="stat-label">进行中</text>
     </view>
     <view class="stat-divider"></view>
-    <view class="stat-item" bindtap="onStatTap" data-type="points" hover-class="stat-hover">
-      <text class="stat-value">{{stats.points}}</text>
-      <text class="stat-label">我的积分</text>
+    <view class="stat-item" bindtap="onStatTap" data-type="completed" hover-class="stat-hover">
+      <text class="stat-value">{{stats.completedCases}}</text>
+      <text class="stat-label">已完成</text>
     </view>
   </view>
 

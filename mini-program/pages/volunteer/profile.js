@@ -12,8 +12,7 @@ Page({
       nickname: '',
       realName: '',
       role: 'volunteer',
-      points: 0,
-      org: null
+      orgName: ''  // 使用 org_name 而非 org 对象
     },
     
     // 角色映射
@@ -32,12 +31,12 @@ Page({
       volunteer: '#27AE60'
     },
     
-    // 统计数据
+    // 统计数据（使用后端实际返回的字段）
     stats: {
-      taskCount: 0,
-      caseCount: 0,
-      dialectCount: 0,
-      points: 0
+      totalTasks: 0,      // 总任务数 (total_tasks)
+      totalCases: 0,      // 总案件数 (total_cases)
+      activeCases: 0,     // 进行中案件 (active_cases)
+      completedCases: 0   // 已完成案件 (completed_cases)
     },
     
     // 功能菜单
@@ -90,8 +89,8 @@ Page({
         nickname: userInfo.nickname || profile.nickname || '志愿者',
         realName: userInfo.real_name || profile.real_name || '',
         role: userInfo.role || profile.role || 'volunteer',
-        points: userInfo.points || profile.points || 0,
-        org: userInfo.org || profile.org || null
+        // 后端返回的是 org_name 字符串，不是 org 对象
+        orgName: userInfo.org_name || profile.org_name || userInfo.org?.name || '未知组织'
       }
       
       this.setData({ userInfo: mergedUserInfo })
@@ -104,18 +103,19 @@ Page({
   // 加载统计数据
   async loadStats() {
     try {
-      // 并行获取各项统计
+      // 获取用户统计和任务统计
       const [userStats, taskStats] = await Promise.all([
         userService.getStats().catch(() => ({})),
         taskService.getStats().catch(() => ({}))
       ])
       
+      // 使用后端实际返回的字段名
       this.setData({
         stats: {
-          taskCount: userStats.task_count || taskStats.total || 0,
-          caseCount: userStats.case_count || 0,
-          dialectCount: userStats.dialect_count || 0,
-          points: userStats.points || this.data.userInfo.points || 0
+          totalTasks: userStats.total_tasks || taskStats.my_tasks || 0,
+          totalCases: userStats.total_cases || 0,
+          activeCases: userStats.active_cases || 0,
+          completedCases: userStats.completed_cases || 0
         }
       })
     } catch (error) {
@@ -133,11 +133,11 @@ Page({
       case 'case':
         wx.switchTab({ url: '/pages/cases/list' })
         break
-      case 'dialect':
-        wx.navigateTo({ url: '/pages/dialect/list' })
+      case 'activeCase':
+        wx.switchTab({ url: '/pages/cases/list?status=searching' })
         break
-      case 'points':
-        showToast('积分可用于兑换志愿者福利')
+      case 'completed':
+        wx.switchTab({ url: '/pages/cases/list?status=found' })
         break
     }
   },

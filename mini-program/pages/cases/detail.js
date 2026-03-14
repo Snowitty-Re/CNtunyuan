@@ -10,15 +10,6 @@ const STATUS_MAP = {
   'closed': { label: '已结案', color: '#999' }
 }
 
-// 案件类型映射
-const CASE_TYPE_MAP = {
-  'elderly': '老人走失',
-  'child': '儿童走失',
-  'adult': '成年人走失',
-  'disability': '残障人士走失',
-  'other': '其他'
-}
-
 // 性别映射
 const GENDER_MAP = {
   'male': '男',
@@ -31,13 +22,11 @@ Page({
     id: '',
     caseData: {},
     tracks: [],
-    markers: [],
     loading: false,
     isManager: false, // 是否为管理者
     
     // 映射常量
     statusMap: STATUS_MAP,
-    caseTypeMap: CASE_TYPE_MAP,
     genderMap: GENDER_MAP
   },
 
@@ -85,32 +74,29 @@ Page({
     try {
       const data = await missingPersonService.getById(this.data.id)
       
-      // 处理数据
+      // 处理数据 - 使用后端实际返回的字段
       data.missing_time = formatDate(data.missing_time)
       data.created_at = formatDate(data.created_at)
       data.photoUrl = this.getFirstPhoto(data.photos)
-      data.possible_location = data.possible_location || '未知'
-      data.appearance = data.appearance || '暂无描述'
-      data.clothing = data.clothing || '暂无描述'
-      data.special_features = data.special_features || '无'
       
-      // 设置地图标记
-      const markers = []
-      if (data.missing_latitude && data.missing_longitude) {
-        markers.push({
-          id: 1,
-          latitude: data.missing_latitude,
-          longitude: data.missing_longitude,
-          title: '走失地点',
-          iconPath: '/assets/images/marker_red.png',
-          width: 40,
-          height: 40
-        })
+      // 拼接走失地点（后端返回的是 province, city, district, address）
+      const locationParts = [data.province, data.city, data.district, data.address].filter(Boolean)
+      data.displayLocation = locationParts.length > 0 ? locationParts.join(' ') : '未知'
+      
+      // 衣着描述（后端字段为 clothes）
+      data.clothes = data.clothes || '暂无描述'
+      // 特征（后端字段为 features）
+      data.features = data.features || '无'
+      // 详细描述
+      data.description = data.description || '暂无描述'
+      
+      // 找到信息
+      if (data.found_time) {
+        data.found_time = formatDate(data.found_time)
       }
 
       this.setData({ 
-        caseData: data,
-        markers
+        caseData: data
       })
     } catch (error) {
       console.error('加载案件详情失败:', error)
@@ -129,7 +115,8 @@ Page({
       this.setData({
         tracks: (tracks || []).map(t => ({
           ...t,
-          track_time: formatDate(t.track_time)
+          // 后端返回的字段是 time，不是 track_time
+          displayTime: formatDate(t.time)
         }))
       })
     } catch (error) {
@@ -181,6 +168,7 @@ Page({
    */
   addTrack() {
     const { id } = this.data
+    const { caseData } = this.data
     wx.showModal({
       title: '添加线索',
       editable: true,
@@ -189,9 +177,15 @@ Page({
         if (res.confirm && res.content && res.content.trim()) {
           try {
             showLoading('提交中...')
+            // 使用后端要求的字段名
             await missingPersonService.addTrack(id, {
               description: res.content.trim(),
-              track_time: new Date().toISOString()
+              time: new Date().toISOString(),  // 使用 time 而非 track_time
+              location: caseData.displayLocation || '未知地点', // 添加必需的 location 字段
+              province: caseData.province,
+              city: caseData.city,
+              district: caseData.district,
+              address: caseData.address
             })
             hideLoading()
             showSuccess('线索添加成功')
@@ -248,10 +242,11 @@ Page({
 
     showLoading('处理中...')
     try {
+      const { caseData } = this.data
+      // 使用后端要求的字段名：location 和 note
       await missingPersonService.markFound(this.data.id, {
-        found_location: this.data.caseData.missing_location,
-        found_time: new Date().toISOString(),
-        description: '通过志愿者帮助找到'
+        location: caseData.displayLocation || '未知地点',  // 使用 location 而非 found_location
+        note: '通过志愿者帮助找到'  // 使用 note 而非 description，后端不需要 found_time
       })
       hideLoading()
       showSuccess('标记成功')
@@ -303,19 +298,22 @@ Page({
 
   /**
    * 打开地图导航
+   * 注意：后端没有经纬度字段，此功能需要地址解析服务
    */
   openLocation() {
     const { caseData } = this.data
-    if (!caseData.missing_latitude || !caseData.missing_longitude) {
+    
+    // 由于没有经纬度，显示提示
+    if (!caseData.province && !caseData.city && !caseData.address) {
       wx.showToast({ title: '暂无位置信息', icon: 'none' })
       return
     }
     
-    wx.openLocation({
-      latitude: parseFloat(caseData.missing_latitude),
-      longitude: parseFloat(caseData.missing_longitude),
-      name: '走失地点',
-      address: caseData.missing_location
+    // 显示地址信息
+    wx.showModal({
+      title: '走失地点',
+      content: caseData.displayLocation,
+      showCancel: false
     })
   },
 
@@ -325,7 +323,7 @@ Page({
   onShareAppMessage() {
     const { caseData } = this.data
     return {
-      title: `寻亲：${caseData.name}，${caseData.age}岁，${caseData.missing_location}`,
+      title: `寻亲：${caseData.name}，${caseData.age}岁，${caseData.displayLocation || '未知地点'}`,
       path: `/pages/cases/detail?id=${caseData.id}`,
       imageUrl: caseData.photoUrl || '/assets/images/share-default.png'
     }

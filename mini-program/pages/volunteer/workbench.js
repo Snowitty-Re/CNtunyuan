@@ -8,11 +8,11 @@ Page({
     userInfo: {},
     currentDate: '',
     
-    // 今日统计
+    // 今日统计（使用后端实际返回的字段）
     todayStats: {
-      pendingCount: 0,    // 待处理任务
-      processingCount: 0, // 进行中任务
-      helpedCount: 0      // 已帮助案件
+      myPending: 0,      // 我的待处理任务 (my_pending)
+      myProcessing: 0,   // 我的进行中任务 (my_processing)
+      myCompleted: 0     // 我的已完成任务 (my_completed)
     },
     
     // 快捷入口
@@ -111,11 +111,12 @@ Page({
     try {
       showLoading('加载中...')
       const stats = await taskService.getStats()
+      // 使用后端实际返回的字段
       this.setData({
         todayStats: {
-          pendingCount: stats.pending_count || 0,
-          processingCount: stats.processing_count || 0,
-          helpedCount: stats.helped_count || stats.completed_count || 0
+          myPending: stats.my_pending || 0,
+          myProcessing: stats.my_processing || stats.processing || 0,
+          myCompleted: stats.my_completed || stats.completed || 0
         }
       })
     } catch (error) {

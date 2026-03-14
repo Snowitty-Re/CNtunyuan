@@ -1,20 +1,9 @@
 const services = require('../../services/index')
 const { showError, showToast } = require('../../utils/util')
 
-// 地图上下文
-let mapContext = null
-
 Page({
   data: {
-    // 地图配置
-    latitude: 39.9042,  // 默认北京
-    longitude: 116.4074,
-    scale: 10,
-    
-    // 标记点
-    markers: [],
-    
-    // 案件列表（用于地图标记）
+    // 案件列表
     cases: [],
     
     // 当前选中的案件
@@ -30,32 +19,8 @@ Page({
   },
 
   onLoad(options) {
-    // 获取当前位置
-    this.getCurrentLocation()
-    
     // 加载案件数据
     this.loadCases()
-  },
-
-  onReady() {
-    // 创建地图上下文
-    mapContext = wx.createMapContext('map')
-  },
-
-  // 获取当前位置
-  getCurrentLocation() {
-    wx.getLocation({
-      type: 'gcj02',
-      success: (res) => {
-        this.setData({
-          latitude: res.latitude,
-          longitude: res.longitude
-        })
-      },
-      fail: () => {
-        showToast('获取位置失败，请检查权限设置')
-      }
-    })
   },
 
   // 加载案件数据
@@ -70,14 +35,14 @@ Page({
       }
       
       const result = await services.missingPerson.getList(params)
-      const cases = result.list || []
-      
-      // 生成地图标记
-      const markers = this.generateMarkers(cases)
+      const cases = (result.list || []).map(item => ({
+        ...item,
+        // 拼接地址信息用于显示
+        displayLocation: [item.province, item.city, item.district, item.address].filter(Boolean).join(' ') || '未知位置'
+      }))
       
       this.setData({
         cases,
-        markers,
         loading: false
       })
     } catch (error) {
@@ -87,84 +52,15 @@ Page({
     }
   },
 
-  // 生成地图标记
-  generateMarkers(cases) {
-    return cases
-      .filter(item => item.missing_latitude && item.missing_longitude)
-      .map((item, index) => ({
-        id: index,
-        latitude: parseFloat(item.missing_latitude),
-        longitude: parseFloat(item.missing_longitude),
-        title: item.name,
-        iconPath: this.getMarkerIcon(item.status),
-        width: 40,
-        height: 40,
-        callout: {
-          content: `${item.name}\n${this.getLocationText(item)}`,
-          color: '#333',
-          fontSize: 14,
-          borderRadius: 8,
-          bgColor: '#fff',
-          padding: 10,
-          display: 'BYCLICK'
-        },
-        data: item
-      }))
-  },
-
-  // 获取标记图标
-  getMarkerIcon(status) {
-    const iconMap = {
-      'missing': '/assets/images/marker_red.png',
-      'searching': '/assets/images/marker_orange.png',
-      'found': '/assets/images/marker_green.png',
-      'reunited': '/assets/images/marker_blue.png'
+  // 获取状态标签颜色
+  getStatusColor(status) {
+    const colorMap = {
+      'missing': '#ff4d4f',
+      'searching': '#faad14',
+      'found': '#52c41a',
+      'reunited': '#52c41a'
     }
-    return iconMap[status] || '/assets/images/marker_red.png'
-  },
-
-  // 拼接位置信息
-  getLocationText(item) {
-    const parts = []
-    if (item.province) parts.push(item.province)
-    if (item.city) parts.push(item.city)
-    if (item.district) parts.push(item.district)
-    if (item.address) parts.push(item.address)
-    return parts.length > 0 ? parts.join(' ') : '未知位置'
-  },
-
-  // 标记点击事件
-  onMarkerTap(e) {
-    const markerId = e.detail.markerId
-    const marker = this.data.markers[markerId]
-    
-    if (marker && marker.data) {
-      this.setData({
-        selectedCase: marker.data,
-        showCaseList: true
-      })
-    }
-  },
-
-  // 地图点击事件
-  onMapTap() {
-    this.setData({
-      selectedCase: null,
-      showCaseList: false
-    })
-  },
-
-  // 视野改变事件
-  onRegionChange(e) {
-    if (e.type === 'end') {
-      // 可以在这里根据视野范围加载数据
-    }
-  },
-
-  // 定位到当前位置
-  locateCurrentPosition() {
-    this.getCurrentLocation()
-    mapContext.moveToLocation()
+    return colorMap[status] || '#999'
   },
 
   // 显示案件列表
@@ -174,7 +70,19 @@ Page({
 
   // 隐藏案件列表
   hideCaseList() {
-    this.setData({ showCaseList: false })
+    this.setData({ showCaseList: false, selectedCase: null })
+  },
+
+  // 选择案件
+  selectCase(e) {
+    const id = e.currentTarget.dataset.id
+    const caseItem = this.data.cases.find(c => c.id === id)
+    if (caseItem) {
+      this.setData({
+        selectedCase: caseItem,
+        showCaseList: true
+      })
+    }
   },
 
   // 筛选状态改变
@@ -202,31 +110,12 @@ Page({
     // 本地筛选
     const filtered = cases.filter(item => 
       item.name.includes(keyword) ||
-      (this.getLocationText(item).includes(keyword))
+      (item.displayLocation && item.displayLocation.includes(keyword))
     )
     
-    const markers = this.generateMarkers(filtered)
-    
     this.setData({
-      markers,
+      cases: filtered,
       showCaseList: true
-    })
-  },
-
-  // 导航到案件位置
-  navigateToLocation(e) {
-    const item = e.currentTarget.dataset.item
-    
-    if (!item.missing_latitude || !item.missing_longitude) {
-      showToast('该案件没有位置信息')
-      return
-    }
-    
-    wx.openLocation({
-      latitude: parseFloat(item.missing_latitude),
-      longitude: parseFloat(item.missing_longitude),
-      name: item.name,
-      address: this.getLocationText(item)
     })
   },
 
@@ -248,5 +137,15 @@ Page({
   // 刷新数据
   onRefresh() {
     this.loadCases()
+  },
+
+  // 拨打电话
+  makePhoneCall(e) {
+    const phone = e.currentTarget.dataset.phone
+    if (!phone) {
+      showToast('暂无联系电话')
+      return
+    }
+    wx.makePhoneCall({ phoneNumber: phone })
   }
 })

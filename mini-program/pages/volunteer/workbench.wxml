@@ -25,23 +25,23 @@
     <view class="stats-card">
       <view class="stat-item">
         <view class="stat-value-wrapper">
-          <text class="stat-value">{{todayStats.pendingCount}}</text>
+          <text class="stat-value">{{todayStats.myPending}}</text>
         </view>
         <text class="stat-label">待处理</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
         <view class="stat-value-wrapper">
-          <text class="stat-value processing">{{todayStats.processingCount}}</text>
+          <text class="stat-value processing">{{todayStats.myProcessing}}</text>
         </view>
         <text class="stat-label">进行中</text>
       </view>
       <view class="stat-divider"></view>
       <view class="stat-item">
         <view class="stat-value-wrapper">
-          <text class="stat-value completed">{{todayStats.helpedCount}}</text>
+          <text class="stat-value completed">{{todayStats.myCompleted}}</text>
         </view>
-        <text class="stat-label">已帮助</text>
+        <text class="stat-label">已完成</text>
       </view>
     </view>
   </view>
@@ -92,8 +92,8 @@
             <text class="task-title">{{item.title}}</text>
           </view>
           <view class="task-meta">
-            <view class="meta-tag type-tag">{{taskTypeMap[item.task_type] || '其他'}}</view>
-            <view class="meta-tag status-tag status-{{item.status}}">{{statusMap[item.status]}}</view>
+            <view class="meta-tag type-tag">{{taskTypeMap[item.type] || '其他'}}</view>
+            <view class="meta-tag status-tag status-{{item.status}}">{{statusMap[item.status] || item.status}}</view>
             <text class="task-time">{{item.timeAgo}}</text>
           </view>
         </view>

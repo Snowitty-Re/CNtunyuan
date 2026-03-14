@@ -92,7 +92,9 @@ Page({
       const cases = list.map(item => ({
         ...item,
         missing_time: formatDate(item.missing_time),
-        photoUrl: this.getFirstPhoto(item.photos)
+        photoUrl: this.getFirstPhoto(item.photos),
+        // 拼接走失地点（后端返回 province, city, district, address）
+        missingLocation: [item.province, item.city, item.district, item.address].filter(Boolean).join(' ') || '未知'
       }))
 
       this.setData({

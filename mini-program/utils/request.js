@@ -3,9 +3,9 @@
  * 统一处理请求、响应、错误和 Token 刷新
  */
 
-// 生产环境 API 地址 - 统一配置在这里
-// const API_BASE_URL = 'https://cntuanyuan.com/api/v1'
+// API 基础配置
 const API_BASE_URL = 'http://localhost:8080/api/v1'
+// const API_BASE_URL = 'https://cntuanyuan.com/api/v1'
 // 请求队列（用于 token 刷新时暂存请求）
 let requestQueue = []
 let isRefreshing = false
@@ -125,8 +125,8 @@ const request = (options) => {
       timeout: options.timeout || BASE_CONFIG.timeout
     }
 
-    // 显示加载中
-    if (options.loading !== false) {
+    // 显示加载中（仅在明确指定 loading: true 时显示）
+    if (options.loading === true) {
       wx.showLoading({ 
         title: options.loadingText || '加载中...',
         mask: true
@@ -137,7 +137,7 @@ const request = (options) => {
       ...config,
       success: (res) => {
         // 隐藏加载
-        if (options.loading !== false) {
+        if (options.loading === true) {
           wx.hideLoading()
         }
 
@@ -184,7 +184,7 @@ const request = (options) => {
       },
       fail: (err) => {
         // 隐藏加载
-        if (options.loading !== false) {
+        if (options.loading === true) {
           wx.hideLoading()
         }
 
@@ -340,5 +340,6 @@ module.exports = {
   put,
   del,
   uploadFile,
-  uploadFiles
+  uploadFiles,
+  API_BASE_URL
 }

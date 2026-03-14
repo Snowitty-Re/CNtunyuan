@@ -13,8 +13,11 @@ Page({
     currentUser: null,
     isManager: false,
     isAssignee: false,
+    // 完整的任务状态映射（包含所有后端状态）
     statusMap: {
+      draft: '草稿',
       pending: '待分配',
+      assigned: '已分配',
       processing: '进行中',
       completed: '已完成',
       cancelled: '已取消'
@@ -94,15 +97,31 @@ Page({
     }
   },
 
-  // 分配任务（管理者）
+  // 分配任务（管理者）- 使用页面内选择而非跳转
   async assignTask() {
     if (!this.data.isManager) {
       showToast('无权限操作')
       return
     }
 
-    wx.navigateTo({
-      url: `/pages/tasks/assign?id=${this.data.taskId}`
+    // 显示输入框让用户输入执行人ID
+    wx.showModal({
+      title: '分配任务',
+      editable: true,
+      placeholderText: '请输入执行人ID',
+      success: async (res) => {
+        if (res.confirm && res.content) {
+          try {
+            showLoading('分配中...')
+            await taskService.assign(this.data.taskId, { assignee_id: res.content })
+            showSuccess('分配成功')
+            this.loadTaskDetail()
+            this.loadTaskLogs()
+          } catch (error) {
+            showToast('分配失败')
+          }
+        }
+      }
     })
   },
 
@@ -245,13 +264,14 @@ Page({
   // 查看位置
   viewLocation() {
     const { task } = this.data
-    if (!task || !task.latitude || !task.longitude) {
+    // 后端返回的是 lat/lng 而非 latitude/longitude
+    if (!task || !task.lat || !task.lng) {
       showToast('暂无位置信息')
       return
     }
     wx.openLocation({
-      latitude: parseFloat(task.latitude),
-      longitude: parseFloat(task.longitude),
+      latitude: parseFloat(task.lat),
+      longitude: parseFloat(task.lng),
       name: task.address || '任务位置',
       address: task.address
     })

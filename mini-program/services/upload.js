@@ -41,7 +41,8 @@ module.exports = {
   download(id) {
     return new Promise((resolve, reject) => {
       const token = wx.getStorageSync('token') || ''
-      const API_BASE_URL = 'https://cntuanyuan.com/api/v1'
+      // 使用与 request.js 一致的 API 配置
+      const API_BASE_URL = require('../utils/request').API_BASE_URL || 'http://localhost:8080/api/v1'
       wx.downloadFile({
         url: `${API_BASE_URL}/upload/${id}/download`,
         header: {

@@ -9,15 +9,6 @@ const GENDER_OPTIONS = [
   { value: 'other', label: '其他' }
 ]
 
-// 案件类型选项
-const CASE_TYPE_OPTIONS = [
-  { value: 'elderly', label: '老人走失' },
-  { value: 'child', label: '儿童走失' },
-  { value: 'adult', label: '成年人走失' },
-  { value: 'disability', label: '残障人士走失' },
-  { value: 'other', label: '其他' }
-]
-
 Page({
   data: {
     // 表单数据
@@ -26,25 +17,24 @@ Page({
       gender: 'male',
       age: '',
       height: '',
-      caseType: 'elderly',
       missingTime: '',
-      missingLocation: '',
-      latitude: '',
-      longitude: '',
+      // 位置信息（前端展示用）
+      province: '',
+      city: '',
+      district: '',
+      address: '',
+      // 详细描述（包含外貌、衣着、特征等）
       description: '',
-      appearance: '',
-      clothing: '',
-      specialFeatures: '',
+      // 联系人信息
       contactName: '',
-      contactRelation: '',
-      contactPhone: ''
+      contactRel: '',
+      contactPhone: '',
+      altContact: ''
     },
     
     // 选项数据
     genderOptions: GENDER_OPTIONS,
-    caseTypeOptions: CASE_TYPE_OPTIONS,
     genderLabel: '男',
-    caseTypeLabel: '老人走失',
     
     // 照片
     photos: [], // 本地临时文件路径
@@ -81,7 +71,9 @@ Page({
       hideLoading()
 
       const genderIndex = GENDER_OPTIONS.findIndex(g => g.value === data.gender)
-      const caseTypeIndex = CASE_TYPE_OPTIONS.findIndex(c => c.value === data.case_type)
+
+      // 将后端的省市区地址拼接为地址字符串（用于展示）
+      const locationParts = [data.province, data.city, data.district, data.address].filter(Boolean)
 
       this.setData({
         form: {
@@ -89,21 +81,23 @@ Page({
           gender: data.gender || 'male',
           age: data.age ? String(data.age) : '',
           height: data.height ? String(data.height) : '',
-          caseType: data.case_type || 'elderly',
           missingTime: data.missing_time ? formatDate(data.missing_time, 'YYYY-MM-DD HH:mm') : '',
-          missingLocation: data.missing_location || '',
-          latitude: data.missing_latitude || '',
-          longitude: data.missing_longitude || '',
-          description: data.missing_detail || '',
-          appearance: data.appearance || '',
-          clothing: data.clothing || '',
-          specialFeatures: data.special_features || '',
+          // 位置信息
+          province: data.province || '',
+          city: data.city || '',
+          district: data.district || '',
+          address: data.address || '',
+          // 详细描述（后端存储的是合并后的描述）
+          description: data.description || '',
+          // 联系人信息（注意字段名映射）
           contactName: data.contact_name || '',
-          contactRelation: data.contact_relation || '',
-          contactPhone: data.contact_phone || ''
+          contactRel: data.contact_rel || '',  // 后端返回 contact_rel
+          contactPhone: data.contact_phone || '',
+          altContact: data.alt_contact || ''
         },
-        genderLabel: genderIndex >= 0 ? GENDER_OPTIONS[genderIndex].label : '男',
-        caseTypeLabel: caseTypeIndex >= 0 ? CASE_TYPE_OPTIONS[caseTypeIndex].label : '老人走失'
+        // 如果有照片，设置到photos中
+        uploadedPhotos: data.photos || [],
+        genderLabel: genderIndex >= 0 ? GENDER_OPTIONS[genderIndex].label : '男'
       })
     } catch (error) {
       hideLoading()
@@ -157,14 +151,6 @@ Page({
   },
 
   /**
-   * 获取案件类型标签
-   */
-  getCaseTypeLabel(value) {
-    const item = CASE_TYPE_OPTIONS.find(item => item.value === value)
-    return item ? item.label : '老人走失'
-  },
-
-  /**
    * 性别选择
    */
   onGenderChange(e) {
@@ -173,18 +159,6 @@ Page({
     this.setData({ 
       'form.gender': gender,
       'genderLabel': GENDER_OPTIONS[index].label
-    })
-  },
-
-  /**
-   * 案件类型选择
-   */
-  onCaseTypeChange(e) {
-    const index = parseInt(e.detail.value)
-    const caseType = CASE_TYPE_OPTIONS[index].value
-    this.setData({ 
-      'form.caseType': caseType,
-      'caseTypeLabel': CASE_TYPE_OPTIONS[index].label
     })
   },
 
@@ -198,15 +172,20 @@ Page({
   },
 
   /**
-   * 选择位置
+   * 选择位置（使用微信小程序选择位置API）
    */
   chooseLocation() {
     wx.chooseLocation({
       success: (res) => {
+        // 解析地址字符串，尝试提取省市区
+        const address = res.address || res.name || ''
+        const parts = this.parseAddress(address)
+        
         this.setData({
-          'form.missingLocation': res.name || res.address,
-          'form.latitude': res.latitude,
-          'form.longitude': res.longitude
+          'form.province': parts.province,
+          'form.city': parts.city,
+          'form.district': parts.district,
+          'form.address': address
         })
       },
       fail: (err) => {
@@ -229,6 +208,47 @@ Page({
         })
       }
     })
+  },
+
+  /**
+   * 解析地址字符串为省市区
+   * 这是一个简化的实现，实际可能需要更复杂的地址解析
+   */
+  parseAddress(address) {
+    const parts = { province: '', city: '', district: '' }
+    if (!address) return parts
+    
+    // 简单解析：假设地址格式为"XX省XX市XX区..."
+    const provinceMatch = address.match(/([^省市自治区]+(?:省|市|自治区))/)
+    const cityMatch = address.match(/([^市区县]+(?:市|区))/g)
+    
+    if (provinceMatch) {
+      parts.province = provinceMatch[1]
+    }
+    
+    // 这里使用简化的逻辑，实际可能需要调用地址解析服务
+    const addrParts = address.split(/[省市区县]/)
+    if (addrParts.length >= 3) {
+      parts.province = addrParts[0] + (address.includes('省') ? '省' : address.includes('自治区') ? '自治区' : '市')
+      parts.city = addrParts[1] + (address.includes('市') ? '市' : '区')
+      if (addrParts[2]) {
+        parts.district = addrParts[2] + (address.includes('县') ? '县' : '区')
+      }
+    } else {
+      // 如果无法解析，将完整地址放入address字段
+      parts.address = address
+    }
+    
+    return parts
+  },
+
+  /**
+   * 手动输入位置
+   */
+  onLocationInput(e) {
+    const { field } = e.currentTarget.dataset
+    const { value } = e.detail
+    this.setData({ [`form.${field}`]: value })
   },
 
   /**
@@ -294,10 +314,7 @@ Page({
           entity_type: 'missing_person',
           sort: i
         })
-        uploadedUrls.push({
-          url: result.url || result,
-          sort: i
-        })
+        uploadedUrls.push(result.url || result)
         
         // 更新上传进度
         this.setData({
@@ -328,7 +345,7 @@ Page({
       return false
     }
     
-    if (!form.missingLocation.trim()) {
+    if (!form.province && !form.city && !form.address) {
       showError('请输入走失地点')
       return false
     }
@@ -370,25 +387,28 @@ Page({
 
       const { form } = this.data
       
-      // 构建提交数据
+      // 构建提交数据（按照后端API要求的字段名）
       const submitData = {
         name: form.name.trim(),
         gender: form.gender,
         age: parseInt(form.age) || 0,
         height: parseInt(form.height) || 0,
-        case_type: form.caseType,
+        // 走失时间
         missing_time: new Date(form.missingTime).toISOString(),
-        missing_location: form.missingLocation.trim(),
-        missing_latitude: form.latitude || null,
-        missing_longitude: form.longitude || null,
-        missing_detail: form.description.trim(),
-        appearance: form.appearance.trim(),
-        clothing: form.clothing.trim(),
-        special_features: form.specialFeatures.trim(),
+        // 位置信息（分别提交）
+        province: form.province.trim(),
+        city: form.city.trim(),
+        district: form.district.trim(),
+        address: form.address.trim(),
+        // 详细描述
+        description: form.description.trim(),
+        // 联系人信息（注意字段名与后端一致）
         contact_name: form.contactName.trim(),
-        contact_relation: form.contactRelation.trim(),
+        contact_rel: form.contactRel.trim(),      // 使用 contact_rel 而非 contact_relation
         contact_phone: form.contactPhone.trim(),
-        photos: photoUrls
+        alt_contact: form.altContact.trim(),
+        // 照片URL（后端只接受单个字符串，取第一张）
+        photo_url: photoUrls.length > 0 ? photoUrls[0] : ''
       }
 
       if (this.data.isEdit) {
@@ -434,18 +454,16 @@ Page({
               gender: 'male',
               age: '',
               height: '',
-              caseType: 'elderly',
               missingTime: '',
-              missingLocation: '',
-              latitude: '',
-              longitude: '',
+              province: '',
+              city: '',
+              district: '',
+              address: '',
               description: '',
-              appearance: '',
-              clothing: '',
-              specialFeatures: '',
               contactName: '',
-              contactRelation: '',
-              contactPhone: ''
+              contactRel: '',
+              contactPhone: '',
+              altContact: ''
             },
             photos: []
           })

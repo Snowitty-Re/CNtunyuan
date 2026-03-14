@@ -434,14 +434,22 @@ Page({
       }
       
       // 2. 创建方言记录
+      // 解析地区为省份和城市
+      const regionParts = this.parseRegion(this.data.form.region)
+      
       const dialectData = {
         title: this.data.form.title.trim(),
+        content: this.data.form.description.trim(),  // 后端字段为 content
         description: this.data.form.description.trim(),
         audio_url: audioUrl,
         duration: this.data.recordDuration,
         region: this.data.form.region,
-        tags: this.data.form.tags,
-        missing_person_id: this.data.form.missing_person_id || undefined
+        province: regionParts.province,  // 添加省份
+        city: regionParts.city,          // 添加城市
+        dialect_type: regionParts.dialectType,  // 方言类型
+        tags: this.data.form.tags.join(','),  // 将数组转换为逗号分隔的字符串
+        file_size: 0,     // 可选字段
+        format: 'mp3'     // 可选字段
       }
       
       await dialectService.create(dialectData)
@@ -473,5 +481,75 @@ Page({
     const current = this.data.recordTime
     const remaining = MAX_DURATION - current
     return this.formatTime(remaining)
+  },
+
+  // 解析地区为省份、城市和方言类型
+  parseRegion(region) {
+    if (!region) {
+      return { province: '', city: '', dialectType: '' }
+    }
+    
+    // 直辖市
+    const municipalities = ['北京市', '上海市', '天津市', '重庆市']
+    if (municipalities.includes(region)) {
+      return {
+        province: region,
+        city: region,
+        dialectType: this.getDialectType(region)
+      }
+    }
+    
+    // 自治区/省
+    if (region.includes('自治区')) {
+      return {
+        province: region,
+        city: region.replace('自治区', ''),
+        dialectType: this.getDialectType(region)
+      }
+    }
+    
+    return {
+      province: region,
+      city: region,
+      dialectType: this.getDialectType(region)
+    }
+  },
+
+  // 根据地区获取方言类型
+  getDialectType(region) {
+    const dialectMap = {
+      '北京市': '官话',
+      '上海市': '吴语',
+      '天津市': '官话',
+      '重庆市': '官话',
+      '广东省': '粤语',
+      '江苏省': '官话',
+      '浙江省': '吴语',
+      '山东省': '官话',
+      '河南省': '官话',
+      '四川省': '官话',
+      '湖北省': '官话',
+      '湖南省': '湘语',
+      '河北省': '官话',
+      '福建省': '闽语',
+      '安徽省': '官话',
+      '辽宁省': '官话',
+      '江西省': '赣语',
+      '陕西省': '官话',
+      '黑龙江省': '官话',
+      '山西省': '晋语',
+      '广西壮族自治区': '粤语',
+      '吉林省': '官话',
+      '贵州省': '官话',
+      '云南省': '官话',
+      '甘肃省': '官话',
+      '海南省': '闽语',
+      '内蒙古自治区': '官话',
+      '新疆维吾尔自治区': '官话',
+      '西藏自治区': '藏语',
+      '青海省': '官话',
+      '宁夏回族自治区': '官话'
+    }
+    return dialectMap[region] || '方言'
   }
 })

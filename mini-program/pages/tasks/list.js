@@ -13,13 +13,18 @@ Page({
     hasMore: true,
     stats: {
       total: 0,
+      draft: 0,
       pending: 0,
+      assigned: 0,
       processing: 0,
       completed: 0,
       cancelled: 0
     },
+    // 完整的任务状态映射（包含所有后端状态）
     statusMap: {
+      draft: '草稿',
       pending: '待分配',
+      assigned: '已分配',
       processing: '进行中',
       completed: '已完成',
       cancelled: '已取消'
