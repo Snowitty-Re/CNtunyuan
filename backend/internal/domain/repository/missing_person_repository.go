@@ -49,6 +49,9 @@ type MissingPersonRepository interface {
 	// CountByReporter 统计用户上报的案件数
 	CountByReporter(ctx context.Context, reporterID string) (int64, error)
 
+	// CountByReporterAndStatus 统计用户上报的特定状态案件数
+	CountByReporterAndStatus(ctx context.Context, reporterID string, status entity.MissingStatus) (int64, error)
+
 	// IncrementViews 增加浏览次数
 	IncrementViews(ctx context.Context, id string) error
 }

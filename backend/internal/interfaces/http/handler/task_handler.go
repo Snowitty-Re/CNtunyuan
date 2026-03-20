@@ -290,6 +290,8 @@ func (h *TaskHandler) Start(c *gin.Context) {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
+		case service.ErrTaskNotAssignedToUser:
+			response.Forbidden(c, "task not assigned to you")
 		default:
 			response.BadRequest(c, err.Error())
 		}
@@ -332,6 +334,8 @@ func (h *TaskHandler) Complete(c *gin.Context) {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
+		case service.ErrTaskNotAssignedToUser:
+			response.Forbidden(c, "task not assigned to you")
 		default:
 			response.BadRequest(c, err.Error())
 		}

@@ -106,6 +106,24 @@ func (m *MissingPerson) Validate() error {
 	return nil
 }
 
+// IsValidMissingStatus 校验状态值是否合法
+func IsValidMissingStatus(s MissingStatus) bool {
+	switch s {
+	case MissingStatusMissing, MissingStatusSearching, MissingStatusFound, MissingStatusReunited, MissingStatusClosed:
+		return true
+	}
+	return false
+}
+
+// IsValidUrgencyLevel 校验紧急程度是否合法
+func IsValidUrgencyLevel(u UrgencyLevel) bool {
+	switch u {
+	case UrgencyLevelCritical, UrgencyLevelHigh, UrgencyLevelMedium, UrgencyLevelLow:
+		return true
+	}
+	return false
+}
+
 // IsActive 是否活跃（寻找中）
 func (m *MissingPerson) IsActive() bool {
 	return m.Status == MissingStatusMissing || m.Status == MissingStatusSearching

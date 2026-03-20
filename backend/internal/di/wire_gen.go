@@ -73,7 +73,10 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	}
 
 	// 创建 Token 服务
-	tokenService := auth.NewJWTService(&cfg.JWT, redisCache)
+	tokenService, err := auth.NewJWTService(&cfg.JWT, redisCache)
+	if err != nil {
+		return nil, fmt.Errorf("JWT配置错误: %w", err)
+	}
 
 	// 创建微信客户端
 	var wechatClient *wechat.Client

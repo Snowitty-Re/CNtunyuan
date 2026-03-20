@@ -18,6 +18,7 @@ var (
 	ErrEmailExists       = errors.New("email already exists")
 	ErrInvalidRole       = errors.New("invalid role")
 	ErrCannotModify      = errors.New("cannot modify this user")
+	ErrOldPasswordWrong  = errors.New("old password is wrong")
 )
 
 // UserAppService user application service
@@ -200,6 +201,10 @@ func (s *UserAppService) List(ctx context.Context, req *dto.UserListRequest) (*d
 
 // UpdateStatus update user status
 func (s *UserAppService) UpdateStatus(ctx context.Context, id string, status entity.UserStatus, operator *entity.User) error {
+	if !entity.IsValidUserStatus(status) {
+		return errors.New("invalid status: must be one of active/inactive/banned")
+	}
+
 	user, err := s.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrUserNotFound
@@ -301,7 +306,7 @@ func (s *UserAppService) ChangePassword(ctx context.Context, id string, req *dto
 	}
 
 	if !user.CheckPassword(req.OldPassword) {
-		return errors.New("old password is wrong")
+		return ErrOldPasswordWrong
 	}
 
 	if err := user.SetPassword(req.NewPassword); err != nil {
@@ -347,8 +352,8 @@ func (s *UserAppService) GetStats(ctx context.Context, id string) (*dto.UserStat
 		stats.PendingTasks = taskStats.MyPending
 	}
 
-	// 用户上报的案件中已结案的数量（通过走失人员仓储统计）
-	completedCases, err := s.mpRepo.CountByStatus(ctx, entity.MissingStatusReunited)
+	// 用户上报的案件中已团聚的数量
+	completedCases, err := s.mpRepo.CountByReporterAndStatus(ctx, id, entity.MissingStatusReunited)
 	if err != nil {
 		logger.Error("Failed to count completed cases", logger.Err(err))
 	} else {

@@ -60,6 +60,19 @@ func NewService(cfg *config.SMSConfig, cache cache.Cache) Service {
 
 // SendVerifyCode 发送验证码
 func (s *smsService) SendVerifyCode(ctx context.Context, phone string) (string, error) {
+	// 每手机号限流：同一号码60秒内只能发送一次，防止 SMS Bombing
+	if s.cache != nil {
+		throttleKey := fmt.Sprintf("sms_throttle:%s", phone)
+		exists, err := s.cache.Exists(ctx, throttleKey)
+		if err == nil && exists {
+			return "", fmt.Errorf("发送验证码过于频繁，请60秒后再试")
+		}
+		// 设置60秒节流窗口
+		if setErr := s.cache.Set(ctx, throttleKey, 1, 60*time.Second); setErr != nil {
+			logger.Warn("Failed to set SMS throttle", logger.Err(setErr))
+		}
+	}
+
 	// 生成6位验证码
 	code := generateVerifyCode()
 

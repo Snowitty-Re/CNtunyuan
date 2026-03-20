@@ -343,6 +343,8 @@ func (h *OrganizationHandler) Move(c *gin.Context) {
 		switch err {
 		case service.ErrOrganizationNotFound:
 			response.NotFound(c, "organization not found")
+		case service.ErrOrganizationInvalidMove:
+			response.BadRequest(c, "cannot move organization to itself")
 		default:
 			response.InternalServerError(c, "failed to move organization")
 		}

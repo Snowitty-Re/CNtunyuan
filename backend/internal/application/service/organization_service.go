@@ -11,10 +11,11 @@ import (
 )
 
 var (
-	ErrOrganizationNotFound = errors.New("organization not found")
-	ErrOrganizationExists   = errors.New("organization already exists")
-	ErrInvalidOrgType       = errors.New("invalid organization type")
-	ErrCannotDeleteOrg      = errors.New("cannot delete organization with children")
+	ErrOrganizationNotFound    = errors.New("organization not found")
+	ErrOrganizationExists      = errors.New("organization already exists")
+	ErrInvalidOrgType          = errors.New("invalid organization type")
+	ErrCannotDeleteOrg         = errors.New("cannot delete organization with children")
+	ErrOrganizationInvalidMove = errors.New("cannot move organization to itself")
 )
 
 // OrganizationAppService 组织应用服务
@@ -227,6 +228,11 @@ func (s *OrganizationAppService) GetChildren(ctx context.Context, parentID strin
 
 // Move 移动组织
 func (s *OrganizationAppService) Move(ctx context.Context, id string, newParentID string) error {
+	// 禁止将组织移动到自身
+	if id == newParentID {
+		return ErrOrganizationInvalidMove
+	}
+
 	// 检查组织是否存在
 	if _, err := s.orgRepo.FindByID(ctx, id); err != nil {
 		return ErrOrganizationNotFound

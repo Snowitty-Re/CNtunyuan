@@ -9,38 +9,37 @@
 ```
 backend/
 ├── internal/
-│   ├── domain/entity/              # 领域实体测试 (69.0% 覆盖率)
-│   │   ├── user_test.go            # 用户实体测试
-│   │   ├── organization_test.go    # 组织实体测试
-│   │   ├── missing_person_test.go  # 走失人员实体测试
-│   │   ├── task_test.go            # 任务实体测试
-│   │   └── dialect_test.go         # 方言实体测试
+│   ├── domain/entity/              # 领域实体测试
+│   │   ├── user_test.go
+│   │   ├── organization_test.go
+│   │   ├── missing_person_test.go
+│   │   ├── task_test.go
+│   │   └── dialect_test.go
 │   │
-│   ├── domain/service/             # 领域服务测试 (74.6% 覆盖率)
-│   │   └── auth_service_test.go    # 认证服务测试
+│   ├── domain/service/             # 领域服务测试
+│   │   └── auth_service_test.go
 │   │
-│   ├── application/service/        # 应用服务测试 (64.3% 覆盖率)
-│   │   ├── user_service_test.go           # 用户服务测试
-│   │   ├── organization_service_test.go   # 组织服务测试
-│   │   ├── missing_person_service_test.go # 走失人员服务测试
-│   │   ├── task_service_test.go           # 任务服务测试
-│   │   ├── dialect_service_test.go        # 方言服务测试
-│   │   └── file_service_test.go           # 文件服务测试
+│   ├── application/service/        # 应用服务测试
+│   │   ├── user_service_test.go
+│   │   ├── organization_service_test.go
+│   │   ├── missing_person_service_test.go
+│   │   ├── task_service_test.go
+│   │   ├── dialect_service_test.go
+│   │   └── file_service_test.go
 │   │
-│   ├── interfaces/http/middleware/ # 中间件测试 (64.3% 覆盖率)
-│   │   └── middleware_test.go      # HTTP 中间件测试
+│   ├── interfaces/http/middleware/ # 中间件测试
+│   │   └── middleware_test.go
 │   │
 │   └── testutil/                   # 测试工具包
-│       ├── testutil.go             # 数据库和辅助函数
-│       └── handler_testutil.go     # HTTP 测试工具
+│       ├── testutil.go
+│       └── handler_testutil.go
 ```
 
 ## 运行测试
 
 ### 运行所有测试
 ```bash
-cd backend
-go test ./internal/... -count=1
+go test ./... -count=1
 ```
 
 ### 运行特定包测试
@@ -62,55 +61,55 @@ go test ./internal/interfaces/http/middleware/... -v
 ```bash
 go test -run TestNewUser ./internal/domain/entity/...
 go test -run TestUserAppService ./internal/application/service/...
+go test -run TestTaskAppService_Start ./internal/application/service/...
 ```
 
 ### 带覆盖率报告
 ```bash
 # 查看覆盖率摘要
-go test ./internal/... -count=1 -cover
+go test ./... -count=1 -cover
 
 # 生成覆盖率报告
-go test ./internal/... -count=1 -coverprofile=coverage.out
+go test ./... -count=1 -coverprofile=coverage.out
 
 # 查看 HTML 覆盖率报告
 go tool cover -html=coverage.out
 ```
 
-### 详细输出
+### 竞态检测
 ```bash
-go test ./internal/... -v
+go test -race ./...
 ```
 
 ## 测试覆盖率
 
-| 模块 | 包路径 | 覆盖率 | 测试文件数 |
-|------|--------|--------|-----------|
-| 领域实体 | `internal/domain/entity` | 69.0% | 5 |
-| 领域服务 | `internal/domain/service` | 74.6% | 1 |
-| 应用服务 | `internal/application/service` | 64.3% | 6 |
-| HTTP中间件 | `internal/interfaces/http/middleware` | 64.3% | 1 |
+| 模块 | 包路径 | 测试文件数 |
+|------|--------|-----------|
+| 领域实体 | `internal/domain/entity` | 5 |
+| 领域服务 | `internal/domain/service` | 1 |
+| 应用服务 | `internal/application/service` | 6 |
+| HTTP中间件 | `internal/interfaces/http/middleware` | 1 |
 
-**总计**: 14 个测试文件，110+ 测试函数，300+ 测试用例
+**总计**: 13 个测试文件，110+ 测试函数
 
 ## 测试说明
 
 ### 领域实体测试 (entity)
 测试核心业务规则和验证逻辑：
-- **User**: 创建、密码哈希、角色权限、验证
+- **User**: 创建、密码哈希、角色权限、验证、枚举状态（`IsValidUserStatus`）
 - **Organization**: 创建、层级关系、状态管理
-- **MissingPerson**: 创建、状态流转、轨迹管理
+- **MissingPerson**: 创建、状态流转（`IsValidMissingStatus` / `IsValidUrgencyLevel`）、轨迹管理
 - **Task**: 状态机、分配逻辑、进度跟踪
 - **Dialect**: 创建、点赞统计、播放计数
 
 ### 领域服务测试 (service)
-- **AuthService**: 登录/登出、Token 刷新、微信登录、手机号绑定
+- **AuthService**: 登录/登出、Token 刷新、微信登录、手机号绑定、登录锁定
 
 ### 应用服务测试 (service)
-测试业务逻辑和用例：
-- **UserAppService**: 用户 CRUD、状态/角色更新、密码修改、权限检查
-- **OrganizationAppService**: 组织 CRUD、树形结构、移动组织
-- **MissingPersonAppService**: 走失人员 CRUD、状态更新、轨迹管理
-- **TaskAppService**: 任务 CRUD、分配、状态流转（草稿→待分配→已分配→进行中→已完成）
+- **UserAppService**: 用户 CRUD、状态/角色更新、密码修改（`ErrOldPasswordWrong` Sentinel）、权限检查、`GetStats` 按 reporter 范围统计
+- **OrganizationAppService**: 组织 CRUD、树形结构、移动组织（自移动防护 `ErrOrganizationInvalidMove`）
+- **MissingPersonAppService**: 走失人员 CRUD、状态枚举校验、轨迹管理
+- **TaskAppService**: 任务 CRUD、分配、状态流转、**任务所有权执行**（Start/Complete 仅允许被分配者）
 - **DialectAppService**: 方言 CRUD、审核、点赞、精选
 - **FileAppService**: 文件上传（含安全检查）、下载、删除
 
@@ -125,12 +124,15 @@ go test ./internal/... -v
 
 ### 数据库工具
 ```go
-// 创建测试数据库
+// 创建测试数据库（SQLite 内存）
 tdb := testutil.SetupTestDB(t)
 defer tdb.Close()
 
 // 创建测试记录
-testutil.MustCreate(t, db, entity)
+testutil.MustCreate(t, tdb.DB, entity)
+
+// 更新测试记录（使用 GORM 直接操作）
+require.NoError(t, tdb.DB.Save(entity).Error)
 
 // 查找记录
 testutil.MustFind(t, db, &result, "id = ?", id)
@@ -167,7 +169,7 @@ func TestXXX(t *testing.T) {
         {"case1", "input1", "output1", false},
         {"case2", "input2", "", true},
     }
-    
+
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             // 测试逻辑
@@ -182,18 +184,51 @@ func TestXXX(t *testing.T) {
 - `MockVirusScanner`: 模拟病毒扫描
 - `MockFileRepository`: 模拟文件仓储
 
+## 重要测试行为说明
+
+### 任务所有权检查优先于状态检查
+
+`task_service.go` 中 `Start()` 和 `Complete()` 会先检查任务是否分配给当前用户，再检查状态是否合法。因此编写无效状态测试时，**必须先将任务分配给测试用户**，否则会得到 `ErrTaskNotAssignedToUser` 而非预期的状态错误：
+
+```go
+// 正确：测试前先设置 AssigneeID
+task := &entity.Task{
+    ...,
+    AssigneeID: &assignee.ID,  // 必须设置，否则 Start() 先返回 ErrTaskNotAssignedToUser
+}
+testutil.MustCreate(t, tdb.DB, task)
+err := service.Start(ctx, task.ID, assignee.ID)
+assert.Contains(t, err.Error(), "当前状态不能开始任务")
+```
+
+### Sentinel 错误与 HTTP 状态码映射
+
+| Sentinel 错误 | HTTP 状态码 |
+|--------------|-------------|
+| `ErrUserNotFound` | 404 |
+| `ErrTaskNotFound` | 404 |
+| `ErrFileNotFound` | 404 |
+| `ErrOrganizationNotFound` | 404 |
+| `ErrTaskNotAssignedToUser` | 403 |
+| `ErrCannotModify` | 403 |
+| `ErrPhoneExists` / `ErrEmailExists` | 409 |
+| `ErrFileTooLarge` | 400 |
+| `ErrOldPasswordWrong` | 400 |
+| `ErrOrganizationInvalidMove` | 400 |
+| `ErrAlreadyLiked` / `ErrNotLiked` | 400 |
+
 ## 持续集成
 
 建议在 CI/CD 中运行：
 ```bash
-# 运行测试
-go test ./internal/... -count=1
-
 # 运行测试（带竞态检测）
-go test ./internal/... -race -count=1
+go test -race ./... -count=1
 
 # 生成覆盖率报告
-go test ./internal/... -count=1 -coverprofile=coverage.out
+go test ./... -count=1 -coverprofile=coverage.out
+
+# 构建验证
+go build ./...
 ```
 
 ## 添加新测试
@@ -206,9 +241,12 @@ package service
 import (
     "testing"
     "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
 )
 
 func TestNewFeature(t *testing.T) {
+    service, tdb := setupXxxTest(t)
+    defer tdb.Close()
     // 测试代码
 }
 ```
@@ -218,13 +256,16 @@ func TestNewFeature(t *testing.T) {
 func TestWithDB(t *testing.T) {
     tdb := testutil.SetupTestDB(t)
     defer tdb.Close()
-    
+
     // 创建测试数据
     user := &entity.User{...}
     testutil.MustCreate(t, tdb.DB, user)
-    
+
+    // 更新数据（用 GORM 直接操作）
+    user.Role = entity.RoleAdmin
+    require.NoError(t, tdb.DB.Save(user).Error)
+
     // 执行测试
-    // ...
 }
 ```
 
@@ -240,3 +281,4 @@ go test -v -run TestNewFeature ./path/to/package/...
 3. **清理资源**: 使用 `defer tdb.Close()` 清理数据库
 4. **唯一数据**: 使用 UUID 或时间戳确保测试数据唯一
 5. **错误检查**: 同时测试成功和失败场景
+6. **Sentinel 错误**: 使用 `assert.Equal(t, service.ErrXxx, err)` 而非 `assert.Contains(t, err.Error(), "...")`（字符串比较脆弱）

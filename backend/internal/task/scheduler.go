@@ -301,6 +301,7 @@ func (s *Scheduler) backupData() {
 }
 
 // buildPostgresBackupCmd 构建PostgreSQL备份命令
+// 通过 PGPASSWORD 环境变量传递密码，避免密码出现在 shell 命令中（防止 shell 注入和进程列表泄露）
 func (s *Scheduler) buildPostgresBackupCmd(outputFile string) *exec.Cmd {
 	pgDump := "pg_dump"
 	if runtime.GOOS == "windows" {
@@ -318,17 +319,23 @@ func (s *Scheduler) buildPostgresBackupCmd(outputFile string) *exec.Cmd {
 		sslMode = "disable"
 	}
 
-	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%d/%s?sslmode=%s",
-		s.dbConfig.User, s.dbConfig.Password,
+	// DSN 中不包含密码；密码通过 PGPASSWORD 环境变量传递
+	dsn := fmt.Sprintf("postgresql://%s@%s:%d/%s?sslmode=%s",
+		s.dbConfig.User,
 		s.dbConfig.Host, s.dbConfig.Port,
 		s.dbConfig.Database, sslMode,
 	)
+	pgpassEnv := "PGPASSWORD=" + s.dbConfig.Password
 
 	// pg_dump | gzip > file
 	if isGzipAvailable() {
 		shellCmd := fmt.Sprintf("%s --dbname=%q --no-owner --no-privileges --clean --if-exists | gzip > %q",
 			pgDump, dsn, outputFile)
-		return shellExec(shellCmd)
+		cmd := shellExec(shellCmd)
+		if cmd != nil {
+			cmd.Env = append(os.Environ(), pgpassEnv)
+		}
+		return cmd
 	}
 
 	// 不压缩
@@ -341,10 +348,12 @@ func (s *Scheduler) buildPostgresBackupCmd(outputFile string) *exec.Cmd {
 		"--if-exists",
 		"--file="+outputFile,
 	)
+	cmd.Env = append(os.Environ(), pgpassEnv)
 	return cmd
 }
 
 // buildMySQLBackupCmd 构建MySQL备份命令
+// 通过 MYSQL_PWD 环境变量传递密码，避免密码出现在 shell 命令和进程列表中
 func (s *Scheduler) buildMySQLBackupCmd(outputFile string) *exec.Cmd {
 	mysqldump := "mysqldump"
 	if runtime.GOOS == "windows" {
@@ -357,11 +366,12 @@ func (s *Scheduler) buildMySQLBackupCmd(outputFile string) *exec.Cmd {
 		return nil
 	}
 
+	// 不在 args 中传递密码；通过 MYSQL_PWD 环境变量传递
+	mysqlPwdEnv := "MYSQL_PWD=" + s.dbConfig.Password
 	args := []string{
 		fmt.Sprintf("--host=%s", s.dbConfig.Host),
 		fmt.Sprintf("--port=%d", s.dbConfig.Port),
 		fmt.Sprintf("--user=%s", s.dbConfig.User),
-		fmt.Sprintf("--password=%s", s.dbConfig.Password),
 		"--single-transaction",
 		"--routines",
 		"--triggers",
@@ -372,12 +382,18 @@ func (s *Scheduler) buildMySQLBackupCmd(outputFile string) *exec.Cmd {
 	if isGzipAvailable() {
 		shellCmd := fmt.Sprintf("%s %s | gzip > %q",
 			mysqldump, strings.Join(args, " "), outputFile)
-		return shellExec(shellCmd)
+		cmd := shellExec(shellCmd)
+		if cmd != nil {
+			cmd.Env = append(os.Environ(), mysqlPwdEnv)
+		}
+		return cmd
 	}
 
 	outputFile = strings.TrimSuffix(outputFile, ".gz")
 	args = append(args, fmt.Sprintf("--result-file=%s", outputFile))
-	return exec.Command(mysqldump, args...)
+	cmd := exec.Command(mysqldump, args...)
+	cmd.Env = append(os.Environ(), mysqlPwdEnv)
+	return cmd
 }
 
 // cleanupOldBackups 清理过期备份文件

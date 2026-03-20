@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
@@ -34,12 +35,15 @@ type JWTAuth struct {
 }
 
 // NewJWTAuth 创建JWT认证实例
-func NewJWTAuth(cfg *config.JWTConfig) *JWTAuth {
+func NewJWTAuth(cfg *config.JWTConfig) (*JWTAuth, error) {
+	if len(cfg.Secret) < 32 {
+		return nil, fmt.Errorf("JWT secret must be at least 32 characters, got %d", len(cfg.Secret))
+	}
 	return &JWTAuth{
 		secret:     []byte(cfg.Secret),
 		accessTTL:  time.Duration(cfg.ExpireTime) * time.Second,
 		refreshTTL: time.Duration(cfg.ExpireTime*2) * time.Second,
-	}
+	}, nil
 }
 
 // GenerateToken 生成访问令牌

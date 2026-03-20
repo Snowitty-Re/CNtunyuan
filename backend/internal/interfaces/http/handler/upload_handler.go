@@ -34,12 +34,13 @@ func (h *UploadHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *
 	{
 		upload.POST("", h.Upload)
 		upload.POST("/batch", h.UploadBatch)
+		// 静态路由必须在参数路由之前注册，防止 Gin 路由冲突
+		upload.GET("/stats", middleware.RequireAdmin(), h.GetStats)
+		upload.GET("/entity/:type/:id", h.GetFilesByEntity)
 		upload.GET("/:id", h.GetByID)
 		upload.GET("/:id/download", h.Download)
-		upload.GET("/entity/:type/:id", h.GetFilesByEntity)
 		upload.DELETE("/:id", h.Delete)
 		upload.PUT("/:id/bind", h.BindToEntity)
-		upload.GET("/stats", middleware.RequireAdmin(), h.GetStats)
 	}
 }
 

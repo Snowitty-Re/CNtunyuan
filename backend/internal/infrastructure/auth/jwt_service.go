@@ -38,13 +38,16 @@ type JWTClaims struct {
 }
 
 // NewJWTService create JWT service
-func NewJWTService(cfg *config.JWTConfig, cache cache.Cache) service.TokenService {
+func NewJWTService(cfg *config.JWTConfig, cache cache.Cache) (service.TokenService, error) {
+	if len(cfg.Secret) < 32 {
+		return nil, fmt.Errorf("JWT secret must be at least 32 characters, got %d", len(cfg.Secret))
+	}
 	return &JWTService{
 		secret:        []byte(cfg.Secret),
 		accessExpiry:  time.Duration(cfg.ExpireTime) * time.Second,
 		refreshExpiry: time.Duration(cfg.ExpireTime*2) * time.Second,
 		cache:         cache,
-	}
+	}, nil
 }
 
 // GenerateTokenPair generate token pair

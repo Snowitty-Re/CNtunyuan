@@ -116,8 +116,8 @@ func (r *Router) Setup() {
 	api.GET("/health", r.healthCheck)
 	api.GET("/health/detailed", r.detailedHealthCheck)
 
-	// Prometheus 指标端点
-	api.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	// Prometheus 指标端点（仅管理员可访问，避免泄露运维数据）
+	api.GET("/metrics", r.authMiddleware.Required(), middleware.RequireAdmin(), gin.WrapH(promhttp.Handler()))
 	
 	// Swagger JSON/YAML 文档端点
 	api.GET("/docs", func(c *gin.Context) {

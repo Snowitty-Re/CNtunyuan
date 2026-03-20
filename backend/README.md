@@ -9,9 +9,10 @@
 - **GORM** - ORM 框架
 - **PostgreSQL / MySQL** - 数据库（双数据库支持）
 - **Redis** - 缓存（可选，自动降级内存缓存）
-- **JWT** - 认证
+- **JWT** - 认证（access + refresh 双令牌，Redis 黑名单）
 - **Zap** - 日志
 - **Swagger** - API 文档自动生成
+- **Prometheus** - 监控指标
 
 ## 项目结构
 
@@ -69,7 +70,7 @@ cd backend
 go mod download
 ```
 
-### 2. 配置数据库
+### 2. 配置文件
 
 编辑 `config/config.yaml`:
 
@@ -82,7 +83,13 @@ database:
   password: "yourpassword"
   database: "cntuanyuan"
   ssl_mode: "disable"
+
+jwt:
+  secret: "your-secret-key-must-be-at-least-32-chars"   # 必须 ≥ 32 字符
+  expire_time: 7200      # access token 有效期（秒）
 ```
+
+> **安全要求**：`jwt.secret` 必须至少 32 个字符，否则服务启动失败。建议使用随机生成的强密钥（64+ 字符）。
 
 ### 3. 数据库迁移
 
@@ -112,7 +119,7 @@ go run cmd/app/main.go
 - `POST /api/v1/auth/refresh` - 刷新令牌
 - `POST /api/v1/auth/logout` - 登出
 - `POST /api/v1/auth/bind-phone` - 绑定手机号
-- `POST /api/v1/auth/send-code` - 发送验证码
+- `POST /api/v1/auth/send-code` - 发送验证码（60 秒内每号码限 1 次）
 - `POST /api/v1/auth/reset-password` - 重置密码
 - `GET  /api/v1/auth/me` - 获取当前用户
 
@@ -140,7 +147,7 @@ go run cmd/app/main.go
 - `DELETE /api/v1/organizations/:id` - 删除组织（管理员）
 - `GET    /api/v1/organizations/:id/children` - 子组织
 - `GET    /api/v1/organizations/:id/path` - 组织路径
-- `PUT    /api/v1/organizations/:id/move` - 移动组织（管理员）
+- `PUT    /api/v1/organizations/:id/move` - 移动组织（管理员，不能移动到自身）
 
 ### 走失人员 `/missing-persons`
 - `GET    /api/v1/missing-persons` - 案件列表
@@ -150,7 +157,7 @@ go run cmd/app/main.go
 - `GET    /api/v1/missing-persons/:id` - 案件详情
 - `PUT    /api/v1/missing-persons/:id` - 更新案件
 - `DELETE /api/v1/missing-persons/:id` - 删除案件（管理者）
-- `PUT    /api/v1/missing-persons/:id/status` - 更新状态（管理者）
+- `PUT    /api/v1/missing-persons/:id/status` - 更新状态（管理者，合法值：missing/searching/found/reunited/closed）
 - `POST   /api/v1/missing-persons/:id/found` - 标记已找到（管理者）
 - `POST   /api/v1/missing-persons/:id/reunited` - 标记已团圆（管理者）
 - `GET    /api/v1/missing-persons/:id/tracks` - 获取轨迹
@@ -185,20 +192,20 @@ go run cmd/app/main.go
 - `DELETE /api/v1/tasks/:id` - 删除任务（管理者）
 - `GET    /api/v1/tasks/:id/logs` - 操作日志
 - `POST   /api/v1/tasks/:id/assign` - 分配任务（管理者）
-- `POST   /api/v1/tasks/:id/start` - 开始任务
-- `POST   /api/v1/tasks/:id/complete` - 完成任务
+- `POST   /api/v1/tasks/:id/start` - 开始任务（仅被分配者）
+- `POST   /api/v1/tasks/:id/complete` - 完成任务（仅被分配者）
 - `POST   /api/v1/tasks/:id/cancel` - 取消任务（管理者）
 - `PUT    /api/v1/tasks/:id/progress` - 更新进度
 
 ### 文件上传 `/upload`
-- `POST   /api/v1/upload` - 单文件上传
+- `POST   /api/v1/upload` - 单文件上传（最大 50MB）
 - `POST   /api/v1/upload/batch` - 批量上传
+- `GET    /api/v1/upload/stats` - 文件统计（管理员）
+- `GET    /api/v1/upload/entity/:type/:id` - 实体关联文件
 - `GET    /api/v1/upload/:id` - 文件信息
 - `GET    /api/v1/upload/:id/download` - 下载文件
 - `DELETE /api/v1/upload/:id` - 删除文件
-- `GET    /api/v1/upload/entity/:type/:id` - 实体关联文件
 - `PUT    /api/v1/upload/:id/bind` - 绑定到实体
-- `GET    /api/v1/upload/stats` - 文件统计（管理员）
 
 ### 仪表盘 `/dashboard`
 - `GET /api/v1/dashboard/stats` - 统计数据
@@ -216,7 +223,44 @@ go run cmd/app/main.go
 ### 系统
 - `GET /api/v1/health` - 健康检查
 - `GET /api/v1/health/detailed` - 详细健康检查
-- `GET /api/v1/metrics` - Prometheus 指标
+- `GET /api/v1/metrics` - Prometheus 指标（**需要管理员权限**）
+
+## 枚举值参考
+
+| 字段 | 合法值 |
+|------|--------|
+| 用户角色 | `super_admin` / `admin` / `manager` / `volunteer` |
+| 用户状态 | `active` / `inactive` / `banned` |
+| 走失人员状态 | `missing` / `searching` / `found` / `reunited` / `closed` |
+| 紧急程度 | `critical` / `high` / `medium` / `low` |
+| 任务类型 | `search` / `rescue` / `follow_up` / `other` |
+| 任务状态 | `draft` → `pending` → `assigned` → `processing` → `completed` / `cancelled` |
+
+## HTTP 状态码
+
+| 状态码 | 说明 |
+|--------|------|
+| 200 | 请求成功 |
+| 201 | 创建成功 |
+| 204 | 删除成功（无内容） |
+| 400 | 请求参数错误 |
+| 401 | 未授权（Token 无效或过期） |
+| 403 | 禁止访问（权限不足，或任务未分配给当前用户） |
+| 404 | 资源不存在 |
+| 409 | 资源冲突（如重复创建） |
+| 500 | 服务器内部错误 |
+
+## 安全特性
+
+- **JWT**：access + refresh 双令牌；密钥强度校验（最少 32 字符）；登出后 token 加入 Redis 黑名单
+- **密码**：bcrypt 哈希存储；密码至少 8 位
+- **短信**：每手机号 60 秒内限发 1 条验证码，防刷
+- **登录**：连续失败自动锁定账号（Redis 计数，配置阈值）
+- **文件**：magic number 双重校验（扩展名 + MIME 嗅探）；ClamAV 病毒扫描；文件必须有扩展名
+- **备份**：数据库密码通过环境变量传递（`PGPASSWORD` / `MYSQL_PWD`），不嵌入命令行
+- **监控**：Prometheus `/metrics` 端点需要管理员认证
+- **RBAC**：四级角色权限（super_admin > admin > manager > volunteer）
+- **任务**：Start/Complete 操作仅允许被分配者本人执行
 
 ## 开发指南
 
@@ -228,7 +272,7 @@ go run cmd/app/main.go
 4. **创建应用服务** (`internal/application/service/`)
 5. **创建 HTTP 处理器** (`internal/interfaces/http/handler/`)
 6. **注册路由** (`internal/interfaces/http/router/`)
-7. **更新 DI 容器** (`internal/di/`)
+7. **更新 DI 容器** (`internal/di/wire_gen.go`)
 
 ### 常用命令
 
@@ -263,6 +307,9 @@ go test ./internal/domain/...
 
 # 带覆盖率
 go test -cover ./...
+
+# 带竞态检测
+go test -race ./...
 ```
 
 ## 部署
@@ -279,6 +326,16 @@ CGO_ENABLED=0 GOOS=linux go build -o app cmd/app/main.go
 docker build -t cntuanyuan-backend .
 docker run -p 8080:8080 cntuanyuan-backend
 ```
+
+### 生产配置检查清单
+
+- [ ] `jwt.secret` 至少 32 字符（推荐 64+）
+- [ ] 数据库使用独立账号，非 root
+- [ ] Redis 设置密码
+- [ ] 配置文件不纳入版本控制（使用环境变量注入）
+- [ ] 文件存储使用 OSS/COS，非本地磁盘
+- [ ] 开启 ClamAV 病毒扫描（`storage.scan_virus: true`）
+- [ ] 配置数据库定时备份路径（`backup.path`）
 
 ## 许可证
 

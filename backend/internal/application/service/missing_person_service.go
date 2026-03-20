@@ -60,6 +60,14 @@ func (s *MissingPersonAppService) Create(ctx context.Context, req *dto.CreateMis
 	// Generate a unique case number if not handled by entity layer
 	caseNo := generateCaseNo()
 
+	// 校验并设置紧急程度
+	urgency := entity.UrgencyLevel(req.UrgencyLevel)
+	if req.UrgencyLevel == "" {
+		urgency = entity.UrgencyLevelMedium
+	} else if !entity.IsValidUrgencyLevel(urgency) {
+		return nil, fmt.Errorf("无效的紧急程度: %s，合法值为 critical/high/medium/low", req.UrgencyLevel)
+	}
+
 	mp := &entity.MissingPerson{
 		Name:         req.Name,
 		Gender:       req.Gender,
@@ -83,12 +91,8 @@ func (s *MissingPersonAppService) Create(ctx context.Context, req *dto.CreateMis
 		ReporterID:   reporterID,
 		OrgID:        orgID,
 		Status:       entity.MissingStatusMissing,
-		Urgency:      entity.UrgencyLevel(req.UrgencyLevel),
+		Urgency:      urgency,
 		CaseNo:       caseNo,
-	}
-
-	if req.UrgencyLevel == "" {
-		mp.Urgency = entity.UrgencyLevelMedium
 	}
 
 	if err := s.createWithRetry(ctx, mp); err != nil {
@@ -242,6 +246,11 @@ func (s *MissingPersonAppService) Delete(ctx context.Context, id string) error {
 
 // UpdateStatus 更新状态
 func (s *MissingPersonAppService) UpdateStatus(ctx context.Context, id string, status string) error {
+	newStatus := entity.MissingStatus(status)
+	if !entity.IsValidMissingStatus(newStatus) {
+		return fmt.Errorf("无效的状态值: %s，合法值为 missing/searching/found/reunited/closed", status)
+	}
+
 	mp, err := s.mpRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrMissingPersonNotFound
@@ -251,7 +260,6 @@ func (s *MissingPersonAppService) UpdateStatus(ctx context.Context, id string, s
 		return errors.New("cannot update closed case")
 	}
 
-	newStatus := entity.MissingStatus(status)
 	mp.Status = newStatus
 
 	if err := s.mpRepo.UpdateStatus(ctx, id, newStatus); err != nil {

@@ -15,6 +15,7 @@ var (
 	ErrTaskNotFound      = errors.New("task not found")
 	ErrTaskInvalidStatus = errors.New("invalid status transition")
 	ErrAlreadyAssigned   = errors.New("task already assigned")
+	ErrTaskNotAssignedToUser = errors.New("task not assigned to this user")
 )
 
 // TaskAppService 任务应用服务
@@ -188,7 +189,7 @@ func (s *TaskAppService) Assign(ctx context.Context, id string, assigneeID strin
 		return err
 	}
 
-	// 记录日志
+	// 记录日志（非关键操作，失败仅记录警告）
 	log := &entity.TaskLog{
 		TaskID:    id,
 		UserID:    assigneeID,
@@ -196,16 +197,23 @@ func (s *TaskAppService) Assign(ctx context.Context, id string, assigneeID strin
 		NewStatus: string(task.Status),
 		Content:   "Task assigned",
 	}
-	s.taskRepo.AddLog(ctx, log)
+	if err := s.taskRepo.AddLog(ctx, log); err != nil {
+		logger.Warn("Failed to add task assign log", logger.String("task_id", id), logger.Err(err))
+	}
 
 	return nil
 }
 
-// Start 开始任务
+// Start 开始任务（只有被分配的执行人才能开始任务）
 func (s *TaskAppService) Start(ctx context.Context, id string, userID string) error {
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrTaskNotFound
+	}
+
+	// 只有被分配的执行人才能开始任务
+	if task.AssigneeID == nil || *task.AssigneeID != userID {
+		return ErrTaskNotAssignedToUser
 	}
 
 	if err := task.Start(); err != nil {
@@ -223,16 +231,23 @@ func (s *TaskAppService) Start(ctx context.Context, id string, userID string) er
 		NewStatus: string(task.Status),
 		Content:   "Task started",
 	}
-	s.taskRepo.AddLog(ctx, log)
+	if err := s.taskRepo.AddLog(ctx, log); err != nil {
+		logger.Warn("Failed to add task start log", logger.String("task_id", id), logger.Err(err))
+	}
 
 	return nil
 }
 
-// Complete 完成任务
+// Complete 完成任务（只有被分配的执行人才能完成任务）
 func (s *TaskAppService) Complete(ctx context.Context, id string, req *dto.CompleteTaskRequest, userID string) error {
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrTaskNotFound
+	}
+
+	// 只有被分配的执行人才能完成任务
+	if task.AssigneeID == nil || *task.AssigneeID != userID {
+		return ErrTaskNotAssignedToUser
 	}
 
 	if err := task.Complete(req.Result); err != nil {
@@ -250,7 +265,9 @@ func (s *TaskAppService) Complete(ctx context.Context, id string, req *dto.Compl
 		NewStatus: string(task.Status),
 		Content:   req.Result,
 	}
-	s.taskRepo.AddLog(ctx, log)
+	if err := s.taskRepo.AddLog(ctx, log); err != nil {
+		logger.Warn("Failed to add task complete log", logger.String("task_id", id), logger.Err(err))
+	}
 
 	return nil
 }
@@ -277,7 +294,9 @@ func (s *TaskAppService) Cancel(ctx context.Context, id string, req *dto.CancelT
 		NewStatus: string(task.Status),
 		Content:   req.Reason,
 	}
-	s.taskRepo.AddLog(ctx, log)
+	if err := s.taskRepo.AddLog(ctx, log); err != nil {
+		logger.Warn("Failed to add task cancel log", logger.String("task_id", id), logger.Err(err))
+	}
 
 	return nil
 }

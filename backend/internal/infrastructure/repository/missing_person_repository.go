@@ -310,6 +310,15 @@ func (r *MissingPersonRepositoryImpl) CountByReporter(ctx context.Context, repor
 	return count, err
 }
 
+// CountByReporterAndStatus 统计用户上报的特定状态案件数
+func (r *MissingPersonRepositoryImpl) CountByReporterAndStatus(ctx context.Context, reporterID string, status entity.MissingStatus) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).Model(&entity.MissingPerson{}).
+		Where("reporter_id = ? AND status = ?", reporterID, status).
+		Count(&count).Error
+	return count, err
+}
+
 // FindByID 根据ID查找
 func (r *MissingPersonRepositoryImpl) FindByID(ctx context.Context, id string) (*entity.MissingPerson, error) {
 	var person entity.MissingPerson

@@ -643,20 +643,13 @@ func TestTaskAppService_Start_InvalidStatus(t *testing.T) {
 				Status:     tt.status,
 				CreatorID:  creator.ID,
 				OrgID:      org.ID,
-			}
-			if tt.status == entity.TaskStatusAssigned || tt.status == entity.TaskStatusProcessing {
-				task.AssigneeID = &assignee.ID
+				AssigneeID: &assignee.ID,
 			}
 			testutil.MustCreate(t, tdb.DB, task)
 
 			err := service.Start(testutil.Context(), task.ID, assignee.ID)
 			assert.Error(t, err)
-			if tt.status == entity.TaskStatusAssigned {
-				// 已分配状态可以开始，所以这里不应该出错
-				// 但我们的测试数据中只有 assigned 能开始
-			} else {
-				assert.Contains(t, err.Error(), "当前状态不能开始任务")
-			}
+			assert.Contains(t, err.Error(), "当前状态不能开始任务")
 		})
 	}
 }
@@ -714,14 +707,18 @@ func TestTaskAppService_Complete_InvalidStatus(t *testing.T) {
 	// 创建测试数据
 	org := createTestOrg(t, tdb)
 	creator := createTestUser(t, tdb, "creator-id", "13800138000", string(entity.RoleManager))
+	assignee := createTestUser(t, tdb, "assignee-id", "13900139000", string(entity.RoleVolunteer))
 
-	// 创建一个草稿状态的任务（不能直接完成）
+	// 创建一个草稿状态的任务，分配给 assignee（不能直接完成，因为状态不对）
 	task := createTestTask(t, tdb, creator.ID, org.ID, entity.TaskStatusDraft)
+	assigneeID := assignee.ID
+	task.AssigneeID = &assigneeID
+	require.NoError(t, tdb.DB.Save(task).Error)
 
 	req := &dto.CompleteTaskRequest{
 		Result: "尝试完成",
 	}
-	err := service.Complete(testutil.Context(), task.ID, req, creator.ID)
+	err := service.Complete(testutil.Context(), task.ID, req, assignee.ID)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "当前状态不能完成任务")
 }

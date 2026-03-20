@@ -59,6 +59,15 @@ func HasRole(userRole Role, requiredRole Role) bool {
 	return GetRoleLevel(userRole) >= GetRoleLevel(requiredRole)
 }
 
+// IsValidUserStatus 校验用户状态值是否合法
+func IsValidUserStatus(s UserStatus) bool {
+	switch s {
+	case UserStatusActive, UserStatusInactive, UserStatusBanned:
+		return true
+	}
+	return false
+}
+
 // User 用户领域实体
 type User struct {
 	BaseEntity

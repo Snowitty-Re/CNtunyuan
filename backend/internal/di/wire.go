@@ -67,6 +67,6 @@ func provideCache(cfg *config.Config) (cache.Cache, error) {
 }
 
 // provideJWTService 提供JWT服务
-func provideJWTService(cfg *config.Config, cache cache.Cache) service.TokenService {
+func provideJWTService(cfg *config.Config, cache cache.Cache) (service.TokenService, error) {
 	return auth.NewJWTService(&cfg.JWT, cache)
 }

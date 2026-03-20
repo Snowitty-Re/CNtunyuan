@@ -464,7 +464,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	}
 
 	if err := h.userService.ChangePassword(c.Request.Context(), userID, &req); err != nil {
-		if err.Error() == "old password is wrong" {
+		if err == service.ErrOldPasswordWrong {
 			response.BadRequest(c, "old password is wrong")
 		} else {
 			response.InternalServerError(c, "change password failed")

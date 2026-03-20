@@ -101,10 +101,15 @@ func (c *FileSecurityChecker) CheckFile(header *multipart.FileHeader) (*Security
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	result.FileType = ext
 
-	// 检查扩展名
-	if !c.allowedExtensions[ext] && !c.allowedExtensions[ext[1:]] {
+	// 检查扩展名（ext 可能为空，需防止 index out of range）
+	extWithoutDot := strings.TrimPrefix(ext, ".")
+	if ext == "" || (!c.allowedExtensions[ext] && !c.allowedExtensions[extWithoutDot]) {
 		result.Passed = false
-		result.ErrorMessage = fmt.Sprintf("不支持的文件类型: %s", ext)
+		if ext == "" {
+			result.ErrorMessage = "文件必须有扩展名"
+		} else {
+			result.ErrorMessage = fmt.Sprintf("不支持的文件类型: %s", ext)
+		}
 		return result, nil
 	}
 
