@@ -447,8 +447,7 @@ Page({
         audioUrl = uploadRes.url || uploadRes.data?.url
       } catch (uploadErr) {
         console.error('上传文件失败:', uploadErr)
-        // 模拟上传成功，实际开发中应该抛出错误
-        audioUrl = this.data.tempFilePath
+        throw new Error('录音文件上传失败，请重试')
       }
       
       // 2. 创建方言记录

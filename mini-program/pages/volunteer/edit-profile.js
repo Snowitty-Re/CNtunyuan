@@ -161,14 +161,22 @@ Page({
 
   // 倒计时
   startCountdown() {
-    const timer = setInterval(() => {
+    this._countdownTimer = setInterval(() => {
       if (this.data.countdown <= 1) {
-        clearInterval(timer)
+        clearInterval(this._countdownTimer)
+        this._countdownTimer = null
         this.setData({ countdown: 0 })
       } else {
         this.setData({ countdown: this.data.countdown - 1 })
       }
     }, 1000)
+  },
+
+  onUnload() {
+    if (this._countdownTimer) {
+      clearInterval(this._countdownTimer)
+      this._countdownTimer = null
+    }
   },
 
   // 保存资料

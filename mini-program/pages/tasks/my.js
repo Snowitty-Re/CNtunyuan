@@ -62,12 +62,13 @@ Page({
                    item.status !== 'completed' && item.status !== 'cancelled'
       }))
 
-      // 更新标签计数
+      // 更新标签计数（全量加载时统计各状态）
+      const allTasks = loadMore ? [...this.data.tasks, ...tasks] : tasks
       const tabs = this.data.tabs.map(tab => {
         if (tab.key === '') {
-          return { ...tab, count: result.total || tasks.length }
+          return { ...tab, count: result.total || allTasks.length }
         }
-        return tab
+        return { ...tab, count: allTasks.filter(t => t.status === tab.key).length }
       })
 
       this.setData({

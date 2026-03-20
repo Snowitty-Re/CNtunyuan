@@ -97,7 +97,7 @@ Page({
         if (res.confirm && res.content) {
           try {
             showLoading('分配中...')
-            await taskService.assign(this.data.taskId, { assignee_id: res.content })
+            await taskService.assign(this.data.taskId, res.content)
             showSuccess('分配成功')
             this.loadTaskDetail()
             this.loadTaskLogs()

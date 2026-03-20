@@ -225,11 +225,11 @@ function handleTokenExpired(failedRequest, resolve, reject) {
   
   refreshToken().then((newToken) => {
     // 重试队列中的请求
-    requestQueue.forEach(({ failedRequest, resolve }) => {
+    requestQueue.forEach(({ failedRequest, resolve, reject }) => {
       // 更新请求头中的 token
       failedRequest.header = failedRequest.header || {}
       failedRequest.header['Authorization'] = `Bearer ${newToken}`
-      request(failedRequest).then(resolve).catch(() => {})
+      request(failedRequest).then(resolve).catch(reject)
     })
     requestQueue = []
   }).catch(() => {
