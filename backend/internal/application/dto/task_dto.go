@@ -228,6 +228,9 @@ func ToTaskLogResponse(log *entity.TaskLog) TaskLogResponse {
 
 // NewTaskListResponse 创建任务列表响应
 func NewTaskListResponse(list []TaskResponse, total int64, page, pageSize int) TaskListResponse {
+	if pageSize <= 0 {
+		pageSize = 10
+	}
 	totalPages := int(total) / pageSize
 	if int(total)%pageSize > 0 {
 		totalPages++

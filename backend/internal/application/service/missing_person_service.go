@@ -129,6 +129,10 @@ func (s *MissingPersonAppService) GetByID(ctx context.Context, id string) (*dto.
 func (s *MissingPersonAppService) List(ctx context.Context, req *dto.MissingPersonListRequest) (*dto.MissingPersonListResponse, error) {
 	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
 
+	if req.AgeMin > 0 && req.AgeMax > 0 && req.AgeMin > req.AgeMax {
+		return nil, fmt.Errorf("age_min 不能大于 age_max")
+	}
+
 	query := repository.NewMissingPersonQuery()
 	query.Page = req.Page
 	query.PageSize = req.PageSize

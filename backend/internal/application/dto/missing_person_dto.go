@@ -277,6 +277,9 @@ func ToMissingPersonTrackResponse(track *entity.MissingPersonTrack) MissingPerso
 
 // NewMissingPersonListResponse 创建走失人员列表响应
 func NewMissingPersonListResponse(list []MissingPersonResponse, total int64, page, pageSize int) MissingPersonListResponse {
+	if pageSize <= 0 {
+		pageSize = 10
+	}
 	totalPages := int(total) / pageSize
 	if int(total)%pageSize > 0 {
 		totalPages++

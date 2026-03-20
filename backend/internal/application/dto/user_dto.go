@@ -153,6 +153,9 @@ func ToUserResponse(user *entity.User) UserResponse {
 
 // NewUserListResponse 创建用户列表响应
 func NewUserListResponse(list []UserResponse, total int64, page, pageSize int) UserListResponse {
+	if pageSize <= 0 {
+		pageSize = 10
+	}
 	totalPages := int(total) / pageSize
 	if int(total)%pageSize > 0 {
 		totalPages++

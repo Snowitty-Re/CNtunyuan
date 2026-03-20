@@ -176,6 +176,9 @@ func ToDialectCommentResponse(c *entity.DialectComment) DialectCommentResponse {
 
 // NewDialectListResponse 创建方言列表响应
 func NewDialectListResponse(list []DialectResponse, total int64, page, pageSize int) DialectListResponse {
+	if pageSize <= 0 {
+		pageSize = 10
+	}
 	totalPages := int(total) / pageSize
 	if int(total)%pageSize > 0 {
 		totalPages++
