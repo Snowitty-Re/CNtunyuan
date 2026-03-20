@@ -298,18 +298,25 @@ Page({
 
   /**
    * 打开地图导航
-   * 注意：后端没有经纬度字段，此功能需要地址解析服务
    */
   openLocation() {
     const { caseData } = this.data
-    
-    // 由于没有经纬度，显示提示
+
+    if (caseData.missing_latitude && caseData.missing_longitude) {
+      wx.openLocation({
+        latitude:  caseData.missing_latitude,
+        longitude: caseData.missing_longitude,
+        name:      caseData.name ? `${caseData.name}走失地点` : '走失地点',
+        address:   caseData.displayLocation || ''
+      })
+      return
+    }
+
     if (!caseData.province && !caseData.city && !caseData.address) {
       wx.showToast({ title: '暂无位置信息', icon: 'none' })
       return
     }
-    
-    // 显示地址信息
+
     wx.showModal({
       title: '走失地点',
       content: caseData.displayLocation,

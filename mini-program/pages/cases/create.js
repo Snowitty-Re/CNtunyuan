@@ -416,7 +416,9 @@ Page({
         contact_phone: form.contactPhone.trim(),
         alt_contact: form.altContact.trim(),
         // 照片URL（后端只接受单个字符串，取第一张）
-        photo_url: photoUrls.length > 0 ? photoUrls[0] : ''
+        photo_url: photoUrls.length > 0 ? photoUrls[0] : '',
+        // 紧急程度（与后端字段名保持一致）
+        urgency_level: form.urgencyLevel || 'medium'
       }
 
       if (this.data.isEdit) {
