@@ -50,7 +50,7 @@ Page({
   onShow() {
     // 返回时刷新数据
     if (this.data.id) {
-      Promise.all([this.loadCaseDetail(), this.loadTracks()])
+      Promise.all([this.loadCaseDetail(), this.loadTracks()]).catch(err => console.error('刷新详情失败:', err))
     }
   },
 
@@ -245,8 +245,8 @@ Page({
       const { caseData } = this.data
       // 使用后端要求的字段名：location 和 note
       await missingPersonService.markFound(this.data.id, {
-        location: caseData.displayLocation || '未知地点',  // 使用 location 而非 found_location
-        note: '通过志愿者帮助找到'  // 使用 note 而非 description，后端不需要 found_time
+        location: '',  // 找到地点由后端默认处理，此处不传走失地点
+        note: '通过志愿者帮助找到'
       })
       hideLoading()
       showSuccess('标记成功')

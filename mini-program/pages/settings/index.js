@@ -35,8 +35,9 @@ Page({
   calculateCacheSize() {
     try {
       const info = wx.getStorageInfoSync()
-      const size = (info.currentSize / 1024).toFixed(2)
-      this.setData({ cacheSize: `${size}MB` })
+      const kb = info.currentSize
+      const display = kb < 1024 ? `${kb}KB` : `${(kb / 1024).toFixed(2)}MB`
+      this.setData({ cacheSize: display })
     } catch (e) {
       console.error('获取缓存信息失败:', e)
     }

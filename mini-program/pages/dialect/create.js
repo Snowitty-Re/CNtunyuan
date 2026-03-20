@@ -22,6 +22,10 @@ Page({
       missing_person_id: ''
     },
     
+    // 录音时长限制（同步模块常量供 WXML 使用）
+    minDuration: MIN_DURATION,
+    maxDuration: MAX_DURATION,
+
     // 录音状态
     isRecording: false,
     hasRecorded: false,

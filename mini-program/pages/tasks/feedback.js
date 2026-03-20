@@ -97,7 +97,7 @@ Page({
         const uploadResults = await Promise.all(
           photos.map(path => services.upload.upload(path))
         )
-        photoUrls = uploadResults.map(r => r.url)
+        photoUrls = uploadResults.map(r => r.url || r.data?.url || '').filter(Boolean)
       }
 
       // 提交任务完成

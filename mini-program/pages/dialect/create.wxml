@@ -17,18 +17,18 @@
 
       <!-- Sound wave bars -->
       <view class="record-wave-bars" wx:if="{{isRecording}}">
-        <view class="rw-bar" wx:for="{{24}}" wx:key="index" style="animation-delay: {{index * 0.07}}s;"></view>
+        <view class="rw-bar" wx:for="{{24}}" wx:key="barIdx" wx:for-index="barIdx" style="animation-delay: {{barIdx * 0.07}}s;"></view>
       </view>
 
       <!-- Status text -->
       <view class="record-status">
         <block wx:if="{{!hasRecorded && !isRecording}}">
           <text class="status-main">点击下方按钮开始录音</text>
-          <text class="status-sub">录音时长 {{MIN_DURATION}}-{{MAX_DURATION}} 秒</text>
+          <text class="status-sub">录音时长 {{minDuration}}-{{maxDuration}} 秒</text>
         </block>
         <block wx:if="{{isRecording}}">
           <text class="status-main recording-text">正在录音 {{recordTimeText}}</text>
-          <text class="status-sub">{{recordTime < MIN_DURATION ? '至少录制' + MIN_DURATION + '秒' : '点击停止按钮结束录音'}}</text>
+          <text class="status-sub">{{recordTime < minDuration ? '至少录制' + minDuration + '秒' : '点击停止按钮结束录音'}}</text>
         </block>
         <block wx:if="{{hasRecorded && !isRecording}}">
           <text class="status-main">录音完成 {{recordDurationText}}</text>

@@ -279,6 +279,16 @@ Page({
     }
   },
 
+  // 注册（暂未开放）
+  goToRegister() {
+    wx.showToast({ title: '注册功能敬请期待', icon: 'none' })
+  },
+
+  // 忘记密码（暂未开放）
+  goToForgot() {
+    wx.showToast({ title: '请联系管理员重置密码', icon: 'none' })
+  },
+
   // 用户协议
   goToAgreement() {
     wx.navigateTo({
