@@ -248,6 +248,17 @@ mini-program/
 
 ## 更新日志
 
+### v1.6.0 (2026-03)
+**第五轮修复 — 模板渲染、登录交互、数据语义、上传容错**
+
+- **录音时长提示修复**：`dialect/create.js` 将模块级常量 `MIN_DURATION`/`MAX_DURATION` 写入 `data.minDuration`/`data.maxDuration`；`create.wxml` 引用 `{{minDuration}}`/`{{maxDuration}}`，修复录音时长提示显示为空的问题
+- **录音波形动画索引**：`dialect/create.wxml` 内层波形 `wx:for` 添加 `wx:for-index="barIdx"` 别名，与外层 `index` 隔离
+- **登录链接修复**：`login/index.js` 添加 `goToRegister`/`goToForgot` 方法，点击不再触发 JS 错误
+- **markFound 语义修复**：`cases/detail.js` 不再将走失地点作为找到地点传给后端
+- **onShow 错误捕获**：`cases/detail.js` onShow 中 `Promise.all` 补充 `.catch()`
+- **上传结果容错**：`tasks/feedback.js` 图片 URL 提取加 `r.data?.url` 回退并过滤空值
+- **缓存显示优化**：`settings/index.js` 小于 1MB 显示 KB，大于等于 1MB 显示 MB
+
 ### v1.5.0 (2026-03)
 **第四轮修复 — 空指针崩溃、字段类型、UI 文案、性能**
 
