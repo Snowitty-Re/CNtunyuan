@@ -346,7 +346,6 @@ Page({
       if (value.title) return String(value.title)
       if (value.label) return String(value.label)
       // 否则返回默认字符串
-      console.warn('字段值为对象:', value)
       return defaultValue
     }
     return String(value)

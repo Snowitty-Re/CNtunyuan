@@ -82,7 +82,7 @@
 
           <!-- Sound wave visualization -->
           <view class="card-sound-bars">
-            <view class="s-bar {{playingId === item.id ? 'animating' : ''}}" wx:for="{{12}}" wx:key="index" wx:for-item="barItem" style="animation-delay: {{index * 0.08}}s; height: {{20 + (index % 3) * 16}}rpx;"></view>
+            <view class="s-bar {{playingId === item.id ? 'animating' : ''}}" wx:for="{{12}}" wx:key="barIndex" wx:for-item="barItem" wx:for-index="barIndex" style="animation-delay: {{barIndex * 0.08}}s; height: {{20 + (barIndex % 3) * 16}}rpx;"></view>
           </view>
 
           <view class="card-duration">

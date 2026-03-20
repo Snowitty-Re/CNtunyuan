@@ -110,7 +110,7 @@ Page({
         tracks: (tracks || []).map(t => ({
           ...t,
           // 后端返回的字段是 time，不是 track_time
-          displayTime: formatDate(t.time)
+          displayTime: formatDate(t.time || t.created_at)
         }))
       })
     } catch (error) {

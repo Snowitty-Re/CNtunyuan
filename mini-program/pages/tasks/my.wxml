@@ -101,7 +101,10 @@
         </view>
       </view>
       <text class="empty-heading">暂无任务</text>
-      <text class="empty-desc">您还没有{{currentStatus === 'processing' ? '进行中' : currentStatus === 'completed' ? '已完成' : ''}}的任务</text>
+      <text class="empty-desc" wx:if="{{currentStatus === ''}}">您还没有任何任务</text>
+      <text class="empty-desc" wx:elif="{{currentStatus === 'processing'}}">您还没有进行中的任务</text>
+      <text class="empty-desc" wx:elif="{{currentStatus === 'completed'}}">您还没有已完成的任务</text>
+      <text class="empty-desc" wx:else>暂无相关任务</text>
     </view>
 
     <!-- 加载更多 -->

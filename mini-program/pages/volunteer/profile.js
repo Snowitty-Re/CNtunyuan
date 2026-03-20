@@ -84,7 +84,7 @@ Page({
         realName: userInfo.real_name || profile.real_name || '',
         role: userInfo.role || profile.role || 'volunteer',
         // 后端返回的是 org_name 字符串，不是 org 对象
-        orgName: userInfo.org_name || profile.org_name || userInfo.org?.name || '未知组织'
+        orgName: userInfo.org_name || profile.org_name || (typeof userInfo.org === 'object' && userInfo.org ? userInfo.org.name : null) || '未知组织'
       }
       
       this.setData({ userInfo: mergedUserInfo })

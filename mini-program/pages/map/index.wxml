@@ -116,7 +116,7 @@
         >
           <image
             class="case-photo"
-            src="{{item.data.photos[0].url || '/assets/icons/default-avatar.png'}}"
+            src="{{item.data.photos && item.data.photos.length > 0 ? item.data.photos[0].url : '/assets/icons/default-avatar.png'}}"
             mode="aspectFill"
           />
           <view class="case-info">

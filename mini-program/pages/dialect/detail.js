@@ -92,6 +92,9 @@ Page({
     })
 
     innerAudioContext.onTimeUpdate(() => {
+      const now = Date.now()
+      if (this._lastTimeUpdate && now - this._lastTimeUpdate < 100) return
+      this._lastTimeUpdate = now
       const currentTime = Math.floor(innerAudioContext.currentTime || 0)
       const duration = innerAudioContext.duration || 1
       this.setData({
@@ -138,6 +141,7 @@ Page({
       // 预计算展示用字段
       dialect.playCountText = this._formatPlayCount(dialect.play_count)
       dialect.likeCountText = this._formatPlayCount(dialect.like_count)
+      dialect.tags = typeof dialect.tags === 'string' ? dialect.tags.split(',').filter(Boolean) : (dialect.tags || [])
 
       // 处理关联走失人员
       if (dialect.missing_person) {

@@ -110,6 +110,7 @@ Page({
 
       const newDialects = (result.list || []).map(item => ({
         ...item,
+        tags:          typeof item.tags === 'string' ? item.tags.split(',').filter(Boolean) : (item.tags || []),
         durationText:  this._formatTime(item.duration),
         playCountText: this._formatPlayCount(item.play_count),
         likeCountText: this._formatPlayCount(item.like_count),
