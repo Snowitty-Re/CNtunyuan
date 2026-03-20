@@ -1,7 +1,7 @@
 const dashboardService = require('../../services/dashboard')
 const missingPersonService = require('../../services/missingPerson')
 const dialectService = require('../../services/dialect')
-const { formatDate, formatTimeAgo, showError, showLoading, hideLoading } = require('../../utils/util')
+const { formatDate, formatTimeAgo, showError, showLoading, hideLoading, joinLocation } = require('../../utils/util')
 
 Page({
   data: {
@@ -120,7 +120,6 @@ Page({
       // 获取仪表盘统计数据
       try {
         const dashboardStats = await dashboardService.getStats()
-        console.log('仪表盘统计数据:', dashboardStats)
         
         if (dashboardStats) {
           // 处理嵌套结构：missing_persons.total, users.total, dialects.total
@@ -153,7 +152,6 @@ Page({
       if (stats.totalCases === 0) {
         promises.push(
           missingPersonService.getStats().then(res => {
-            console.log('案件统计:', res)
             if (res) {
               // 处理嵌套或平铺结构
               if (res.missing_persons) {
@@ -171,7 +169,6 @@ Page({
       if (stats.dialects === 0) {
         promises.push(
           dialectService.getStats().then(res => {
-            console.log('方言统计:', res)
             if (res) {
               if (res.dialects) {
                 stats.dialects = res.dialects.total || 0
@@ -187,7 +184,6 @@ Page({
       if (stats.volunteers === 0 || stats.totalCases === 0) {
         promises.push(
           dashboardService.getOverview().then(res => {
-            console.log('概览数据:', res)
             if (res) {
               stats.volunteers = stats.volunteers || res.total_users || 0
               stats.totalCases = stats.totalCases || res.total_cases || 0
@@ -198,8 +194,6 @@ Page({
       }
 
       await Promise.all(promises)
-      
-      console.log('最终统计数据:', stats)
       this.setData({ stats })
     } catch (error) {
       console.error('加载统计数据失败:', error)
@@ -219,38 +213,18 @@ Page({
         page_size: 5 
       })
 
-      console.log('案件列表原始数据:', result)
-      
-      const list = result.list || result.data || result || []
-      
-      const cases = list.map(item => {
-        // 组合地址：province + city + district + address
-        const locationParts = []
-        if (item.province) locationParts.push(item.province)
-        if (item.city) locationParts.push(item.city)
-        if (item.district) locationParts.push(item.district)
-        if (item.address) locationParts.push(item.address)
-        
-        const missingLocation = locationParts.length > 0 
-          ? locationParts.join(' ') 
-          : '未知地点'
-        
-        // 处理时间字段 - 后端返回的是 ISO 格式字符串
-        const missingTime = item.missing_time 
-          ? formatTimeAgo(item.missing_time) 
-          : '未知时间'
-        
-        return {
-          id: item.id,
-          name: item.name || '未知',
-          status: item.status || 'missing',
-          photoUrl: this.getPhotoUrl(item),
-          missingLocation: missingLocation,
-          missingTime: missingTime,
-          age: this.calculateAge(item.birth_date),
-          gender: item.gender === 'male' ? '男' : item.gender === 'female' ? '女' : '未知'
-        }
-      })
+      const list = result.list || []
+
+      const cases = list.map(item => ({
+        id: item.id,
+        name: item.name || '未知',
+        status: item.status || 'missing',
+        photoUrl: this.getPhotoUrl(item),
+        missingLocation: joinLocation(item, '未知地点'),
+        missingTime: item.missing_time ? formatTimeAgo(item.missing_time) : '未知时间',
+        age: this.calculateAge(item.birth_date),
+        gender: item.gender === 'male' ? '男' : item.gender === 'female' ? '女' : '未知'
+      }))
 
       this.setData({ 
         recentCases: cases,
@@ -280,27 +254,18 @@ Page({
         result = await dialectService.getList({ page: 1, page_size: 5 })
       }
 
-      console.log('方言列表原始数据:', result)
-      
-      const list = result.list || result.data || result || []
+      const list = result.list || []
 
-      const dialects = list.map(item => {
-        // 确保所有字段都是字符串
-        const title = item.title || item.content || '方言录音'
-        const province = item.province || ''
-        const city = item.city || ''
-        
-        return {
-          id: item.id,
-          title: String(title),
-          province: String(province),
-          city: String(city),
-          playCount: this.formatCount(item.play_count || item.playCount || 0),
-          likeCount: this.formatCount(item.like_count || item.likeCount || 0),
-          duration: item.duration || '00:00',
-          createdAt: formatTimeAgo(item.created_at || item.createdAt)
-        }
-      })
+      const dialects = list.map(item => ({
+        id: item.id,
+        title: item.title || item.content || '方言录音',
+        province: item.province || '',
+        city: item.city || '',
+        playCount: this.formatCount(item.play_count || 0),
+        likeCount: this.formatCount(item.like_count || 0),
+        durationText: this._formatDuration(item.duration),
+        createdAt: formatTimeAgo(item.created_at)
+      }))
 
       this.setData({ 
         recentDialects: dialects,
@@ -385,6 +350,12 @@ Page({
       return defaultValue
     }
     return String(value)
+  },
+
+  // 格式化秒数为 m:ss 字符串
+  _formatDuration(seconds) {
+    const s = parseInt(seconds) || 0
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
   },
 
   // ========== 导航方法 ==========

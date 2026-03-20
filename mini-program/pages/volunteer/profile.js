@@ -1,5 +1,6 @@
 const userService = require('../../services/user')
 const { showConfirm, showSuccess, showToast } = require('../../utils/util')
+const { ROLE_MAP } = require('../../utils/constants')
 const app = getApp()
 
 Page({
@@ -14,13 +15,7 @@ Page({
       orgName: ''  // 使用 org_name 而非 org 对象
     },
     
-    // 角色映射
-    roleMap: {
-      super_admin: '超级管理员',
-      admin: '管理员',
-      manager: '管理者',
-      volunteer: '志愿者'
-    },
+    roleMap: ROLE_MAP,
     
     // 角色等级颜色
     roleColorMap: {

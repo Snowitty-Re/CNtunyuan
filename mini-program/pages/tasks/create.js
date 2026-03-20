@@ -178,15 +178,15 @@ Page({
 
       await taskService.create(data)
       showSuccess('创建成功')
-      
-      // 返回上一页并刷新
-      const pages = getCurrentPages()
-      const prevPage = pages[pages.length - 2]
-      if (prevPage && prevPage.loadTasks) {
-        prevPage.loadTasks()
-      }
-      
+
       wx.navigateBack()
+
+      // 刷新前一页（navigateBack 后前一页 onShow 会触发节流，手动重置时间戳）
+      const pages = getCurrentPages()
+      const prevPage = pages[pages.length - 1]
+      if (prevPage) {
+        prevPage._lastLoadTime = 0
+      }
     } catch (error) {
       console.error('创建任务失败:', error)
       showToast('创建失败')

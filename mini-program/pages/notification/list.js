@@ -36,7 +36,7 @@ Page({
       // 获取最近任务变更作为通知
       try {
         const taskResult = await services.task.getMyTasks({ page: 1, page_size: 10 })
-        const tasks = taskResult.list || taskResult || []
+        const tasks = taskResult.list || []
         tasks.forEach(task => {
           notifications.push({
             id: `task_${task.id}`,

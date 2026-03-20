@@ -394,7 +394,15 @@ Page({
         age: parseInt(form.age) || 0,
         height: parseInt(form.height) || 0,
         // 走失时间
-        missing_time: (() => { try { return new Date(form.missingTime).toISOString() } catch (e) { return '' } })(),
+        missing_time: (() => {
+          try {
+            const d = new Date(form.missingTime)
+            if (isNaN(d.getTime())) throw new Error('invalid date')
+            return d.toISOString()
+          } catch (e) {
+            throw new Error('走失时间格式无效，请重新选择')
+          }
+        })(),
         // 位置信息（分别提交）
         province: form.province.trim(),
         city: form.city.trim(),
