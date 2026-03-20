@@ -99,7 +99,8 @@ type UpdateTaskStatusRequest struct {
 
 // UpdateTaskProgressRequest 更新进度请求
 type UpdateTaskProgressRequest struct {
-	Progress int `json:"progress" binding:"required,min=0,max=100"`
+	Progress int    `json:"progress" binding:"required,min=0,max=100"`
+	Remark   string `json:"remark"`
 }
 
 // CompleteTaskRequest 完成任务请求

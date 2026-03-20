@@ -841,7 +841,7 @@ func TestTaskAppService_UpdateProgress(t *testing.T) {
 	testutil.MustCreate(t, tdb.DB, task)
 
 	// 更新进度
-	err := service.UpdateProgress(testutil.Context(), task.ID, 50, assignee.ID)
+	err := service.UpdateProgress(testutil.Context(), task.ID, 50, "", assignee.ID)
 	require.NoError(t, err)
 
 	// 验证进度已更新
@@ -863,7 +863,7 @@ func TestTaskAppService_UpdateProgress_InvalidProgress(t *testing.T) {
 	require.NoError(t, tdb.DB.Model(task).Update("assignee_id", creator.ID).Error)
 
 	// 尝试设置无效进度
-	err := service.UpdateProgress(testutil.Context(), task.ID, 150, creator.ID)
+	err := service.UpdateProgress(testutil.Context(), task.ID, 150, "", creator.ID)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "进度必须在0-100之间")
 }

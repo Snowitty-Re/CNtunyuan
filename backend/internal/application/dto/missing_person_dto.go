@@ -92,7 +92,7 @@ type MissingPersonResponse struct {
 	ContactRel    string               `json:"contact_rel"`
 	AltContact    string               `json:"alt_contact"`
 	Status        string               `json:"status"`
-	Urgency       string               `json:"urgency"`
+	UrgencyLevel  string               `json:"urgency_level"`
 	Views         int                  `json:"views"`
 	ShareCount    int                  `json:"share_count"`
 	ReporterID    string               `json:"reporter_id"`
@@ -210,7 +210,7 @@ func ToMissingPersonResponse(mp *entity.MissingPerson) MissingPersonResponse {
 		ContactRel:    mp.ContactRel,
 		AltContact:    mp.AltContact,
 		Status:        string(mp.Status),
-		Urgency:       string(mp.Urgency),
+		UrgencyLevel:  string(mp.Urgency),
 		Views:         mp.Views,
 		ShareCount:    mp.ShareCount,
 		ReporterID:    mp.ReporterID,

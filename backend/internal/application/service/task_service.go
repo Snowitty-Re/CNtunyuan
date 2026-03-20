@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -316,7 +317,7 @@ func (s *TaskAppService) Cancel(ctx context.Context, id string, req *dto.CancelT
 }
 
 // UpdateProgress 更新进度
-func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress int, userID string) error {
+func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress int, remark string, userID string) error {
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrTaskNotFound
@@ -333,6 +334,20 @@ func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
 		return err
+	}
+
+	content := fmt.Sprintf("进度更新至 %d%%", progress)
+	if remark != "" {
+		content += "：" + remark
+	}
+	log := &entity.TaskLog{
+		TaskID:  id,
+		UserID:  userID,
+		Action:  "update_progress",
+		Content: content,
+	}
+	if err := s.taskRepo.AddLog(ctx, log); err != nil {
+		logger.Warn("Failed to add progress log", logger.Err(err), logger.String("task_id", id))
 	}
 
 	return nil

@@ -417,7 +417,7 @@ func (h *TaskHandler) UpdateProgress(c *gin.Context) {
 
 	userID := middleware.GetUserID(c)
 
-	if err := h.taskService.UpdateProgress(c.Request.Context(), id, req.Progress, userID); err != nil {
+	if err := h.taskService.UpdateProgress(c.Request.Context(), id, req.Progress, req.Remark, userID); err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")

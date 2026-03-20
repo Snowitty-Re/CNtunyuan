@@ -100,7 +100,7 @@ func TestMissingPersonAppService_Create(t *testing.T) {
 				assert.Equal(t, "李四", resp.ContactName)
 				assert.Equal(t, "13900139000", resp.ContactPhone)
 				assert.Equal(t, string(entity.MissingStatusMissing), resp.Status)
-				assert.Equal(t, string(entity.UrgencyLevelHigh), resp.Urgency)
+				assert.Equal(t, string(entity.UrgencyLevelHigh), resp.UrgencyLevel)
 				assert.Equal(t, reporter.ID, resp.ReporterID)
 				assert.Equal(t, org.ID, resp.OrgID)
 			},
@@ -124,7 +124,7 @@ func TestMissingPersonAppService_Create(t *testing.T) {
 			wantErr:    false,
 			expectedResp: func(t *testing.T, resp *dto.MissingPersonResponse) {
 				assert.Equal(t, "王五", resp.Name)
-				assert.Equal(t, string(entity.UrgencyLevelLow), resp.Urgency)
+				assert.Equal(t, string(entity.UrgencyLevelLow), resp.UrgencyLevel)
 			},
 		},
 	}
@@ -514,7 +514,7 @@ func TestMissingPersonAppService_Update(t *testing.T) {
 				assert.Equal(t, "朝阳区", resp.District)
 				assert.Equal(t, "新联系人", resp.ContactName)
 				assert.Equal(t, "13900139111", resp.ContactPhone)
-				assert.Equal(t, string(entity.UrgencyLevelHigh), resp.Urgency)
+				assert.Equal(t, string(entity.UrgencyLevelHigh), resp.UrgencyLevel)
 			},
 			wantErr: false,
 		},
