@@ -248,6 +248,18 @@ mini-program/
 
 ## 更新日志
 
+### v1.5.0 (2026-03)
+**第四轮修复 — 空指针崩溃、字段类型、UI 文案、性能**
+
+- **P0 地图崩溃修复**：`map/index.wxml` 标记弹窗中 `item.data.photos[0].url` 在照片列表为空时崩溃，改为带守卫的三目表达式
+- **P0 方言标签修复**：`dialect/list.js` 和 `dialect/detail.js` — 后端返回逗号分隔字符串，WXML 的 `wx:for` 会逐字迭代；JS 层统一转数组（`split(',').filter(Boolean)`）
+- **P1 轨迹时间回退**：`cases/detail.js` `loadTracks` 中 `displayTime: formatDate(t.time)` — 若 `time` 字段为空轨迹时间显示为空；改为 `t.time || t.created_at` 回退
+- **P1 空状态文案修复**：`tasks/my.wxml` 条件字符串拼接导致"您还没有的任务"（全部标签时中间词为空）；改为 `wx:if/wx:elif` 独立文本节点
+- **P2 波形动画索引冲突**：`dialect/list.wxml` 内层 `wx:for="{{12}}"` 使用外层 `{{index}}` 变量导致动画延迟全部相同；添加 `wx:for-index="barIndex"` 别名
+- **P2 org 类型守卫**：`volunteer/profile.js` `userInfo.org?.name` 在 `org` 为字符串时行为未定义；改为先检查类型再访问 `.name`
+- **P3 onTimeUpdate 节流**：`dialect/detail.js` 音频进度回调每秒触发多次 `setData`；添加 100ms 节流减少渲染压力
+- **P3 删除 console.warn**：`index/index.js` `safeString()` 中残留的调试日志已移除
+
 ### v1.4.0 (2026-03)
 **地图功能完整实现、性能优化、技术债清偿**
 
