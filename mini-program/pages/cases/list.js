@@ -87,7 +87,7 @@ Page({
       }
 
       const result = await missingPersonService.getList(params)
-      const list = result.list || result || []
+      const list = result.list || []
       
       const cases = list.map(item => ({
         ...item,

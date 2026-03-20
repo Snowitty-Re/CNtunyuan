@@ -93,9 +93,15 @@ module.exports = {
   },
 
   /**
-   * 获取个人统计
+   * 获取个人统计（字段规范化，页面直接用标准字段名）
    */
   getStats() {
-    return get('/profile/stats')
+    return get('/profile/stats').then(res => ({
+      totalTasks:     res.total_tasks     ?? res.task_count    ?? 0,
+      totalCases:     res.total_cases     ?? res.case_count    ?? 0,
+      pendingTasks:   res.pending_tasks   ?? 0,
+      activeCases:    res.active_cases    ?? 0,
+      completedCases: res.completed_cases ?? 0,
+    }))
   }
 }

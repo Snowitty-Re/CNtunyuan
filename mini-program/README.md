@@ -80,6 +80,8 @@
 ### 项目结构
 ```
 mini-program/
+├── config/
+│   └── index.js        # 环境配置（dev/prod 切换，统一 API_BASE）
 ├── app.js              # 应用入口（登录态管理、全局方法）
 ├── app.json            # 全局配置（23个页面、tabBar）
 ├── app.wxss            # 全局样式（CSS变量、基础样式）
@@ -214,14 +216,15 @@ mini-program/
 ### 开发配置
 1. 克隆项目
 2. 使用微信开发者工具打开 `mini-program` 目录
-3. 修改 `app.js` 中的 `API_CONFIG` 配置
+3. 确认 `config/index.js` 中 `env = 'dev'`（默认开发环境）
 4. 开启"不校验合法域名"进行开发
 
 ### 生产环境
-1. 配置服务器域名（request、upload、download）
-2. 配置业务域名（webview）
-3. 关闭开发调试选项
-4. 上传代码并提交审核
+1. 将 `config/index.js` 中的 `env` 改为 `'prod'`，所有请求（含文件下载）自动指向生产域名
+2. 配置服务器域名（request、upload、download）
+3. 配置业务域名（webview）
+4. 关闭开发调试选项
+5. 上传代码并提交审核
 
 ## 注意事项
 
@@ -244,6 +247,14 @@ mini-program/
 - 案件状态：`missing` / `searching` / `found` / `reunited` / `closed`
 
 ## 更新日志
+
+### v1.2.0 (2026-03)
+- 新增 `config/index.js` 统一环境配置，切换 dev/prod 只需改一行
+- 修复 Token 刷新队列缺陷：并发 401 时入队前浅拷贝 options，防止重试时 header 污染
+- 删除登录页测试绕过逻辑（`quickBindPhone` / `doBindPhoneWithoutCode`），绑定手机号强制走短信验证
+- `user.getStats()` 返回值规范化，消除 profile/workbench 页面的重复 fallback 映射
+- 统一权限检查：`tasks/list`、`tasks/detail` 改用 `app.isManager()`，与 `app.js` 保持单一来源
+- 删除各列表页 `result.list || result` 响应兼容层，统一依赖后端标准结构
 
 ### v1.1.0 (2026-03)
 - 修复11个P0级接口错误（字段名、不存在的API端点、页面跳转）

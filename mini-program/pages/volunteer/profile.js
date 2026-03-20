@@ -1,5 +1,4 @@
 const userService = require('../../services/user')
-const taskService = require('../../services/task')
 const { showConfirm, showSuccess, showToast } = require('../../utils/util')
 const app = getApp()
 
@@ -103,19 +102,14 @@ Page({
   // 加载统计数据
   async loadStats() {
     try {
-      // 获取用户统计和任务统计
-      const [userStats, taskStats] = await Promise.all([
-        userService.getStats().catch(() => ({})),
-        taskService.getStats().catch(() => ({}))
-      ])
+      const userStats = await userService.getStats().catch(() => ({}))
       
-      // 使用后端实际返回的字段名
       this.setData({
         stats: {
-          totalTasks: userStats.total_tasks || taskStats.my_tasks || 0,
-          totalCases: userStats.total_cases || 0,
-          activeCases: userStats.active_cases || 0,
-          completedCases: userStats.completed_cases || 0
+          totalTasks:     userStats.totalTasks     || 0,
+          totalCases:     userStats.totalCases     || 0,
+          activeCases:    userStats.activeCases    || 0,
+          completedCases: userStats.completedCases || 0
         }
       })
     } catch (error) {

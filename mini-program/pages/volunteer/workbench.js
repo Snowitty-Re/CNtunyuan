@@ -111,12 +111,11 @@ Page({
     try {
       showLoading('加载中...')
       const stats = await taskService.getStats()
-      // 使用后端实际返回的字段
       this.setData({
         todayStats: {
-          myPending: stats.my_pending || 0,
-          myProcessing: stats.my_processing || stats.processing || 0,
-          myCompleted: stats.my_completed || stats.completed || 0
+          myPending:    stats.my_pending    || 0,
+          myProcessing: stats.my_processing || 0,
+          myCompleted:  stats.my_completed  || 0
         }
       })
     } catch (error) {
@@ -134,7 +133,7 @@ Page({
         page: 1, 
         page_size: 5 
       })
-      const tasks = (result.list || result || []).map(item => ({
+      const tasks = (result.list || []).map(item => ({
         ...item,
         timeAgo: formatTimeAgo(item.created_at || item.updated_at)
       }))

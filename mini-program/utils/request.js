@@ -4,8 +4,7 @@
  */
 
 // API 基础配置
-const API_BASE_URL = 'http://localhost:8080/api/v1'
-// const API_BASE_URL = 'https://cntuanyuan.com/api/v1'
+const { API_BASE: API_BASE_URL } = require('../config')
 // 请求队列（用于 token 刷新时暂存请求）
 let requestQueue = []
 let isRefreshing = false
@@ -215,8 +214,8 @@ const request = (options) => {
  * 处理 Token 过期
  */
 function handleTokenExpired(failedRequest, resolve, reject) {
-  // 将失败请求加入队列
-  requestQueue.push({ failedRequest, resolve, reject })
+  // 将失败请求加入队列（浅拷贝，避免重试时 header 被外部修改）
+  requestQueue.push({ failedRequest: { ...failedRequest }, resolve, reject })
   
   if (isRefreshing) {
     return

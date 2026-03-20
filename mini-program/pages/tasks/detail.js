@@ -1,5 +1,6 @@
 const taskService = require('../../services/task')
 const { formatDate, formatTimeAgo, showSuccess, showToast, showConfirm } = require('../../utils/util')
+const app = getApp()
 
 Page({
   data: {
@@ -41,7 +42,7 @@ Page({
     this.setData({ 
       taskId: options.id,
       currentUser: userInfo,
-      isManager: ['super_admin', 'admin', 'manager'].includes(userInfo.role)
+      isManager: app.isManager()
     })
     
     if (options.id) {

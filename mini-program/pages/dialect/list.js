@@ -108,7 +108,7 @@ Page({
 
       const result = await dialectService.getList(params)
       
-      const newDialects = result.list || result.data || []
+      const newDialects = result.list || []
       
       this.setData({
         dialects: this.data.page === 1 ? newDialects : [...this.data.dialects, ...newDialects],

@@ -1,5 +1,6 @@
 const taskService = require('../../services/task')
 const { formatDate, showSuccess, showToast, showConfirm } = require('../../utils/util')
+const app = getApp()
 
 Page({
   data: {
@@ -61,7 +62,7 @@ Page({
   checkPermission() {
     const userInfo = wx.getStorageSync('userInfo') || {}
     this.setData({
-      canCreate: ['super_admin', 'admin', 'manager'].includes(userInfo.role),
+      canCreate: app.isManager(),
       userRole: userInfo.role || ''
     })
   },
@@ -97,7 +98,7 @@ Page({
       }
 
       const result = await taskService.getList(params)
-      const list = result.list || result || []
+      const list = result.list || []
 
       const tasks = list.map(item => ({
         ...item,
