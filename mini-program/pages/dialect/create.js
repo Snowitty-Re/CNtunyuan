@@ -25,14 +25,17 @@ Page({
     // 录音状态
     isRecording: false,
     hasRecorded: false,
-    recordTime: 0,      // 当前录音时长(秒)
-    recordDuration: 0,  // 实际录音总时长(秒)
-    tempFilePath: '',   // 临时文件路径
-    
+    recordTime: 0,         // 当前录音时长(秒)
+    recordTimeText: '0:00',
+    recordDuration: 0,     // 实际录音总时长(秒)
+    recordDurationText: '0:00',
+    tempFilePath: '',      // 临时文件路径
+
     // 播放状态
     isPlaying: false,
     playProgress: 0,
     playCurrentTime: 0,
+    playCurrentTimeText: '0:00',
     
     // 地区选项
     regionOptions: [
@@ -110,10 +113,11 @@ Page({
         isRecording: false,
         hasRecorded: true,
         tempFilePath: res.tempFilePath,
-        recordDuration: duration
+        recordDuration: duration,
+        recordDurationText: this._formatTime(duration),
       })
       
-      showToast(`录音完成 ${this.formatTime(duration)}`, 'success')
+      showSuccess(`录音完成 ${this.formatTime(duration)}`)
     })
 
     recorderManager.onError((err) => {
@@ -126,10 +130,10 @@ Page({
 
   // 开始录音计时
   startRecordTimer() {
-    this.setData({ recordTime: 0 })
+    this.setData({ recordTime: 0, recordTimeText: '0:00' })
     this.recordTimer = setInterval(() => {
       const recordTime = this.data.recordTime + 1
-      this.setData({ recordTime })
+      this.setData({ recordTime, recordTimeText: this._formatTime(recordTime) })
       
       // 达到最大时长自动停止
       if (recordTime >= MAX_DURATION) {
@@ -202,9 +206,12 @@ Page({
       hasRecorded: false,
       tempFilePath: '',
       recordTime: 0,
+      recordTimeText: '0:00',
       recordDuration: 0,
+      recordDurationText: '0:00',
       playProgress: 0,
       playCurrentTime: 0,
+      playCurrentTimeText: '0:00',
       isPlaying: false
     })
   },
@@ -215,19 +222,21 @@ Page({
       innerAudioContext = wx.createInnerAudioContext()
       
       innerAudioContext.onTimeUpdate(() => {
-        const currentTime = innerAudioContext.currentTime || 0
+        const currentTime = Math.floor(innerAudioContext.currentTime || 0)
         const duration = this.data.recordDuration || 1
         this.setData({
-          playCurrentTime: Math.floor(currentTime),
+          playCurrentTime: currentTime,
+          playCurrentTimeText: this._formatTime(currentTime),
           playProgress: (currentTime / duration) * 100
         })
       })
 
       innerAudioContext.onEnded(() => {
-        this.setData({ 
+        this.setData({
           isPlaying: false,
           playProgress: 0,
-          playCurrentTime: 0
+          playCurrentTime: 0,
+          playCurrentTimeText: '0:00',
         })
       })
 
@@ -259,10 +268,11 @@ Page({
     if (innerAudioContext) {
       innerAudioContext.stop()
     }
-    this.setData({ 
+    this.setData({
       isPlaying: false,
       playProgress: 0,
-      playCurrentTime: 0
+      playCurrentTime: 0,
+      playCurrentTimeText: '0:00',
     })
   },
 
@@ -270,12 +280,20 @@ Page({
   onPlayProgressChange(e) {
     if (!innerAudioContext) return
     const value = e.detail.value
-    const seekTime = (value / 100) * this.data.recordDuration
+    const seekTime = Math.floor((value / 100) * this.data.recordDuration)
     innerAudioContext.seek(seekTime)
     this.setData({
       playProgress: value,
-      playCurrentTime: Math.floor(seekTime)
+      playCurrentTime: seekTime,
+      playCurrentTimeText: this._formatTime(seekTime),
     })
+  },
+
+  _formatTime(seconds) {
+    if (!seconds || isNaN(seconds)) return '0:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   },
 
   // 表单输入
@@ -469,11 +487,8 @@ Page({
     }
   },
 
-  // 格式化时间
   formatTime(seconds) {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
+    return this._formatTime(seconds)
   },
 
   // 格式化录音时间（带倒计时）

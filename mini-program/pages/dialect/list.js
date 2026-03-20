@@ -107,9 +107,15 @@ Page({
       }
 
       const result = await dialectService.getList(params)
-      
-      const newDialects = result.list || []
-      
+
+      const newDialects = (result.list || []).map(item => ({
+        ...item,
+        durationText:  this._formatTime(item.duration),
+        playCountText: this._formatPlayCount(item.play_count),
+        likeCountText: this._formatPlayCount(item.like_count),
+        timeAgoText:   formatTimeAgo(item.created_at),
+      }))
+
       this.setData({
         dialects: this.data.page === 1 ? newDialects : [...this.data.dialects, ...newDialects],
         noMore: newDialects.length < this.data.pageSize
@@ -193,24 +199,17 @@ Page({
     }, 200)
   },
 
-  // 格式化播放次数
-  formatPlayCount(count) {
+  _formatPlayCount(count) {
     if (!count) return '0'
     if (count < 1000) return count.toString()
     if (count < 10000) return (count / 1000).toFixed(1) + 'k'
     return (count / 10000).toFixed(1) + 'w'
   },
 
-  // 格式化时间
-  formatTime(seconds) {
+  _formatTime(seconds) {
     if (!seconds) return '0:00'
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
-  },
-
-  // 格式化相对时间
-  formatTimeAgo(date) {
-    return formatTimeAgo(date)
   }
 })

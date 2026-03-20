@@ -175,17 +175,18 @@ Page({
 
   // 开始倒计时
   startCountDown() {
-    this.setData({ 
+    this.setData({
       counting: true,
       canSendCode: false,
-      countDown: 60 
+      countDown: 60
     })
 
-    const timer = setInterval(() => {
+    this._countDownTimer = setInterval(() => {
       let countDown = this.data.countDown - 1
-      
+
       if (countDown <= 0) {
-        clearInterval(timer)
+        clearInterval(this._countDownTimer)
+        this._countDownTimer = null
         this.setData({
           counting: false,
           canSendCode: validatePhone(this.data.phone),
@@ -195,6 +196,13 @@ Page({
         this.setData({ countDown })
       }
     }, 1000)
+  },
+
+  onUnload() {
+    if (this._countDownTimer) {
+      clearInterval(this._countDownTimer)
+      this._countDownTimer = null
+    }
   },
 
   // 手机号登录

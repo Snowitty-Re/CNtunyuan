@@ -68,7 +68,7 @@
         <view class="card-meta">
           <view class="meta-row">
             <view class="meta-icon location-icon"></view>
-            <text class="meta-text">{{item.missing_location || '未知地点'}}</text>
+            <text class="meta-text">{{item.missingLocation || '未知地点'}}</text>
           </view>
           <view class="meta-row">
             <view class="meta-icon time-icon"></view>

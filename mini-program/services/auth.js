@@ -52,15 +52,10 @@ module.exports = {
   /**
    * 绑定手机号
    * @param {String} phone 手机号
-   * @param {String} code 验证码（可选，测试阶段可传空跳过）
+   * @param {String} code 短信验证码
    */
   bindPhone(phone, code) {
-    const data = { phone }
-    // 有验证码时传入，测试阶段可跳过
-    if (code) {
-      data.code = code
-    }
-    return post('/auth/bind-phone', data)
+    return post('/auth/bind-phone', { phone, code })
   },
 
   /**

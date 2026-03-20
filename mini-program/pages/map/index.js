@@ -108,8 +108,8 @@ Page({
     }
     
     // 本地筛选
-    const filtered = cases.filter(item => 
-      item.name.includes(keyword) ||
+    const filtered = cases.filter(item =>
+      (item.name && item.name.includes(keyword)) ||
       (item.displayLocation && item.displayLocation.includes(keyword))
     )
     

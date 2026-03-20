@@ -27,11 +27,11 @@
           <text class="status-sub">录音时长 {{MIN_DURATION}}-{{MAX_DURATION}} 秒</text>
         </block>
         <block wx:if="{{isRecording}}">
-          <text class="status-main recording-text">正在录音 {{formatTime(recordTime)}}</text>
+          <text class="status-main recording-text">正在录音 {{recordTimeText}}</text>
           <text class="status-sub">{{recordTime < MIN_DURATION ? '至少录制' + MIN_DURATION + '秒' : '点击停止按钮结束录音'}}</text>
         </block>
         <block wx:if="{{hasRecorded && !isRecording}}">
-          <text class="status-main">录音完成 {{formatTime(recordDuration)}}</text>
+          <text class="status-main">录音完成 {{recordDurationText}}</text>
           <text class="status-sub">点击下方按钮试听或重新录制</text>
         </block>
       </view>
@@ -51,8 +51,8 @@
           bindchange="onPlayProgressChange"
         />
         <view class="preview-time">
-          <text>{{formatTime(playCurrentTime)}}</text>
-          <text>{{formatTime(recordDuration)}}</text>
+          <text>{{playCurrentTimeText}}</text>
+          <text>{{recordDurationText}}</text>
         </view>
       </view>
 

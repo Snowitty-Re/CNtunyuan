@@ -12,7 +12,9 @@ Page({
     refreshing: false,
     hasMore: true,
     statusMap: {
+      draft: '草稿',
       pending: '待分配',
+      assigned: '已分配',
       processing: '进行中',
       completed: '已完成',
       cancelled: '已取消'
@@ -62,7 +64,7 @@ Page({
       }
 
       const result = await taskService.getMyTasks(params)
-      const list = result.list || result || []
+      const list = result.list || []
 
       const tasks = list.map(item => ({
         ...item,

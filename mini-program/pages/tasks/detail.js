@@ -1,5 +1,5 @@
 const taskService = require('../../services/task')
-const { formatDate, formatTimeAgo, showSuccess, showToast, showConfirm } = require('../../utils/util')
+const { formatDate, formatTimeAgo, showSuccess, showToast, showConfirm, showLoading, hideLoading } = require('../../utils/util')
 const app = getApp()
 
 Page({

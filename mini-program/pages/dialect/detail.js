@@ -15,7 +15,9 @@ Page({
     // 音频播放
     isPlaying: false,
     currentTime: 0,
+    currentTimeText: '0:00',
     duration: 0,
+    durationText: '0:00',
     progress: 0,
     
     // 点赞状态
@@ -81,26 +83,29 @@ Page({
 
   // 初始化音频上下文
   initAudioContext() {
+    if (innerAudioContext) return  // 已初始化则不重复创建
     innerAudioContext = wx.createInnerAudioContext()
     
     innerAudioContext.onCanplay(() => {
-      const duration = innerAudioContext.duration || 0
-      this.setData({ duration: Math.floor(duration) })
+      const duration = Math.floor(innerAudioContext.duration || 0)
+      this.setData({ duration, durationText: this._formatTime(duration) })
     })
 
     innerAudioContext.onTimeUpdate(() => {
-      const currentTime = innerAudioContext.currentTime || 0
+      const currentTime = Math.floor(innerAudioContext.currentTime || 0)
       const duration = innerAudioContext.duration || 1
       this.setData({
-        currentTime: Math.floor(currentTime),
+        currentTime,
+        currentTimeText: this._formatTime(currentTime),
         progress: (currentTime / duration) * 100
       })
     })
 
     innerAudioContext.onEnded(() => {
-      this.setData({ 
+      this.setData({
         isPlaying: false,
         currentTime: 0,
+        currentTimeText: '0:00',
         progress: 0
       })
     })
@@ -126,15 +131,20 @@ Page({
       // 设置音频源
       if (dialect.audio_url) {
         innerAudioContext.src = dialect.audio_url
-        this.setData({ duration: dialect.duration || 0 })
+        const dur = dialect.duration || 0
+        this.setData({ duration: dur, durationText: this._formatTime(dur) })
       }
-      
+
+      // 预计算展示用字段
+      dialect.playCountText = this._formatPlayCount(dialect.play_count)
+      dialect.likeCountText = this._formatPlayCount(dialect.like_count)
+
       // 处理关联走失人员
       if (dialect.missing_person) {
         this.setData({ missingPerson: dialect.missing_person })
       }
-      
-      this.setData({ 
+
+      this.setData({
         dialect,
         isLiked: dialect.is_liked || false
       })
@@ -186,8 +196,7 @@ Page({
     })
   },
 
-  // 格式化时间
-  formatTime(seconds) {
+  _formatTime(seconds) {
     if (!seconds || isNaN(seconds)) return '0:00'
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
@@ -297,7 +306,7 @@ Page({
   goToMissingPerson() {
     if (this.data.missingPerson?.id) {
       wx.navigateTo({
-        url: `/pages/missing/detail?id=${this.data.missingPerson.id}`
+        url: `/pages/cases/detail?id=${this.data.missingPerson.id}`
       })
     }
   },
@@ -322,8 +331,7 @@ Page({
     }
   },
 
-  // 播放次数格式化
-  formatPlayCount(count) {
+  _formatPlayCount(count) {
     if (!count) return '0'
     if (count < 1000) return count.toString()
     if (count < 10000) return (count / 1000).toFixed(1) + 'k'

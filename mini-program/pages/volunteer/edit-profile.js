@@ -1,4 +1,5 @@
 const userService = require('../../services/user')
+const authService = require('../../services/auth')
 const uploadService = require('../../services/upload')
 const { showSuccess, showToast, showLoading, hideLoading, validatePhone, validateEmail } = require('../../utils/util')
 const app = getApp()
@@ -141,11 +142,8 @@ Page({
     
     try {
       showLoading('发送中...')
-      // 调用发送验证码接口
-      await userService.sendVerifyCode?.(target, type).catch(() => {
-        // 模拟发送成功
-        showSuccess('验证码已发送')
-      })
+      await authService.sendVerifyCode(target)
+      showSuccess('验证码已发送')
       
       this.setData({ 
         countdown: 60,
