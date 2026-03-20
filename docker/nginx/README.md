@@ -11,7 +11,7 @@
                            ▼
                     ┌─────────────┐
                     │  前端静态资源 │
-                    │ (web-new/dist)│
+                    │  (web/dist)  │
                     └─────────────┘
 ```
 
@@ -50,7 +50,7 @@ sudo systemctl start cntuanyuan
 
 ```bash
 # 1. 在本地或服务器构建前端
-cd web-new
+cd web
 
 # 2. 修改 .env.production 中的 API 地址
 # VITE_API_BASE_URL=/api/v1
@@ -59,7 +59,7 @@ cd web-new
 pnpm build
 
 # 4. 上传构建结果到服务器
-rsync -avz dist/ user@vps:/var/www/cntuanyuan/web-new/
+rsync -avz dist/ user@vps:/var/www/cntuanyuan/web/
 ```
 
 ### 4. 配置 Nginx
@@ -99,7 +99,7 @@ sudo certbot renew --dry-run
 |--------|------|------|
 | `server_name` | 你的域名 | `cntuanyuan.org` |
 | `upstream backend_api` | 后端服务地址 | `127.0.0.1:8080` |
-| `root` | 前端静态资源目录 | `/var/www/cntuanyuan/web-new/dist` |
+| `root` | 前端静态资源目录 | `/var/www/cntuanyuan/web/dist` |
 | `ssl_certificate` | SSL 证书路径 | `/etc/letsencrypt/live/...` |
 
 ### 跨域配置（已处理）
@@ -152,13 +152,13 @@ jwt:
 ### 2. 修改小程序配置
 
 ```javascript
-// mini-program/app.js
-App({
-  globalData: {
-    // 生产环境 API 地址
-    apiBaseUrl: 'https://your-domain.com/api/v1'
-  }
-})
+// mini-program/config/index.js
+const ENV = {
+  dev:  { API_BASE: 'http://localhost:8080/api/v1' },
+  prod: { API_BASE: 'https://your-domain.com/api/v1' },
+}
+const env = 'prod' // 切换到生产环境
+module.exports = { ...ENV[env], ENV: env }
 ```
 
 ## 常见问题
@@ -261,7 +261,7 @@ git pull
 sudo systemctl restart cntuanyuan
 
 # 3. 重新构建前端（如需要）
-cd web-new && pnpm build
+cd web && pnpm build
 
 # 4. 重载 Nginx
 sudo nginx -s reload

@@ -2,6 +2,56 @@
 
 本项目所有重大变更都将记录在此文件中。
 
+## [2.2.0] - 2026-03-20
+
+### 后端 Bug 修复与质量加固（第 3-4 轮 + 全栈对齐第 1-2 轮）
+
+#### 数据正确性修复
+- **走失人员统计时间字段**：`GetStats()` 中 `WeekNew`/`MonthNew` 之前映射到零值，现正确关联 `entity.MissingPersonStats.ThisWeekNew/ThisMonthNew`
+- **年龄范围验证**：`List()` 增加 `age_min > age_max` 的前置校验，避免数据库返回错误结果
+- **分页除零保护**：`NewMissingPersonListResponse`/`NewTaskListResponse`/`NewUserListResponse`/`NewDialectListResponse` 在 `pageSize <= 0` 时自动回退到 10，防止 panic
+
+#### DTO / 字段名对齐
+- **`urgency` → `urgency_level`**：`MissingPersonResponse.Urgency` 重命名为 `UrgencyLevel`，JSON key 从 `urgency` 改为 `urgency_level`，与小程序和 Web 端保持一致；同步更新 `ToMissingPersonResponse` 映射及所有测试断言
+- **`my_processing` 统计字段**：在 `entity.TaskStats`、`TaskStatsResponse`、`task_repository.GetStats()`、`TaskAppService.GetStats()` 四处同步添加 `MyProcessing` 字段，修复小程序工作台"进行中"始终为 0 的问题
+
+#### 任务进度记录
+- **`UpdateTaskProgressRequest.Remark`**：新增 `remark` 字段，允许在更新进度时附带备注
+- **`UpdateProgress` 写入 TaskLog**：进度更新后自动写入操作日志（格式："进度更新至 N%：备注"）
+- **Handler 同步更新**：`task_handler.go` 中 `UpdateProgress` 透传 `req.Remark` 到服务层
+
+#### 小程序对齐修复
+- **`cases/create.js`**：提交数据新增 `urgency_level` 字段（之前完全缺失）
+- **`cases/detail.js`**：`openLocation()` 优先使用 `missing_latitude/missing_longitude` 坐标打开地图导航，无坐标时退化为文字地址弹窗
+
+#### 实体测试修复
+- **`task_test.go`**：`TestTask_CanStart`/`TestTask_Start` 中 `TaskStatusAssigned` 测试用例补充 `AssigneeID`，修复因 ownership 检查导致的测试误判
+
+---
+
+## [2.1.0] - 2026-03-14
+
+### 后端生产级加固（第 1-2 轮评估修复）
+
+#### 安全修复
+- **Shell 注入**（`internal/task/scheduler.go`）：数据库密码改用环境变量 `PGPASSWORD`/`MYSQL_PWD` 传递，不再拼入 shell 命令
+- **短信轰炸防护**（`internal/infrastructure/sms/sms.go`）：同一手机号添加 60s Redis 限速
+- **Metrics 端点防护**（`router.go`）：`/metrics` 端点增加 admin 权限校验
+- **JWT 密钥强度校验**（`jwt_service.go`/`pkg/auth/jwt.go`）：密钥长度 < 32 字符时启动失败并返回 error
+
+#### Bug 修复
+- **文件上传 panic**（`storage/security.go`）：`ext[1:]` 对无扩展名文件触发越界，改用 `strings.TrimPrefix`
+- **GetStats 数据错误**（`user_service.go`）：错误计数全系统已团圆案件，改为只统计当前上报者自己的案件；新增 `CountByReporterAndStatus` 仓储方法
+- **任务归属校验**（`task_service.go`）：`Start()`/`Complete()` 增加 `ErrTaskNotAssignedToUser` 检查，只有被分配的执行人才能操作
+
+#### 验证与错误处理
+- **枚举验证**：`IsValidMissingStatus`/`IsValidUrgencyLevel`/`IsValidUserStatus` 域方法；服务层在 DB 查询前校验枚举值
+- **哨兵错误**：将字符串比较 `err.Error() == "..."` 替换为类型化错误变量（`ErrOldPasswordWrong` 等）
+- **路由冲突修复**：`upload_handler.go` 静态路由（`/stats`、`/entity/:type/:id`）注册顺序提前，避免与参数路由冲突
+- **Silent error 修复**：`task_service.go` AddLog 调用均检查错误并记录警告
+
+---
+
 ## [2.0.0] - 2026-03-11
 
 ### Web 管理后台 (全新构建)

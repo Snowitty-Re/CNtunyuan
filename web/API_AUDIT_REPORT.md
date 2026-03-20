@@ -1,7 +1,11 @@
 # Web 前端与后端接口审查报告
 
 > 审查日期: 2026-03-14
+> 最后更新: 2026-03-20
 > 审查方法: 逐行对比前端 `src/api/*.ts` + `src/types/*.ts` + `src/pages/**/*.tsx` 的请求字段/响应字段 vs 后端 `dto/*.go` 和 `service/*.go` 的 JSON tag 定义。
+
+> **注**: 小程序端的 30 个接口问题已在 v1.2.0–v2.2.0 版本中全部修复，见 `mini-program/API_AUDIT_REPORT.md`。
+> Web 端核心字段均匹配（E1-E3、E8-E11 已验证 ✅），E5（recent_activity 无数据）为已知设计限制。
 
 ---
 

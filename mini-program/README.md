@@ -241,10 +241,13 @@ mini-program/
 - 退出登录清除所有本地数据
 
 ### 后端字段对照
-- 走失位置字段：`missing_latitude` / `missing_longitude`（非 `last_seen_*`）
-- 位置文本：拼接 `province` + `city` + `district` + `address`
+- 走失位置坐标：`missing_latitude` / `missing_longitude`（可选，用于 `wx.openLocation` 导航）
+- 位置文本：拼接 `province` + `city` + `district` + `address`（使用 `utils/util.js` 的 `joinLocation()`）
+- 紧急程度：`urgency_level`（`low` / `medium` / `high` / `critical`）
 - 任务状态：`draft` / `pending` / `assigned` / `processing` / `completed` / `cancelled`
 - 案件状态：`missing` / `searching` / `found` / `reunited` / `closed`
+- 方言标签：后端存储为逗号分隔字符串，JS 层用 `split(',').filter(Boolean)` 转数组后使用
+- 统计字段：`TaskStatsResponse` 含 `my_tasks` / `my_pending` / `my_processing` / `my_completed`
 
 ## 更新日志
 
