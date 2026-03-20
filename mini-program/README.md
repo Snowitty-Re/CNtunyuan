@@ -248,6 +248,19 @@ mini-program/
 
 ## 更新日志
 
+### v1.3.0 (2026-03)
+**全面代码审查 — P0 崩溃、WXML 渲染错误、内存泄漏修复**
+
+- **P0 崩溃**：`tasks/detail.js` 补充 `showLoading`/`hideLoading` 导入（点击"分配任务"触发 ReferenceError）
+- **P0 数据不显示**：`cases/list.wxml` 修正字段名 `missing_location` → `missingLocation`（地点列永远空白）
+- **WXML 渲染错误**：`dialect/list`、`dialect/detail`、`dialect/create` 的 WXML 模板中直接调用 Page 方法（`{{formatTime()}}`、`{{formatPlayCount()}}`、`{{formatTimeAgo()}}`）— 小程序不支持此语法，时长/播放数/时间进度全部不渲染。改为在 JS 的 `setData` 处预计算文本字段写入 data
+- **跳转路径错误**：`dialect/detail.js` 关联案件跳转 `/pages/missing/detail` 不存在，修正为 `/pages/cases/detail`
+- **状态显示空白**：`tasks/my.js` statusMap 缺少 `assigned`/`draft` 状态，对应任务标签空白
+- **音频实例泄漏**：`dialect/detail.js` `initAudioContext()` 无守卫，每次进入页面创建新实例不释放旧实例
+- **定时器泄漏**：`login/index.js` 倒计时 `setInterval` 未在 `onUnload` 清理，页面销毁后持续运行
+- **验证码功能失效**：`edit-profile.js` 调用不存在的 `userService.sendVerifyCode?()`（可选链静默失败）→ 改为 `authService.sendVerifyCode()`
+- **搜索崩溃**：`map/index.js` 搜索时 `item.name.includes()` 在 name 为 null 时抛出异常，添加 null 守卫
+
 ### v1.2.0 (2026-03)
 - 新增 `config/index.js` 统一环境配置，切换 dev/prod 只需改一行
 - 修复 Token 刷新队列缺陷：并发 401 时入队前浅拷贝 options，防止重试时 header 污染
