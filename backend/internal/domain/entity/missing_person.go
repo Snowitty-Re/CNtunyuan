@@ -49,8 +49,10 @@ type MissingPerson struct {
 	Province    string    `gorm:"size:50" json:"province,omitempty"`
 	City        string    `gorm:"size:50" json:"city,omitempty"`
 	District    string    `gorm:"size:50" json:"district,omitempty"`
-	Address     string    `gorm:"size:255" json:"address,omitempty"`
-	Clothes     string    `gorm:"type:text" json:"clothes,omitempty"`
+	Address          string  `gorm:"size:255" json:"address,omitempty"`
+	MissingLatitude  float64 `gorm:"default:0" json:"missing_latitude,omitempty"`
+	MissingLongitude float64 `gorm:"default:0" json:"missing_longitude,omitempty"`
+	Clothes          string  `gorm:"type:text" json:"clothes,omitempty"`
 	Features    string    `gorm:"type:text" json:"features,omitempty"`
 
 	// 联系人信息

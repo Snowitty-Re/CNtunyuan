@@ -82,6 +82,8 @@ func (s *MissingPersonAppService) Create(ctx context.Context, req *dto.CreateMis
 		City:         req.City,
 		District:     req.District,
 		Address:      req.Address,
+		MissingLatitude:  req.MissingLatitude,
+		MissingLongitude: req.MissingLongitude,
 		Clothes:      req.Clothes,
 		Features:     req.Features,
 		ContactName:  req.ContactName,
@@ -203,6 +205,12 @@ func (s *MissingPersonAppService) Update(ctx context.Context, id string, req *dt
 	}
 	if req.Address != "" {
 		mp.Address = req.Address
+	}
+	if req.MissingLatitude != 0 {
+		mp.MissingLatitude = req.MissingLatitude
+	}
+	if req.MissingLongitude != 0 {
+		mp.MissingLongitude = req.MissingLongitude
 	}
 	if req.Clothes != "" {
 		mp.Clothes = req.Clothes

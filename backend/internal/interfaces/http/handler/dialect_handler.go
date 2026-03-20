@@ -102,7 +102,8 @@ func (h *DialectHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	dialect, err := h.dialectService.GetByID(c.Request.Context(), id)
+	userID := middleware.GetUserID(c)
+	dialect, err := h.dialectService.GetByID(c.Request.Context(), id, userID)
 	if err != nil {
 		if err == service.ErrDialectNotFound {
 			response.NotFound(c, "dialect not found")

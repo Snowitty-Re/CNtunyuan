@@ -8,18 +8,19 @@ import (
 
 // CreateDialectRequest 创建方言请求
 type CreateDialectRequest struct {
-	Title       string `json:"title" binding:"required"`
-	Content     string `json:"content"`
-	Region      string `json:"region" binding:"required"`
-	Province    string `json:"province"`
-	City        string `json:"city"`
-	DialectType string `json:"dialect_type"`
-	AudioUrl    string `json:"audio_url" binding:"required"`
-	Duration    int    `json:"duration"`
-	FileSize    int    `json:"file_size"`
-	Format      string `json:"format"`
-	Tags        string `json:"tags"`
-	Description string `json:"description"`
+	Title           string `json:"title" binding:"required"`
+	Content         string `json:"content"`
+	Region          string `json:"region" binding:"required"`
+	Province        string `json:"province"`
+	City            string `json:"city"`
+	DialectType     string `json:"dialect_type"`
+	AudioUrl        string `json:"audio_url" binding:"required"`
+	Duration        int    `json:"duration"`
+	FileSize        int    `json:"file_size"`
+	Format          string `json:"format"`
+	Tags            string `json:"tags"`
+	Description     string `json:"description"`
+	MissingPersonID string `json:"missing_person_id"`
 }
 
 // UpdateDialectRequest 更新方言请求
@@ -54,8 +55,10 @@ type DialectResponse struct {
 	CommentCount int           `json:"comment_count"`
 	Tags         string        `json:"tags"`
 	Description  string        `json:"description"`
-	UploaderID   string        `json:"uploader_id"`
-	OrgID        string        `json:"org_id"`
+	UploaderID      string        `json:"uploader_id"`
+	OrgID           string        `json:"org_id"`
+	MissingPersonID *string       `json:"missing_person_id,omitempty"`
+	IsLiked         bool          `json:"is_liked"`
 	Uploader     *UserResponse `json:"uploader,omitempty"`
 	CreatedAt    time.Time     `json:"created_at"`
 }
@@ -115,7 +118,7 @@ type DialectStatsResponse struct {
 }
 
 // ToDialectResponse 转换为方言响应
-func ToDialectResponse(d *entity.Dialect) DialectResponse {
+func ToDialectResponse(d *entity.Dialect, isLiked bool) DialectResponse {
 	resp := DialectResponse{
 		ID:           d.ID,
 		Title:        d.Title,
@@ -135,9 +138,11 @@ func ToDialectResponse(d *entity.Dialect) DialectResponse {
 		CommentCount: d.CommentCount,
 		Tags:         d.Tags,
 		Description:  d.Description,
-		UploaderID:   d.UploaderID,
-		OrgID:        d.OrgID,
-		CreatedAt:    d.CreatedAt,
+		UploaderID:      d.UploaderID,
+		OrgID:           d.OrgID,
+		MissingPersonID: d.MissingPersonID,
+		IsLiked:         isLiked,
+		CreatedAt:       d.CreatedAt,
 	}
 
 	if d.Uploader != nil {

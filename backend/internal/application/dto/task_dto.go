@@ -104,7 +104,9 @@ type UpdateTaskProgressRequest struct {
 
 // CompleteTaskRequest 完成任务请求
 type CompleteTaskRequest struct {
-	Result string `json:"result"`
+	Result      string   `json:"result"`
+	Feedback    string   `json:"feedback"`
+	Attachments []string `json:"attachments"`
 }
 
 // CancelTaskRequest 取消任务请求

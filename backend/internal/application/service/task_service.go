@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
@@ -254,16 +255,29 @@ func (s *TaskAppService) Complete(ctx context.Context, id string, req *dto.Compl
 		return err
 	}
 
+	if req.Feedback != "" {
+		task.Feedback = req.Feedback
+	}
+	if len(req.Attachments) > 0 {
+		if b, err := json.Marshal(req.Attachments); err == nil {
+			task.ResultPhotos = string(b)
+		}
+	}
+
 	if err := s.taskRepo.Update(ctx, task); err != nil {
 		return err
 	}
 
+	logContent := req.Result
+	if req.Feedback != "" {
+		logContent = req.Feedback
+	}
 	log := &entity.TaskLog{
 		TaskID:    id,
 		UserID:    userID,
 		Action:    "complete",
 		NewStatus: string(task.Status),
-		Content:   req.Result,
+		Content:   logContent,
 	}
 	if err := s.taskRepo.AddLog(ctx, log); err != nil {
 		logger.Warn("Failed to add task complete log", logger.String("task_id", id), logger.Err(err))

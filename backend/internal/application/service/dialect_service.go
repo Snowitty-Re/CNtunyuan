@@ -47,6 +47,10 @@ func (s *DialectAppService) Create(ctx context.Context, req *dto.CreateDialectRe
 		Status:      entity.DialectStatusPending,
 	}
 
+	if req.MissingPersonID != "" {
+		d.MissingPersonID = &req.MissingPersonID
+	}
+
 	if req.DialectType == "" {
 		d.DialectType = entity.DialectTypePhrase
 	}
@@ -58,18 +62,25 @@ func (s *DialectAppService) Create(ctx context.Context, req *dto.CreateDialectRe
 
 	logger.Info("Dialect created", logger.String("dialect_id", d.ID))
 
-	resp := dto.ToDialectResponse(d)
+	resp := dto.ToDialectResponse(d, false)
 	return &resp, nil
 }
 
 // GetByID 根据ID获取
-func (s *DialectAppService) GetByID(ctx context.Context, id string) (*dto.DialectResponse, error) {
+func (s *DialectAppService) GetByID(ctx context.Context, id string, userID string) (*dto.DialectResponse, error) {
 	d, err := s.dialectRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrDialectNotFound
 	}
 
-	resp := dto.ToDialectResponse(d)
+	isLiked := false
+	if userID != "" {
+		if liked, err := s.dialectRepo.HasLiked(ctx, id, userID); err == nil {
+			isLiked = liked
+		}
+	}
+
+	resp := dto.ToDialectResponse(d, isLiked)
 	return &resp, nil
 }
 
@@ -94,7 +105,7 @@ func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListReques
 
 	list := make([]dto.DialectResponse, len(result.List))
 	for i, d := range result.List {
-		list[i] = dto.ToDialectResponse(&d)
+		list[i] = dto.ToDialectResponse(&d, false)
 	}
 
 	resp := dto.NewDialectListResponse(list, result.Total, result.Page, result.PageSize)
@@ -138,7 +149,7 @@ func (s *DialectAppService) Update(ctx context.Context, id string, req *dto.Upda
 		return nil, err
 	}
 
-	resp := dto.ToDialectResponse(d)
+	resp := dto.ToDialectResponse(d, false)
 	return &resp, nil
 }
 
@@ -313,7 +324,7 @@ func (s *DialectAppService) GetFeatured(ctx context.Context, page, pageSize int)
 
 	list := make([]dto.DialectResponse, len(result.List))
 	for i, d := range result.List {
-		list[i] = dto.ToDialectResponse(&d)
+		list[i] = dto.ToDialectResponse(&d, false)
 	}
 
 	resp := dto.NewDialectListResponse(list, result.Total, result.Page, result.PageSize)

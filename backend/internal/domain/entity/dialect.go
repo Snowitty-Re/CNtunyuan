@@ -49,8 +49,9 @@ type Dialect struct {
 	Description  string        `gorm:"type:text" json:"description,omitempty"`
 
 	// 关联
-	UploaderID string `gorm:"type:uuid;not null;index" json:"uploader_id"`
-	OrgID      string `gorm:"type:uuid;not null;index" json:"org_id"`
+	UploaderID      string  `gorm:"type:uuid;not null;index" json:"uploader_id"`
+	OrgID           string  `gorm:"type:uuid;not null;index" json:"org_id"`
+	MissingPersonID *string `gorm:"type:uuid;index" json:"missing_person_id,omitempty"`
 
 	Uploader *User         `gorm:"foreignKey:UploaderID" json:"uploader,omitempty"`
 	Org      *Organization `gorm:"foreignKey:OrgID" json:"org,omitempty"`

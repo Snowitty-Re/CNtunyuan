@@ -173,7 +173,7 @@ func TestDialectAppService_GetByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.GetByID(testutil.Context(), tt.dialID)
+			resp, err := service.GetByID(testutil.Context(), tt.dialID, "")
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Equal(t, ErrDialectNotFound, err)

@@ -20,10 +20,12 @@ type CreateMissingPersonRequest struct {
 	Province     string    `json:"province"`
 	City         string    `json:"city"`
 	District     string    `json:"district"`
-	Address      string    `json:"address"`
-	Clothes      string    `json:"clothes"`
-	Features     string    `json:"features"`
-	ContactName  string    `json:"contact_name" binding:"required"`
+	Address          string    `json:"address"`
+	MissingLatitude  float64   `json:"missing_latitude"`
+	MissingLongitude float64   `json:"missing_longitude"`
+	Clothes          string    `json:"clothes"`
+	Features         string    `json:"features"`
+	ContactName      string    `json:"contact_name" binding:"required"`
 	ContactPhone string    `json:"contact_phone" binding:"required"`
 	ContactRel   string    `json:"contact_rel"`
 	AltContact   string    `json:"alt_contact"`
@@ -45,6 +47,8 @@ type UpdateMissingPersonRequest struct {
 	City         string    `json:"city"`
 	District     string    `json:"district"`
 	Address      string    `json:"address"`
+	MissingLatitude  float64   `json:"missing_latitude"`
+	MissingLongitude float64   `json:"missing_longitude"`
 	Clothes      string    `json:"clothes"`
 	Features     string    `json:"features"`
 	ContactName  string    `json:"contact_name"`
@@ -78,8 +82,10 @@ type MissingPersonResponse struct {
 	Province      string               `json:"province"`
 	City          string               `json:"city"`
 	District      string               `json:"district"`
-	Address       string               `json:"address"`
-	Clothes       string               `json:"clothes"`
+	Address          string               `json:"address"`
+	MissingLatitude  float64              `json:"missing_latitude"`
+	MissingLongitude float64              `json:"missing_longitude"`
+	Clothes          string               `json:"clothes"`
 	Features      string               `json:"features"`
 	ContactName   string               `json:"contact_name"`
 	ContactPhone  string               `json:"contact_phone"`
@@ -194,8 +200,10 @@ func ToMissingPersonResponse(mp *entity.MissingPerson) MissingPersonResponse {
 		Province:      mp.Province,
 		City:          mp.City,
 		District:      mp.District,
-		Address:       mp.Address,
-		Clothes:       mp.Clothes,
+		Address:          mp.Address,
+		MissingLatitude:  mp.MissingLatitude,
+		MissingLongitude: mp.MissingLongitude,
+		Clothes:          mp.Clothes,
 		Features:      mp.Features,
 		ContactName:   mp.ContactName,
 		ContactPhone:  mp.ContactPhone,
