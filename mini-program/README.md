@@ -248,6 +248,20 @@ mini-program/
 
 ## 更新日志
 
+### v1.4.0 (2026-03)
+**地图功能完整实现、性能优化、技术债清偿**
+
+- **地图完整实现**：`map/index.js` 新增 `latitude/longitude/scale/markers` data 字段；实现 `locateCurrentPosition()`（`wx.getLocation` 定位）、`onMarkerTap()`（标记点选中）、`onRegionChange()`（区域变更）、`navigateToLocation()`（`wx.openLocation` 导航）；案件数据按 `missing_latitude/missing_longitude` 字段转换为地图标记数组
+- **onShow 节流**：`tasks/list.js` 和 `index/index.js` 添加 30s 节流，避免每次返回页面触发全量刷新
+- **并发加载**：`cases/detail.js` onShow 改为 `Promise.all([loadCaseDetail(), loadTracks()])`，减少串行等待
+- **拨打电话确认**：`cases/detail.js`、`map/index.js` makePhoneCall 前弹出确认对话框
+- **统一常量**：新建 `utils/constants.js`，提取 `TASK_STATUS_MAP`/`TASK_PRIORITY_MAP`/`TASK_PRIORITY_COLOR`/`CASE_STATUS_MAP`/`GENDER_MAP`/`ROLE_MAP` 等；`tasks/list`、`tasks/my`、`tasks/detail`、`volunteer/workbench` 改为引用共享常量
+- **统一地址拼接**：`utils/util.js` 新增 `joinLocation(item)` 帮助函数；`cases/list`、`cases/detail`、`map/index` 三处重复的 `.filter(Boolean).join(' ')` 改为调用此函数
+- **deadline 过去日期校验**：`tasks/create.js` validateForm 添加截止日期不能早于今天的校验
+- **is_liked 布尔修复**：`dialect/detail.js` `is_liked || false` → `!!dialect.is_liked`，避免非布尔值判断错误
+- **移除占位通知**：`notification/list.js` 删除硬编码的 `system_welcome` 系统欢迎通知
+- **missingTime try-catch**：`cases/create.js` `new Date(form.missingTime)` 包裹 try-catch
+
 ### v1.3.0 (2026-03)
 **全面代码审查 — P0 崩溃、WXML 渲染错误、内存泄漏修复**
 

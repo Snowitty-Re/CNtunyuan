@@ -1,5 +1,6 @@
 const taskService = require('../../services/task')
 const { formatDate, showSuccess, showToast, showConfirm } = require('../../utils/util')
+const { TASK_STATUS_MAP, TASK_PRIORITY_MAP } = require('../../utils/constants')
 
 Page({
   data: {
@@ -11,20 +12,8 @@ Page({
     loadingMore: false,
     refreshing: false,
     hasMore: true,
-    statusMap: {
-      draft: '草稿',
-      pending: '待分配',
-      assigned: '已分配',
-      processing: '进行中',
-      completed: '已完成',
-      cancelled: '已取消'
-    },
-    priorityMap: {
-      urgent: '紧急',
-      high: '高',
-      normal: '普通',
-      low: '低'
-    },
+    statusMap:   TASK_STATUS_MAP,
+    priorityMap: TASK_PRIORITY_MAP,
     tabs: [
       { key: '', label: '全部', count: 0 },
       { key: 'processing', label: '进行中', count: 0 },

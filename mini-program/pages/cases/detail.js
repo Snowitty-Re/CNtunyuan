@@ -1,5 +1,5 @@
 const missingPersonService = require('../../services/missingPerson')
-const { formatDate, showConfirm, showSuccess, showLoading, hideLoading } = require('../../utils/util')
+const { formatDate, showConfirm, showSuccess, showLoading, hideLoading, joinLocation } = require('../../utils/util')
 
 // 状态映射
 const STATUS_MAP = {
@@ -50,8 +50,7 @@ Page({
   onShow() {
     // 返回时刷新数据
     if (this.data.id) {
-      this.loadCaseDetail()
-      this.loadTracks()
+      Promise.all([this.loadCaseDetail(), this.loadTracks()])
     }
   },
 
@@ -59,11 +58,8 @@ Page({
    * 检查用户角色
    */
   checkUserRole() {
-    const userInfo = wx.getStorageSync('userInfo') || {}
-    const role = userInfo.role || ''
-    // super_admin, admin, manager 视为管理者
-    const isManager = ['super_admin', 'admin', 'manager'].includes(role)
-    this.setData({ isManager })
+    const app = getApp()
+    this.setData({ isManager: app.isManager() })
   },
 
   /**
@@ -79,9 +75,7 @@ Page({
       data.created_at = formatDate(data.created_at)
       data.photoUrl = this.getFirstPhoto(data.photos)
       
-      // 拼接走失地点（后端返回的是 province, city, district, address）
-      const locationParts = [data.province, data.city, data.district, data.address].filter(Boolean)
-      data.displayLocation = locationParts.length > 0 ? locationParts.join(' ') : '未知'
+      data.displayLocation = joinLocation(data, '未知')
       
       // 衣着描述（后端字段为 clothes）
       data.clothes = data.clothes || '暂无描述'
@@ -155,10 +149,16 @@ Page({
       wx.showToast({ title: '暂无联系电话', icon: 'none' })
       return
     }
-    wx.makePhoneCall({ 
-      phoneNumber: phone,
-      fail: () => {
-        wx.showToast({ title: '呼叫失败', icon: 'none' })
+    wx.showModal({
+      title:   '拨打电话',
+      content: `确认拨打 ${phone}？`,
+      success: (res) => {
+        if (res.confirm) {
+          wx.makePhoneCall({
+            phoneNumber: phone,
+            fail: () => { wx.showToast({ title: '呼叫失败', icon: 'none' }) }
+          })
+        }
       }
     })
   },

@@ -394,7 +394,7 @@ Page({
         age: parseInt(form.age) || 0,
         height: parseInt(form.height) || 0,
         // 走失时间
-        missing_time: new Date(form.missingTime).toISOString(),
+        missing_time: (() => { try { return new Date(form.missingTime).toISOString() } catch (e) { return '' } })(),
         // 位置信息（分别提交）
         province: form.province.trim(),
         city: form.city.trim(),

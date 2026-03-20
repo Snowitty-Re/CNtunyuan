@@ -1,5 +1,6 @@
 const taskService = require('../../services/task')
 const { formatTimeAgo, showSuccess, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_TYPE_MAP, ROLE_MAP } = require('../../utils/constants')
 const app = getApp()
 
 Page({
@@ -26,35 +27,10 @@ Page({
     // 最近任务列表
     recentTasks: [],
     
-    // 状态映射
-    roleMap: {
-      super_admin: '超级管理员',
-      admin: '管理员',
-      manager: '管理者',
-      volunteer: '志愿者'
-    },
-    priorityMap: {
-      urgent: '紧急',
-      high: '高',
-      normal: '普通',
-      low: '低'
-    },
-    statusMap: {
-      draft: '草稿',
-      pending: '待处理',
-      assigned: '已分配',
-      processing: '进行中',
-      completed: '已完成',
-      cancelled: '已取消'
-    },
-    taskTypeMap: {
-      search: '实地寻访',
-      call: '电话核实',
-      info_collect: '信息收集',
-      dialect_record: '方言录制',
-      coordination: '协调沟通',
-      other: '其他'
-    }
+    roleMap:     ROLE_MAP,
+    priorityMap: TASK_PRIORITY_MAP,
+    statusMap:   TASK_STATUS_MAP,
+    taskTypeMap: TASK_TYPE_MAP
   },
 
   onLoad() {

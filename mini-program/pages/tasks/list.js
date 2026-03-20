@@ -1,5 +1,6 @@
 const taskService = require('../../services/task')
 const { formatDate, showSuccess, showToast, showConfirm } = require('../../utils/util')
+const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_PRIORITY_COLOR } = require('../../utils/constants')
 const app = getApp()
 
 Page({
@@ -21,27 +22,9 @@ Page({
       completed: 0,
       cancelled: 0
     },
-    // 完整的任务状态映射（包含所有后端状态）
-    statusMap: {
-      draft: '草稿',
-      pending: '待分配',
-      assigned: '已分配',
-      processing: '进行中',
-      completed: '已完成',
-      cancelled: '已取消'
-    },
-    priorityMap: {
-      urgent: '紧急',
-      high: '高',
-      normal: '普通',
-      low: '低'
-    },
-    priorityColorMap: {
-      urgent: '#ff4d4f',
-      high: '#faad14',
-      normal: '#1890ff',
-      low: '#52c41a'
-    },
+    statusMap:        TASK_STATUS_MAP,
+    priorityMap:      TASK_PRIORITY_MAP,
+    priorityColorMap: TASK_PRIORITY_COLOR,
     canCreate: false,
     userRole: ''
   },
@@ -53,6 +36,10 @@ Page({
   },
 
   onShow() {
+    // Throttle: skip if loaded less than 30s ago
+    const now = Date.now()
+    if (this._lastLoadTime && now - this._lastLoadTime < 30000) return
+    this._lastLoadTime = now
     this.checkPermission()
     this.loadStats()
     this.loadTasks()

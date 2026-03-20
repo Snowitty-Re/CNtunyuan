@@ -48,7 +48,10 @@ Page({
 
   onShow() {
     this.updateGreeting()
-    // 每次显示页面时刷新数据
+    // Throttle: skip if loaded less than 30s ago
+    const now = Date.now()
+    if (this._lastLoadTime && now - this._lastLoadTime < 30000) return
+    this._lastLoadTime = now
     this.loadData()
   },
 

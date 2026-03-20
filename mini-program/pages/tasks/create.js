@@ -150,6 +150,11 @@ Page({
       return false
     }
 
+    if (new Date(form.deadline) < new Date()) {
+      showToast('截止日期不能早于今天')
+      return false
+    }
+
     return true
   },
 

@@ -1,5 +1,5 @@
 const missingPersonService = require('../../services/missingPerson')
-const { formatDate, showLoading, hideLoading, debounce } = require('../../utils/util')
+const { formatDate, showLoading, hideLoading, debounce, joinLocation } = require('../../utils/util')
 
 // 状态映射
 const STATUS_MAP = {
@@ -94,7 +94,7 @@ Page({
         missing_time: formatDate(item.missing_time),
         photoUrl: this.getFirstPhoto(item.photos),
         // 拼接走失地点（后端返回 province, city, district, address）
-        missingLocation: [item.province, item.city, item.district, item.address].filter(Boolean).join(' ') || '未知'
+        missingLocation: joinLocation(item, '未知')
       }))
 
       this.setData({

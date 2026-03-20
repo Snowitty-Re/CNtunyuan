@@ -73,17 +73,6 @@ Page({
         console.log('获取案件通知失败:', e)
       }
 
-      // 添加系统欢迎通知
-      notifications.push({
-        id: 'system_welcome',
-        type: 'system',
-        title: '系统通知',
-        content: '欢迎使用团圆寻亲志愿者系统，通知功能即将全面接入',
-        is_read: !!readStatus['system_welcome'],
-        created_at: new Date().toISOString(),
-        target_url: ''
-      })
-
       // 按时间排序
       notifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 

@@ -146,7 +146,7 @@ Page({
 
       this.setData({
         dialect,
-        isLiked: dialect.is_liked || false
+        isLiked: !!dialect.is_liked
       })
       
       // 记录播放

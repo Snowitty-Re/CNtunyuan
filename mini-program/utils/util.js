@@ -62,6 +62,17 @@ const formatTimeAgo = (date) => {
 }
 
 /**
+ * 拼接地址字段（省/市/区/详细地址）
+ * @param {Object} item 含 province/city/district/address 字段的对象
+ * @param {String} fallback 无任何字段时的兜底文本
+ */
+const joinLocation = (item, fallback = '未知位置') => {
+  if (!item) return fallback
+  const parts = [item.province, item.city, item.district, item.address].filter(Boolean)
+  return parts.length > 0 ? parts.join(' ') : fallback
+}
+
+/**
  * 显示成功提示
  * @param {String} title 提示文字
  * @param {Function} callback 回调函数
@@ -296,5 +307,6 @@ module.exports = {
   formatFileSize,
   generateUUID,
   truncate,
-  calculateDistance
+  calculateDistance,
+  joinLocation
 }
