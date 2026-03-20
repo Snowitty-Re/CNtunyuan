@@ -123,6 +123,9 @@ func (t *Task) CanStart() bool {
 	if t.Status != TaskStatusAssigned {
 		return false
 	}
+	if t.AssigneeID == nil {
+		return false
+	}
 	if t.Deadline != nil && time.Now().After(*t.Deadline) {
 		return false
 	}

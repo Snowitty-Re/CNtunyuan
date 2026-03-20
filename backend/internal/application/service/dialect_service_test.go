@@ -404,7 +404,7 @@ func TestDialectAppService_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.Update(testutil.Context(), tt.dialID, tt.req)
+			resp, err := service.Update(testutil.Context(), tt.dialID, tt.req, user.ID, false)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Equal(t, ErrDialectNotFound, err)
@@ -1142,7 +1142,7 @@ func TestDialectAppService_Delete(t *testing.T) {
 	testutil.MustCreate(t, tdb.DB, dialect)
 
 	t.Run("delete dialect", func(t *testing.T) {
-		err := service.Delete(testutil.Context(), dialect.ID)
+		err := service.Delete(testutil.Context(), dialect.ID, user.ID, false)
 		require.NoError(t, err)
 
 		// 验证已软删除

@@ -133,6 +133,10 @@ func TestTask_CanStart(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := &Task{Status: tt.status}
+			if tt.status == TaskStatusAssigned {
+				assigneeID := "test-assignee"
+				task.AssigneeID = &assigneeID
+			}
 			assert.Equal(t, tt.want, task.CanStart())
 		})
 	}
@@ -232,6 +236,10 @@ func TestTask_Start(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := &Task{Status: tt.status}
+			if tt.status == TaskStatusAssigned {
+				assigneeID := "test-assignee"
+				task.AssigneeID = &assigneeID
+			}
 			err := task.Start()
 			if tt.wantErr {
 				assert.Error(t, err)

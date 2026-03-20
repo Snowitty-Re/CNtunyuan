@@ -3,18 +3,22 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/validator"
 	"github.com/google/uuid"
 )
 
 var (
-	ErrDialectNotFound = errors.New("dialect not found")
-	ErrAlreadyLiked    = errors.New("already liked")
-	ErrNotLiked        = errors.New("not liked")
+	ErrDialectNotFound    = errors.New("dialect not found")
+	ErrAlreadyLiked       = errors.New("already liked")
+	ErrNotLiked           = errors.New("not liked")
+	ErrDialectForbidden   = errors.New("no permission to modify this dialect")
+	ErrDialectInvalidStatus = errors.New("invalid dialect status")
 )
 
 // DialectAppService 方言应用服务
@@ -86,6 +90,8 @@ func (s *DialectAppService) GetByID(ctx context.Context, id string, userID strin
 
 // List 列表查询
 func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListRequest) (*dto.DialectListResponse, error) {
+	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
+
 	query := repository.NewDialectQuery()
 	query.Page = req.Page
 	query.PageSize = req.PageSize
@@ -113,10 +119,15 @@ func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListReques
 }
 
 // Update 更新
-func (s *DialectAppService) Update(ctx context.Context, id string, req *dto.UpdateDialectRequest) (*dto.DialectResponse, error) {
+func (s *DialectAppService) Update(ctx context.Context, id string, req *dto.UpdateDialectRequest, userID string, isManager bool) (*dto.DialectResponse, error) {
 	d, err := s.dialectRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrDialectNotFound
+	}
+
+	// 只有上传者或管理员可以修改
+	if d.UploaderID != userID && !isManager {
+		return nil, ErrDialectForbidden
 	}
 
 	if req.Title != "" {
@@ -154,7 +165,17 @@ func (s *DialectAppService) Update(ctx context.Context, id string, req *dto.Upda
 }
 
 // Delete 删除
-func (s *DialectAppService) Delete(ctx context.Context, id string) error {
+func (s *DialectAppService) Delete(ctx context.Context, id string, userID string, isManager bool) error {
+	d, err := s.dialectRepo.FindByID(ctx, id)
+	if err != nil {
+		return ErrDialectNotFound
+	}
+
+	// 只有上传者或管理员可以删除
+	if d.UploaderID != userID && !isManager {
+		return ErrDialectForbidden
+	}
+
 	if err := s.dialectRepo.SoftDelete(ctx, id); err != nil {
 		logger.Error("Failed to delete dialect", logger.Err(err))
 		return err
@@ -164,12 +185,17 @@ func (s *DialectAppService) Delete(ctx context.Context, id string) error {
 
 // UpdateStatus 更新状态
 func (s *DialectAppService) UpdateStatus(ctx context.Context, id string, status string) error {
+	newStatus := entity.DialectStatus(status)
+	if !entity.IsValidDialectStatus(newStatus) {
+		return fmt.Errorf("%w: %s，合法值为 active/inactive/pending", ErrDialectInvalidStatus, status)
+	}
+
 	d, err := s.dialectRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrDialectNotFound
 	}
 
-	d.Status = entity.DialectStatus(status)
+	d.Status = newStatus
 	if err := s.dialectRepo.Update(ctx, d); err != nil {
 		logger.Error("Failed to update dialect status", logger.Err(err), logger.String("dialect_id", id))
 		return err
@@ -283,6 +309,11 @@ func (s *DialectAppService) HasLiked(ctx context.Context, dialectID string, user
 
 // AddComment 添加评论
 func (s *DialectAppService) AddComment(ctx context.Context, dialectID string, req *dto.CreateDialectCommentRequest, userID string) (*dto.DialectCommentResponse, error) {
+	// 验证方言是否存在
+	if _, err := s.dialectRepo.FindByID(ctx, dialectID); err != nil {
+		return nil, ErrDialectNotFound
+	}
+
 	comment := &entity.DialectComment{
 		DialectID: dialectID,
 		UserID:    userID,
@@ -302,6 +333,7 @@ func (s *DialectAppService) AddComment(ctx context.Context, dialectID string, re
 
 // GetComments 获取评论
 func (s *DialectAppService) GetComments(ctx context.Context, dialectID string, page, pageSize int) (*dto.PageResult[dto.DialectCommentResponse], error) {
+	page, pageSize = validator.SanitizePagination(page, pageSize)
 	pagination := repository.Pagination{Page: page, PageSize: pageSize}
 	result, err := s.dialectRepo.GetComments(ctx, dialectID, pagination)
 	if err != nil {

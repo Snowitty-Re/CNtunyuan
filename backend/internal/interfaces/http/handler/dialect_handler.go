@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
+	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
@@ -182,11 +184,17 @@ func (h *DialectHandler) Update(c *gin.Context) {
 		return
 	}
 
-	dialect, err := h.dialectService.Update(c.Request.Context(), id, &req)
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	dialect, err := h.dialectService.Update(c.Request.Context(), id, &req, userID, isManager)
 	if err != nil {
 		switch err {
 		case service.ErrDialectNotFound:
 			response.NotFound(c, "dialect not found")
+		case service.ErrDialectForbidden:
+			response.Forbidden(c, "no permission to modify this dialect")
 		default:
 			logger.Error("Failed to update dialect", logger.Err(err))
 			response.InternalServerError(c, "failed to update")
@@ -217,9 +225,20 @@ func (h *DialectHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.dialectService.Delete(c.Request.Context(), id); err != nil {
-		logger.Error("Failed to delete dialect", logger.Err(err))
-		response.InternalServerError(c, "failed to delete")
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	if err := h.dialectService.Delete(c.Request.Context(), id, userID, isManager); err != nil {
+		switch err {
+		case service.ErrDialectNotFound:
+			response.NotFound(c, "dialect not found")
+		case service.ErrDialectForbidden:
+			response.Forbidden(c, "no permission to delete this dialect")
+		default:
+			logger.Error("Failed to delete dialect", logger.Err(err))
+			response.InternalServerError(c, "failed to delete")
+		}
 		return
 	}
 
@@ -256,9 +275,11 @@ func (h *DialectHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	if err := h.dialectService.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
-		switch err {
-		case service.ErrDialectNotFound:
+		switch {
+		case err == service.ErrDialectNotFound:
 			response.NotFound(c, "dialect not found")
+		case errors.Is(err, service.ErrDialectInvalidStatus):
+			response.BadRequest(c, err.Error())
 		default:
 			response.InternalServerError(c, "failed to update status")
 		}
@@ -510,6 +531,12 @@ func (h *DialectHandler) GetComments(c *gin.Context) {
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
 
 	comments, err := h.dialectService.GetComments(c.Request.Context(), id, page, pageSize)
 	if err != nil {

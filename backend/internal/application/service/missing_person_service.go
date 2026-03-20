@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	ErrMissingPersonNotFound = errors.New("missing person not found")
-	ErrInvalidStatus         = errors.New("invalid status")
+	ErrMissingPersonNotFound    = errors.New("missing person not found")
+	ErrInvalidStatus            = errors.New("invalid status")
+	ErrMissingPersonForbidden   = errors.New("no permission to modify this case")
 )
 
 // generateCaseNo 生成案件编号 (格式: CASE-YYYYMMDD-XXXXXXXX)
@@ -156,10 +157,15 @@ func (s *MissingPersonAppService) List(ctx context.Context, req *dto.MissingPers
 }
 
 // Update 更新
-func (s *MissingPersonAppService) Update(ctx context.Context, id string, req *dto.UpdateMissingPersonRequest) (*dto.MissingPersonResponse, error) {
+func (s *MissingPersonAppService) Update(ctx context.Context, id string, req *dto.UpdateMissingPersonRequest, userID string, isManager bool) (*dto.MissingPersonResponse, error) {
 	mp, err := s.mpRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrMissingPersonNotFound
+	}
+
+	// 只有上报者或管理员可以修改案件
+	if mp.ReporterID != userID && !isManager {
+		return nil, ErrMissingPersonForbidden
 	}
 
 	// 检查是否可以更新

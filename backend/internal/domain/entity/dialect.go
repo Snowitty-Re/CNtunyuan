@@ -62,6 +62,15 @@ func (Dialect) TableName() string {
 	return "ty_dialects"
 }
 
+// IsValidDialectStatus 校验方言状态值是否合法
+func IsValidDialectStatus(s DialectStatus) bool {
+	switch s {
+	case DialectStatusActive, DialectStatusInactive, DialectStatusPending:
+		return true
+	}
+	return false
+}
+
 // Validate 验证
 func (d *Dialect) Validate() error {
 	if d.Title == "" {

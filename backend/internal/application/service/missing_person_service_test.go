@@ -544,7 +544,7 @@ func TestMissingPersonAppService_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.Update(testutil.Context(), tt.id, tt.req)
+			resp, err := service.Update(testutil.Context(), tt.id, tt.req, reporter.ID, false)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, ErrMissingPersonNotFound)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
+	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
@@ -175,11 +176,17 @@ func (h *MissingPersonHandler) Update(c *gin.Context) {
 		return
 	}
 
-	mp, err := h.mpService.Update(c.Request.Context(), id, &req)
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	mp, err := h.mpService.Update(c.Request.Context(), id, &req, userID, isManager)
 	if err != nil {
 		switch err {
 		case service.ErrMissingPersonNotFound:
 			response.NotFound(c, "missing person not found")
+		case service.ErrMissingPersonForbidden:
+			response.Forbidden(c, "no permission to modify this case")
 		default:
 			logger.Error("Failed to update missing person", logger.Err(err))
 			response.InternalServerError(c, "failed to update")
