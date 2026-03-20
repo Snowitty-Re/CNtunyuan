@@ -460,8 +460,7 @@ Page({
       
       const dialectData = {
         title: this.data.form.title.trim(),
-        content: this.data.form.description.trim(),  // 后端字段为 content
-        description: this.data.form.description.trim(),
+        content: this.data.form.description.trim(),
         audio_url: audioUrl,
         duration: this.data.recordDuration,
         region: this.data.form.region,
