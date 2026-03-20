@@ -859,6 +859,9 @@ func TestTaskAppService_UpdateProgress_InvalidProgress(t *testing.T) {
 	creator := createTestUser(t, tdb, "creator-id", "13800138000", string(entity.RoleManager))
 	task := createTestTask(t, tdb, creator.ID, org.ID, entity.TaskStatusProcessing)
 
+	// 设置执行人，使所有权校验通过
+	require.NoError(t, tdb.DB.Model(task).Update("assignee_id", creator.ID).Error)
+
 	// 尝试设置无效进度
 	err := service.UpdateProgress(testutil.Context(), task.ID, 150, creator.ID)
 	assert.Error(t, err)

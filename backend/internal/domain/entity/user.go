@@ -127,8 +127,11 @@ func (u *User) Validate() error {
 	if len(u.Nickname) > 100 {
 		return errors.New("昵称不能超过100字符")
 	}
-	if err := u.ValidatePhone(); err != nil {
-		return err
+	// 微信登录临时用户手机号为空（待绑定），跳过手机号校验
+	if u.Phone != "" {
+		if err := u.ValidatePhone(); err != nil {
+			return err
+		}
 	}
 	if u.Email != "" && !utils.IsValidEmail(u.Email) {
 		return errors.New("邮箱格式不正确")

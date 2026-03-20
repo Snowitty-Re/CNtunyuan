@@ -141,6 +141,19 @@ func (m *MissingPerson) CanUpdate() bool {
 	return m.Status != MissingStatusClosed
 }
 
+// CanTransitionTo 校验是否允许跳转到目标状态
+func (m *MissingPerson) CanTransitionTo(s MissingStatus) bool {
+	// closed 是终态
+	if m.Status == MissingStatusClosed {
+		return false
+	}
+	// reunited 只能流转到 closed
+	if m.Status == MissingStatusReunited && s != MissingStatusClosed {
+		return false
+	}
+	return true
+}
+
 // StartSearch 开始搜索
 func (m *MissingPerson) StartSearch() error {
 	if m.Status != MissingStatusMissing {

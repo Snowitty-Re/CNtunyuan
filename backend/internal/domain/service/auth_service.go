@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
@@ -315,6 +316,12 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 		logger.String("user_id", userID),
 		logger.String("phone", phone),
 	)
+
+	// 在 Service 层校验手机号格式（防御纵深，不依赖 Handler 层校验）
+	phoneRegex := regexp.MustCompile(`^1[3-9]\d{9}$`)
+	if !phoneRegex.MatchString(phone) {
+		return nil, errors.New(errors.CodeInvalidParam, "手机号格式不正确")
+	}
 
 	// 验证验证码
 	if s.smsService == nil {

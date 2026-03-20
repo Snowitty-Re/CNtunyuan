@@ -268,6 +268,10 @@ func (s *MissingPersonAppService) UpdateStatus(ctx context.Context, id string, s
 		return errors.New("cannot update closed case")
 	}
 
+	if !mp.CanTransitionTo(newStatus) {
+		return fmt.Errorf("无效的状态流转: %s → %s", mp.Status, newStatus)
+	}
+
 	mp.Status = newStatus
 
 	if err := s.mpRepo.UpdateStatus(ctx, id, newStatus); err != nil {
@@ -317,8 +321,19 @@ func (s *MissingPersonAppService) MarkReunited(ctx context.Context, id string) e
 // AddTrack 添加轨迹
 func (s *MissingPersonAppService) AddTrack(ctx context.Context, personID string, req *dto.CreateMissingPersonTrackRequest, reporterID string) (*dto.MissingPersonTrackResponse, error) {
 	// 检查案件是否存在
-	if _, err := s.mpRepo.FindByID(ctx, personID); err != nil {
+	mp, err := s.mpRepo.FindByID(ctx, personID)
+	if err != nil {
 		return nil, ErrMissingPersonNotFound
+	}
+
+	// 校验轨迹时间合理性
+	if !req.Time.IsZero() {
+		if req.Time.After(time.Now()) {
+			return nil, fmt.Errorf("目击时间不能是未来时间")
+		}
+		if req.Time.Before(mp.MissingTime) {
+			return nil, fmt.Errorf("目击时间不能早于走失时间")
+		}
 	}
 
 	track := &entity.MissingPersonTrack{

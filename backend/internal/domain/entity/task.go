@@ -120,7 +120,13 @@ func (t *Task) CanAssign() bool {
 
 // CanStart 是否可以开始
 func (t *Task) CanStart() bool {
-	return t.Status == TaskStatusAssigned
+	if t.Status != TaskStatusAssigned {
+		return false
+	}
+	if t.Deadline != nil && time.Now().After(*t.Deadline) {
+		return false
+	}
+	return true
 }
 
 // CanUpdate 是否可以更新

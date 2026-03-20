@@ -907,7 +907,7 @@ func TestMissingPersonAppService_AddTrack(t *testing.T) {
 		CaseNo:       "CASE-20240101-0001",
 		Name:         "有轨迹人员",
 		Gender:       "male",
-		MissingTime:  time.Now(),
+		MissingTime:  time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 		ContactName:  "联系人",
 		ContactPhone: "13900139000",
 		ReporterID:   reporter.ID,

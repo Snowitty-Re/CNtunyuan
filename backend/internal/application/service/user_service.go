@@ -352,13 +352,16 @@ func (s *UserAppService) GetStats(ctx context.Context, id string) (*dto.UserStat
 		stats.PendingTasks = taskStats.MyPending
 	}
 
-	// 用户上报的案件中已团聚的数量
-	completedCases, err := s.mpRepo.CountByReporterAndStatus(ctx, id, entity.MissingStatusReunited)
+	// 用户上报的案件中已找到（found）和已团聚（reunited）的数量
+	foundCases, err := s.mpRepo.CountByReporterAndStatus(ctx, id, entity.MissingStatusFound)
 	if err != nil {
-		logger.Error("Failed to count completed cases", logger.Err(err))
-	} else {
-		stats.CompletedCases = completedCases
+		logger.Error("Failed to count found cases", logger.Err(err))
 	}
+	reunitedCases, err := s.mpRepo.CountByReporterAndStatus(ctx, id, entity.MissingStatusReunited)
+	if err != nil {
+		logger.Error("Failed to count reunited cases", logger.Err(err))
+	}
+	stats.CompletedCases = foundCases + reunitedCases
 	stats.ActiveCases = stats.TotalCases - stats.CompletedCases
 	if stats.ActiveCases < 0 {
 		stats.ActiveCases = 0

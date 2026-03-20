@@ -322,6 +322,11 @@ func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress
 		return ErrTaskNotFound
 	}
 
+	// 只有被分配的执行人才能更新进度
+	if task.AssigneeID == nil || *task.AssigneeID != userID {
+		return ErrTaskNotAssignedToUser
+	}
+
 	if err := task.UpdateProgress(progress); err != nil {
 		return err
 	}

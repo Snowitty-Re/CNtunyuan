@@ -238,10 +238,20 @@ func (s *OrganizationAppService) Move(ctx context.Context, id string, newParentI
 		return ErrOrganizationNotFound
 	}
 
-	// 检查新父组织是否存在
+	// 检查新父组织是否存在，并检测环形引用
 	if newParentID != "" {
 		if _, err := s.orgRepo.FindByID(ctx, newParentID); err != nil {
 			return ErrOrganizationNotFound
+		}
+		// 沿目标父节点向上遍历祖先链，若遇到 id 则说明会产生环
+		ancestors, err := s.orgRepo.FindPath(ctx, newParentID)
+		if err != nil {
+			return err
+		}
+		for _, anc := range ancestors {
+			if anc.ID == id {
+				return ErrOrganizationInvalidMove
+			}
 		}
 	}
 

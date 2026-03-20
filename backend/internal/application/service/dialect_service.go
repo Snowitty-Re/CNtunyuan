@@ -232,9 +232,13 @@ func (s *DialectAppService) Like(ctx context.Context, dialectID string, userID s
 		return err
 	}
 
-	// 增加点赞计数
+	// 增加点赞计数；若失败则回滚 like 记录以保持数据一致性
 	if err := s.dialectRepo.IncrementLikeCount(ctx, dialectID); err != nil {
-		logger.Error("Failed to increment like count", logger.Err(err))
+		logger.Error("Failed to increment like count, rolling back like record", logger.Err(err))
+		if rbErr := s.dialectRepo.RemoveLike(ctx, dialectID, userID); rbErr != nil {
+			logger.Error("Failed to rollback like record", logger.Err(rbErr))
+		}
+		return err
 	}
 
 	return nil
@@ -255,9 +259,18 @@ func (s *DialectAppService) Unlike(ctx context.Context, dialectID string, userID
 		return err
 	}
 
-	// 减少点赞计数
+	// 减少点赞计数；若失败则回滚（重新添加 like 记录）
 	if err := s.dialectRepo.DecrementLikeCount(ctx, dialectID); err != nil {
-		logger.Error("Failed to decrement like count", logger.Err(err))
+		logger.Error("Failed to decrement like count, rolling back unlike", logger.Err(err))
+		rollback := &entity.DialectLike{
+			ID:        uuid.New().String(),
+			DialectID: dialectID,
+			UserID:    userID,
+		}
+		if rbErr := s.dialectRepo.AddLike(ctx, rollback); rbErr != nil {
+			logger.Error("Failed to rollback unlike record", logger.Err(rbErr))
+		}
+		return err
 	}
 
 	return nil
