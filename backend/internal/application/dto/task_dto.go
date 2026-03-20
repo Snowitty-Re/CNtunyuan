@@ -146,17 +146,18 @@ type TaskLogResponse struct {
 
 // TaskStatsResponse 任务统计响应
 type TaskStatsResponse struct {
-	Total       int64 `json:"total"`
-	Draft       int64 `json:"draft"`
-	Pending     int64 `json:"pending"`
-	Assigned    int64 `json:"assigned"`
-	Processing  int64 `json:"processing"`
-	Completed   int64 `json:"completed"`
-	Cancelled   int64 `json:"cancelled"`
-	Overdue     int64 `json:"overdue"`
-	MyTasks     int64 `json:"my_tasks"`
-	MyPending   int64 `json:"my_pending"`
-	MyCompleted int64 `json:"my_completed"`
+	Total        int64 `json:"total"`
+	Draft        int64 `json:"draft"`
+	Pending      int64 `json:"pending"`
+	Assigned     int64 `json:"assigned"`
+	Processing   int64 `json:"processing"`
+	Completed    int64 `json:"completed"`
+	Cancelled    int64 `json:"cancelled"`
+	Overdue      int64 `json:"overdue"`
+	MyTasks      int64 `json:"my_tasks"`
+	MyPending    int64 `json:"my_pending"`
+	MyProcessing int64 `json:"my_processing"`
+	MyCompleted  int64 `json:"my_completed"`
 }
 
 // ToTaskResponse 转换为任务响应

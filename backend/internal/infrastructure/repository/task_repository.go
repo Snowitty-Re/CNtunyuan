@@ -353,6 +353,13 @@ func (r *TaskRepositoryImpl) GetStats(ctx context.Context, userID string) (*enti
 		}
 		stats.MyPending = myPending
 
+		var myProcessing int64
+		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status = ?",
+			userID, userID, entity.TaskStatusProcessing).Count(&myProcessing).Error; err != nil {
+			return nil, err
+		}
+		stats.MyProcessing = myProcessing
+
 		var myCompleted int64
 		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status = ?",
 			userID, userID, entity.TaskStatusCompleted).Count(&myCompleted).Error; err != nil {

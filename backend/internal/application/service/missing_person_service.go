@@ -399,6 +399,9 @@ func (s *MissingPersonAppService) GetStats(ctx context.Context) (*dto.MissingPer
 		Found:     stats.Found,
 		Reunited:  stats.Reunited,
 		Closed:    stats.Closed,
+		TodayNew:  stats.TodayNew,
+		WeekNew:   stats.ThisWeekNew,
+		MonthNew:  stats.ThisMonthNew,
 	}, nil
 }
 

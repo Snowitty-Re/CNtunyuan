@@ -412,16 +412,17 @@ func (s *TaskAppService) GetStats(ctx context.Context, userID string) (*dto.Task
 	}
 
 	return &dto.TaskStatsResponse{
-		Total:       stats.Total,
-		Draft:       stats.Draft,
-		Pending:     stats.Pending,
-		Assigned:    stats.Assigned,
-		Processing:  stats.Processing,
-		Completed:   stats.Completed,
-		Cancelled:   stats.Cancelled,
-		Overdue:     stats.Overdue,
-		MyTasks:     stats.MyTasks,
-		MyPending:   stats.MyPending,
-		MyCompleted: stats.MyCompleted,
+		Total:        stats.Total,
+		Draft:        stats.Draft,
+		Pending:      stats.Pending,
+		Assigned:     stats.Assigned,
+		Processing:   stats.Processing,
+		Completed:    stats.Completed,
+		Cancelled:    stats.Cancelled,
+		Overdue:      stats.Overdue,
+		MyTasks:      stats.MyTasks,
+		MyPending:    stats.MyPending,
+		MyProcessing: stats.MyProcessing,
+		MyCompleted:  stats.MyCompleted,
 	}, nil
 }
