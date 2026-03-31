@@ -28,9 +28,9 @@ func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *mi
 	users := router.Group("/users")
 	users.Use(authMiddleware.Required())
 	{
-		users.GET("", h.List)
+		users.GET("", middleware.RequireManager(), h.List)
 		users.POST("", middleware.RequireAdmin(), h.Create)
-		users.GET("/:id", h.GetByID)
+		users.GET("/:id", middleware.RequireManager(), h.GetByID)
 		users.PUT("/:id", middleware.RequireAdmin(), h.Update)
 		users.DELETE("/:id", middleware.RequireAdmin(), h.Delete)
 		users.PUT("/:id/status", middleware.RequireManager(), h.UpdateStatus)

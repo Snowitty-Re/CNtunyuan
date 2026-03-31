@@ -23,9 +23,9 @@ func (h *DashboardHandler) RegisterRoutes(router *gin.RouterGroup, authMiddlewar
 	dashboard := router.Group("/dashboard")
 	dashboard.Use(authMiddleware.Required())
 	{
-		dashboard.GET("/stats", h.GetStats)
-		dashboard.GET("/overview", h.GetOverview)
-		dashboard.GET("/trend", h.GetTrend)
+		dashboard.GET("/stats", middleware.RequireManager(), h.GetStats)
+		dashboard.GET("/overview", middleware.RequireManager(), h.GetOverview)
+		dashboard.GET("/trend", middleware.RequireManager(), h.GetTrend)
 	}
 }
 

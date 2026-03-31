@@ -29,11 +29,11 @@ func (h *AuditHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *m
 	audit := router.Group("/audit")
 	audit.Use(authMiddleware.Required())
 	{
-		audit.GET("/logs", h.List)
-		audit.GET("/logs/:id", h.GetByID)
-		audit.GET("/stats", h.GetStats)
-		audit.GET("/user-activity/:userId", h.GetUserActivity)
-		audit.GET("/module-stats", h.GetModuleStats)
+		audit.GET("/logs", middleware.RequireAdmin(), h.List)
+		audit.GET("/logs/:id", middleware.RequireAdmin(), h.GetByID)
+		audit.GET("/stats", middleware.RequireAdmin(), h.GetStats)
+		audit.GET("/user-activity/:userId", middleware.RequireAdmin(), h.GetUserActivity)
+		audit.GET("/module-stats", middleware.RequireAdmin(), h.GetModuleStats)
 		audit.POST("/cleanup", h.Cleanup)
 	}
 }
@@ -42,23 +42,23 @@ func (h *AuditHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *m
 // @Description 审计日志分页查询结果
 type AuditPaginatedResult struct {
 	Items    []entity.AuditLog `json:"items"`     // 日志列表
-	Total    int64             `json:"total"`      // 总数
-	Page     int               `json:"page"`       // 当前页
-	PageSize int               `json:"page_size"`  // 每页数量
+	Total    int64             `json:"total"`     // 总数
+	Page     int               `json:"page"`      // 当前页
+	PageSize int               `json:"page_size"` // 每页数量
 }
 
 // AuditUserActivityItem 用户活动项（Swagger用）
 // @Description 用户活动统计项
 type AuditUserActivityItem struct {
-	Date  string `json:"date" example:"2024-01-01"`  // 日期
-	Count int64  `json:"count" example:"15"`          // 操作次数
+	Date  string `json:"date" example:"2024-01-01"` // 日期
+	Count int64  `json:"count" example:"15"`        // 操作次数
 }
 
 // AuditModuleStatItem 模块统计项（Swagger用）
 // @Description 模块操作统计项
 type AuditModuleStatItem struct {
 	Module string `json:"module" example:"用户管理"` // 模块名称
-	Count  int64  `json:"count" example:"42"`       // 操作次数
+	Count  int64  `json:"count" example:"42"`    // 操作次数
 }
 
 // ListRequest 列表查询请求

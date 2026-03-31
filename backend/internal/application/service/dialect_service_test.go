@@ -173,7 +173,7 @@ func TestDialectAppService_GetByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.GetByID(testutil.Context(), tt.dialID, "")
+			resp, err := service.GetByID(testutil.Context(), tt.dialID, "", true)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Equal(t, ErrDialectNotFound, err)
@@ -309,7 +309,7 @@ func TestDialectAppService_List(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.List(testutil.Context(), tt.req)
+			resp, err := service.List(testutil.Context(), tt.req, true)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(resp.List))
 			if tt.expectedTitles != nil {
@@ -365,7 +365,7 @@ func TestDialectAppService_Update(t *testing.T) {
 		wantErr        bool
 	}{
 		{
-			name: "update all fields",
+			name:   "update all fields",
 			dialID: dialect.ID,
 			req: &dto.UpdateDialectRequest{
 				Title:       "更新后的标题",
@@ -383,7 +383,7 @@ func TestDialectAppService_Update(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "update partial fields",
+			name:   "update partial fields",
 			dialID: dialect.ID,
 			req: &dto.UpdateDialectRequest{
 				Title: "仅更新标题",
@@ -393,7 +393,7 @@ func TestDialectAppService_Update(t *testing.T) {
 			wantErr:        false,
 		},
 		{
-			name: "update non-existing dialect",
+			name:   "update non-existing dialect",
 			dialID: "non-existing-id",
 			req: &dto.UpdateDialectRequest{
 				Title: "新标题",
@@ -539,19 +539,19 @@ func TestDialectAppService_Like(t *testing.T) {
 
 	// Test: like dialect first time
 	t.Run("like dialect first time", func(t *testing.T) {
-		err := service.Like(testutil.Context(), dialect.ID, user.ID)
+		err := service.Like(testutil.Context(), dialect.ID, user.ID, true)
 		require.NoError(t, err)
 	})
 
 	// Test: like already liked dialect should fail
 	t.Run("like already liked dialect should fail", func(t *testing.T) {
-		err := service.Like(testutil.Context(), dialect.ID, user.ID)
+		err := service.Like(testutil.Context(), dialect.ID, user.ID, true)
 		assert.Error(t, err)
 	})
 
 	// Test: another user likes same dialect
 	t.Run("another user likes same dialect", func(t *testing.T) {
-		err := service.Like(testutil.Context(), dialect.ID, user2.ID)
+		err := service.Like(testutil.Context(), dialect.ID, user2.ID, true)
 		require.NoError(t, err)
 	})
 }
@@ -618,7 +618,7 @@ func TestDialectAppService_Unlike(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.Unlike(testutil.Context(), tt.dialID, tt.userID)
+			err := service.Unlike(testutil.Context(), tt.dialID, tt.userID, true)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -673,13 +673,13 @@ func TestDialectAppService_IncrementPlayCount(t *testing.T) {
 		{
 			name:    "increment play count for non-existing dialect",
 			dialID:  "non-existing-id",
-			wantErr: false, // 不会返回错误，只是没有更新记录
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.IncrementPlayCount(testutil.Context(), tt.dialID)
+			err := service.IncrementPlayCount(testutil.Context(), tt.dialID, true)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -803,7 +803,7 @@ func TestDialectAppService_AddComment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.AddComment(testutil.Context(), dialect.ID, tt.req, user.ID)
+			resp, err := service.AddComment(testutil.Context(), dialect.ID, tt.req, user.ID, true)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -868,7 +868,7 @@ func TestDialectAppService_GetComments(t *testing.T) {
 	}
 
 	t.Run("get comments", func(t *testing.T) {
-		resp, err := service.GetComments(testutil.Context(), dialect.ID, 1, 10)
+		resp, err := service.GetComments(testutil.Context(), dialect.ID, 1, 10, true)
 		require.NoError(t, err)
 		assert.Equal(t, 2, len(resp.List))
 		assert.Equal(t, int64(2), resp.Total)
@@ -1012,7 +1012,7 @@ func TestDialectAppService_GetStats(t *testing.T) {
 	}
 
 	t.Run("get stats", func(t *testing.T) {
-		resp, err := service.GetStats(testutil.Context())
+		resp, err := service.GetStats(testutil.Context(), true)
 		require.NoError(t, err)
 		// Total count is reliable
 		assert.Equal(t, int64(3), resp.Total)

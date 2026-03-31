@@ -18,6 +18,7 @@ var (
 	ErrFileNotFound       = fmt.Errorf("file not found")
 	ErrFileTypeNotAllowed = fmt.Errorf("file type not allowed")
 	ErrFileTooLarge       = fmt.Errorf("file too large")
+	ErrFileForbidden      = fmt.Errorf("no permission to access file")
 )
 
 // FileAppService 文件应用服务
@@ -139,10 +140,13 @@ func (s *FileAppService) UploadFiles(ctx context.Context, files []multipart.File
 }
 
 // GetByID 根据ID获取文件
-func (s *FileAppService) GetByID(ctx context.Context, id string) (*dto.FileResponse, error) {
+func (s *FileAppService) GetByID(ctx context.Context, id string, userID string, isManager bool) (*dto.FileResponse, error) {
 	file, err := s.fileRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrFileNotFound
+	}
+	if !s.canReadFile(file, userID, isManager) {
+		return nil, ErrFileForbidden
 	}
 
 	resp := dto.ToFileResponse(file)
@@ -150,10 +154,13 @@ func (s *FileAppService) GetByID(ctx context.Context, id string) (*dto.FileRespo
 }
 
 // GetFile 获取文件内容
-func (s *FileAppService) GetFile(ctx context.Context, id string) (io.ReadCloser, *entity.File, error) {
+func (s *FileAppService) GetFile(ctx context.Context, id string, userID string, isManager bool) (io.ReadCloser, *entity.File, error) {
 	file, err := s.fileRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, nil, ErrFileNotFound
+	}
+	if !s.canReadFile(file, userID, isManager) {
+		return nil, nil, ErrFileForbidden
 	}
 
 	reader, err := s.storageService.Download(ctx, file.Path)
@@ -191,10 +198,13 @@ func (s *FileAppService) List(ctx context.Context, req *dto.FileListRequest) (*d
 }
 
 // Delete 删除文件
-func (s *FileAppService) Delete(ctx context.Context, id string) error {
+func (s *FileAppService) Delete(ctx context.Context, id string, userID string, isManager bool) error {
 	file, err := s.fileRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrFileNotFound
+	}
+	if !s.canWriteFile(file, userID, isManager) {
+		return ErrFileForbidden
 	}
 
 	// 软删除数据库记录
@@ -211,12 +221,24 @@ func (s *FileAppService) Delete(ctx context.Context, id string) error {
 }
 
 // BindToEntity 绑定文件到实体
-func (s *FileAppService) BindToEntity(ctx context.Context, fileID string, entityType string, entityID string) error {
+func (s *FileAppService) BindToEntity(ctx context.Context, fileID string, entityType string, entityID string, userID string, isManager bool) error {
+	file, err := s.fileRepo.FindByID(ctx, fileID)
+	if err != nil {
+		return ErrFileNotFound
+	}
+	if !s.canWriteFile(file, userID, isManager) {
+		return ErrFileForbidden
+	}
+
 	return s.fileRepo.UpdateEntity(ctx, fileID, entityType, entityID)
 }
 
 // GetFilesByEntity 获取实体的文件
-func (s *FileAppService) GetFilesByEntity(ctx context.Context, entityType string, entityID string) ([]dto.FileResponse, error) {
+func (s *FileAppService) GetFilesByEntity(ctx context.Context, entityType string, entityID string, userID string, isManager bool) ([]dto.FileResponse, error) {
+	if entityType == "user" && entityID != userID && !isManager {
+		return nil, ErrFileForbidden
+	}
+
 	files, err := s.fileRepo.FindByEntity(ctx, entityType, entityID)
 	if err != nil {
 		return nil, err
@@ -228,6 +250,18 @@ func (s *FileAppService) GetFilesByEntity(ctx context.Context, entityType string
 	}
 
 	return list, nil
+}
+
+func (s *FileAppService) canWriteFile(file *entity.File, userID string, isManager bool) bool {
+	return isManager || file.UploaderID == userID
+}
+
+func (s *FileAppService) canReadFile(file *entity.File, userID string, isManager bool) bool {
+	if s.canWriteFile(file, userID, isManager) {
+		return true
+	}
+	// 允许读取已绑定到业务实体的文件（案件/任务/方言等）
+	return file.EntityType != "" && file.EntityID != ""
 }
 
 // GetStats 获取文件统计

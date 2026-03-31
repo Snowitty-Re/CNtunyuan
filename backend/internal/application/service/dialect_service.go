@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	ErrDialectNotFound    = errors.New("dialect not found")
-	ErrAlreadyLiked       = errors.New("already liked")
-	ErrNotLiked           = errors.New("not liked")
-	ErrDialectForbidden   = errors.New("no permission to modify this dialect")
+	ErrDialectNotFound      = errors.New("dialect not found")
+	ErrAlreadyLiked         = errors.New("already liked")
+	ErrNotLiked             = errors.New("not liked")
+	ErrDialectForbidden     = errors.New("no permission to modify this dialect")
 	ErrDialectInvalidStatus = errors.New("invalid dialect status")
 )
 
@@ -29,6 +29,21 @@ type DialectAppService struct {
 // NewDialectAppService 创建方言应用服务
 func NewDialectAppService(dialectRepo repository.DialectRepository) *DialectAppService {
 	return &DialectAppService{dialectRepo: dialectRepo}
+}
+
+func canViewDialect(d *entity.Dialect, isManager bool) bool {
+	return isManager || d.Status == entity.DialectStatusActive
+}
+
+func (s *DialectAppService) getViewableDialect(ctx context.Context, id string, isManager bool) (*entity.Dialect, error) {
+	d, err := s.dialectRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, ErrDialectNotFound
+	}
+	if !canViewDialect(d, isManager) {
+		return nil, ErrDialectNotFound
+	}
+	return d, nil
 }
 
 // Create 创建方言
@@ -71,10 +86,10 @@ func (s *DialectAppService) Create(ctx context.Context, req *dto.CreateDialectRe
 }
 
 // GetByID 根据ID获取
-func (s *DialectAppService) GetByID(ctx context.Context, id string, userID string) (*dto.DialectResponse, error) {
-	d, err := s.dialectRepo.FindByID(ctx, id)
+func (s *DialectAppService) GetByID(ctx context.Context, id string, userID string, isManager bool) (*dto.DialectResponse, error) {
+	d, err := s.getViewableDialect(ctx, id, isManager)
 	if err != nil {
-		return nil, ErrDialectNotFound
+		return nil, err
 	}
 
 	isLiked := false
@@ -89,7 +104,7 @@ func (s *DialectAppService) GetByID(ctx context.Context, id string, userID strin
 }
 
 // List 列表查询
-func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListRequest) (*dto.DialectListResponse, error) {
+func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListRequest, isManager bool) (*dto.DialectListResponse, error) {
 	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
 
 	query := repository.NewDialectQuery()
@@ -100,7 +115,11 @@ func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListReques
 	query.Province = req.Province
 	query.City = req.City
 	query.Type = entity.DialectType(req.Type)
-	query.Status = entity.DialectStatus(req.Status)
+	if isManager {
+		query.Status = entity.DialectStatus(req.Status)
+	} else {
+		query.Status = entity.DialectStatusActive
+	}
 	query.SortBy = req.SortBy
 	query.SortOrder = req.SortOrder
 
@@ -227,15 +246,18 @@ func (s *DialectAppService) Unfeature(ctx context.Context, id string) error {
 }
 
 // IncrementPlayCount 增加播放次数
-func (s *DialectAppService) IncrementPlayCount(ctx context.Context, id string) error {
+func (s *DialectAppService) IncrementPlayCount(ctx context.Context, id string, isManager bool) error {
+	if _, err := s.getViewableDialect(ctx, id, isManager); err != nil {
+		return err
+	}
 	return s.dialectRepo.IncrementPlayCount(ctx, id)
 }
 
 // Like 点赞
-func (s *DialectAppService) Like(ctx context.Context, dialectID string, userID string) error {
-	// 检查方言是否存在
-	if _, err := s.dialectRepo.FindByID(ctx, dialectID); err != nil {
-		return ErrDialectNotFound
+func (s *DialectAppService) Like(ctx context.Context, dialectID string, userID string, isManager bool) error {
+	// 检查方言是否存在且可见
+	if _, err := s.getViewableDialect(ctx, dialectID, isManager); err != nil {
+		return err
 	}
 
 	// 检查是否已点赞
@@ -258,20 +280,15 @@ func (s *DialectAppService) Like(ctx context.Context, dialectID string, userID s
 		return err
 	}
 
-	// 增加点赞计数；若失败则回滚 like 记录以保持数据一致性
-	if err := s.dialectRepo.IncrementLikeCount(ctx, dialectID); err != nil {
-		logger.Error("Failed to increment like count, rolling back like record", logger.Err(err))
-		if rbErr := s.dialectRepo.RemoveLike(ctx, dialectID, userID); rbErr != nil {
-			logger.Error("Failed to rollback like record", logger.Err(rbErr))
-		}
-		return err
-	}
-
 	return nil
 }
 
 // Unlike 取消点赞
-func (s *DialectAppService) Unlike(ctx context.Context, dialectID string, userID string) error {
+func (s *DialectAppService) Unlike(ctx context.Context, dialectID string, userID string, isManager bool) error {
+	if _, err := s.getViewableDialect(ctx, dialectID, isManager); err != nil {
+		return err
+	}
+
 	// 检查是否已点赞
 	hasLiked, err := s.dialectRepo.HasLiked(ctx, dialectID, userID)
 	if err != nil {
@@ -285,20 +302,6 @@ func (s *DialectAppService) Unlike(ctx context.Context, dialectID string, userID
 		return err
 	}
 
-	// 减少点赞计数；若失败则回滚（重新添加 like 记录）
-	if err := s.dialectRepo.DecrementLikeCount(ctx, dialectID); err != nil {
-		logger.Error("Failed to decrement like count, rolling back unlike", logger.Err(err))
-		rollback := &entity.DialectLike{
-			ID:        uuid.New().String(),
-			DialectID: dialectID,
-			UserID:    userID,
-		}
-		if rbErr := s.dialectRepo.AddLike(ctx, rollback); rbErr != nil {
-			logger.Error("Failed to rollback unlike record", logger.Err(rbErr))
-		}
-		return err
-	}
-
 	return nil
 }
 
@@ -308,10 +311,10 @@ func (s *DialectAppService) HasLiked(ctx context.Context, dialectID string, user
 }
 
 // AddComment 添加评论
-func (s *DialectAppService) AddComment(ctx context.Context, dialectID string, req *dto.CreateDialectCommentRequest, userID string) (*dto.DialectCommentResponse, error) {
-	// 验证方言是否存在
-	if _, err := s.dialectRepo.FindByID(ctx, dialectID); err != nil {
-		return nil, ErrDialectNotFound
+func (s *DialectAppService) AddComment(ctx context.Context, dialectID string, req *dto.CreateDialectCommentRequest, userID string, isManager bool) (*dto.DialectCommentResponse, error) {
+	// 验证方言是否存在且可见
+	if _, err := s.getViewableDialect(ctx, dialectID, isManager); err != nil {
+		return nil, err
 	}
 
 	comment := &entity.DialectComment{
@@ -332,7 +335,11 @@ func (s *DialectAppService) AddComment(ctx context.Context, dialectID string, re
 }
 
 // GetComments 获取评论
-func (s *DialectAppService) GetComments(ctx context.Context, dialectID string, page, pageSize int) (*dto.PageResult[dto.DialectCommentResponse], error) {
+func (s *DialectAppService) GetComments(ctx context.Context, dialectID string, page, pageSize int, isManager bool) (*dto.PageResult[dto.DialectCommentResponse], error) {
+	if _, err := s.getViewableDialect(ctx, dialectID, isManager); err != nil {
+		return nil, err
+	}
+
 	page, pageSize = validator.SanitizePagination(page, pageSize)
 	pagination := repository.Pagination{Page: page, PageSize: pageSize}
 	result, err := s.dialectRepo.GetComments(ctx, dialectID, pagination)
@@ -377,10 +384,16 @@ func (s *DialectAppService) GetFeatured(ctx context.Context, page, pageSize int)
 }
 
 // GetStats 获取统计
-func (s *DialectAppService) GetStats(ctx context.Context) (*dto.DialectStatsResponse, error) {
+func (s *DialectAppService) GetStats(ctx context.Context, isManager bool) (*dto.DialectStatsResponse, error) {
 	stats, err := s.dialectRepo.GetStats(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// 非管理角色仅返回公开数据（active）
+	if !isManager {
+		stats.Pending = 0
+		stats.Total = stats.Active
 	}
 
 	return &dto.DialectStatsResponse{

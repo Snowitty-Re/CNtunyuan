@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
@@ -240,7 +241,8 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 			},
 			Nickname: nickname,
 			Avatar:   avatar,
-			Phone:    "", // Will be filled when binding phone
+			// 使用唯一占位符避免 phone 唯一约束冲突，绑定手机号后会被真实号码覆盖
+			Phone:    "wx" + strings.ReplaceAll(uuid.New().String(), "-", "")[:10],
 			Role:     entity.RoleVolunteer,
 			Status:   entity.UserStatusActive,
 			OrgID:    orgID,

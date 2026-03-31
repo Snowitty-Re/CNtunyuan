@@ -8,6 +8,7 @@ import (
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
+	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
@@ -173,13 +174,20 @@ func (h *UploadHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.fileService.GetByID(c.Request.Context(), id)
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	resp, err := h.fileService.GetByID(c.Request.Context(), id, userID, isManager)
 	if err != nil {
-		if err == service.ErrFileNotFound {
+		switch err {
+		case service.ErrFileNotFound:
 			response.NotFound(c, "file not found")
-			return
+		case service.ErrFileForbidden:
+			response.Forbidden(c, "no permission to access this file")
+		default:
+			response.InternalServerError(c, "failed to get file")
 		}
-		response.InternalServerError(c, "failed to get file")
 		return
 	}
 
@@ -207,13 +215,20 @@ func (h *UploadHandler) Download(c *gin.Context) {
 		return
 	}
 
-	reader, file, err := h.fileService.GetFile(c.Request.Context(), id)
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	reader, file, err := h.fileService.GetFile(c.Request.Context(), id, userID, isManager)
 	if err != nil {
-		if err == service.ErrFileNotFound {
+		switch err {
+		case service.ErrFileNotFound:
 			response.NotFound(c, "file not found")
-			return
+		case service.ErrFileForbidden:
+			response.Forbidden(c, "no permission to access this file")
+		default:
+			response.InternalServerError(c, "failed to get file")
 		}
-		response.InternalServerError(c, "failed to get file")
 		return
 	}
 	defer reader.Close()
@@ -260,9 +275,17 @@ func (h *UploadHandler) GetFilesByEntity(c *gin.Context) {
 		return
 	}
 
-	files, err := h.fileService.GetFilesByEntity(c.Request.Context(), entityType, entityID)
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	files, err := h.fileService.GetFilesByEntity(c.Request.Context(), entityType, entityID, userID, isManager)
 	if err != nil {
-		response.InternalServerError(c, "failed to get files")
+		if err == service.ErrFileForbidden {
+			response.Forbidden(c, "no permission to access these files")
+		} else {
+			response.InternalServerError(c, "failed to get files")
+		}
 		return
 	}
 
@@ -290,13 +313,20 @@ func (h *UploadHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.fileService.Delete(c.Request.Context(), id); err != nil {
-		if err == service.ErrFileNotFound {
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	if err := h.fileService.Delete(c.Request.Context(), id, userID, isManager); err != nil {
+		switch err {
+		case service.ErrFileNotFound:
 			response.NotFound(c, "file not found")
-			return
+		case service.ErrFileForbidden:
+			response.Forbidden(c, "no permission to delete this file")
+		default:
+			logger.Error("Failed to delete file", logger.Err(err))
+			response.InternalServerError(c, "failed to delete file")
 		}
-		logger.Error("Failed to delete file", logger.Err(err))
-		response.InternalServerError(c, "failed to delete file")
 		return
 	}
 
@@ -331,12 +361,19 @@ func (h *UploadHandler) BindToEntity(c *gin.Context) {
 		return
 	}
 
-	if err := h.fileService.BindToEntity(c.Request.Context(), id, req.EntityType, req.EntityID); err != nil {
-		if err == service.ErrFileNotFound {
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	if err := h.fileService.BindToEntity(c.Request.Context(), id, req.EntityType, req.EntityID, userID, isManager); err != nil {
+		switch err {
+		case service.ErrFileNotFound:
 			response.NotFound(c, "file not found")
-			return
+		case service.ErrFileForbidden:
+			response.Forbidden(c, "no permission to modify this file")
+		default:
+			response.InternalServerError(c, "failed to bind file")
 		}
-		response.InternalServerError(c, "failed to bind file")
 		return
 	}
 

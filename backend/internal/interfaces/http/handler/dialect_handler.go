@@ -30,7 +30,7 @@ func (h *DialectHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware 
 		// 公开接口（需要登录但不需要特殊权限）
 		dialects.GET("", authMiddleware.Required(), h.List)
 		dialects.GET("/featured", authMiddleware.Required(), h.GetFeatured)
-		dialects.GET("/stats", authMiddleware.Required(), h.GetStats)
+		dialects.GET("/stats", authMiddleware.Required(), middleware.RequireManager(), h.GetStats)
 		dialects.GET("/:id", authMiddleware.Required(), h.GetByID)
 		dialects.GET("/:id/comments", authMiddleware.Required(), h.GetComments)
 		dialects.POST("/:id/play", authMiddleware.Required(), h.Play)
@@ -105,7 +105,9 @@ func (h *DialectHandler) GetByID(c *gin.Context) {
 	}
 
 	userID := middleware.GetUserID(c)
-	dialect, err := h.dialectService.GetByID(c.Request.Context(), id, userID)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+	dialect, err := h.dialectService.GetByID(c.Request.Context(), id, userID, isManager)
 	if err != nil {
 		if err == service.ErrDialectNotFound {
 			response.NotFound(c, "dialect not found")
@@ -147,7 +149,10 @@ func (h *DialectHandler) List(c *gin.Context) {
 		return
 	}
 
-	dialects, err := h.dialectService.List(c.Request.Context(), &req)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	dialects, err := h.dialectService.List(c.Request.Context(), &req, isManager)
 	if err != nil {
 		response.InternalServerError(c, "failed to get list")
 		return
@@ -379,7 +384,10 @@ func (h *DialectHandler) Play(c *gin.Context) {
 		return
 	}
 
-	if err := h.dialectService.IncrementPlayCount(c.Request.Context(), id); err != nil {
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	if err := h.dialectService.IncrementPlayCount(c.Request.Context(), id, isManager); err != nil {
 		response.InternalServerError(c, "failed to record play")
 		return
 	}
@@ -409,8 +417,10 @@ func (h *DialectHandler) Like(c *gin.Context) {
 	}
 
 	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
 
-	if err := h.dialectService.Like(c.Request.Context(), id, userID); err != nil {
+	if err := h.dialectService.Like(c.Request.Context(), id, userID, isManager); err != nil {
 		switch err {
 		case service.ErrAlreadyLiked:
 			response.BadRequest(c, "already liked")
@@ -447,8 +457,10 @@ func (h *DialectHandler) Unlike(c *gin.Context) {
 	}
 
 	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
 
-	if err := h.dialectService.Unlike(c.Request.Context(), id, userID); err != nil {
+	if err := h.dialectService.Unlike(c.Request.Context(), id, userID, isManager); err != nil {
 		switch err {
 		case service.ErrNotLiked:
 			response.BadRequest(c, "not liked yet")
@@ -492,8 +504,10 @@ func (h *DialectHandler) AddComment(c *gin.Context) {
 	}
 
 	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
 
-	comment, err := h.dialectService.AddComment(c.Request.Context(), id, &req, userID)
+	comment, err := h.dialectService.AddComment(c.Request.Context(), id, &req, userID, isManager)
 	if err != nil {
 		switch err {
 		case service.ErrDialectNotFound:
@@ -538,7 +552,10 @@ func (h *DialectHandler) GetComments(c *gin.Context) {
 		pageSize = 10
 	}
 
-	comments, err := h.dialectService.GetComments(c.Request.Context(), id, page, pageSize)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	comments, err := h.dialectService.GetComments(c.Request.Context(), id, page, pageSize, isManager)
 	if err != nil {
 		response.InternalServerError(c, "failed to get comments")
 		return
@@ -585,7 +602,10 @@ func (h *DialectHandler) GetFeatured(c *gin.Context) {
 // @Failure 500 {object} response.Response "服务器内部错误"
 // @Router /dialects/stats [get]
 func (h *DialectHandler) GetStats(c *gin.Context) {
-	stats, err := h.dialectService.GetStats(c.Request.Context())
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	stats, err := h.dialectService.GetStats(c.Request.Context(), isManager)
 	if err != nil {
 		response.InternalServerError(c, "failed to get stats")
 		return

@@ -691,7 +691,7 @@ func TestFileAppService_GetByID_Success(t *testing.T) {
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(expectedFile, nil)
 
 	ctx := testutil.Context()
-	resp, err := service.GetByID(ctx, fileID)
+	resp, err := service.GetByID(ctx, fileID, "uploader-id", true)
 
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -710,7 +710,7 @@ func TestFileAppService_GetByID_NotFound(t *testing.T) {
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(nil, errors.New("record not found"))
 
 	ctx := testutil.Context()
-	resp, err := service.GetByID(ctx, fileID)
+	resp, err := service.GetByID(ctx, fileID, "uploader-id", true)
 
 	require.Error(t, err)
 	assert.Nil(t, resp)
@@ -739,7 +739,7 @@ func TestFileAppService_Delete_Success(t *testing.T) {
 	mockStorage.On("Delete", mock.Anything, filePath).Return(nil)
 
 	ctx := testutil.Context()
-	err := service.Delete(ctx, fileID)
+	err := service.Delete(ctx, fileID, "uploader-id", true)
 
 	require.NoError(t, err)
 
@@ -755,7 +755,7 @@ func TestFileAppService_Delete_NotFound(t *testing.T) {
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(nil, errors.New("record not found"))
 
 	ctx := testutil.Context()
-	err := service.Delete(ctx, fileID)
+	err := service.Delete(ctx, fileID, "uploader-id", true)
 
 	require.Error(t, err)
 	assert.Equal(t, ErrFileNotFound, err)
@@ -784,7 +784,7 @@ func TestFileAppService_Delete_PhysicalDeleteFailed(t *testing.T) {
 	mockStorage.On("Delete", mock.Anything, filePath).Return(deleteError)
 
 	ctx := testutil.Context()
-	err := service.Delete(ctx, fileID)
+	err := service.Delete(ctx, fileID, "uploader-id", true)
 
 	// 应该返回 nil，因为软删除成功了
 	require.NoError(t, err)
@@ -814,7 +814,7 @@ func TestFileAppService_GetFile_Success(t *testing.T) {
 	mockStorage.On("Download", mock.Anything, filePath).Return(mockContent, nil)
 
 	ctx := testutil.Context()
-	reader, file, err := service.GetFile(ctx, fileID)
+	reader, file, err := service.GetFile(ctx, fileID, "uploader-id", true)
 
 	require.NoError(t, err)
 	assert.NotNil(t, reader)
@@ -833,7 +833,7 @@ func TestFileAppService_GetFile_NotFound(t *testing.T) {
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(nil, errors.New("record not found"))
 
 	ctx := testutil.Context()
-	reader, file, err := service.GetFile(ctx, fileID)
+	reader, file, err := service.GetFile(ctx, fileID, "uploader-id", true)
 
 	require.Error(t, err)
 	assert.Nil(t, reader)
@@ -860,7 +860,7 @@ func TestFileAppService_GetFile_DownloadFailed(t *testing.T) {
 	mockStorage.On("Download", mock.Anything, filePath).Return(nil, downloadError)
 
 	ctx := testutil.Context()
-	reader, file, err := service.GetFile(ctx, fileID)
+	reader, file, err := service.GetFile(ctx, fileID, "uploader-id", true)
 
 	require.Error(t, err)
 	assert.Nil(t, reader)
@@ -967,10 +967,14 @@ func TestFileAppService_BindToEntity_Success(t *testing.T) {
 	entityType := "task"
 	entityID := "task-456"
 
+	mockRepo.On("FindByID", mock.Anything, fileID).Return(&entity.File{
+		BaseEntity: entity.BaseEntity{ID: fileID},
+		UploaderID: "uploader-id",
+	}, nil)
 	mockRepo.On("UpdateEntity", mock.Anything, fileID, entityType, entityID).Return(nil)
 
 	ctx := testutil.Context()
-	err := service.BindToEntity(ctx, fileID, entityType, entityID)
+	err := service.BindToEntity(ctx, fileID, entityType, entityID, "uploader-id", true)
 
 	require.NoError(t, err)
 	mockRepo.AssertExpectations(t)
@@ -984,10 +988,14 @@ func TestFileAppService_BindToEntity_Failed(t *testing.T) {
 	entityID := "task-456"
 
 	bindError := errors.New("bind failed")
+	mockRepo.On("FindByID", mock.Anything, fileID).Return(&entity.File{
+		BaseEntity: entity.BaseEntity{ID: fileID},
+		UploaderID: "uploader-id",
+	}, nil)
 	mockRepo.On("UpdateEntity", mock.Anything, fileID, entityType, entityID).Return(bindError)
 
 	ctx := testutil.Context()
-	err := service.BindToEntity(ctx, fileID, entityType, entityID)
+	err := service.BindToEntity(ctx, fileID, entityType, entityID, "uploader-id", true)
 
 	require.Error(t, err)
 	assert.Equal(t, bindError, err)
@@ -1030,7 +1038,7 @@ func TestFileAppService_GetFilesByEntity_Success(t *testing.T) {
 	mockRepo.On("FindByEntity", mock.Anything, entityType, entityID).Return(files, nil)
 
 	ctx := testutil.Context()
-	resp, err := service.GetFilesByEntity(ctx, entityType, entityID)
+	resp, err := service.GetFilesByEntity(ctx, entityType, entityID, "uploader-id", true)
 
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -1051,7 +1059,7 @@ func TestFileAppService_GetFilesByEntity_Failed(t *testing.T) {
 	mockRepo.On("FindByEntity", mock.Anything, entityType, entityID).Return(nil, findError)
 
 	ctx := testutil.Context()
-	resp, err := service.GetFilesByEntity(ctx, entityType, entityID)
+	resp, err := service.GetFilesByEntity(ctx, entityType, entityID, "uploader-id", true)
 
 	require.Error(t, err)
 	assert.Nil(t, resp)
@@ -1159,7 +1167,7 @@ func TestFileAppService_Integration_UploadAndGet(t *testing.T) {
 	assert.NotNil(t, resp)
 
 	// 测试获取
-	getResp, err := service.GetByID(ctx, resp.ID)
+	getResp, err := service.GetByID(ctx, resp.ID, "integration-user", true)
 	require.NoError(t, err)
 	assert.Equal(t, resp.ID, getResp.ID)
 	assert.Equal(t, resp.FileName, getResp.FileName)
