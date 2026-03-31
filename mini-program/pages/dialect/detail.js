@@ -326,7 +326,7 @@ Page({
 
   // 跳转到采集者主页
   goToCollectorProfile() {
-    const collectorId = this.data.dialect?.collector?.id
+    const collectorId = this.data.dialect?.uploader?.id || this.data.dialect?.collector?.id
     if (collectorId) {
       wx.navigateTo({
         url: `/pages/volunteer/profile?id=${collectorId}`

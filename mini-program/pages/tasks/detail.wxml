@@ -15,20 +15,20 @@
       <view class="status-flow-bar">
         <view class="flow-bg-decor"></view>
         <view class="flow-steps">
-          <view class="flow-step {{task.status === 'pending' || task.status === 'processing' || task.status === 'completed' ? 'done' : ''}} {{task.status === 'pending' ? 'current' : ''}}">
+          <view class="flow-step {{task.status === 'pending' || task.status === 'assigned' || task.status === 'processing' || task.status === 'completed' ? 'done' : ''}} {{task.status === 'pending' ? 'current' : ''}}">
             <view class="step-dot">
               <view class="dot-fill"></view>
             </view>
             <text class="step-label">待分配</text>
           </view>
-          <view class="flow-connector {{task.status === 'processing' || task.status === 'completed' ? 'done' : ''}}">
+          <view class="flow-connector {{task.status === 'assigned' || task.status === 'processing' || task.status === 'completed' ? 'done' : ''}}">
             <view class="connector-fill"></view>
           </view>
-          <view class="flow-step {{task.status === 'processing' || task.status === 'completed' ? 'done' : ''}} {{task.status === 'processing' ? 'current' : ''}}">
+          <view class="flow-step {{task.status === 'assigned' || task.status === 'processing' || task.status === 'completed' ? 'done' : ''}} {{task.status === 'assigned' || task.status === 'processing' ? 'current' : ''}}">
             <view class="step-dot">
               <view class="dot-fill"></view>
             </view>
-            <text class="step-label">进行中</text>
+            <text class="step-label">{{task.status === 'assigned' ? '已分配' : '进行中'}}</text>
           </view>
           <view class="flow-connector {{task.status === 'completed' ? 'done' : ''}}">
             <view class="connector-fill"></view>
@@ -223,14 +223,14 @@
               <button class="bar-btn btn-primary" bindtap="assignTask" loading="{{actionLoading}}">分配任务</button>
             </view>
           </block>
-          <block wx:elif="{{task.status === 'processing'}}">
+          <block wx:elif="{{task.status === 'assigned' || task.status === 'processing'}}">
             <button class="bar-btn btn-danger full-width" bindtap="cancelTask" loading="{{actionLoading}}">取消任务</button>
           </block>
         </block>
 
         <!-- 执行人操作 -->
         <block wx:if="{{isAssignee}}">
-          <block wx:if="{{task.status === 'pending'}}">
+          <block wx:if="{{task.status === 'assigned'}}">
             <button class="bar-btn btn-primary full-width" bindtap="startTask" loading="{{actionLoading}}">开始任务</button>
           </block>
           <block wx:elif="{{task.status === 'processing'}}">

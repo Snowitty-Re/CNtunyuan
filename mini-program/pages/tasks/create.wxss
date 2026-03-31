@@ -240,6 +240,8 @@
 .priority-dot-urgent { background: #FF4D4F; }
 .priority-chip-high { background: #FFF7E6; }
 .priority-dot-high { background: #F2994A; }
+.priority-chip-medium { background: #E6F4FF; }
+.priority-dot-medium { background: #4A90D9; }
 .priority-chip-normal { background: #E6F4FF; }
 .priority-dot-normal { background: #4A90D9; }
 .priority-chip-low { background: #F0F2F5; }
@@ -252,6 +254,7 @@
 
 .priority-chip-urgent .priority-chip-text { color: #FF4D4F; }
 .priority-chip-high .priority-chip-text { color: #F2994A; }
+.priority-chip-medium .priority-chip-text { color: #4A90D9; }
 .priority-chip-normal .priority-chip-text { color: #4A90D9; }
 .priority-chip-low .priority-chip-text { color: #95A5A6; }
 

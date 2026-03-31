@@ -122,7 +122,7 @@
         </view>
 
         <!-- 快速领取 -->
-        <view class="card-claim-action" wx:if="{{item.status === 'pending'}}" catchtap="quickClaim" data-id="{{item.id}}">
+        <view class="card-claim-action" wx:if="{{item.status === 'pending' && canCreate}}" catchtap="quickClaim" data-id="{{item.id}}">
           <view class="claim-btn">
             <text class="claim-btn-text">+</text>
           </view>

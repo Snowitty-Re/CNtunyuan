@@ -132,6 +132,10 @@
 .status-pending .status-dot-mini { background: #F2994A; }
 .status-pending .status-text-mini { color: #F2994A; }
 
+.status-assigned { background: #E6F4FF; }
+.status-assigned .status-dot-mini { background: #4A90D9; }
+.status-assigned .status-text-mini { color: #4A90D9; }
+
 .status-processing { background: #E8F8EE; }
 .status-processing .status-dot-mini { background: #27AE60; animation: blink 2s infinite; }
 .status-processing .status-text-mini { color: #27AE60; }
@@ -167,6 +171,7 @@
 
 .priority-urgent { background: #FFF1F0; color: #FF4D4F; }
 .priority-high { background: #FFF7E6; color: #F2994A; }
+.priority-medium { background: #E6F4FF; color: #4A90D9; }
 .priority-normal { background: #E6F4FF; color: #4A90D9; }
 .priority-low { background: #F0F2F5; color: #95A5A6; }
 

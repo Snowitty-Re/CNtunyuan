@@ -118,8 +118,8 @@
         <!-- Footer: collector info + time -->
         <view class="card-footer">
           <view class="collector">
-            <image class="collector-avatar" src="{{(item.collector && item.collector.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
-            <text class="collector-name">{{(item.collector && item.collector.nickname) || '志愿者'}}</text>
+            <image class="collector-avatar" src="{{(item.uploader && item.uploader.avatar) || (item.collector && item.collector.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
+            <text class="collector-name">{{(item.uploader && item.uploader.nickname) || (item.collector && item.collector.nickname) || '志愿者'}}</text>
           </view>
           <text class="card-time">{{item.timeAgoText}}</text>
         </view>

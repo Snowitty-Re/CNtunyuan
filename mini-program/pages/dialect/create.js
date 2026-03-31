@@ -461,6 +461,7 @@ Page({
       const dialectData = {
         title: this.data.form.title.trim(),
         content: this.data.form.description.trim(),
+        description: this.data.form.description.trim(),
         audio_url: audioUrl,
         duration: this.data.recordDuration,
         region: this.data.form.region,
@@ -470,6 +471,9 @@ Page({
         tags: this.data.form.tags.join(','),  // 将数组转换为逗号分隔的字符串
         file_size: 0,     // 可选字段
         format: 'mp3'     // 可选字段
+      }
+      if (this.data.form.missing_person_id) {
+        dialectData.missing_person_id = this.data.form.missing_person_id
       }
       
       await dialectService.create(dialectData)
@@ -503,7 +507,7 @@ Page({
   // 解析地区为省份、城市和方言类型
   parseRegion(region) {
     if (!region) {
-      return { province: '', city: '', dialectType: '' }
+      return { province: '', city: '', dialectType: 'other' }
     }
     
     // 直辖市
@@ -535,38 +539,38 @@ Page({
   // 根据地区获取方言类型
   getDialectType(region) {
     const dialectMap = {
-      '北京市': '官话',
-      '上海市': '吴语',
-      '天津市': '官话',
-      '重庆市': '官话',
-      '广东省': '粤语',
-      '江苏省': '官话',
-      '浙江省': '吴语',
-      '山东省': '官话',
-      '河南省': '官话',
-      '四川省': '官话',
-      '湖北省': '官话',
-      '湖南省': '湘语',
-      '河北省': '官话',
-      '福建省': '闽语',
-      '安徽省': '官话',
-      '辽宁省': '官话',
-      '江西省': '赣语',
-      '陕西省': '官话',
-      '黑龙江省': '官话',
-      '山西省': '晋语',
-      '广西壮族自治区': '粤语',
-      '吉林省': '官话',
-      '贵州省': '官话',
-      '云南省': '官话',
-      '甘肃省': '官话',
-      '海南省': '闽语',
-      '内蒙古自治区': '官话',
-      '新疆维吾尔自治区': '官话',
-      '西藏自治区': '藏语',
-      '青海省': '官话',
-      '宁夏回族自治区': '官话'
+      '北京市': 'daily',
+      '上海市': 'daily',
+      '天津市': 'daily',
+      '重庆市': 'daily',
+      '广东省': 'daily',
+      '江苏省': 'daily',
+      '浙江省': 'daily',
+      '山东省': 'daily',
+      '河南省': 'daily',
+      '四川省': 'daily',
+      '湖北省': 'daily',
+      '湖南省': 'daily',
+      '河北省': 'daily',
+      '福建省': 'daily',
+      '安徽省': 'daily',
+      '辽宁省': 'daily',
+      '江西省': 'daily',
+      '陕西省': 'daily',
+      '黑龙江省': 'daily',
+      '山西省': 'daily',
+      '广西壮族自治区': 'daily',
+      '吉林省': 'daily',
+      '贵州省': 'daily',
+      '云南省': 'daily',
+      '甘肃省': 'daily',
+      '海南省': 'daily',
+      '内蒙古自治区': 'daily',
+      '新疆维吾尔自治区': 'daily',
+      '西藏自治区': 'daily',
+      '青海省': 'daily',
+      '宁夏回族自治区': 'daily'
     }
-    return dialectMap[region] || '方言'
+    return dialectMap[region] || 'other'
   }
 })

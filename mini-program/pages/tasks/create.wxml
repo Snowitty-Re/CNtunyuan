@@ -62,6 +62,20 @@
         </view>
       </view>
 
+      <!-- 任务类型 -->
+      <view class="field-group">
+        <view class="field-label">
+          <text class="required-mark">*</text>
+          <text class="label-text">任务类型</text>
+        </view>
+        <picker bindchange="onTaskTypeChange" range="{{taskTypes}}" range-key="label" value="{{taskTypeIndex}}">
+          <view class="field-picker">
+            <text class="picker-value">{{taskTypes[taskTypeIndex].label}}</text>
+            <text class="picker-arrow">></text>
+          </view>
+        </picker>
+      </view>
+
       <!-- 优先级 -->
       <view class="field-group">
         <view class="field-label">

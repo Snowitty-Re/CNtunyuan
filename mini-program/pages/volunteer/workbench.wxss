@@ -282,6 +282,7 @@
 
 .task-priority-bar.priority-urgent { background: linear-gradient(180deg, #ff4d4f, #ff7875); }
 .task-priority-bar.priority-high { background: linear-gradient(180deg, #FF8C42, #FFB085); }
+.task-priority-bar.priority-medium { background: linear-gradient(180deg, #1890ff, #69c0ff); }
 .task-priority-bar.priority-normal { background: linear-gradient(180deg, #1890ff, #69c0ff); }
 .task-priority-bar.priority-low { background: linear-gradient(180deg, #52c41a, #95de64); }
 

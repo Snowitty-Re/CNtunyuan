@@ -153,6 +153,10 @@ Page({
     e.stopPropagation()
     const id = e.currentTarget.dataset.id
     const userInfo = wx.getStorageSync('userInfo') || {}
+    if (!this.data.canCreate) {
+      showToast('无权限操作')
+      return
+    }
     
     if (!userInfo.id) {
       showToast('请先登录')

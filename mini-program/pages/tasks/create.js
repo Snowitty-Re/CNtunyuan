@@ -9,15 +9,25 @@ Page({
     form: {
       title: '',
       description: '',
-      priority: 'normal',
+      type: 'search',
+      priority: 'medium',
       deadline: '',
       missing_person_id: '',
       assignee_id: ''
     },
+    taskTypes: [
+      { key: 'search', label: '搜寻' },
+      { key: 'verify', label: '核实' },
+      { key: 'assist', label: '协助' },
+      { key: 'follow', label: '跟进' },
+      { key: 'interview', label: '寻访' },
+      { key: 'other', label: '其他' }
+    ],
+    taskTypeIndex: 0,
     priorities: [
       { key: 'urgent', label: '紧急' },
       { key: 'high', label: '高' },
-      { key: 'normal', label: '普通' },
+      { key: 'medium', label: '普通' },
       { key: 'low', label: '低' }
     ],
     priorityIndex: 2,
@@ -100,6 +110,16 @@ Page({
     this.setData({
       priorityIndex: index,
       'form.priority': item.key
+    })
+  },
+
+  // 任务类型选择
+  onTaskTypeChange(e) {
+    const index = parseInt(e.detail.value)
+    const item = this.data.taskTypes[index]
+    this.setData({
+      taskTypeIndex: index,
+      'form.type': item.key
     })
   },
 

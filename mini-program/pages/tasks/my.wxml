@@ -74,8 +74,8 @@
         </view>
 
         <!-- 操作按钮区 -->
-        <view class="card-actions" wx:if="{{item.status === 'processing' || item.status === 'pending'}}">
-          <block wx:if="{{item.status === 'pending'}}">
+        <view class="card-actions" wx:if="{{item.status === 'processing' || item.status === 'assigned'}}">
+          <block wx:if="{{item.status === 'assigned'}}">
             <button class="action-btn btn-primary" bindtap="startTask" data-id="{{item.id}}">
               开始任务
             </button>

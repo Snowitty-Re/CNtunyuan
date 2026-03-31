@@ -15,6 +15,7 @@ const TASK_STATUS_MAP = {
 const TASK_PRIORITY_MAP = {
   urgent: '紧急',
   high:   '高',
+  medium: '普通',
   normal: '普通',
   low:    '低'
 }
@@ -22,15 +23,17 @@ const TASK_PRIORITY_MAP = {
 const TASK_PRIORITY_COLOR = {
   urgent: '#ff4d4f',
   high:   '#faad14',
+  medium: '#1890ff',
   normal: '#1890ff',
   low:    '#52c41a'
 }
 
 const TASK_TYPE_MAP = {
   search:    '搜寻',
-  inquiry:   '问询',
-  document:  '材料',
-  transport: '运输',
+  verify:    '核实',
+  assist:    '协助',
+  follow:    '跟进',
+  interview: '寻访',
   other:     '其他'
 }
 
