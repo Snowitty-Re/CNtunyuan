@@ -297,6 +297,28 @@ Page({
   },
 
   /**
+   * 删除案件
+   */
+  async deleteCase() {
+    const confirmed = await showConfirm('确认删除', '删除后无法恢复，确认删除该案件吗？')
+    if (!confirmed) return
+
+    showLoading('删除中...')
+    try {
+      await missingPersonService.delete(this.data.id)
+      wx.setStorageSync(CASES_LIST_DIRTY_KEY, 1)
+      hideLoading()
+      showSuccess('删除成功')
+      setTimeout(() => {
+        wx.navigateBack()
+      }, 600)
+    } catch (error) {
+      hideLoading()
+      wx.showToast({ title: '删除失败', icon: 'none' })
+    }
+  },
+
+  /**
    * 创建任务
    */
   createTask() {

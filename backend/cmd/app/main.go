@@ -114,6 +114,7 @@ func checkDatabase(cfg *config.Config) error {
 		"ty_users",
 		"ty_permissions",
 		"ty_missing_persons",
+		"ty_missing_person_tracks",
 		"ty_tasks",
 		"ty_dialects",
 		"ty_files",

@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
@@ -382,7 +384,23 @@ func (h *MissingPersonHandler) AddTrack(c *gin.Context) {
 		switch err {
 		case service.ErrMissingPersonNotFound:
 			response.NotFound(c, "missing person not found")
+		case service.ErrTrackReporterRequired:
+			response.Unauthorized(c, "please login first")
 		default:
+			if errors.Is(err, service.ErrInvalidTrackData) {
+				response.BadRequest(c, err.Error())
+				return
+			}
+			logger.Error("Failed to add track",
+				logger.Err(err),
+				logger.String("missing_person_id", id),
+				logger.String("reporter_id", userID),
+			)
+			if strings.Contains(err.Error(), "invalid input syntax for type uuid") ||
+				strings.Contains(err.Error(), "violates foreign key constraint") {
+				response.BadRequest(c, "invalid track data")
+				return
+			}
 			response.InternalServerError(c, "failed to add track")
 		}
 		return

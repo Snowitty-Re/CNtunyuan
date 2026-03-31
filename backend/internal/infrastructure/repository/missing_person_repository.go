@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -182,7 +183,34 @@ func (r *MissingPersonRepositoryImpl) UpdateStatus(ctx context.Context, id strin
 
 // AddTrack 添加轨迹
 func (r *MissingPersonRepositoryImpl) AddTrack(ctx context.Context, track *entity.MissingPersonTrack) error {
-	return r.db.WithContext(ctx).Create(track).Error
+	if strings.TrimSpace(track.Photos) == "" {
+		track.Photos = "[]"
+	}
+
+	db := r.db.WithContext(ctx)
+	if strings.TrimSpace(track.VideoUrl) == "" {
+		db = db.Omit("VideoUrl")
+	}
+	if strings.TrimSpace(track.AudioUrl) == "" {
+		db = db.Omit("AudioUrl")
+	}
+
+	err := db.Create(track).Error
+	if err != nil && isMissingTrackTableError(err) {
+		// 兼容未完整执行 SQL migration 的开发环境：自动补建轨迹表后重试一次
+		if migrateErr := r.db.WithContext(ctx).AutoMigrate(&entity.MissingPersonTrack{}); migrateErr != nil {
+			return err
+		}
+		retryDB := r.db.WithContext(ctx)
+		if strings.TrimSpace(track.VideoUrl) == "" {
+			retryDB = retryDB.Omit("VideoUrl")
+		}
+		if strings.TrimSpace(track.AudioUrl) == "" {
+			retryDB = retryDB.Omit("AudioUrl")
+		}
+		return retryDB.Create(track).Error
+	}
+	return err
 }
 
 // GetTracks 获取轨迹
@@ -193,7 +221,26 @@ func (r *MissingPersonRepositoryImpl) GetTracks(ctx context.Context, personID st
 		Order("time DESC").
 		Preload("Reporter").
 		Find(&tracks).Error
+	if err != nil && isMissingTrackTableError(err) {
+		if migrateErr := r.db.WithContext(ctx).AutoMigrate(&entity.MissingPersonTrack{}); migrateErr != nil {
+			return nil, err
+		}
+		err = r.db.WithContext(ctx).
+			Where("missing_person_id = ?", personID).
+			Order("time DESC").
+			Preload("Reporter").
+			Find(&tracks).Error
+	}
 	return tracks, err
+}
+
+func isMissingTrackTableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "ty_missing_person_tracks") &&
+		(strings.Contains(msg, "does not exist") || strings.Contains(msg, "doesn't exist"))
 }
 
 // GetStats 获取统计

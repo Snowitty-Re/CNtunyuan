@@ -19,6 +19,8 @@ var (
 	ErrMissingPersonNotFound  = errors.New("missing person not found")
 	ErrInvalidStatus          = errors.New("invalid status")
 	ErrMissingPersonForbidden = errors.New("no permission to modify this case")
+	ErrInvalidTrackData       = errors.New("invalid track data")
+	ErrTrackReporterRequired  = errors.New("track reporter is required")
 )
 
 // generateCaseNo 生成案件编号 (格式: CASE-YYYYMMDD-XXXXXXXX)
@@ -346,23 +348,32 @@ func (s *MissingPersonAppService) MarkReunited(ctx context.Context, id string) e
 
 // AddTrack 添加轨迹
 func (s *MissingPersonAppService) AddTrack(ctx context.Context, personID string, req *dto.CreateMissingPersonTrackRequest, reporterID string) (*dto.MissingPersonTrackResponse, error) {
+	if strings.TrimSpace(reporterID) == "" {
+		return nil, ErrTrackReporterRequired
+	}
+
 	// 检查案件是否存在
 	mp, err := s.mpRepo.FindByID(ctx, personID)
 	if err != nil {
 		return nil, ErrMissingPersonNotFound
 	}
 
+	if req.Time.IsZero() {
+		req.Time = time.Now()
+	}
+
 	// 校验轨迹时间合理性
-	if !req.Time.IsZero() {
-		if req.Time.After(time.Now()) {
-			return nil, fmt.Errorf("目击时间不能是未来时间")
-		}
-		if req.Time.Before(mp.MissingTime) {
-			return nil, fmt.Errorf("目击时间不能早于走失时间")
-		}
+	if req.Time.After(time.Now()) {
+		return nil, fmt.Errorf("%w: 目击时间不能是未来时间", ErrInvalidTrackData)
+	}
+	if req.Time.Before(mp.MissingTime) {
+		return nil, fmt.Errorf("%w: 目击时间不能早于走失时间", ErrInvalidTrackData)
 	}
 
 	track := &entity.MissingPersonTrack{
+		BaseEntity: entity.BaseEntity{
+			ID: uuid.New().String(),
+		},
 		MissingPersonID: personID,
 		ReporterID:      reporterID,
 		Location:        req.Location,

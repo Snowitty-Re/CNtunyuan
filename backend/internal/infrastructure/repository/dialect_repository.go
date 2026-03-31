@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
@@ -19,6 +20,36 @@ type DialectRepositoryImpl struct {
 func NewDialectRepository(db *gorm.DB) repository.DialectRepository {
 	return &DialectRepositoryImpl{
 		BaseRepository: NewBaseRepository[entity.Dialect](db),
+	}
+}
+
+// Create 创建方言（兼容 PostgreSQL JSON/UUID 字段）
+func (r *DialectRepositoryImpl) Create(ctx context.Context, dialect *entity.Dialect) error {
+	sanitizeDialectOptionalFields(dialect)
+
+	db := r.db.WithContext(ctx)
+	if strings.TrimSpace(dialect.Tags) == "" {
+		db = db.Omit("Tags")
+	}
+
+	return db.Create(dialect).Error
+}
+
+// Update 更新方言（兼容 PostgreSQL JSON/UUID 字段）
+func (r *DialectRepositoryImpl) Update(ctx context.Context, dialect *entity.Dialect) error {
+	sanitizeDialectOptionalFields(dialect)
+
+	db := r.db.WithContext(ctx)
+	if strings.TrimSpace(dialect.Tags) == "" {
+		db = db.Omit("Tags")
+	}
+
+	return db.Save(dialect).Error
+}
+
+func sanitizeDialectOptionalFields(dialect *entity.Dialect) {
+	if dialect.MissingPersonID != nil && strings.TrimSpace(*dialect.MissingPersonID) == "" {
+		dialect.MissingPersonID = nil
 	}
 }
 

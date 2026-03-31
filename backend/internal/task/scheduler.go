@@ -164,6 +164,7 @@ func (s *Scheduler) checkOverdueTasks() {
 			// 记录任务日志
 			log := &entity.TaskLog{
 				TaskID:    task.ID,
+				UserID:    task.CreatorID,
 				Action:    "auto_overdue",
 				Content:   "任务自动标记为逾期",
 				NewStatus: "overdue",

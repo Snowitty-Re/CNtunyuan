@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -20,6 +21,39 @@ type TaskRepositoryImpl struct {
 func NewTaskRepository(db *gorm.DB) repository.TaskRepository {
 	return &TaskRepositoryImpl{
 		BaseRepository: NewBaseRepository[entity.Task](db),
+	}
+}
+
+// Create 创建任务（兼容 PostgreSQL JSON/UUID 字段）
+func (r *TaskRepositoryImpl) Create(ctx context.Context, task *entity.Task) error {
+	sanitizeTaskOptionalFields(task)
+
+	db := r.db.WithContext(ctx)
+	if strings.TrimSpace(task.ResultPhotos) == "" {
+		db = db.Omit("ResultPhotos")
+	}
+
+	return db.Create(task).Error
+}
+
+// Update 更新任务（兼容 PostgreSQL JSON/UUID 字段）
+func (r *TaskRepositoryImpl) Update(ctx context.Context, task *entity.Task) error {
+	sanitizeTaskOptionalFields(task)
+
+	db := r.db.WithContext(ctx)
+	if strings.TrimSpace(task.ResultPhotos) == "" {
+		db = db.Omit("ResultPhotos")
+	}
+
+	return db.Save(task).Error
+}
+
+func sanitizeTaskOptionalFields(task *entity.Task) {
+	if task.AssigneeID != nil && strings.TrimSpace(*task.AssigneeID) == "" {
+		task.AssigneeID = nil
+	}
+	if task.MissingPersonID != nil && strings.TrimSpace(*task.MissingPersonID) == "" {
+		task.MissingPersonID = nil
 	}
 }
 
