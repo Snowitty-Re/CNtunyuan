@@ -1,9 +1,10 @@
 const dashboardService = require('../../services/dashboard')
 const missingPersonService = require('../../services/missingPerson')
 const dialectService = require('../../services/dialect')
-const { formatDate, formatTimeAgo, showError, showLoading, hideLoading, joinLocation } = require('../../utils/util')
+const { formatDate, formatTimeAgo, showError, showLoading, hideLoading, joinLocation, normalizeMediaUrl, normalizeAge } = require('../../utils/util')
 const app = getApp()
 const CASES_STATUS_FILTER_KEY = 'cases_status_filter'
+const CASES_LIST_DIRTY_KEY = 'cases_list_dirty'
 
 Page({
   data: {
@@ -52,6 +53,12 @@ Page({
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
     this.updateGreeting()
+    const listDirty = wx.getStorageSync(CASES_LIST_DIRTY_KEY)
+    if (listDirty) {
+      wx.removeStorageSync(CASES_LIST_DIRTY_KEY)
+      this.loadRecentCases()
+      return
+    }
     // Throttle: skip if loaded less than 30s ago
     const now = Date.now()
     if (this._lastLoadTime && now - this._lastLoadTime < 30000) return
@@ -232,7 +239,7 @@ Page({
         photoUrl: this.getPhotoUrl(item),
         missingLocation: joinLocation(item, '未知地点'),
         missingTime: item.missing_time ? formatTimeAgo(item.missing_time) : '未知时间',
-        age: this.calculateAge(item.birth_date),
+        age: normalizeAge(item.age),
         gender: item.gender === 'male' ? '男' : item.gender === 'female' ? '女' : '未知'
       }))
 
@@ -297,34 +304,15 @@ Page({
   getPhotoUrl(item) {
     // 尝试多种可能的图片字段
     if (item.photos && item.photos.length > 0) {
-      return item.photos[0].url || item.photos[0]
+      return normalizeMediaUrl(item.photos[0].url || item.photos[0]) || '/assets/images/default-avatar.png'
     }
-    if (item.photo_url) return item.photo_url
-    if (item.avatar) return item.avatar
-    if (item.image) return item.image
-    if (item.cover) return item.cover
-    if (item.cover_url) return item.cover_url
+    if (item.photo_url) return normalizeMediaUrl(item.photo_url) || '/assets/images/default-avatar.png'
+    if (item.avatar) return normalizeMediaUrl(item.avatar) || '/assets/images/default-avatar.png'
+    if (item.image) return normalizeMediaUrl(item.image) || '/assets/images/default-avatar.png'
+    if (item.cover) return normalizeMediaUrl(item.cover) || '/assets/images/default-avatar.png'
+    if (item.cover_url) return normalizeMediaUrl(item.cover_url) || '/assets/images/default-avatar.png'
     // 默认头像
     return '/assets/images/default-avatar.png'
-  },
-
-  /**
-   * 计算年龄
-   */
-  calculateAge(birthDate) {
-    if (!birthDate) return null
-    try {
-      const birth = new Date(birthDate)
-      const now = new Date()
-      let age = now.getFullYear() - birth.getFullYear()
-      const monthDiff = now.getMonth() - birth.getMonth()
-      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
-        age--
-      }
-      return age > 0 ? age : null
-    } catch (e) {
-      return null
-    }
   },
 
   /**

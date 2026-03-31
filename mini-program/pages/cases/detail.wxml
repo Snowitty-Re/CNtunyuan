@@ -19,7 +19,7 @@
     <view class="hero-info">
       <view class="hero-name-row">
         <text class="hero-name">{{caseData.name}}</text>
-        <text class="hero-age" wx:if="{{caseData.age}}">{{caseData.age}}岁</text>
+        <text class="hero-age" wx:if="{{caseData.displayAge}}">{{caseData.displayAgeText}}</text>
       </view>
       <view class="hero-tags">
         <view class="hero-tag gender-tag" wx:if="{{caseData.gender}}">
@@ -67,9 +67,9 @@
         <text class="info-label">性别</text>
         <text class="info-value">{{genderMap[caseData.gender] || '未知'}}</text>
       </view>
-      <view class="info-cell" wx:if="{{caseData.age}}">
+      <view class="info-cell">
         <text class="info-label">年龄</text>
-        <text class="info-value">{{caseData.age}}岁</text>
+        <text class="info-value">{{caseData.displayAgeText}}</text>
       </view>
       <view class="info-cell" wx:if="{{caseData.height}}">
         <text class="info-label">身高</text>

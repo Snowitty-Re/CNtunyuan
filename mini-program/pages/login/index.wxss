@@ -100,47 +100,51 @@ page {
   width: 88%;
   max-width: 650rpx;
   background: #fff;
-  border-radius: 32rpx;
-  padding: 48rpx 40rpx 40rpx;
-  box-shadow: 0 8rpx 60rpx rgba(255, 140, 66, 0.12), 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  border-radius: 36rpx;
+  padding: 34rpx 34rpx 40rpx;
+  box-shadow: 0 12rpx 68rpx rgba(255, 140, 66, 0.15), 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 
 /* ---------- 登录标签切换 ---------- */
 .login-tabs {
+  background: #f9f4ee;
+  border-radius: 999rpx;
   display: flex;
-  justify-content: center;
-  margin-bottom: 48rpx;
-  gap: 60rpx;
+  justify-content: space-between;
+  margin-bottom: 36rpx;
+  padding: 8rpx;
 }
 
 .tab-item {
+  flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding-bottom: 16rpx;
+  justify-content: center;
+  height: 76rpx;
+  border-radius: 999rpx;
   position: relative;
 }
 
 .tab-label {
-  font-size: 30rpx;
-  color: #BCBCBC;
-  font-weight: 500;
+  font-size: 28rpx;
+  color: #9f978f;
+  font-weight: 600;
   transition: color 0.3s;
 }
 
 .tab-item.active .tab-label {
-  color: #FF8C42;
+  color: #ffffff;
   font-weight: 700;
-  font-size: 32rpx;
+  font-size: 30rpx;
 }
 
 .tab-indicator {
-  position: absolute;
-  bottom: 0;
-  width: 48rpx;
-  height: 6rpx;
-  border-radius: 3rpx;
-  background: linear-gradient(90deg, #FF8C42, #FFA866);
+  display: none;
+}
+
+.tab-item.active {
+  background: linear-gradient(135deg, #ff8b42 0%, #ff6f37 100%);
+  box-shadow: 0 6rpx 16rpx rgba(255, 122, 64, 0.35);
 }
 
 /* ---------- 微信登录区域 ---------- */
@@ -212,6 +216,29 @@ page {
 .phone-section {
   display: flex;
   flex-direction: column;
+  background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+  border-radius: 26rpx;
+  padding: 24rpx 20rpx 16rpx;
+}
+
+.phone-head {
+  margin-bottom: 24rpx;
+}
+
+.phone-title {
+  display: block;
+  font-size: 34rpx;
+  color: #3a3027;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.phone-subtitle {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #aa9f93;
+  line-height: 1.4;
 }
 
 /* 绑定通知 */
@@ -221,8 +248,8 @@ page {
   background: #FFF6ED;
   border: 1rpx solid #FFE0C2;
   border-radius: 16rpx;
-  padding: 20rpx 24rpx;
-  margin-bottom: 36rpx;
+  padding: 18rpx 20rpx;
+  margin-bottom: 22rpx;
 }
 
 .notice-icon {
@@ -247,30 +274,38 @@ page {
 
 /* 表单项 */
 .form-item {
-  margin-bottom: 28rpx;
+  margin-bottom: 22rpx;
+}
+
+.form-label {
+  display: block;
+  margin: 0 0 10rpx 12rpx;
+  font-size: 24rpx;
+  color: #8e8173;
+  font-weight: 600;
 }
 
 .input-box {
   display: flex;
   align-items: center;
-  background: #F8F5F1;
-  border: 2rpx solid #F0EBE5;
-  border-radius: 50rpx;
-  padding: 0 30rpx;
-  height: 96rpx;
+  background: #fff;
+  border: 2rpx solid #eadfd3;
+  border-radius: 24rpx;
+  padding: 0 24rpx;
+  height: 92rpx;
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .input-box:focus-within {
-  border-color: #FF8C42;
-  box-shadow: 0 0 0 4rpx rgba(255, 140, 66, 0.1);
+  border-color: #ff8c42;
+  box-shadow: 0 0 0 4rpx rgba(255, 140, 66, 0.13);
 }
 
 .input-prefix {
   flex-shrink: 0;
-  margin-right: 20rpx;
-  padding-right: 20rpx;
-  border-right: 2rpx solid #E8E2DC;
+  margin-right: 16rpx;
+  padding-right: 16rpx;
+  border-right: 2rpx solid #f1e6dc;
 }
 
 .field-icon {
@@ -293,7 +328,7 @@ page {
   flex: 1;
   font-size: 30rpx;
   color: #333;
-  height: 96rpx;
+  height: 92rpx;
 }
 
 .placeholder-style {
@@ -303,7 +338,7 @@ page {
 
 /* 验证码输入行 */
 .code-input-box {
-  padding-right: 10rpx;
+  padding-right: 8rpx;
 }
 
 .code-btn-wrapper {
@@ -312,12 +347,12 @@ page {
 }
 
 .send-code-btn {
-  height: 64rpx;
-  line-height: 64rpx;
+  height: 62rpx;
+  line-height: 62rpx;
   font-size: 24rpx;
   color: #C0B8AE;
   background: #EDE8E3;
-  border-radius: 32rpx;
+  border-radius: 20rpx;
   padding: 0 24rpx !important;
   margin: 0;
   white-space: nowrap;
@@ -341,15 +376,15 @@ page {
 /* 提交按钮 */
 .submit-btn {
   width: 100% !important;
-  height: 100rpx;
+  height: 94rpx;
   background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%);
-  border-radius: 50rpx !important;
+  border-radius: 24rpx !important;
   border: none !important;
-  font-size: 34rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: #fff !important;
-  letter-spacing: 8rpx;
-  margin-top: 16rpx;
+  letter-spacing: 6rpx;
+  margin-top: 12rpx;
   padding: 0 !important;
   box-shadow: 0 8rpx 30rpx rgba(255, 107, 53, 0.35);
   transition: opacity 0.2s;
@@ -370,7 +405,7 @@ page {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 32rpx;
+  margin-top: 24rpx;
 }
 
 .extra-link {
@@ -390,7 +425,7 @@ page {
 /* 返回链接 */
 .back-link {
   text-align: center;
-  margin-top: 36rpx;
+  margin-top: 24rpx;
 }
 
 .back-text {
@@ -398,6 +433,7 @@ page {
   color: #B0A89E;
   padding: 12rpx 0;
 }
+
 
 /* ---------- 底部协议 ---------- */
 .agreement-section {

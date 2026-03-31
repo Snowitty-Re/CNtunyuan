@@ -1,7 +1,8 @@
 const missingPersonService = require('../../services/missingPerson')
-const { formatDate, showLoading, hideLoading, debounce, joinLocation } = require('../../utils/util')
+const { formatDate, showLoading, hideLoading, debounce, joinLocation, normalizeMediaUrl } = require('../../utils/util')
 const app = getApp()
 const CASES_STATUS_FILTER_KEY = 'cases_status_filter'
+const CASES_LIST_DIRTY_KEY = 'cases_list_dirty'
 
 // 状态映射
 const STATUS_MAP = {
@@ -61,10 +62,18 @@ Page({
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
     const pendingStatus = wx.getStorageSync(CASES_STATUS_FILTER_KEY)
+    const listDirty = wx.getStorageSync(CASES_LIST_DIRTY_KEY)
     if (pendingStatus) {
       wx.removeStorageSync(CASES_STATUS_FILTER_KEY)
       if (pendingStatus === this.data.currentStatus) return
       this.applyInitialStatus(pendingStatus)
+      this.loadCases()
+      return
+    }
+
+    if (listDirty) {
+      wx.removeStorageSync(CASES_LIST_DIRTY_KEY)
+      this.setData({ page: 1, cases: [], noMore: false })
       this.loadCases()
     }
   },
@@ -117,7 +126,7 @@ Page({
       const cases = list.map(item => ({
         ...item,
         missing_time: formatDate(item.missing_time),
-        photoUrl: this.getFirstPhoto(item.photos),
+        photoUrl: this.getFirstPhoto(item.photos, item.photo_url),
         // 拼接走失地点（后端返回 province, city, district, address）
         missingLocation: joinLocation(item, '未知')
       }))
@@ -149,9 +158,12 @@ Page({
   /**
    * 获取第一张图片
    */
-  getFirstPhoto(photos) {
+  getFirstPhoto(photos, fallbackPhotoUrl = '') {
     if (photos && photos.length > 0) {
-      return photos[0].url || photos[0]
+      return normalizeMediaUrl(photos[0].url || photos[0]) || '/assets/images/default-avatar.png'
+    }
+    if (fallbackPhotoUrl) {
+      return normalizeMediaUrl(fallbackPhotoUrl) || '/assets/images/default-avatar.png'
     }
     return '/assets/images/default-avatar.png'
   },

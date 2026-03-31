@@ -56,6 +56,11 @@
 
     <!-- 手机号登录 / 绑定手机号 -->
     <view class="phone-section" wx:if="{{loginType === 'phone' || isBinding}}">
+      <view class="phone-head">
+        <text class="phone-title">{{isBinding ? '绑定手机号' : '手机号登录'}}</text>
+        <text class="phone-subtitle">{{isBinding ? '验证码验证后即可继续使用' : '请输入您已登记的手机号和密码'}}</text>
+      </view>
+
       <!-- 绑定手机号提示 -->
       <view class="binding-notice" wx:if="{{isBinding}}">
         <text class="notice-icon">!</text>
@@ -64,6 +69,7 @@
 
       <!-- 手机号输入 -->
       <view class="form-item">
+        <text class="form-label">手机号</text>
         <view class="input-box">
           <view class="input-prefix">
             <text class="field-icon phone-icon">+86</text>
@@ -82,6 +88,7 @@
 
       <!-- 验证码输入（绑定时显示） -->
       <view class="form-item" wx:if="{{isBinding}}">
+        <text class="form-label">验证码</text>
         <view class="input-box code-input-box">
           <view class="input-prefix">
             <text class="field-icon code-icon-text">验证码</text>
@@ -109,6 +116,7 @@
 
       <!-- 密码输入（手机登录时显示） -->
       <view class="form-item" wx:if="{{!isBinding}}">
+        <text class="form-label">登录密码</text>
         <view class="input-box">
           <view class="input-prefix">
             <text class="field-icon pwd-icon-text">密码</text>

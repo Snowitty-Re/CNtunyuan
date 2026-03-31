@@ -1,6 +1,59 @@
 /**
  * 工具函数集合
  */
+const { API_BASE } = require('../config/index')
+
+function getApiOrigin() {
+  const matched = (API_BASE || '').match(/^(https?:\/\/[^/]+)/i)
+  return matched ? matched[1] : ''
+}
+
+/**
+ * 规范化媒体 URL（支持后端返回相对路径）
+ * @param {String} url 媒体地址
+ */
+const normalizeMediaUrl = (url) => {
+  if (!url || typeof url !== 'string') return ''
+  const value = url.trim()
+  if (!value) return ''
+
+  if (/^(https?:)?\/\//i.test(value) || /^wxfile:\/\//i.test(value) || /^data:image\//i.test(value) || value.startsWith('/assets/')) {
+    return value
+  }
+
+  const origin = getApiOrigin()
+  if (!origin) return value
+
+  if (value.startsWith('/')) {
+    return `${origin}${value}`
+  }
+
+  return `${origin}/${value}`
+}
+
+/**
+ * 规范化年龄显示值：仅使用登记时提交的 age 字段
+ * @param {Number|String} age 年龄字段
+ */
+const normalizeAge = (age) => {
+  let directAge = Number(age)
+
+  // 兼容字符串年龄，如 "11岁"
+  if (!Number.isFinite(directAge) && typeof age === 'string') {
+    const matched = age.match(/\d+/)
+    if (matched) {
+      directAge = Number(matched[0])
+    }
+  }
+
+  if (Number.isFinite(directAge)) {
+    if (directAge > 0 && directAge <= 130) {
+      return Math.floor(directAge)
+    }
+  }
+
+  return null
+}
 
 /**
  * 格式化日期
@@ -291,6 +344,8 @@ const calculateDistance = (lat1, lng1, lat2, lng2) => {
 module.exports = {
   formatDate,
   formatTimeAgo,
+  normalizeMediaUrl,
+  normalizeAge,
   showSuccess,
   showError,
   showToast,

@@ -2,6 +2,7 @@ const missingPersonService = require('../../services/missingPerson')
 const uploadService = require('../../services/upload')
 const { showLoading, hideLoading, showSuccess, showError, validatePhone, formatDate } = require('../../utils/util')
 const app = getApp()
+const CASES_LIST_DIRTY_KEY = 'cases_list_dirty'
 
 // 性别选项
 const GENDER_OPTIONS = [
@@ -471,6 +472,7 @@ Page({
       } else {
         await missingPersonService.create(submitData)
       }
+      wx.setStorageSync(CASES_LIST_DIRTY_KEY, 1)
 
       hideLoading()
       showSuccess(this.data.isEdit ? '更新成功' : '登记成功')

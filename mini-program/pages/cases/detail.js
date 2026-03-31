@@ -1,6 +1,7 @@
 const missingPersonService = require('../../services/missingPerson')
-const { formatDate, showConfirm, showSuccess, showLoading, hideLoading, joinLocation } = require('../../utils/util')
+const { formatDate, showConfirm, showSuccess, showLoading, hideLoading, joinLocation, normalizeMediaUrl, normalizeAge } = require('../../utils/util')
 const app = getApp()
+const CASES_LIST_DIRTY_KEY = 'cases_list_dirty'
 
 // 状态映射
 const STATUS_MAP = {
@@ -75,9 +76,17 @@ Page({
       // 处理数据 - 使用后端实际返回的字段
       data.missing_time = formatDate(data.missing_time)
       data.created_at = formatDate(data.created_at)
-      data.photoUrl = this.getFirstPhoto(data.photos)
+      data.photos = (data.photos || []).map((photo) => {
+        if (photo && typeof photo === 'object') {
+          return { ...photo, url: normalizeMediaUrl(photo.url) || photo.url }
+        }
+        return normalizeMediaUrl(photo) || photo
+      })
+      data.photoUrl = this.getFirstPhoto(data.photos, data.photo_url)
       
       data.displayLocation = joinLocation(data, '未知')
+      data.displayAge = normalizeAge(data.age)
+      data.displayAgeText = data.displayAge ? `${data.displayAge}岁` : '未知'
       
       // 衣着描述（后端字段为 clothes）
       data.clothes = data.clothes || '暂无描述'
@@ -123,9 +132,12 @@ Page({
   /**
    * 获取第一张图片
    */
-  getFirstPhoto(photos) {
+  getFirstPhoto(photos, fallbackPhotoUrl = '') {
     if (photos && photos.length > 0) {
-      return photos[0].url || photos[0]
+      return normalizeMediaUrl(photos[0].url || photos[0]) || '/assets/images/default-avatar.png'
+    }
+    if (fallbackPhotoUrl) {
+      return normalizeMediaUrl(fallbackPhotoUrl) || '/assets/images/default-avatar.png'
     }
     return '/assets/images/default-avatar.png'
   },
@@ -135,9 +147,12 @@ Page({
    */
   previewImage(e) {
     const { url } = e.currentTarget.dataset
-    const urls = (this.data.caseData.photos || []).map(p => p.url || p)
+    const urls = (this.data.caseData.photos || []).map(p => normalizeMediaUrl(p.url || p)).filter(Boolean)
+    if (urls.length === 0 && this.data.caseData.photoUrl) {
+      urls.push(this.data.caseData.photoUrl)
+    }
     wx.previewImage({
-      current: url,
+      current: normalizeMediaUrl(url) || url,
       urls
     })
   },
@@ -224,6 +239,7 @@ Page({
         showLoading('更新中...')
         try {
           await missingPersonService.updateStatus(caseData.id, newStatus)
+          wx.setStorageSync(CASES_LIST_DIRTY_KEY, 1)
           hideLoading()
           showSuccess('状态更新成功')
           this.loadCaseDetail()
@@ -250,6 +266,7 @@ Page({
         location: '',  // 找到地点由后端默认处理，此处不传走失地点
         note: '通过志愿者帮助找到'
       })
+      wx.setStorageSync(CASES_LIST_DIRTY_KEY, 1)
       hideLoading()
       showSuccess('标记成功')
       this.loadCaseDetail()
@@ -269,6 +286,7 @@ Page({
     showLoading('处理中...')
     try {
       await missingPersonService.markReunited(this.data.id)
+      wx.setStorageSync(CASES_LIST_DIRTY_KEY, 1)
       hideLoading()
       showSuccess('标记成功')
       this.loadCaseDetail()
