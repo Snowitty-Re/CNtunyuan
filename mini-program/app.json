@@ -4,6 +4,7 @@
     "pages/login/index",
     "pages/cases/list",
     "pages/cases/detail",
+    "pages/cases/track-create",
     "pages/cases/create",
     "pages/dialect/list",
     "pages/dialect/detail",

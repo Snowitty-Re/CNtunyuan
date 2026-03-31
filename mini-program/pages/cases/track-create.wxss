@@ -1,0 +1,167 @@
+.page {
+  min-height: 100vh;
+  background: #FDF8F3;
+}
+
+.form-scroll {
+  height: calc(100vh - 132rpx);
+}
+
+.section {
+  margin: 24rpx 28rpx 0;
+  padding: 28rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 18rpx rgba(139, 109, 78, 0.06);
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #2D1F10;
+  margin-bottom: 20rpx;
+}
+
+.field {
+  margin-top: 20rpx;
+}
+
+.label {
+  display: block;
+  font-size: 26rpx;
+  color: #6E5C4B;
+  margin-bottom: 10rpx;
+}
+
+.required::before {
+  content: '*';
+  color: #ff4d4f;
+  margin-right: 6rpx;
+}
+
+.textarea,
+.picker-value {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1rpx solid #EBDDCB;
+  border-radius: 14rpx;
+  background: #FFFBF7;
+  color: #2D1F10;
+  font-size: 28rpx;
+  padding: 18rpx 20rpx;
+}
+
+.input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1rpx solid #EBDDCB;
+  border-radius: 14rpx;
+  background: #FFFBF7;
+  color: #2D1F10;
+  font-size: 28rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+  padding: 0 20rpx;
+}
+
+.textarea {
+  min-height: 180rpx;
+}
+
+.placeholder {
+  color: #BCA892;
+}
+
+.count {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #A89888;
+  text-align: right;
+}
+
+.switch-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.switch-row .label {
+  margin-bottom: 0;
+}
+
+.picker-row {
+  display: block;
+}
+
+.picker-row .label {
+  margin-bottom: 10rpx;
+}
+
+.picker-row picker {
+  display: block;
+  width: 100%;
+}
+
+.picker-value {
+  min-height: 84rpx;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  word-break: keep-all;
+}
+
+.btn {
+  display: inline-block;
+  background: #FFF3EA;
+  color: #FF8C42;
+  border: 1rpx solid #FFD3B5;
+  border-radius: 12rpx;
+  padding: 14rpx 18rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.gps-row {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 20rpx;
+  align-items: flex-start;
+}
+
+.gps-col {
+  flex: 1;
+}
+
+@media (max-width: 360px) {
+  .gps-row {
+    flex-direction: column;
+    gap: 12rpx;
+  }
+}
+
+.bottom-space {
+  height: 180rpx;
+}
+
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  padding: 20rpx 24rpx 24rpx;
+  box-shadow: 0 -6rpx 24rpx rgba(0, 0, 0, 0.08);
+}
+
+.submit-btn {
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+}

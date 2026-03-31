@@ -173,7 +173,7 @@
         </view>
         <!-- Right: card -->
         <view class="timeline-card">
-          <view class="timeline-location">{{item.location}}</view>
+          <view class="timeline-location">{{item.displayLocation}}</view>
           <text class="timeline-desc" wx:if="{{item.description}}">{{item.description}}</text>
           <text class="timeline-time">{{item.displayTime}} · {{(item.reporter && item.reporter.nickname) || '志愿者'}}</text>
         </view>

@@ -120,6 +120,7 @@ Page({
       this.setData({
         tracks: (tracks || []).map(t => ({
           ...t,
+          displayLocation: t.location || joinLocation(t, '未知地点'),
           // 后端返回的字段是 time，不是 track_time
           displayTime: formatDate(t.time || t.created_at)
         }))
@@ -185,34 +186,12 @@ Page({
    */
   addTrack() {
     const { id } = this.data
-    const { caseData } = this.data
-    wx.showModal({
-      title: '添加线索',
-      editable: true,
-      placeholderText: '请输入线索描述...',
-      success: async (res) => {
-        if (res.confirm && res.content && res.content.trim()) {
-          try {
-            showLoading('提交中...')
-            // 使用后端要求的字段名
-            await missingPersonService.addTrack(id, {
-              description: res.content.trim(),
-              time: new Date().toISOString(),  // 使用 time 而非 track_time
-              location: caseData.displayLocation || '未知地点', // 添加必需的 location 字段
-              province: caseData.province,
-              city: caseData.city,
-              district: caseData.district,
-              address: caseData.address
-            })
-            hideLoading()
-            showSuccess('线索添加成功')
-            this.loadTracks()
-          } catch (error) {
-            hideLoading()
-            wx.showToast({ title: '添加失败', icon: 'none' })
-          }
-        }
-      }
+    if (!id) {
+      wx.showToast({ title: '案件ID无效', icon: 'none' })
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/cases/track-create?id=${id}`
     })
   },
 

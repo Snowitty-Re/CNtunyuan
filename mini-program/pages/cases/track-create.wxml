@@ -1,0 +1,121 @@
+<view class="page">
+  <scroll-view class="form-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="section">
+      <view class="section-title">线索内容</view>
+      <view class="field">
+        <text class="label required">线索描述</text>
+        <textarea
+          class="textarea"
+          placeholder="请描述目击时间、人物特征、行动方向、同行人员等"
+          placeholder-class="placeholder"
+          value="{{form.description}}"
+          data-field="description"
+          bindinput="onInput"
+          maxlength="500"
+          auto-height
+        />
+        <text class="count">{{form.description.length || 0}}/500</text>
+      </view>
+
+      <view class="field switch-row">
+        <text class="label">关键线索</text>
+        <switch color="#FF8C42" checked="{{form.isKeyPoint}}" bindchange="onKeyPointChange" />
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">线索时间</view>
+      <view class="field picker-row">
+        <text class="label required">日期</text>
+        <picker mode="date" value="{{form.date}}" bindchange="onDateChange">
+          <view class="picker-value">{{form.date || '请选择日期'}}</view>
+        </picker>
+      </view>
+      <view class="field picker-row">
+        <text class="label required">时间</text>
+        <picker mode="time" value="{{form.time}}" bindchange="onTimeChange">
+          <view class="picker-value">{{form.time || '请选择时间'}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-title">线索地点</view>
+      <view class="field">
+        <text class="label">地图选点</text>
+        <view class="btn" bindtap="chooseLocation">从地图选择位置</view>
+      </view>
+
+      <view class="field picker-row">
+        <text class="label">省市区</text>
+        <picker mode="region" value="{{[form.province, form.city, form.district]}}" bindchange="onRegionChange">
+          <view class="picker-value">
+            <text wx:if="{{form.province || form.city || form.district}}">{{form.province}} {{form.city}} {{form.district}}</text>
+            <text class="placeholder" wx:else>请选择省市区</text>
+          </view>
+        </picker>
+      </view>
+
+      <view class="field">
+        <text class="label">详细地址</text>
+        <input
+          class="input"
+          placeholder="如：北京街道府前路1号"
+          placeholder-class="placeholder"
+          value="{{form.address}}"
+          data-field="address"
+          bindinput="onInput"
+          maxlength="120"
+        />
+      </view>
+
+      <view class="field">
+        <text class="label required">地点摘要</text>
+        <input
+          class="input"
+          placeholder="展示在轨迹时间线上的地点文本"
+          placeholder-class="placeholder"
+          value="{{form.location}}"
+          data-field="location"
+          bindinput="onInput"
+          maxlength="120"
+        />
+      </view>
+
+      <view class="gps-row">
+        <view class="gps-col">
+          <text class="label">纬度</text>
+          <input
+            class="input"
+            type="digit"
+            placeholder="可选"
+            placeholder-class="placeholder"
+            value="{{form.lat}}"
+            data-field="lat"
+            bindinput="onInput"
+          />
+        </view>
+        <view class="gps-col">
+          <text class="label">经度</text>
+          <input
+            class="input"
+            type="digit"
+            placeholder="可选"
+            placeholder-class="placeholder"
+            value="{{form.lng}}"
+            data-field="lng"
+            bindinput="onInput"
+          />
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-space"></view>
+  </scroll-view>
+
+  <view class="footer">
+    <button class="submit-btn" bindtap="submit" loading="{{submitting}}" disabled="{{submitting}}">
+      提交线索
+    </button>
+  </view>
+</view>
