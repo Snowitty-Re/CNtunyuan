@@ -106,6 +106,11 @@ func NewRouter(
 
 // Setup 设置路由
 func (r *Router) Setup() {
+	// 本地存储静态文件路由（仅 local 模式）
+	if cfg := config.GetConfig(); cfg != nil && cfg.Storage.Type == "local" && cfg.Storage.LocalPath != "" {
+		r.engine.Static("/uploads", cfg.Storage.LocalPath)
+	}
+
 	// Swagger UI - 公开访问
 	r.engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -118,7 +123,7 @@ func (r *Router) Setup() {
 
 	// Prometheus 指标端点（仅管理员可访问，避免泄露运维数据）
 	api.GET("/metrics", r.authMiddleware.Required(), middleware.RequireAdmin(), gin.WrapH(promhttp.Handler()))
-	
+
 	// Swagger JSON/YAML 文档端点
 	api.GET("/docs", func(c *gin.Context) {
 		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
@@ -139,7 +144,7 @@ func (r *Router) Setup() {
 	r.taskHandler.RegisterRoutes(api, r.authMiddleware)
 	r.uploadHandler.RegisterRoutes(api, r.authMiddleware)
 	r.dashboardHandler.RegisterRoutes(api, r.authMiddleware)
-	
+
 	// 注册审计日志路由（如果配置了）
 	if r.auditHandler != nil {
 		r.auditHandler.RegisterRoutes(api, r.authMiddleware)

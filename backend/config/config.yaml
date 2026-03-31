@@ -43,9 +43,9 @@ wechat:
 
 storage:
   type: local  # local/oss/cos
-  local_path: ./uploads
+  local_path: /Users/chengzitian/github.com/Snowitty/CNtunyuan/backend/uploads
   # 【生产环境】修改为实际域名，用于生成文件访问URL
-  base_url: https://cntuanyuan.com/uploads
+  base_url: http://localhost:8080/uploads
   max_file_size: 52428800  # 50MB
   allowed_types: "jpg,png,gif,mp4,mp3,wav"
   

@@ -3,6 +3,8 @@ package config
 
 import (
 	"fmt"
+	"net/url"
+	"path/filepath"
 	"strings"
 )
 
@@ -141,6 +143,23 @@ func (v *ConfigValidator) validateStorage(cfg *Config) {
 
 	if cfg.Storage.MaxFileSize > 1024*1024*1024 {
 		v.addError("storage.max_file_size", "最大文件大小不能超过1GB")
+	}
+
+	if cfg.Storage.Type == "local" {
+		if strings.TrimSpace(cfg.Storage.LocalPath) == "" {
+			v.addError("storage.local_path", "使用本地存储时 local_path 不能为空")
+		} else if !filepath.IsAbs(cfg.Storage.LocalPath) {
+			v.addError("storage.local_path", "使用本地存储时 local_path 必须是绝对路径")
+		}
+
+		if strings.TrimSpace(cfg.Storage.BaseURL) == "" {
+			v.addError("storage.base_url", "使用本地存储时 base_url 不能为空")
+		} else {
+			u, err := url.Parse(cfg.Storage.BaseURL)
+			if err != nil || u.Scheme == "" || u.Host == "" {
+				v.addError("storage.base_url", "base_url 必须是合法的完整 URL，例如 http://localhost:8080/uploads")
+			}
+		}
 	}
 
 	// 验证OSS配置

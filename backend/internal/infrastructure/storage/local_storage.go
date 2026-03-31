@@ -27,9 +27,16 @@ type LocalStorage struct {
 
 // NewLocalStorage 创建本地存储
 func NewLocalStorage(cfg *config.StorageConfig) service.StorageService {
+	basePath := cfg.LocalPath
+	if absPath, err := filepath.Abs(basePath); err == nil {
+		basePath = absPath
+	}
+
+	baseURL := strings.TrimRight(cfg.BaseURL, "/")
+
 	return &LocalStorage{
-		basePath:     cfg.LocalPath,
-		baseURL:      cfg.BaseURL,
+		basePath:     basePath,
+		baseURL:      baseURL,
 		maxSize:      cfg.MaxFileSize,
 		allowedTypes: strings.Split(cfg.AllowedTypes, ","),
 	}
