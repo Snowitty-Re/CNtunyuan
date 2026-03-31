@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS ty_missing_persons (
     height INTEGER,
     weight INTEGER,
     description TEXT,
+    case_type VARCHAR(20) NOT NULL DEFAULT 'other' CHECK (case_type IN ('elderly', 'child', 'adult', 'disability', 'other')),
     photo_url VARCHAR(255),
     
     missing_time TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -170,6 +171,8 @@ CREATE TABLE IF NOT EXISTS ty_missing_persons (
     city VARCHAR(50),
     district VARCHAR(50),
     address VARCHAR(255),
+    missing_latitude DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK (missing_latitude BETWEEN -90 AND 90),
+    missing_longitude DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK (missing_longitude BETWEEN -180 AND 180),
     clothes TEXT,
     features TEXT,
     
@@ -199,15 +202,20 @@ CREATE TABLE IF NOT EXISTS ty_missing_persons (
 COMMENT ON TABLE ty_missing_persons IS '走失人员表';
 COMMENT ON COLUMN ty_missing_persons.status IS '状态: missing-待寻找, searching-寻找中, found-已找到, reunited-已团聚, closed-已关闭';
 COMMENT ON COLUMN ty_missing_persons.urgency IS '紧急程度: critical-紧急, high-高, medium-中, low-低';
+COMMENT ON COLUMN ty_missing_persons.case_type IS '案件类型: elderly-老人, child-儿童, adult-成人, disability-残障, other-其他';
+COMMENT ON COLUMN ty_missing_persons.missing_latitude IS '走失地点纬度';
+COMMENT ON COLUMN ty_missing_persons.missing_longitude IS '走失地点经度';
 
 -- 走失人员表索引
 CREATE INDEX idx_missing_persons_status ON ty_missing_persons(status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_urgency ON ty_missing_persons(urgency) WHERE deleted_at IS NULL;
+CREATE INDEX idx_missing_persons_case_type ON ty_missing_persons(case_type) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_reporter ON ty_missing_persons(reporter_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_org ON ty_missing_persons(org_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_assigned ON ty_missing_persons(assigned_to) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_missing_time ON ty_missing_persons(missing_time) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_location ON ty_missing_persons(province, city, district) WHERE deleted_at IS NULL;
+CREATE INDEX idx_missing_persons_geo ON ty_missing_persons(missing_latitude, missing_longitude) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_deleted_at ON ty_missing_persons(deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- ============================================================

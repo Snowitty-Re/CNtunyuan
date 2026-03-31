@@ -8,54 +8,56 @@ import (
 
 // CreateMissingPersonRequest 创建走失人员请求
 type CreateMissingPersonRequest struct {
-	Name         string    `json:"name" binding:"required"`
-	Gender       string    `json:"gender" binding:"required"`
-	BirthDate    time.Time `json:"birth_date"`
-	Age          int       `json:"age"`
-	Height       int       `json:"height"`
-	Weight       int       `json:"weight"`
-	Description  string    `json:"description"`
-	PhotoUrl     string    `json:"photo_url"`
-	MissingTime  time.Time `json:"missing_time" binding:"required"`
-	Province     string    `json:"province"`
-	City         string    `json:"city"`
-	District     string    `json:"district"`
+	Name             string    `json:"name" binding:"required"`
+	Gender           string    `json:"gender" binding:"required"`
+	BirthDate        time.Time `json:"birth_date"`
+	Age              int       `json:"age"`
+	Height           int       `json:"height"`
+	Weight           int       `json:"weight"`
+	Description      string    `json:"description"`
+	CaseType         string    `json:"case_type"`
+	PhotoUrl         string    `json:"photo_url"`
+	MissingTime      time.Time `json:"missing_time" binding:"required"`
+	Province         string    `json:"province"`
+	City             string    `json:"city"`
+	District         string    `json:"district"`
 	Address          string    `json:"address"`
 	MissingLatitude  float64   `json:"missing_latitude"`
 	MissingLongitude float64   `json:"missing_longitude"`
 	Clothes          string    `json:"clothes"`
 	Features         string    `json:"features"`
 	ContactName      string    `json:"contact_name" binding:"required"`
-	ContactPhone string    `json:"contact_phone" binding:"required"`
-	ContactRel   string    `json:"contact_rel"`
-	AltContact   string    `json:"alt_contact"`
-	UrgencyLevel string    `json:"urgency_level"`
+	ContactPhone     string    `json:"contact_phone" binding:"required"`
+	ContactRel       string    `json:"contact_rel"`
+	AltContact       string    `json:"alt_contact"`
+	UrgencyLevel     string    `json:"urgency_level"`
 }
 
 // UpdateMissingPersonRequest 更新走失人员请求
 type UpdateMissingPersonRequest struct {
-	Name         string    `json:"name"`
-	Gender       string    `json:"gender"`
-	BirthDate    time.Time `json:"birth_date"`
-	Age          int       `json:"age"`
-	Height       int       `json:"height"`
-	Weight       int       `json:"weight"`
-	Description  string    `json:"description"`
-	PhotoUrl     string    `json:"photo_url"`
-	MissingTime  time.Time `json:"missing_time"`
-	Province     string    `json:"province"`
-	City         string    `json:"city"`
-	District     string    `json:"district"`
-	Address      string    `json:"address"`
+	Name             string    `json:"name"`
+	Gender           string    `json:"gender"`
+	BirthDate        time.Time `json:"birth_date"`
+	Age              int       `json:"age"`
+	Height           int       `json:"height"`
+	Weight           int       `json:"weight"`
+	Description      string    `json:"description"`
+	CaseType         string    `json:"case_type"`
+	PhotoUrl         string    `json:"photo_url"`
+	MissingTime      time.Time `json:"missing_time"`
+	Province         string    `json:"province"`
+	City             string    `json:"city"`
+	District         string    `json:"district"`
+	Address          string    `json:"address"`
 	MissingLatitude  float64   `json:"missing_latitude"`
 	MissingLongitude float64   `json:"missing_longitude"`
-	Clothes      string    `json:"clothes"`
-	Features     string    `json:"features"`
-	ContactName  string    `json:"contact_name"`
-	ContactPhone string    `json:"contact_phone"`
-	ContactRel   string    `json:"contact_rel"`
-	AltContact   string    `json:"alt_contact"`
-	UrgencyLevel string    `json:"urgency_level"`
+	Clothes          string    `json:"clothes"`
+	Features         string    `json:"features"`
+	ContactName      string    `json:"contact_name"`
+	ContactPhone     string    `json:"contact_phone"`
+	ContactRel       string    `json:"contact_rel"`
+	AltContact       string    `json:"alt_contact"`
+	UrgencyLevel     string    `json:"urgency_level"`
 }
 
 // MissingPersonPhoto 走失人员照片响应
@@ -68,43 +70,44 @@ type MissingPersonPhoto struct {
 
 // MissingPersonResponse 走失人员响应
 type MissingPersonResponse struct {
-	ID            string               `json:"id"`
-	CaseNo        string               `json:"case_no"`
-	Name          string               `json:"name"`
-	Gender        string               `json:"gender"`
-	BirthDate     *time.Time           `json:"birth_date,omitempty"`
-	Age           int                  `json:"age"`
-	Height        int                  `json:"height"`
-	Weight        int                  `json:"weight"`
-	Description   string               `json:"description"`
-	PhotoUrl      string               `json:"photo_url"`
-	MissingTime   time.Time            `json:"missing_time"`
-	Province      string               `json:"province"`
-	City          string               `json:"city"`
-	District      string               `json:"district"`
+	ID               string               `json:"id"`
+	CaseNo           string               `json:"case_no"`
+	Name             string               `json:"name"`
+	Gender           string               `json:"gender"`
+	BirthDate        *time.Time           `json:"birth_date,omitempty"`
+	Age              int                  `json:"age"`
+	Height           int                  `json:"height"`
+	Weight           int                  `json:"weight"`
+	Description      string               `json:"description"`
+	CaseType         string               `json:"case_type"`
+	PhotoUrl         string               `json:"photo_url"`
+	MissingTime      time.Time            `json:"missing_time"`
+	Province         string               `json:"province"`
+	City             string               `json:"city"`
+	District         string               `json:"district"`
 	Address          string               `json:"address"`
 	MissingLatitude  float64              `json:"missing_latitude"`
 	MissingLongitude float64              `json:"missing_longitude"`
 	Clothes          string               `json:"clothes"`
-	Features      string               `json:"features"`
-	ContactName   string               `json:"contact_name"`
-	ContactPhone  string               `json:"contact_phone"`
-	ContactRel    string               `json:"contact_rel"`
-	AltContact    string               `json:"alt_contact"`
-	Status        string               `json:"status"`
-	UrgencyLevel  string               `json:"urgency_level"`
-	Views         int                  `json:"views"`
-	ShareCount    int                  `json:"share_count"`
-	ReporterID    string               `json:"reporter_id"`
-	OrgID         string               `json:"org_id"`
-	AssignedTo    *string              `json:"assigned_to,omitempty"`
-	FoundTime     *time.Time           `json:"found_time,omitempty"`
-	FoundLocation string               `json:"found_location"`
-	FoundNote     string               `json:"found_note"`
-	Reporter      *UserResponse        `json:"reporter,omitempty"`
-	Assignee      *UserResponse        `json:"assignee,omitempty"`
-	Photos        []MissingPersonPhoto `json:"photos,omitempty"`
-	CreatedAt     time.Time            `json:"created_at"`
+	Features         string               `json:"features"`
+	ContactName      string               `json:"contact_name"`
+	ContactPhone     string               `json:"contact_phone"`
+	ContactRel       string               `json:"contact_rel"`
+	AltContact       string               `json:"alt_contact"`
+	Status           string               `json:"status"`
+	UrgencyLevel     string               `json:"urgency_level"`
+	Views            int                  `json:"views"`
+	ShareCount       int                  `json:"share_count"`
+	ReporterID       string               `json:"reporter_id"`
+	OrgID            string               `json:"org_id"`
+	AssignedTo       *string              `json:"assigned_to,omitempty"`
+	FoundTime        *time.Time           `json:"found_time,omitempty"`
+	FoundLocation    string               `json:"found_location"`
+	FoundNote        string               `json:"found_note"`
+	Reporter         *UserResponse        `json:"reporter,omitempty"`
+	Assignee         *UserResponse        `json:"assignee,omitempty"`
+	Photos           []MissingPersonPhoto `json:"photos,omitempty"`
+	CreatedAt        time.Time            `json:"created_at"`
 }
 
 // MissingPersonListRequest 走失人员列表请求
@@ -120,6 +123,7 @@ type MissingPersonListRequest struct {
 	City         string `form:"city"`
 	District     string `form:"district"`
 	UrgencyLevel string `form:"urgency_level"`
+	CaseType     string `form:"case_type"`
 }
 
 // MissingPersonListResponse 走失人员列表响应
@@ -186,40 +190,41 @@ type MissingPersonStatsResponse struct {
 // ToMissingPersonResponse 转换为走失人员响应
 func ToMissingPersonResponse(mp *entity.MissingPerson) MissingPersonResponse {
 	resp := MissingPersonResponse{
-		ID:            mp.ID,
-		CaseNo:        mp.CaseNo,
-		Name:          mp.Name,
-		Gender:        mp.Gender,
-		BirthDate:     mp.BirthDate,
-		Age:           mp.Age,
-		Height:        mp.Height,
-		Weight:        mp.Weight,
-		Description:   mp.Description,
-		PhotoUrl:      mp.PhotoUrl,
-		MissingTime:   mp.MissingTime,
-		Province:      mp.Province,
-		City:          mp.City,
-		District:      mp.District,
+		ID:               mp.ID,
+		CaseNo:           mp.CaseNo,
+		Name:             mp.Name,
+		Gender:           mp.Gender,
+		BirthDate:        mp.BirthDate,
+		Age:              mp.Age,
+		Height:           mp.Height,
+		Weight:           mp.Weight,
+		Description:      mp.Description,
+		CaseType:         string(mp.CaseType),
+		PhotoUrl:         mp.PhotoUrl,
+		MissingTime:      mp.MissingTime,
+		Province:         mp.Province,
+		City:             mp.City,
+		District:         mp.District,
 		Address:          mp.Address,
 		MissingLatitude:  mp.MissingLatitude,
 		MissingLongitude: mp.MissingLongitude,
 		Clothes:          mp.Clothes,
-		Features:      mp.Features,
-		ContactName:   mp.ContactName,
-		ContactPhone:  mp.ContactPhone,
-		ContactRel:    mp.ContactRel,
-		AltContact:    mp.AltContact,
-		Status:        string(mp.Status),
-		UrgencyLevel:  string(mp.Urgency),
-		Views:         mp.Views,
-		ShareCount:    mp.ShareCount,
-		ReporterID:    mp.ReporterID,
-		OrgID:         mp.OrgID,
-		AssignedTo:    mp.AssignedTo,
-		FoundTime:     mp.FoundTime,
-		FoundLocation: mp.FoundLocation,
-		FoundNote:     mp.FoundNote,
-		CreatedAt:     mp.CreatedAt,
+		Features:         mp.Features,
+		ContactName:      mp.ContactName,
+		ContactPhone:     mp.ContactPhone,
+		ContactRel:       mp.ContactRel,
+		AltContact:       mp.AltContact,
+		Status:           string(mp.Status),
+		UrgencyLevel:     string(mp.Urgency),
+		Views:            mp.Views,
+		ShareCount:       mp.ShareCount,
+		ReporterID:       mp.ReporterID,
+		OrgID:            mp.OrgID,
+		AssignedTo:       mp.AssignedTo,
+		FoundTime:        mp.FoundTime,
+		FoundLocation:    mp.FoundLocation,
+		FoundNote:        mp.FoundNote,
+		CreatedAt:        mp.CreatedAt,
 	}
 
 	if mp.Reporter != nil {

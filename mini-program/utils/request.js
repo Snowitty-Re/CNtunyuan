@@ -4,7 +4,7 @@
  */
 
 // API 基础配置
-const { API_BASE: API_BASE_URL } = require('../config')
+const { API_BASE: API_BASE_URL } = require('../config/index')
 // 请求队列（用于 token 刷新时暂存请求）
 let requestQueue = []
 let isRefreshing = false

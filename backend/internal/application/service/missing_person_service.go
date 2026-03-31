@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	ErrMissingPersonNotFound    = errors.New("missing person not found")
-	ErrInvalidStatus            = errors.New("invalid status")
-	ErrMissingPersonForbidden   = errors.New("no permission to modify this case")
+	ErrMissingPersonNotFound  = errors.New("missing person not found")
+	ErrInvalidStatus          = errors.New("invalid status")
+	ErrMissingPersonForbidden = errors.New("no permission to modify this case")
 )
 
 // generateCaseNo 生成案件编号 (格式: CASE-YYYYMMDD-XXXXXXXX)
@@ -69,33 +69,41 @@ func (s *MissingPersonAppService) Create(ctx context.Context, req *dto.CreateMis
 		return nil, fmt.Errorf("无效的紧急程度: %s，合法值为 critical/high/medium/low", req.UrgencyLevel)
 	}
 
+	caseType := entity.MissingCaseType(req.CaseType)
+	if req.CaseType == "" {
+		caseType = entity.MissingCaseTypeOther
+	} else if !entity.IsValidCaseType(caseType) {
+		return nil, fmt.Errorf("无效的案件类型: %s，合法值为 elderly/child/adult/disability/other", req.CaseType)
+	}
+
 	mp := &entity.MissingPerson{
-		Name:         req.Name,
-		Gender:       req.Gender,
-		BirthDate:    &req.BirthDate,
-		Age:          req.Age,
-		Height:       req.Height,
-		Weight:       req.Weight,
-		Description:  req.Description,
-		PhotoUrl:     req.PhotoUrl,
-		MissingTime:  req.MissingTime,
-		Province:     req.Province,
-		City:         req.City,
-		District:     req.District,
-		Address:      req.Address,
+		Name:             req.Name,
+		Gender:           req.Gender,
+		BirthDate:        &req.BirthDate,
+		Age:              req.Age,
+		Height:           req.Height,
+		Weight:           req.Weight,
+		Description:      req.Description,
+		CaseType:         caseType,
+		PhotoUrl:         req.PhotoUrl,
+		MissingTime:      req.MissingTime,
+		Province:         req.Province,
+		City:             req.City,
+		District:         req.District,
+		Address:          req.Address,
 		MissingLatitude:  req.MissingLatitude,
 		MissingLongitude: req.MissingLongitude,
-		Clothes:      req.Clothes,
-		Features:     req.Features,
-		ContactName:  req.ContactName,
-		ContactPhone: req.ContactPhone,
-		ContactRel:   req.ContactRel,
-		AltContact:   req.AltContact,
-		ReporterID:   reporterID,
-		OrgID:        orgID,
-		Status:       entity.MissingStatusMissing,
-		Urgency:      urgency,
-		CaseNo:       caseNo,
+		Clothes:          req.Clothes,
+		Features:         req.Features,
+		ContactName:      req.ContactName,
+		ContactPhone:     req.ContactPhone,
+		ContactRel:       req.ContactRel,
+		AltContact:       req.AltContact,
+		ReporterID:       reporterID,
+		OrgID:            orgID,
+		Status:           entity.MissingStatusMissing,
+		Urgency:          urgency,
+		CaseNo:           caseNo,
 	}
 
 	if err := s.createWithRetry(ctx, mp); err != nil {
@@ -145,6 +153,7 @@ func (s *MissingPersonAppService) List(ctx context.Context, req *dto.MissingPers
 	query.City = req.City
 	query.District = req.District
 	query.UrgencyLevel = req.UrgencyLevel
+	query.CaseType = req.CaseType
 
 	result, err := s.mpRepo.List(ctx, query)
 	if err != nil {
@@ -197,6 +206,13 @@ func (s *MissingPersonAppService) Update(ctx context.Context, id string, req *dt
 	}
 	if req.Description != "" {
 		mp.Description = req.Description
+	}
+	if req.CaseType != "" {
+		caseType := entity.MissingCaseType(req.CaseType)
+		if !entity.IsValidCaseType(caseType) {
+			return nil, fmt.Errorf("无效的案件类型: %s，合法值为 elderly/child/adult/disability/other", req.CaseType)
+		}
+		mp.CaseType = caseType
 	}
 	if req.PhotoUrl != "" {
 		mp.PhotoUrl = req.PhotoUrl

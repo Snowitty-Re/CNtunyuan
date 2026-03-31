@@ -69,6 +69,7 @@ type MissingPersonQuery struct {
 	District     string               `json:"district"`
 	MissingDate  string               `json:"missing_date"`
 	UrgencyLevel string               `json:"urgency_level"`
+	CaseType     string               `json:"case_type"`
 	SortField    string               `json:"sort_field"`
 	SortOrder    string               `json:"sort_order"`
 }

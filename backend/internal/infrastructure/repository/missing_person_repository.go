@@ -69,6 +69,9 @@ func (r *MissingPersonRepositoryImpl) List(ctx context.Context, query *repositor
 	if query.UrgencyLevel != "" {
 		db = db.Where("urgency = ?", query.UrgencyLevel)
 	}
+	if query.CaseType != "" {
+		db = db.Where("case_type = ?", query.CaseType)
+	}
 
 	// 统计总数
 	if err := db.Count(&total).Error; err != nil {
@@ -80,7 +83,7 @@ func (r *MissingPersonRepositoryImpl) List(ctx context.Context, query *repositor
 	if query.SortField != "" {
 		allowedSortFields := map[string]bool{
 			"created_at": true, "updated_at": true, "missing_time": true,
-			"name": true, "age": true, "status": true, "urgency": true, "views": true,
+			"name": true, "age": true, "status": true, "urgency": true, "case_type": true, "views": true,
 		}
 		if allowedSortFields[query.SortField] {
 			sortOrder := "DESC"

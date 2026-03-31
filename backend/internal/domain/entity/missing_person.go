@@ -30,30 +30,42 @@ const (
 	UrgencyLevelLow      UrgencyLevel = "low"      // 低
 )
 
+// MissingCaseType 案件类型
+type MissingCaseType string
+
+const (
+	MissingCaseTypeElderly    MissingCaseType = "elderly"
+	MissingCaseTypeChild      MissingCaseType = "child"
+	MissingCaseTypeAdult      MissingCaseType = "adult"
+	MissingCaseTypeDisability MissingCaseType = "disability"
+	MissingCaseTypeOther      MissingCaseType = "other"
+)
+
 // MissingPerson 走失人员领域实体
 type MissingPerson struct {
 	BaseEntity
-	CaseNo      string         `gorm:"size:50;uniqueIndex" json:"case_no"`
-	Name        string         `gorm:"size:50;not null" json:"name"`
-	Gender      string         `gorm:"size:10;not null" json:"gender"`
-	BirthDate   *time.Time     `json:"birth_date,omitempty"`
-	Age         int            `json:"age"`
-	Height      int            `json:"height,omitempty"`
-	Weight      int            `json:"weight,omitempty"`
-	Description string         `gorm:"type:text" json:"description,omitempty"`
-	PhotoUrl    string         `gorm:"size:255" json:"photo_url,omitempty"`
-	Photos      []MissingPhoto `gorm:"foreignKey:MissingPersonID" json:"photos,omitempty"`
+	CaseNo      string          `gorm:"size:50;uniqueIndex" json:"case_no"`
+	Name        string          `gorm:"size:50;not null" json:"name"`
+	Gender      string          `gorm:"size:10;not null" json:"gender"`
+	BirthDate   *time.Time      `json:"birth_date,omitempty"`
+	Age         int             `json:"age"`
+	Height      int             `json:"height,omitempty"`
+	Weight      int             `json:"weight,omitempty"`
+	Description string          `gorm:"type:text" json:"description,omitempty"`
+	PhotoUrl    string          `gorm:"size:255" json:"photo_url,omitempty"`
+	Photos      []MissingPhoto  `gorm:"foreignKey:MissingPersonID" json:"photos,omitempty"`
+	CaseType    MissingCaseType `gorm:"size:20;not null;default:'other'" json:"case_type"`
 
 	// 走失信息
-	MissingTime time.Time `json:"missing_time"`
-	Province    string    `gorm:"size:50" json:"province,omitempty"`
-	City        string    `gorm:"size:50" json:"city,omitempty"`
-	District    string    `gorm:"size:50" json:"district,omitempty"`
-	Address          string  `gorm:"size:255" json:"address,omitempty"`
-	MissingLatitude  float64 `gorm:"default:0" json:"missing_latitude,omitempty"`
-	MissingLongitude float64 `gorm:"default:0" json:"missing_longitude,omitempty"`
-	Clothes          string  `gorm:"type:text" json:"clothes,omitempty"`
-	Features    string    `gorm:"type:text" json:"features,omitempty"`
+	MissingTime      time.Time `json:"missing_time"`
+	Province         string    `gorm:"size:50" json:"province,omitempty"`
+	City             string    `gorm:"size:50" json:"city,omitempty"`
+	District         string    `gorm:"size:50" json:"district,omitempty"`
+	Address          string    `gorm:"size:255" json:"address,omitempty"`
+	MissingLatitude  float64   `gorm:"default:0" json:"missing_latitude,omitempty"`
+	MissingLongitude float64   `gorm:"default:0" json:"missing_longitude,omitempty"`
+	Clothes          string    `gorm:"type:text" json:"clothes,omitempty"`
+	Features         string    `gorm:"type:text" json:"features,omitempty"`
 
 	// 联系人信息
 	ContactName  string `gorm:"size:50" json:"contact_name"`
@@ -121,6 +133,15 @@ func IsValidMissingStatus(s MissingStatus) bool {
 func IsValidUrgencyLevel(u UrgencyLevel) bool {
 	switch u {
 	case UrgencyLevelCritical, UrgencyLevelHigh, UrgencyLevelMedium, UrgencyLevelLow:
+		return true
+	}
+	return false
+}
+
+// IsValidCaseType 校验案件类型是否合法
+func IsValidCaseType(t MissingCaseType) bool {
+	switch t {
+	case MissingCaseTypeElderly, MissingCaseTypeChild, MissingCaseTypeAdult, MissingCaseTypeDisability, MissingCaseTypeOther:
 		return true
 	}
 	return false
@@ -295,6 +316,7 @@ func NewMissingPerson(name, gender, contactName, contactPhone, reporterID, orgID
 		OrgID:        orgID,
 		Status:       MissingStatusMissing,
 		Urgency:      UrgencyLevelMedium,
+		CaseType:     MissingCaseTypeOther,
 		MissingTime:  time.Now(),
 	}
 

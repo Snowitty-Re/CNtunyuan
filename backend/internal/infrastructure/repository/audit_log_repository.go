@@ -4,6 +4,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -23,7 +24,11 @@ func NewAuditLogRepository(db *gorm.DB) repository.AuditLogRepository {
 
 // Create 创建审计日志
 func (r *AuditLogRepositoryImpl) Create(ctx context.Context, log *entity.AuditLog) error {
-	return r.db.WithContext(ctx).Create(log).Error
+	db := r.db.WithContext(ctx)
+	if strings.TrimSpace(log.UserID) == "" {
+		return db.Omit("UserID").Create(log).Error
+	}
+	return db.Create(log).Error
 }
 
 // FindByID 根据ID查找

@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS ty_missing_persons (
     height INT COMMENT '身高(cm)',
     weight INT COMMENT '体重(kg)',
     description TEXT COMMENT '描述',
+    case_type VARCHAR(20) NOT NULL DEFAULT 'other' COMMENT '案件类型: elderly-老人, child-儿童, adult-成人, disability-残障, other-其他',
     photo_url VARCHAR(255) COMMENT '照片URL',
     
     missing_time TIMESTAMP NOT NULL COMMENT '走失时间',
@@ -170,6 +171,8 @@ CREATE TABLE IF NOT EXISTS ty_missing_persons (
     city VARCHAR(50) COMMENT '市',
     district VARCHAR(50) COMMENT '区',
     address VARCHAR(255) COMMENT '详细地址',
+    missing_latitude DOUBLE NOT NULL DEFAULT 0 COMMENT '走失地点纬度',
+    missing_longitude DOUBLE NOT NULL DEFAULT 0 COMMENT '走失地点经度',
     clothes TEXT COMMENT '衣着特征',
     features TEXT COMMENT '体貌特征',
     
@@ -195,17 +198,22 @@ CREATE TABLE IF NOT EXISTS ty_missing_persons (
     CONSTRAINT fk_mp_org FOREIGN KEY (org_id) REFERENCES ty_organizations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_mp_assigned FOREIGN KEY (assigned_to) REFERENCES ty_users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT chk_mp_status CHECK (status IN ('missing', 'searching', 'found', 'reunited', 'closed')),
-    CONSTRAINT chk_mp_urgency CHECK (urgency IN ('critical', 'high', 'medium', 'low'))
+    CONSTRAINT chk_mp_urgency CHECK (urgency IN ('critical', 'high', 'medium', 'low')),
+    CONSTRAINT chk_mp_case_type CHECK (case_type IN ('elderly', 'child', 'adult', 'disability', 'other')),
+    CONSTRAINT chk_mp_missing_latitude CHECK (missing_latitude BETWEEN -90 AND 90),
+    CONSTRAINT chk_mp_missing_longitude CHECK (missing_longitude BETWEEN -180 AND 180)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='走失人员表';
 
 -- 走失人员表索引
 CREATE INDEX idx_missing_persons_status ON ty_missing_persons(status);
 CREATE INDEX idx_missing_persons_urgency ON ty_missing_persons(urgency);
+CREATE INDEX idx_missing_persons_case_type ON ty_missing_persons(case_type);
 CREATE INDEX idx_missing_persons_reporter ON ty_missing_persons(reporter_id);
 CREATE INDEX idx_missing_persons_org ON ty_missing_persons(org_id);
 CREATE INDEX idx_missing_persons_assigned ON ty_missing_persons(assigned_to);
 CREATE INDEX idx_missing_persons_missing_time ON ty_missing_persons(missing_time);
 CREATE INDEX idx_missing_persons_location ON ty_missing_persons(province, city, district);
+CREATE INDEX idx_missing_persons_geo ON ty_missing_persons(missing_latitude, missing_longitude);
 CREATE INDEX idx_missing_persons_deleted_at ON ty_missing_persons(deleted_at);
 
 -- ============================================================

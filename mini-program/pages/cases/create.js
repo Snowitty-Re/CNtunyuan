@@ -10,12 +10,22 @@ const GENDER_OPTIONS = [
   { value: 'other', label: '其他' }
 ]
 
+// 案件类型选项（前端分类展示用）
+const CASE_TYPE_OPTIONS = [
+  { value: 'elderly', label: '老人' },
+  { value: 'child', label: '儿童' },
+  { value: 'adult', label: '成人' },
+  { value: 'disability', label: '残障' },
+  { value: 'other', label: '其他' }
+]
+
 Page({
   data: {
     // 表单数据
     form: {
       name: '',
       gender: 'male',
+      caseType: 'other',
       age: '',
       height: '',
       missingTime: '',
@@ -24,6 +34,8 @@ Page({
       city: '',
       district: '',
       address: '',
+      missingLatitude: '',
+      missingLongitude: '',
       // 详细描述（包含外貌、衣着、特征等）
       description: '',
       // 联系人信息
@@ -36,6 +48,9 @@ Page({
     // 选项数据
     genderOptions: GENDER_OPTIONS,
     genderLabel: '男',
+    caseTypeOptions: CASE_TYPE_OPTIONS,
+    caseTypeLabel: '其他',
+    caseTypeIndex: 4,
     
     // 照片
     photos: [], // 本地临时文件路径
@@ -77,10 +92,13 @@ Page({
       // 将后端的省市区地址拼接为地址字符串（用于展示）
       const locationParts = [data.province, data.city, data.district, data.address].filter(Boolean)
 
+      const caseTypeValue = data.case_type || 'other'
+      const caseTypeIndex = CASE_TYPE_OPTIONS.findIndex(c => c.value === caseTypeValue)
       this.setData({
         form: {
           name: data.name || '',
           gender: data.gender || 'male',
+          caseType: caseTypeValue,
           age: data.age ? String(data.age) : '',
           height: data.height ? String(data.height) : '',
           missingTime: data.missing_time ? formatDate(data.missing_time, 'YYYY-MM-DD HH:mm') : '',
@@ -89,6 +107,8 @@ Page({
           city: data.city || '',
           district: data.district || '',
           address: data.address || '',
+          missingLatitude: data.missing_latitude || '',
+          missingLongitude: data.missing_longitude || '',
           // 详细描述（后端存储的是合并后的描述）
           description: data.description || '',
           // 联系人信息（注意字段名映射）
@@ -99,7 +119,9 @@ Page({
         },
         // 如果有照片，设置到photos中
         uploadedPhotos: data.photos || [],
-        genderLabel: genderIndex >= 0 ? GENDER_OPTIONS[genderIndex].label : '男'
+        genderLabel: genderIndex >= 0 ? GENDER_OPTIONS[genderIndex].label : '男',
+        caseTypeLabel: (CASE_TYPE_OPTIONS.find(c => c.value === caseTypeValue) || CASE_TYPE_OPTIONS[4]).label,
+        caseTypeIndex: caseTypeIndex >= 0 ? caseTypeIndex : 4
       })
     } catch (error) {
       hideLoading()
@@ -165,6 +187,20 @@ Page({
   },
 
   /**
+   * 案件类型选择
+   */
+  onCaseTypeChange(e) {
+    const index = parseInt(e.detail.value, 10)
+    const item = CASE_TYPE_OPTIONS[index]
+    if (!item) return
+    this.setData({
+      'form.caseType': item.value,
+      caseTypeLabel: item.label,
+      caseTypeIndex: index
+    })
+  },
+
+  /**
    * 失踪时间选择
    */
   onMissingTimeChange(e) {
@@ -180,14 +216,18 @@ Page({
     wx.chooseLocation({
       success: (res) => {
         // 解析地址字符串，尝试提取省市区
-        const address = res.address || res.name || ''
+        const address = res.address
+          ? (res.name && !res.address.includes(res.name) ? `${res.address}${res.name}` : res.address)
+          : (res.name || '')
         const parts = this.parseAddress(address)
         
         this.setData({
           'form.province': parts.province,
           'form.city': parts.city,
           'form.district': parts.district,
-          'form.address': address
+          'form.address': address,
+          'form.missingLatitude': res.latitude || '',
+          'form.missingLongitude': res.longitude || ''
         })
       },
       fail: (err) => {
@@ -393,6 +433,7 @@ Page({
       const submitData = {
         name: form.name.trim(),
         gender: form.gender,
+        case_type: form.caseType || 'other',
         age: parseInt(form.age) || 0,
         height: parseInt(form.height) || 0,
         // 走失时间
@@ -410,6 +451,8 @@ Page({
         city: form.city.trim(),
         district: form.district.trim(),
         address: form.address.trim(),
+        missing_latitude: Number(form.missingLatitude) || 0,
+        missing_longitude: Number(form.missingLongitude) || 0,
         // 详细描述
         description: form.description.trim(),
         // 联系人信息（注意字段名与后端一致）
@@ -464,6 +507,7 @@ Page({
             form: {
               name: '',
               gender: 'male',
+              caseType: 'other',
               age: '',
               height: '',
               missingTime: '',
@@ -471,13 +515,17 @@ Page({
               city: '',
               district: '',
               address: '',
+              missingLatitude: '',
+              missingLongitude: '',
               description: '',
               contactName: '',
               contactRel: '',
               contactPhone: '',
               altContact: ''
             },
-            photos: []
+            photos: [],
+            caseTypeLabel: '其他',
+            caseTypeIndex: 4
           })
           this.setDefaultMissingTime()
         }

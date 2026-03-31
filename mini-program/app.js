@@ -11,7 +11,7 @@
  */
 
 const { request, uploadFile } = require('./utils/request')
-const config = require('./config')
+const config = require('./config/index')
 
 App({
   globalData: {
