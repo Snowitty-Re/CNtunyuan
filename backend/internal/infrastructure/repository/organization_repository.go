@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
@@ -201,11 +202,15 @@ func (r *OrganizationRepositoryImpl) UpdateStats(ctx context.Context, orgID stri
 
 // Move 移动组织
 func (r *OrganizationRepositoryImpl) Move(ctx context.Context, orgID, newParentID string) error {
-	return r.db.WithContext(ctx).
+	db := r.db.WithContext(ctx).
 		Model(&entity.Organization{}).
-		Where("id = ?", orgID).
-		Update("parent_id", newParentID).
-		Error
+		Where("id = ?", orgID)
+
+	if strings.TrimSpace(newParentID) == "" {
+		return db.Update("parent_id", nil).Error
+	}
+
+	return db.Update("parent_id", newParentID).Error
 }
 
 // ExistsCode 检查编码是否存在

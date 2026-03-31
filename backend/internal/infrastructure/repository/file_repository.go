@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
@@ -18,6 +19,18 @@ func NewFileRepository(db *gorm.DB) repository.FileRepository {
 	return &FileRepositoryImpl{
 		BaseRepository: NewBaseRepository[entity.File](db),
 	}
+}
+
+// Create 创建文件记录（处理空 UUID 字段，避免写入空字符串导致 PG 报错）
+func (r *FileRepositoryImpl) Create(ctx context.Context, file *entity.File) error {
+	db := r.db.WithContext(ctx)
+	if strings.TrimSpace(file.UploaderID) == "" {
+		db = db.Omit("uploader_id")
+	}
+	if strings.TrimSpace(file.EntityID) == "" {
+		db = db.Omit("entity_id")
+	}
+	return db.Create(file).Error
 }
 
 // FindByUploader 根据上传者查找
@@ -106,13 +119,19 @@ func (r *FileRepositoryImpl) Search(ctx context.Context, keyword string, paginat
 
 // UpdateEntity 更新关联实体
 func (r *FileRepositoryImpl) UpdateEntity(ctx context.Context, fileID string, entityType string, entityID string) error {
+	updates := map[string]interface{}{
+		"entity_type": entityType,
+		"entity_id":   entityID,
+	}
+	if strings.TrimSpace(entityID) == "" {
+		updates["entity_id"] = nil
+		updates["entity_type"] = ""
+	}
+
 	return r.db.WithContext(ctx).
 		Model(&entity.File{}).
 		Where("id = ?", fileID).
-		Updates(map[string]interface{}{
-			"entity_type": entityType,
-			"entity_id":   entityID,
-		}).Error
+		Updates(updates).Error
 }
 
 // GetStats 获取统计
