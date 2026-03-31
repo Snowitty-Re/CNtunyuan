@@ -1,5 +1,7 @@
 const missingPersonService = require('../../services/missingPerson')
 const { formatDate, showLoading, hideLoading, debounce, joinLocation } = require('../../utils/util')
+const app = getApp()
+const CASES_STATUS_FILTER_KEY = 'cases_status_filter'
 
 // 状态映射
 const STATUS_MAP = {
@@ -50,8 +52,21 @@ Page({
     caseTypeMap: CASE_TYPE_MAP
   },
 
-  onLoad() {
+  onLoad(options = {}) {
+    if (!app.ensureAuth || !app.ensureAuth()) return
+    this.applyInitialStatus(options.status)
     this.loadCases()
+  },
+
+  onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
+    const pendingStatus = wx.getStorageSync(CASES_STATUS_FILTER_KEY)
+    if (pendingStatus) {
+      wx.removeStorageSync(CASES_STATUS_FILTER_KEY)
+      if (pendingStatus === this.data.currentStatus) return
+      this.applyInitialStatus(pendingStatus)
+      this.loadCases()
+    }
   },
 
   onPullDownRefresh() {
@@ -65,6 +80,16 @@ Page({
     if (!this.data.noMore && !this.data.loading) {
       this.loadMore()
     }
+  },
+
+  applyInitialStatus(status) {
+    if (!status) return
+    this.setData({
+      currentStatus: status,
+      page: 1,
+      cases: [],
+      noMore: false
+    })
   },
 
   /**

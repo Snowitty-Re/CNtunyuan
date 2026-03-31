@@ -76,9 +76,8 @@ Page({
           lang: 'zh_CN'
         })
         userInfo = profileRes.userInfo
-        console.log('获取到用户信息:', userInfo)
       } catch (profileErr) {
-        console.log('用户拒绝获取信息，继续使用默认信息')
+        // 用户拒绝授权时继续登录，使用后端默认资料
       }
 
       // 调用后端微信登录

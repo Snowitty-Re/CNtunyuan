@@ -31,7 +31,13 @@ App({
     // 检查登录状态
     this.checkLoginStatus()
     
-    console.log('[App] 启动成功, API:', this.globalData.apiBaseUrl)
+    if (this.isDebugEnv()) {
+      console.log('[App] 启动成功, API:', this.globalData.apiBaseUrl)
+    }
+  },
+
+  isDebugEnv() {
+    return this.globalData.apiBaseUrl && this.globalData.apiBaseUrl.includes('localhost')
   },
 
   // 获取系统信息
@@ -273,6 +279,26 @@ App({
       wx.navigateTo({ url: '/pages/login/index' })
       return false
     }
+    return true
+  },
+
+  // 页面统一鉴权守卫（优先检查本地 token，兼容冷启动场景）
+  ensureAuth() {
+    const token = this.globalData.token || wx.getStorageSync('token')
+    const refreshToken = this.globalData.refreshToken || wx.getStorageSync('refresh_token')
+
+    if (!token) {
+      wx.reLaunch({ url: '/pages/login/index' })
+      return false
+    }
+
+    if (!this.globalData.isLogin) {
+      this.globalData.token = token
+      this.globalData.refreshToken = refreshToken || null
+      this.globalData.userInfo = wx.getStorageSync('userInfo') || null
+      this.globalData.isLogin = true
+    }
+
     return true
   },
 

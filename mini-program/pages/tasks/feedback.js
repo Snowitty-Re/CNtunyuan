@@ -1,5 +1,6 @@
 const services = require('../../services/index')
 const { showSuccess, showError, showLoading, hideLoading } = require('../../utils/util')
+const app = getApp()
 
 Page({
   data: {
@@ -12,6 +13,7 @@ Page({
   },
 
   onLoad(options) {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     if (options.id) {
       this.setData({ taskId: options.id })
       this.loadTaskDetail(options.id)

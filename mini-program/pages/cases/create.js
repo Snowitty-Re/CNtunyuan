@@ -1,6 +1,7 @@
 const missingPersonService = require('../../services/missingPerson')
 const uploadService = require('../../services/upload')
 const { showLoading, hideLoading, showSuccess, showError, validatePhone, formatDate } = require('../../utils/util')
+const app = getApp()
 
 // 性别选项
 const GENDER_OPTIONS = [
@@ -50,6 +51,7 @@ Page({
   },
 
   onLoad(options) {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     if (options.id) {
       // 编辑模式
       this.setData({ isEdit: true, editId: options.id })

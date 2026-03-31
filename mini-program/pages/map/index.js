@@ -1,5 +1,6 @@
 const services = require('../../services/index')
 const { showError, showToast, joinLocation } = require('../../utils/util')
+const app = getApp()
 
 const STATUS_COLOR = {
   missing:   '#ff4d4f',
@@ -37,6 +38,7 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadCases()
     this.locateCurrentPosition()
   },

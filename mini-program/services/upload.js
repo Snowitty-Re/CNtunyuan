@@ -1,6 +1,32 @@
 const { get, del } = require('../utils/request')
 const { uploadFile } = require('../utils/request')
 
+async function refreshAccessToken() {
+  const refreshToken = wx.getStorageSync('refresh_token')
+  if (!refreshToken) return ''
+
+  const { post } = require('../utils/request')
+  const data = await post('/auth/refresh', { refresh_token: refreshToken }, { silent: true })
+  const newToken = data && data.access_token
+  const newRefreshToken = data && data.refresh_token
+  if (!newToken) return ''
+
+  wx.setStorageSync('token', newToken)
+  if (newRefreshToken) {
+    wx.setStorageSync('refresh_token', newRefreshToken)
+  }
+
+  const app = getApp()
+  if (app && app.globalData) {
+    app.globalData.token = newToken
+    if (newRefreshToken) {
+      app.globalData.refreshToken = newRefreshToken
+    }
+  }
+
+  return newToken
+}
+
 /**
  * 上传相关服务
  */
@@ -40,22 +66,39 @@ module.exports = {
    */
   download(id) {
     return new Promise((resolve, reject) => {
-      const token = wx.getStorageSync('token') || ''
       const { API_BASE: API_BASE_URL } = require('../config')
-      wx.downloadFile({
-        url: `${API_BASE_URL}/upload/${id}/download`,
-        header: {
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        success: (res) => {
-          if (res.statusCode === 200) {
-            resolve(res.tempFilePath)
-          } else {
+
+      const doDownload = (token, allowRetry) => {
+        wx.downloadFile({
+          url: `${API_BASE_URL}/upload/${id}/download`,
+          header: {
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          success: async (res) => {
+            if (res.statusCode === 200) {
+              resolve(res.tempFilePath)
+              return
+            }
+
+            if (res.statusCode === 401 && allowRetry) {
+              try {
+                const refreshed = await refreshAccessToken()
+                if (refreshed) {
+                  doDownload(refreshed, false)
+                  return
+                }
+              } catch (e) {
+                // ignore and return auth error below
+              }
+            }
+
             reject(new Error(`Download failed: ${res.statusCode}`))
-          }
-        },
-        fail: reject
-      })
+          },
+          fail: reject
+        })
+      }
+
+      doDownload(wx.getStorageSync('token') || '', true)
     })
   },
 

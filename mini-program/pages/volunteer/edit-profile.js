@@ -38,6 +38,7 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadUserInfo()
   },
 
@@ -133,11 +134,8 @@ Page({
         return
       }
     } else if (type === 'email') {
-      target = this.data.form.email
-      if (!validateEmail(target)) {
-        showToast('请输入正确的邮箱')
-        return
-      }
+      showToast('当前版本暂不支持邮箱验证码')
+      return
     }
     
     try {
@@ -181,7 +179,7 @@ Page({
 
   // 保存资料
   async saveProfile() {
-    const { form, originalForm, phoneCode, emailCode } = this.data
+    const { form, originalForm } = this.data
     
     // 表单验证
     if (!form.nickname.trim()) {
@@ -203,16 +201,16 @@ Page({
       showToast('请输入正确的邮箱')
       return
     }
-    
-    // 检查手机号是否变更
-    if (form.phone !== originalForm.phone && !phoneCode) {
-      showToast('请验证新手机号')
+
+    // 后端 /profile 暂不支持在此更新头像
+    if (form.avatar !== originalForm.avatar) {
+      showToast('当前版本暂不支持修改头像')
       return
     }
     
-    // 检查邮箱是否变更
-    if (form.email !== originalForm.email && !emailCode) {
-      showToast('请验证新邮箱')
+    // 后端 /profile 暂不支持在此更新手机号
+    if (form.phone !== originalForm.phone) {
+      showToast('请在登录绑定流程中修改手机号')
       return
     }
     
@@ -221,30 +219,19 @@ Page({
     try {
       // 构建提交数据
       const submitData = {
-        avatar: form.avatar,
         nickname: form.nickname,
         real_name: form.realName,
-        phone: form.phone,
         email: form.email
       }
-      
-      // 如果有验证码，添加到提交数据
-      if (form.phone !== originalForm.phone) {
-        submitData.phone_code = phoneCode
-      }
-      if (form.email !== originalForm.email) {
-        submitData.email_code = emailCode
-      }
-      
-      // 调用更新接口
-      await userService.updateProfile(submitData)
+
+      // 调用更新接口，使用后端返回结果回写本地缓存
+      const profile = await userService.updateProfile(submitData)
       
       // 更新本地存储
       const userInfo = wx.getStorageSync('userInfo') || {}
       const updatedUserInfo = { 
         ...userInfo, 
-        ...submitData,
-        real_name: form.realName
+        ...profile
       }
       wx.setStorageSync('userInfo', updatedUserInfo)
       

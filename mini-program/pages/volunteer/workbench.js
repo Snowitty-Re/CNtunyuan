@@ -34,10 +34,12 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.setCurrentDate()
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadUserInfo()
     this.loadTodayStats()
     this.loadRecentTasks()

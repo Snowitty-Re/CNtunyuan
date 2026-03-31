@@ -1,5 +1,6 @@
 const missingPersonService = require('../../services/missingPerson')
 const { formatDate, showConfirm, showSuccess, showLoading, hideLoading, joinLocation } = require('../../utils/util')
+const app = getApp()
 
 // 状态映射
 const STATUS_MAP = {
@@ -31,6 +32,7 @@ Page({
   },
 
   onLoad(options) {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     const { id } = options
     if (!id) {
       wx.showToast({ title: '参数错误', icon: 'error' })
@@ -48,6 +50,7 @@ Page({
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     // 返回时刷新数据
     if (this.data.id) {
       Promise.all([this.loadCaseDetail(), this.loadTracks()]).catch(err => console.error('刷新详情失败:', err))
@@ -58,7 +61,6 @@ Page({
    * 检查用户角色
    */
   checkUserRole() {
-    const app = getApp()
     this.setData({ isManager: app.isManager() })
   },
 

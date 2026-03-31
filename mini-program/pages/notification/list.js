@@ -1,7 +1,12 @@
 const services = require('../../services/index')
 const { formatTimeAgo } = require('../../utils/util')
+const app = getApp()
 
 const STORAGE_KEY = 'notification_read_status'
+function getUserScopedStorageKey() {
+  const user = wx.getStorageSync('userInfo') || {}
+  return `${STORAGE_KEY}_${user.id || 'guest'}`
+}
 
 Page({
   data: {
@@ -11,10 +16,12 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadNotifications()
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadNotifications()
   },
 
@@ -31,7 +38,7 @@ Page({
 
     try {
       const notifications = []
-      const readStatus = wx.getStorageSync(STORAGE_KEY) || {}
+      const readStatus = wx.getStorageSync(getUserScopedStorageKey()) || {}
 
       // 获取最近任务变更作为通知
       try {
@@ -116,9 +123,10 @@ Page({
 
   // 标记为已读
   markAsRead(id) {
-    const readStatus = wx.getStorageSync(STORAGE_KEY) || {}
+    const storageKey = getUserScopedStorageKey()
+    const readStatus = wx.getStorageSync(storageKey) || {}
     readStatus[id] = true
-    wx.setStorageSync(STORAGE_KEY, readStatus)
+    wx.setStorageSync(storageKey, readStatus)
 
     const notifications = this.data.notifications.map(n => {
       if (n.id === id) return { ...n, is_read: true }
@@ -133,11 +141,12 @@ Page({
 
   // 全部标记为已读
   markAllAsRead() {
-    const readStatus = wx.getStorageSync(STORAGE_KEY) || {}
+    const storageKey = getUserScopedStorageKey()
+    const readStatus = wx.getStorageSync(storageKey) || {}
     this.data.notifications.forEach(n => {
       readStatus[n.id] = true
     })
-    wx.setStorageSync(STORAGE_KEY, readStatus)
+    wx.setStorageSync(storageKey, readStatus)
 
     const notifications = this.data.notifications.map(n => ({ ...n, is_read: true }))
     this.setData({ notifications, unreadCount: 0 })
@@ -151,7 +160,7 @@ Page({
       content: '确定要清空所有通知吗？'
     })
     if (res.confirm) {
-      wx.removeStorageSync(STORAGE_KEY)
+      wx.removeStorageSync(getUserScopedStorageKey())
       this.setData({ notifications: [], unreadCount: 0 })
     }
   }

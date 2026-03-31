@@ -2,6 +2,7 @@ const taskService = require('../../services/task')
 const missingPersonService = require('../../services/missingPerson')
 const userService = require('../../services/user')
 const { formatDate, showSuccess, showToast } = require('../../utils/util')
+const app = getApp()
 
 Page({
   data: {
@@ -30,6 +31,7 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     // 检查权限
     const userInfo = wx.getStorageSync('userInfo') || {}
     if (!['super_admin', 'admin', 'manager'].includes(userInfo.role)) {

@@ -1,5 +1,6 @@
 const dialectService = require('../../services/dialect')
 const { showLoading, hideLoading, showSuccess, showError, showToast, formatTimeAgo, formatDate } = require('../../utils/util')
+const app = getApp()
 
 // 音频上下文
 let innerAudioContext = null
@@ -40,6 +41,7 @@ Page({
   },
 
   onLoad(options) {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     const { id } = options
     if (!id) {
       showError('参数错误')
@@ -126,6 +128,13 @@ Page({
     
     try {
       const dialect = await dialectService.getById(this.data.id)
+      const userInfo = wx.getStorageSync('userInfo') || {}
+      const isManager = ['super_admin', 'admin', 'manager'].includes(userInfo.role)
+      if (!isManager && (dialect.status === 'pending' || dialect.status === 'inactive')) {
+        showToast('当前方言不可见', 'none')
+        setTimeout(() => wx.navigateBack(), 300)
+        return
+      }
       
       // 处理数据
       dialect.created_at_text = formatTimeAgo(dialect.created_at)

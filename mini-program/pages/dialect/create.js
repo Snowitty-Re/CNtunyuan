@@ -2,6 +2,7 @@ const dialectService = require('../../services/dialect')
 const uploadService = require('../../services/upload')
 const missingPersonService = require('../../services/missingPerson')
 const { showLoading, hideLoading, showSuccess, showError, showToast } = require('../../utils/util')
+const app = getApp()
 
 // 录音配置
 const MIN_DURATION = 15 // 最小录音时长(秒)
@@ -68,6 +69,7 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.initRecorder()
     this.loadMissingPersons()
   },
@@ -92,13 +94,11 @@ Page({
     recorderManager = wx.getRecorderManager()
     
     recorderManager.onStart(() => {
-      console.log('录音开始')
       this.setData({ isRecording: true })
       this.startRecordTimer()
     })
 
     recorderManager.onStop((res) => {
-      console.log('录音结束', res)
       this.stopRecordTimer()
       
       const duration = Math.floor(res.duration / 1000)

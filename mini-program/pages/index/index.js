@@ -2,6 +2,8 @@ const dashboardService = require('../../services/dashboard')
 const missingPersonService = require('../../services/missingPerson')
 const dialectService = require('../../services/dialect')
 const { formatDate, formatTimeAgo, showError, showLoading, hideLoading, joinLocation } = require('../../utils/util')
+const app = getApp()
+const CASES_STATUS_FILTER_KEY = 'cases_status_filter'
 
 Page({
   data: {
@@ -42,11 +44,13 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.updateGreeting()
     this.loadData()
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.updateGreeting()
     // Throttle: skip if loaded less than 30s ago
     const now = Date.now()
@@ -162,7 +166,9 @@ Page({
                 stats.resolvedCases = res.found || res.resolved || 0
               }
             }
-          }).catch(() => {})
+          }).catch((err) => {
+            console.warn('missingPerson stats fallback failed', err)
+          })
         )
       }
 
@@ -176,7 +182,9 @@ Page({
                 stats.dialects = res.total || res.total_dialects || 0
               }
             }
-          }).catch(() => {})
+          }).catch((err) => {
+            console.warn('dialect stats fallback failed', err)
+          })
         )
       }
 
@@ -189,7 +197,9 @@ Page({
               stats.totalCases = stats.totalCases || res.total_cases || 0
               stats.resolvedCases = stats.resolvedCases || res.resolved_cases || 0
             }
-          }).catch(() => {})
+          }).catch((err) => {
+            console.warn('dashboard overview fallback failed', err)
+          })
         )
       }
 
@@ -255,8 +265,9 @@ Page({
       }
 
       const list = result.list || []
+      const safeList = this.filterVisibleDialects(list)
 
-      const dialects = list.map(item => ({
+      const dialects = safeList.map(item => ({
         id: item.id,
         title: item.title || item.content || '方言录音',
         province: item.province || '',
@@ -454,10 +465,8 @@ Page({
         this.goToCases()
         break
       case 'resolved':
-        // 跳转到已找到的案件列表
-        wx.navigateTo({ 
-          url: '/pages/cases/list?status=found' 
-        })
+        wx.setStorageSync(CASES_STATUS_FILTER_KEY, 'found')
+        wx.switchTab({ url: '/pages/cases/list' })
         break
       case 'volunteers':
         // 跳转到志愿者页面
@@ -467,5 +476,12 @@ Page({
         this.goToDialects()
         break
     }
+  },
+
+  filterVisibleDialects(list) {
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    const isManager = ['super_admin', 'admin', 'manager'].includes(userInfo.role)
+    if (isManager) return list
+    return (list || []).filter(item => item.status !== 'pending' && item.status !== 'inactive')
   }
 })

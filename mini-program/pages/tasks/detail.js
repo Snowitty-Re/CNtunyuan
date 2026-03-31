@@ -21,6 +21,7 @@ Page({
   },
 
   onLoad(options) {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     const userInfo = wx.getStorageSync('userInfo') || {}
     this.setData({ 
       taskId: options.id,
@@ -35,6 +36,7 @@ Page({
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     if (this.data.taskId) {
       this.loadTaskDetail()
       this.loadTaskLogs()

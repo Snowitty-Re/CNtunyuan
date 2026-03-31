@@ -1,5 +1,6 @@
 const dialectService = require('../../services/dialect')
 const { showLoading, hideLoading, formatTimeAgo, showToast } = require('../../utils/util')
+const app = getApp()
 
 // 创建 InnerAudioContext 实例
 let innerAudioContext = null
@@ -43,6 +44,7 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadDialects()
     this.initAudioContext()
   },
@@ -108,7 +110,9 @@ Page({
 
       const result = await dialectService.getList(params)
 
-      const newDialects = (result.list || []).map(item => ({
+      const rawList = result.list || []
+      const safeList = this.filterVisibleDialects(rawList)
+      const newDialects = safeList.map(item => ({
         ...item,
         tags:          typeof item.tags === 'string' ? item.tags.split(',').filter(Boolean) : (item.tags || []),
         durationText:  this._formatTime(item.duration),
@@ -212,5 +216,12 @@ Page({
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
+  },
+
+  filterVisibleDialects(list) {
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    const isManager = ['super_admin', 'admin', 'manager'].includes(userInfo.role)
+    if (isManager) return list
+    return (list || []).filter(item => item.status !== 'pending' && item.status !== 'inactive')
   }
 })

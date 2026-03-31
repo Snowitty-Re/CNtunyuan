@@ -1,6 +1,7 @@
 const taskService = require('../../services/task')
 const { formatDate, showSuccess, showToast, showConfirm } = require('../../utils/util')
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP } = require('../../utils/constants')
+const app = getApp()
 
 Page({
   data: {
@@ -23,12 +24,14 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     const userInfo = wx.getStorageSync('userInfo') || {}
     this.setData({ userRole: userInfo.role || '' })
     this.loadTasks()
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadTasks()
   },
 

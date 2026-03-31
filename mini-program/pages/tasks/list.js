@@ -30,12 +30,14 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.checkPermission()
     this.loadStats()
     this.loadTasks()
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     // Throttle: skip if loaded less than 30s ago
     const now = Date.now()
     if (this._lastLoadTime && now - this._lastLoadTime < 30000) return

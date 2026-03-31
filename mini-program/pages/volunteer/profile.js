@@ -2,6 +2,7 @@ const userService = require('../../services/user')
 const { showConfirm, showSuccess, showToast } = require('../../utils/util')
 const { ROLE_MAP } = require('../../utils/constants')
 const app = getApp()
+const CASES_STATUS_FILTER_KEY = 'cases_status_filter'
 
 Page({
   data: {
@@ -44,10 +45,12 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadData()
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.loadData()
   },
 
@@ -123,10 +126,12 @@ Page({
         wx.switchTab({ url: '/pages/cases/list' })
         break
       case 'activeCase':
-        wx.switchTab({ url: '/pages/cases/list?status=searching' })
+        wx.setStorageSync(CASES_STATUS_FILTER_KEY, 'searching')
+        wx.switchTab({ url: '/pages/cases/list' })
         break
       case 'completed':
-        wx.switchTab({ url: '/pages/cases/list?status=found' })
+        wx.setStorageSync(CASES_STATUS_FILTER_KEY, 'found')
+        wx.switchTab({ url: '/pages/cases/list' })
         break
     }
   },

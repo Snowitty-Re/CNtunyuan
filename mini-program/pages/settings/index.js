@@ -1,4 +1,5 @@
 const { showConfirm } = require('../../utils/util')
+const app = getApp()
 
 Page({
   data: {
@@ -24,10 +25,12 @@ Page({
   },
 
   onLoad() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.calculateCacheSize()
   },
 
   onShow() {
+    if (!app.ensureAuth || !app.ensureAuth()) return
     this.calculateCacheSize()
   },
 
