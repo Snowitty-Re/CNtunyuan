@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	ErrTaskNotFound      = errors.New("task not found")
-	ErrTaskInvalidStatus = errors.New("invalid status transition")
-	ErrAlreadyAssigned   = errors.New("task already assigned")
+	ErrTaskNotFound          = errors.New("task not found")
+	ErrTaskInvalidStatus     = errors.New("invalid status transition")
+	ErrAlreadyAssigned       = errors.New("task already assigned")
 	ErrTaskNotAssignedToUser = errors.New("task not assigned to this user")
+	ErrTaskForbidden         = errors.New("no permission to modify this task")
 )
 
 // TaskAppService 任务应用服务
@@ -117,10 +118,17 @@ func (s *TaskAppService) List(ctx context.Context, req *dto.TaskListRequest) (*d
 }
 
 // Update 更新
-func (s *TaskAppService) Update(ctx context.Context, id string, req *dto.UpdateTaskRequest) (*dto.TaskResponse, error) {
+func (s *TaskAppService) Update(ctx context.Context, id string, req *dto.UpdateTaskRequest, userID string, isManager bool) (*dto.TaskResponse, error) {
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrTaskNotFound
+	}
+
+	// 只有任务创建者、任务执行人或管理员可以更新任务
+	isCreator := task.CreatorID == userID
+	isAssignee := task.AssigneeID != nil && *task.AssigneeID == userID
+	if !isManager && !isCreator && !isAssignee {
+		return nil, ErrTaskForbidden
 	}
 
 	if !task.CanUpdate() {
@@ -355,6 +363,7 @@ func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress
 
 // GetMyTasks 获取我的任务
 func (s *TaskAppService) GetMyTasks(ctx context.Context, userID string, page, pageSize int) (*dto.TaskListResponse, error) {
+	page, pageSize = validator.SanitizePagination(page, pageSize)
 	pagination := repository.Pagination{Page: page, PageSize: pageSize}
 	result, err := s.taskRepo.FindByAssignee(ctx, userID, pagination)
 	if err != nil {
@@ -372,6 +381,7 @@ func (s *TaskAppService) GetMyTasks(ctx context.Context, userID string, page, pa
 
 // GetPendingTasks 获取待分配任务
 func (s *TaskAppService) GetPendingTasks(ctx context.Context, page, pageSize int) (*dto.TaskListResponse, error) {
+	page, pageSize = validator.SanitizePagination(page, pageSize)
 	pagination := repository.Pagination{Page: page, PageSize: pageSize}
 	result, err := s.taskRepo.FindPending(ctx, pagination)
 	if err != nil {
@@ -389,6 +399,7 @@ func (s *TaskAppService) GetPendingTasks(ctx context.Context, page, pageSize int
 
 // GetOverdueTasks 获取逾期任务
 func (s *TaskAppService) GetOverdueTasks(ctx context.Context, page, pageSize int) (*dto.TaskListResponse, error) {
+	page, pageSize = validator.SanitizePagination(page, pageSize)
 	pagination := repository.Pagination{Page: page, PageSize: pageSize}
 	result, err := s.taskRepo.FindOverdue(ctx, pagination)
 	if err != nil {

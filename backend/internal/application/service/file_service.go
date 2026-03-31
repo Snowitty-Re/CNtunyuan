@@ -10,7 +10,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
-	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/storage"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/filesecurity"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 )
 
@@ -24,8 +24,8 @@ var (
 type FileAppService struct {
 	fileRepo        repository.FileRepository
 	storageService  domainService.StorageService
-	securityChecker *storage.FileSecurityChecker
-	virusScanner    storage.VirusScanner
+	securityChecker *filesecurity.FileSecurityChecker
+	virusScanner    filesecurity.VirusScanner
 	maxFileSize     int64
 	allowedTypes    []string
 }
@@ -40,15 +40,15 @@ func NewFileAppService(
 	return &FileAppService{
 		fileRepo:        fileRepo,
 		storageService:  storageService,
-		securityChecker: storage.NewFileSecurityChecker(allowedTypes, maxFileSize),
-		virusScanner:    storage.NewNoOpScanner(), // 默认使用空扫描器
+		securityChecker: filesecurity.NewFileSecurityChecker(allowedTypes, maxFileSize),
+		virusScanner:    filesecurity.NewNoOpScanner(), // 默认使用空扫描器
 		maxFileSize:     maxFileSize,
 		allowedTypes:    allowedTypes,
 	}
 }
 
 // SetVirusScanner 设置病毒扫描器
-func (s *FileAppService) SetVirusScanner(scanner storage.VirusScanner) {
+func (s *FileAppService) SetVirusScanner(scanner filesecurity.VirusScanner) {
 	s.virusScanner = scanner
 }
 
@@ -66,7 +66,7 @@ func (s *FileAppService) UploadFile(ctx context.Context, file multipart.File, he
 	file.Close()
 
 	// 执行安全检查（文件类型、MIME、病毒扫描）
-	securityResult, err := storage.PerformSecurityCheck(header, s.securityChecker, s.virusScanner)
+	securityResult, err := filesecurity.PerformSecurityCheck(header, s.securityChecker, s.virusScanner)
 	if err != nil {
 		logger.Error("Security check failed", logger.Err(err), logger.String("filename", header.Filename))
 		return nil, fmt.Errorf("安全检查失败: %w", err)

@@ -13,8 +13,8 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
-	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/storage"
 	"github.com/Snowitty-Re/CNtunyuan/internal/testutil"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/filesecurity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -71,12 +71,12 @@ type MockVirusScanner struct {
 	mock.Mock
 }
 
-func (m *MockVirusScanner) Scan(file io.Reader, filename string) (*storage.ScanResult, error) {
+func (m *MockVirusScanner) Scan(file io.Reader, filename string) (*filesecurity.ScanResult, error) {
 	args := m.Called(file, filename)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*storage.ScanResult), args.Error(1)
+	return args.Get(0).(*filesecurity.ScanResult), args.Error(1)
 }
 
 func (m *MockVirusScanner) IsAvailable() bool {
@@ -214,32 +214,32 @@ func (m *MockFileRepository) CountByType(ctx context.Context, fileType entity.Fi
 func createMultipartFileHeader(filename string, content []byte, contentType string) *multipart.FileHeader {
 	var b bytes.Buffer
 	writer := multipart.NewWriter(&b)
-	
+
 	// 创建表单文件
 	part, err := writer.CreateFormFile("file", filename)
 	if err != nil {
 		panic(err)
 	}
-	
+
 	_, err = part.Write(content)
 	if err != nil {
 		panic(err)
 	}
-	
+
 	writer.Close()
-	
+
 	// 解析 multipart 消息
 	reader := multipart.NewReader(&b, writer.Boundary())
 	form, err := reader.ReadForm(int64(len(content)) + 1024)
 	if err != nil {
 		panic(err)
 	}
-	
+
 	files := form.File["file"]
 	if len(files) == 0 {
 		panic("no files in form")
 	}
-	
+
 	return files[0]
 }
 
@@ -278,18 +278,18 @@ func setupFileServiceTest(t *testing.T) (*FileAppService, *MockFileRepository, *
 	mockRepo := new(MockFileRepository)
 	mockStorage := new(MockStorageService)
 	mockScanner := new(MockVirusScanner)
-	
+
 	// 默认配置：允许 jpg, png, gif 类型，最大 10MB
 	allowedTypes := []string{"jpg", "jpeg", "png", "gif"}
 	maxFileSize := int64(10 * 1024 * 1024) // 10MB
-	
+
 	service := NewFileAppService(mockRepo, mockStorage, maxFileSize, allowedTypes)
 	service.SetVirusScanner(mockScanner)
-	
+
 	// 配置 mock scanner 默认返回可用且干净
 	mockScanner.On("IsAvailable").Return(true).Maybe()
 	mockScanner.On("GetName").Return("MockScanner").Maybe()
-	
+
 	return service, mockRepo, mockStorage, mockScanner
 }
 
@@ -299,18 +299,18 @@ func setupFileServiceTest(t *testing.T) (*FileAppService, *MockFileRepository, *
 
 func TestFileAppService_UploadFile_Success(t *testing.T) {
 	service, mockRepo, mockStorage, mockScanner := setupFileServiceTest(t)
-	
+
 	// 创建有效的 JPEG 文件内容
 	content := createValidJPEGContent(1024)
 	header := createMultipartFileHeader("test.jpg", content, "image/jpeg")
-	
+
 	// 创建 multipart.File
 	file, err := header.Open()
 	require.NoError(t, err)
 	defer file.Close()
-	
+
 	uploaderID := "user-123"
-	
+
 	// 设置 mock 期望
 	uploadedFile := &entity.File{
 		BaseEntity:   entity.BaseEntity{ID: "file-123"},
@@ -324,21 +324,21 @@ func TestFileAppService_UploadFile_Success(t *testing.T) {
 		StorageType:  entity.StorageTypeLocal,
 		UploaderID:   uploaderID,
 	}
-	
-	mockScanner.On("Scan", mock.Anything, "test.jpg").Return(&storage.ScanResult{
+
+	mockScanner.On("Scan", mock.Anything, "test.jpg").Return(&filesecurity.ScanResult{
 		Clean:   true,
 		Scanner: "MockScanner",
 	}, nil)
-	
+
 	mockStorage.On("Upload", mock.Anything, mock.Anything, "test.jpg", int64(len(content)), mock.Anything).
 		Return(uploadedFile, nil)
-	
+
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.File")).Return(nil)
-	
+
 	// 执行测试
 	ctx := testutil.Context()
 	resp, err := service.UploadFile(ctx, file, header, uploaderID)
-	
+
 	// 验证结果
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
@@ -347,7 +347,7 @@ func TestFileAppService_UploadFile_Success(t *testing.T) {
 	assert.Equal(t, string(uploadedFile.FileType), resp.FileType)
 	assert.Equal(t, uploadedFile.URL, resp.URL)
 	assert.Equal(t, uploaderID, resp.UploaderID)
-	
+
 	// 验证 mock 调用
 	mockStorage.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
@@ -356,33 +356,33 @@ func TestFileAppService_UploadFile_Success(t *testing.T) {
 
 func TestFileAppService_UploadFile_InvalidFileType(t *testing.T) {
 	service, mockRepo, mockStorage, _ := setupFileServiceTest(t)
-	
+
 	// 创建不支持的文件类型（例如 .exe）
 	content := []byte("some executable content")
-	
+
 	// 手动创建 header，因为 exe 文件类型不支持
 	var b bytes.Buffer
 	writer := multipart.NewWriter(&b)
 	part, _ := writer.CreateFormFile("file", "test.exe")
 	part.Write(content)
 	writer.Close()
-	
+
 	reader := multipart.NewReader(&b, writer.Boundary())
 	form, _ := reader.ReadForm(10240)
 	header := form.File["file"][0]
-	
+
 	file, err := header.Open()
 	require.NoError(t, err)
 	defer file.Close()
-	
+
 	ctx := testutil.Context()
 	resp, err := service.UploadFile(ctx, file, header, "user-123")
-	
+
 	// 验证结果
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Contains(t, err.Error(), "不支持的文件类型")
-	
+
 	// 验证存储和仓储未被调用
 	mockStorage.AssertNotCalled(t, "Upload")
 	mockRepo.AssertNotCalled(t, "Create")
@@ -390,23 +390,23 @@ func TestFileAppService_UploadFile_InvalidFileType(t *testing.T) {
 
 func TestFileAppService_UploadFile_FileTooLarge(t *testing.T) {
 	service, mockRepo, mockStorage, _ := setupFileServiceTest(t)
-	
+
 	// 创建超过 10MB 的 JPEG 文件
 	largeContent := createValidJPEGContent(11 * 1024 * 1024) // 11MB
 	header := createMultipartFileHeader("large.jpg", largeContent, "image/jpeg")
-	
+
 	file, err := header.Open()
 	require.NoError(t, err)
 	defer file.Close()
-	
+
 	ctx := testutil.Context()
 	resp, err := service.UploadFile(ctx, file, header, "user-123")
-	
+
 	// 验证结果
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Contains(t, err.Error(), "文件大小超过限制")
-	
+
 	// 验证存储和仓储未被调用
 	mockStorage.AssertNotCalled(t, "Upload")
 	mockRepo.AssertNotCalled(t, "Create")
@@ -414,30 +414,30 @@ func TestFileAppService_UploadFile_FileTooLarge(t *testing.T) {
 
 func TestFileAppService_UploadFile_VirusDetected(t *testing.T) {
 	service, mockRepo, mockStorage, mockScanner := setupFileServiceTest(t)
-	
+
 	content := createValidJPEGContent(1024)
 	header := createMultipartFileHeader("virus.jpg", content, "image/jpeg")
-	
+
 	file, err := header.Open()
 	require.NoError(t, err)
 	defer file.Close()
-	
+
 	// 设置 mock scanner 返回检测到病毒
-	mockScanner.On("Scan", mock.Anything, "virus.jpg").Return(&storage.ScanResult{
+	mockScanner.On("Scan", mock.Anything, "virus.jpg").Return(&filesecurity.ScanResult{
 		Clean:     false,
 		Infected:  true,
 		VirusName: "TestVirus",
 		Scanner:   "MockScanner",
 	}, nil)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.UploadFile(ctx, file, header, "user-123")
-	
+
 	// 验证结果
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Contains(t, err.Error(), "检测到病毒")
-	
+
 	// 验证存储和仓储未被调用
 	mockStorage.AssertNotCalled(t, "Upload")
 	mockRepo.AssertNotCalled(t, "Create")
@@ -446,76 +446,76 @@ func TestFileAppService_UploadFile_VirusDetected(t *testing.T) {
 
 func TestFileAppService_UploadFile_StorageUploadFailed(t *testing.T) {
 	service, mockRepo, mockStorage, mockScanner := setupFileServiceTest(t)
-	
+
 	content := createValidJPEGContent(1024)
 	header := createMultipartFileHeader("test.jpg", content, "image/jpeg")
-	
+
 	file, err := header.Open()
 	require.NoError(t, err)
 	defer file.Close()
-	
+
 	// 设置 mock 期望：扫描通过，但存储上传失败
-	mockScanner.On("Scan", mock.Anything, "test.jpg").Return(&storage.ScanResult{
+	mockScanner.On("Scan", mock.Anything, "test.jpg").Return(&filesecurity.ScanResult{
 		Clean:   true,
 		Scanner: "MockScanner",
 	}, nil)
-	
+
 	uploadError := errors.New("storage upload failed")
 	mockStorage.On("Upload", mock.Anything, mock.Anything, "test.jpg", int64(len(content)), mock.Anything).
 		Return(nil, uploadError)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.UploadFile(ctx, file, header, "user-123")
-	
+
 	// 验证结果
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Equal(t, uploadError, err)
-	
+
 	// 验证仓储未被调用
 	mockRepo.AssertNotCalled(t, "Create")
 }
 
 func TestFileAppService_UploadFile_DatabaseSaveFailed(t *testing.T) {
 	service, mockRepo, mockStorage, mockScanner := setupFileServiceTest(t)
-	
+
 	content := createValidJPEGContent(1024)
 	header := createMultipartFileHeader("test.jpg", content, "image/jpeg")
-	
+
 	file, err := header.Open()
 	require.NoError(t, err)
 	defer file.Close()
-	
+
 	uploadedFile := &entity.File{
 		BaseEntity: entity.BaseEntity{ID: "file-123"},
 		FileName:   "test.jpg",
 		Path:       "/uploads/test.jpg",
 	}
-	
+
 	dbError := errors.New("database error")
-	
+
 	// 设置 mock 期望
-	mockScanner.On("Scan", mock.Anything, "test.jpg").Return(&storage.ScanResult{
+	mockScanner.On("Scan", mock.Anything, "test.jpg").Return(&filesecurity.ScanResult{
 		Clean:   true,
 		Scanner: "MockScanner",
 	}, nil)
-	
+
 	mockStorage.On("Upload", mock.Anything, mock.Anything, "test.jpg", int64(len(content)), mock.Anything).
 		Return(uploadedFile, nil)
-	
+
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.File")).Return(dbError)
-	
+
 	// 期望删除已上传的文件
 	mockStorage.On("Delete", mock.Anything, uploadedFile.Path).Return(nil)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.UploadFile(ctx, file, header, "user-123")
-	
+
 	// 验证结果
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Equal(t, dbError, err)
-	
+
 	mockStorage.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
 }
@@ -526,23 +526,23 @@ func TestFileAppService_UploadFile_DatabaseSaveFailed(t *testing.T) {
 
 func TestFileAppService_UploadFiles_Success(t *testing.T) {
 	service, mockRepo, mockStorage, mockScanner := setupFileServiceTest(t)
-	
+
 	// 创建两个文件
 	content1 := createValidJPEGContent(1024)
 	content2 := createValidPNGContent(1024)
-	
+
 	header1 := createMultipartFileHeader("file1.jpg", content1, "image/jpeg")
 	header2 := createMultipartFileHeader("file2.png", content2, "image/png")
-	
+
 	file1, _ := header1.Open()
 	file2, _ := header2.Open()
 	defer file1.Close()
 	defer file2.Close()
-	
+
 	files := []multipart.File{file1, file2}
 	headers := []*multipart.FileHeader{header1, header2}
 	uploaderID := "user-123"
-	
+
 	uploadedFile1 := &entity.File{
 		BaseEntity:   entity.BaseEntity{ID: "file-1"},
 		FileName:     "file1.jpg",
@@ -555,7 +555,7 @@ func TestFileAppService_UploadFiles_Success(t *testing.T) {
 		StorageType:  entity.StorageTypeLocal,
 		UploaderID:   uploaderID,
 	}
-	
+
 	uploadedFile2 := &entity.File{
 		BaseEntity:   entity.BaseEntity{ID: "file-2"},
 		FileName:     "file2.png",
@@ -568,38 +568,38 @@ func TestFileAppService_UploadFiles_Success(t *testing.T) {
 		StorageType:  entity.StorageTypeLocal,
 		UploaderID:   uploaderID,
 	}
-	
+
 	// 设置 mock 期望（每个文件都会被扫描和上传）
-	mockScanner.On("Scan", mock.Anything, "file1.jpg").Return(&storage.ScanResult{
+	mockScanner.On("Scan", mock.Anything, "file1.jpg").Return(&filesecurity.ScanResult{
 		Clean:   true,
 		Scanner: "MockScanner",
 	}, nil).Once()
-	mockScanner.On("Scan", mock.Anything, "file2.png").Return(&storage.ScanResult{
+	mockScanner.On("Scan", mock.Anything, "file2.png").Return(&filesecurity.ScanResult{
 		Clean:   true,
 		Scanner: "MockScanner",
 	}, nil).Once()
-	
+
 	mockStorage.On("Upload", mock.Anything, mock.Anything, "file1.jpg", int64(len(content1)), mock.Anything).
 		Return(uploadedFile1, nil).Once()
 	mockStorage.On("Upload", mock.Anything, mock.Anything, "file2.png", int64(len(content2)), mock.Anything).
 		Return(uploadedFile2, nil).Once()
-	
+
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.File")).Return(nil).Twice()
-	
+
 	// 执行测试前需要重新打开文件，因为之前的 Open 已经被 scanner 读取过了
 	file1, _ = header1.Open()
 	file2, _ = header2.Open()
 	files = []multipart.File{file1, file2}
-	
+
 	ctx := testutil.Context()
 	responses, err := service.UploadFiles(ctx, files, headers, uploaderID)
-	
+
 	// 验证结果
 	require.NoError(t, err)
 	assert.Len(t, responses, 2)
 	assert.Equal(t, "file-1", responses[0].ID)
 	assert.Equal(t, "file-2", responses[1].ID)
-	
+
 	mockStorage.AssertExpectations(t)
 	mockRepo.AssertExpectations(t)
 	mockScanner.AssertExpectations(t)
@@ -607,54 +607,54 @@ func TestFileAppService_UploadFiles_Success(t *testing.T) {
 
 func TestFileAppService_UploadFiles_PartialFailure(t *testing.T) {
 	service, mockRepo, mockStorage, mockScanner := setupFileServiceTest(t)
-	
+
 	content1 := createValidJPEGContent(1024)
 	content2 := createValidPNGContent(1024)
-	
+
 	header1 := createMultipartFileHeader("file1.jpg", content1, "image/jpeg")
 	header2 := createMultipartFileHeader("file2.png", content2, "image/png")
-	
+
 	file1, _ := header1.Open()
 	file2, _ := header2.Open()
 	defer file1.Close()
 	defer file2.Close()
-	
+
 	files := []multipart.File{file1, file2}
 	headers := []*multipart.FileHeader{header1, header2}
-	
+
 	uploadedFile1 := &entity.File{
 		BaseEntity: entity.BaseEntity{ID: "file-1"},
 		Path:       "/uploads/file1.jpg",
 	}
-	
+
 	// 设置 mock 期望：第一个文件成功，第二个文件失败
-	mockScanner.On("Scan", mock.Anything, "file1.jpg").Return(&storage.ScanResult{
+	mockScanner.On("Scan", mock.Anything, "file1.jpg").Return(&filesecurity.ScanResult{
 		Clean:   true,
 		Scanner: "MockScanner",
 	}, nil).Once()
-	mockScanner.On("Scan", mock.Anything, "file2.png").Return(&storage.ScanResult{
+	mockScanner.On("Scan", mock.Anything, "file2.png").Return(&filesecurity.ScanResult{
 		Clean:   true,
 		Scanner: "MockScanner",
 	}, nil).Once()
-	
+
 	mockStorage.On("Upload", mock.Anything, mock.Anything, "file1.jpg", int64(len(content1)), mock.Anything).
 		Return(uploadedFile1, nil).Once()
-	
+
 	uploadError := errors.New("upload failed for second file")
 	mockStorage.On("Upload", mock.Anything, mock.Anything, "file2.png", int64(len(content2)), mock.Anything).
 		Return(nil, uploadError).Once()
-	
+
 	// 第一个文件保存成功
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("*entity.File")).Return(nil).Once()
-	
+
 	// 重新打开文件
 	file1, _ = header1.Open()
 	file2, _ = header2.Open()
 	files = []multipart.File{file1, file2}
-	
+
 	ctx := testutil.Context()
 	responses, err := service.UploadFiles(ctx, files, headers, "user-123")
-	
+
 	// 验证结果 - 应该返回错误，因为没有事务回滚机制
 	require.Error(t, err)
 	assert.Nil(t, responses)
@@ -667,10 +667,10 @@ func TestFileAppService_UploadFiles_PartialFailure(t *testing.T) {
 
 func TestFileAppService_GetByID_Success(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	fileID := "file-123"
 	now := time.Now()
-	
+
 	expectedFile := &entity.File{
 		BaseEntity: entity.BaseEntity{
 			ID:        fileID,
@@ -687,35 +687,35 @@ func TestFileAppService_GetByID_Success(t *testing.T) {
 		StorageType:  entity.StorageTypeLocal,
 		UploaderID:   "user-123",
 	}
-	
+
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(expectedFile, nil)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.GetByID(ctx, fileID)
-	
+
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, fileID, resp.ID)
 	assert.Equal(t, expectedFile.FileName, resp.FileName)
 	assert.Equal(t, expectedFile.URL, resp.URL)
-	
+
 	mockRepo.AssertExpectations(t)
 }
 
 func TestFileAppService_GetByID_NotFound(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	fileID := "non-existent-file"
-	
+
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(nil, errors.New("record not found"))
-	
+
 	ctx := testutil.Context()
 	resp, err := service.GetByID(ctx, fileID)
-	
+
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Equal(t, ErrFileNotFound, err)
-	
+
 	mockRepo.AssertExpectations(t)
 }
 
@@ -725,41 +725,41 @@ func TestFileAppService_GetByID_NotFound(t *testing.T) {
 
 func TestFileAppService_Delete_Success(t *testing.T) {
 	service, mockRepo, mockStorage, _ := setupFileServiceTest(t)
-	
+
 	fileID := "file-123"
 	filePath := "/uploads/test.jpg"
-	
+
 	expectedFile := &entity.File{
 		BaseEntity: entity.BaseEntity{ID: fileID},
 		Path:       filePath,
 	}
-	
+
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(expectedFile, nil)
 	mockRepo.On("SoftDelete", mock.Anything, fileID).Return(nil)
 	mockStorage.On("Delete", mock.Anything, filePath).Return(nil)
-	
+
 	ctx := testutil.Context()
 	err := service.Delete(ctx, fileID)
-	
+
 	require.NoError(t, err)
-	
+
 	mockRepo.AssertExpectations(t)
 	mockStorage.AssertExpectations(t)
 }
 
 func TestFileAppService_Delete_NotFound(t *testing.T) {
 	service, mockRepo, mockStorage, _ := setupFileServiceTest(t)
-	
+
 	fileID := "non-existent-file"
-	
+
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(nil, errors.New("record not found"))
-	
+
 	ctx := testutil.Context()
 	err := service.Delete(ctx, fileID)
-	
+
 	require.Error(t, err)
 	assert.Equal(t, ErrFileNotFound, err)
-	
+
 	// 验证其他方法未被调用
 	mockRepo.AssertNotCalled(t, "SoftDelete")
 	mockStorage.AssertNotCalled(t, "Delete")
@@ -767,28 +767,28 @@ func TestFileAppService_Delete_NotFound(t *testing.T) {
 
 func TestFileAppService_Delete_PhysicalDeleteFailed(t *testing.T) {
 	service, mockRepo, mockStorage, _ := setupFileServiceTest(t)
-	
+
 	fileID := "file-123"
 	filePath := "/uploads/test.jpg"
-	
+
 	expectedFile := &entity.File{
 		BaseEntity: entity.BaseEntity{ID: fileID},
 		Path:       filePath,
 	}
-	
+
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(expectedFile, nil)
 	mockRepo.On("SoftDelete", mock.Anything, fileID).Return(nil)
-	
+
 	// 物理删除失败，但软删除成功
 	deleteError := errors.New("physical delete failed")
 	mockStorage.On("Delete", mock.Anything, filePath).Return(deleteError)
-	
+
 	ctx := testutil.Context()
 	err := service.Delete(ctx, fileID)
-	
+
 	// 应该返回 nil，因为软删除成功了
 	require.NoError(t, err)
-	
+
 	mockRepo.AssertExpectations(t)
 	mockStorage.AssertExpectations(t)
 }
@@ -799,69 +799,69 @@ func TestFileAppService_Delete_PhysicalDeleteFailed(t *testing.T) {
 
 func TestFileAppService_GetFile_Success(t *testing.T) {
 	service, mockRepo, mockStorage, _ := setupFileServiceTest(t)
-	
+
 	fileID := "file-123"
 	filePath := "/uploads/test.jpg"
-	
+
 	expectedFile := &entity.File{
 		BaseEntity: entity.BaseEntity{ID: fileID},
 		Path:       filePath,
 	}
-	
+
 	mockContent := io.NopCloser(strings.NewReader("file content"))
-	
+
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(expectedFile, nil)
 	mockStorage.On("Download", mock.Anything, filePath).Return(mockContent, nil)
-	
+
 	ctx := testutil.Context()
 	reader, file, err := service.GetFile(ctx, fileID)
-	
+
 	require.NoError(t, err)
 	assert.NotNil(t, reader)
 	assert.NotNil(t, file)
 	assert.Equal(t, fileID, file.ID)
-	
+
 	mockRepo.AssertExpectations(t)
 	mockStorage.AssertExpectations(t)
 }
 
 func TestFileAppService_GetFile_NotFound(t *testing.T) {
 	service, mockRepo, mockStorage, _ := setupFileServiceTest(t)
-	
+
 	fileID := "non-existent-file"
-	
+
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(nil, errors.New("record not found"))
-	
+
 	ctx := testutil.Context()
 	reader, file, err := service.GetFile(ctx, fileID)
-	
+
 	require.Error(t, err)
 	assert.Nil(t, reader)
 	assert.Nil(t, file)
 	assert.Equal(t, ErrFileNotFound, err)
-	
+
 	mockStorage.AssertNotCalled(t, "Download")
 }
 
 func TestFileAppService_GetFile_DownloadFailed(t *testing.T) {
 	service, mockRepo, mockStorage, _ := setupFileServiceTest(t)
-	
+
 	fileID := "file-123"
 	filePath := "/uploads/test.jpg"
-	
+
 	expectedFile := &entity.File{
 		BaseEntity: entity.BaseEntity{ID: fileID},
 		Path:       filePath,
 	}
-	
+
 	downloadError := errors.New("download failed")
-	
+
 	mockRepo.On("FindByID", mock.Anything, fileID).Return(expectedFile, nil)
 	mockStorage.On("Download", mock.Anything, filePath).Return(nil, downloadError)
-	
+
 	ctx := testutil.Context()
 	reader, file, err := service.GetFile(ctx, fileID)
-	
+
 	require.Error(t, err)
 	assert.Nil(t, reader)
 	assert.Nil(t, file)
@@ -874,7 +874,7 @@ func TestFileAppService_GetFile_DownloadFailed(t *testing.T) {
 
 func TestFileAppService_List_Success(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	req := &dto.FileListRequest{
 		Page:       1,
 		PageSize:   10,
@@ -882,7 +882,7 @@ func TestFileAppService_List_Success(t *testing.T) {
 		FileType:   "image",
 		UploaderID: "user-123",
 	}
-	
+
 	now := time.Now()
 	files := []entity.File{
 		{
@@ -906,7 +906,7 @@ func TestFileAppService_List_Success(t *testing.T) {
 			UploaderID: "user-123",
 		},
 	}
-	
+
 	pageResult := &repository.PageResult[entity.File]{
 		List:       files,
 		Total:      2,
@@ -914,43 +914,43 @@ func TestFileAppService_List_Success(t *testing.T) {
 		PageSize:   10,
 		TotalPages: 1,
 	}
-	
+
 	mockRepo.On("Search", mock.Anything, req.Keyword, repository.Pagination{
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}).Return(pageResult, nil)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.List(ctx, req)
-	
+
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Len(t, resp.List, 2)
 	assert.Equal(t, int64(2), resp.Total)
 	assert.Equal(t, 1, resp.Page)
-	
+
 	mockRepo.AssertExpectations(t)
 }
 
 func TestFileAppService_List_SearchFailed(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	req := &dto.FileListRequest{
 		Page:     1,
 		PageSize: 10,
 		Keyword:  "test",
 	}
-	
+
 	searchError := errors.New("search failed")
-	
+
 	mockRepo.On("Search", mock.Anything, req.Keyword, repository.Pagination{
 		Page:     req.Page,
 		PageSize: req.PageSize,
 	}).Return(nil, searchError)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.List(ctx, req)
-	
+
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Equal(t, searchError, err)
@@ -962,33 +962,33 @@ func TestFileAppService_List_SearchFailed(t *testing.T) {
 
 func TestFileAppService_BindToEntity_Success(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	fileID := "file-123"
 	entityType := "task"
 	entityID := "task-456"
-	
+
 	mockRepo.On("UpdateEntity", mock.Anything, fileID, entityType, entityID).Return(nil)
-	
+
 	ctx := testutil.Context()
 	err := service.BindToEntity(ctx, fileID, entityType, entityID)
-	
+
 	require.NoError(t, err)
 	mockRepo.AssertExpectations(t)
 }
 
 func TestFileAppService_BindToEntity_Failed(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	fileID := "file-123"
 	entityType := "task"
 	entityID := "task-456"
-	
+
 	bindError := errors.New("bind failed")
 	mockRepo.On("UpdateEntity", mock.Anything, fileID, entityType, entityID).Return(bindError)
-	
+
 	ctx := testutil.Context()
 	err := service.BindToEntity(ctx, fileID, entityType, entityID)
-	
+
 	require.Error(t, err)
 	assert.Equal(t, bindError, err)
 }
@@ -999,10 +999,10 @@ func TestFileAppService_BindToEntity_Failed(t *testing.T) {
 
 func TestFileAppService_GetFilesByEntity_Success(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	entityType := "task"
 	entityID := "task-456"
-	
+
 	now := time.Now()
 	files := []entity.File{
 		{
@@ -1026,33 +1026,33 @@ func TestFileAppService_GetFilesByEntity_Success(t *testing.T) {
 			EntityID:   entityID,
 		},
 	}
-	
+
 	mockRepo.On("FindByEntity", mock.Anything, entityType, entityID).Return(files, nil)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.GetFilesByEntity(ctx, entityType, entityID)
-	
+
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Len(t, resp, 2)
 	assert.Equal(t, "file-1", resp[0].ID)
 	assert.Equal(t, "file-2", resp[1].ID)
-	
+
 	mockRepo.AssertExpectations(t)
 }
 
 func TestFileAppService_GetFilesByEntity_Failed(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	entityType := "task"
 	entityID := "task-456"
-	
+
 	findError := errors.New("find failed")
 	mockRepo.On("FindByEntity", mock.Anything, entityType, entityID).Return(nil, findError)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.GetFilesByEntity(ctx, entityType, entityID)
-	
+
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Equal(t, findError, err)
@@ -1064,7 +1064,7 @@ func TestFileAppService_GetFilesByEntity_Failed(t *testing.T) {
 
 func TestFileAppService_GetStats_Success(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	expectedStats := &entity.FileStats{
 		TotalCount: 100,
 		TotalSize:  1024 * 1024 * 100, // 100MB
@@ -1077,31 +1077,31 @@ func TestFileAppService_GetStats_Success(t *testing.T) {
 		DocCount:   15,
 		DocSize:    1024 * 1024 * 10,
 	}
-	
+
 	mockRepo.On("GetStats", mock.Anything).Return(expectedStats, nil)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.GetStats(ctx)
-	
+
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.Equal(t, expectedStats.TotalCount, resp.TotalCount)
 	assert.Equal(t, expectedStats.TotalSize, resp.TotalSize)
 	assert.Equal(t, expectedStats.ImageCount, resp.ImageCount)
 	assert.Equal(t, expectedStats.AudioCount, resp.AudioCount)
-	
+
 	mockRepo.AssertExpectations(t)
 }
 
 func TestFileAppService_GetStats_Failed(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
-	
+
 	statsError := errors.New("get stats failed")
 	mockRepo.On("GetStats", mock.Anything).Return(nil, statsError)
-	
+
 	ctx := testutil.Context()
 	resp, err := service.GetStats(ctx)
-	
+
 	require.Error(t, err)
 	assert.Nil(t, resp)
 	assert.Equal(t, statsError, err)
@@ -1115,23 +1115,23 @@ func TestFileAppService_Integration_UploadAndGet(t *testing.T) {
 	// 创建真实测试数据库
 	testDB := testutil.NewTestDB(t)
 	defer testDB.Close()
-	
+
 	// 创建仓储实现
 	fileRepo := NewGormFileRepository(testDB.DB)
-	
+
 	// 创建 mock 存储服务
 	mockStorage := new(MockStorageService)
-	
+
 	// 创建服务
 	allowedTypes := []string{"jpg", "png"}
 	maxFileSize := int64(10 * 1024 * 1024)
 	service := NewFileAppService(fileRepo, mockStorage, maxFileSize, allowedTypes)
-	
+
 	// 使用空扫描器绕过病毒扫描
 	// 设置 mock 存储返回
 	content := createValidJPEGContent(1024)
 	header := createMultipartFileHeader("test.jpg", content, "image/jpeg")
-	
+
 	uploadedFile := &entity.File{
 		BaseEntity:   entity.BaseEntity{ID: "file-int-001"},
 		FileName:     "test.jpg",
@@ -1144,20 +1144,20 @@ func TestFileAppService_Integration_UploadAndGet(t *testing.T) {
 		StorageType:  entity.StorageTypeLocal,
 		UploaderID:   "user-123",
 	}
-	
+
 	mockStorage.On("Upload", mock.Anything, mock.Anything, "test.jpg", int64(len(content)), mock.Anything).
 		Return(uploadedFile, nil)
-	
+
 	// 测试上传
 	file, _ := header.Open()
 	defer file.Close()
-	
+
 	ctx := testutil.Context()
 	resp, err := service.UploadFile(ctx, file, header, "user-123")
-	
+
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
-	
+
 	// 测试获取
 	getResp, err := service.GetByID(ctx, resp.ID)
 	require.NoError(t, err)

@@ -10,8 +10,6 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/valueobject"
-	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
-	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/sms"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/errors"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/google/uuid"
@@ -61,7 +59,7 @@ type SMSProvider interface {
 type AuthService struct {
 	userRepo       repository.UserRepository
 	tokenService   TokenService
-	cache          cache.Cache
+	cache          Cache
 	wechatClient   WechatClient
 	smsService     SMSProvider
 	securityConfig *config.SecurityConfig
@@ -71,7 +69,7 @@ type AuthService struct {
 func NewAuthService(
 	userRepo repository.UserRepository,
 	tokenService TokenService,
-	cache cache.Cache,
+	cache Cache,
 	wechatClient WechatClient,
 ) *AuthService {
 	return &AuthService{
@@ -80,6 +78,13 @@ func NewAuthService(
 		cache:        cache,
 		wechatClient: wechatClient,
 	}
+}
+
+func (s *AuthService) ensureSMSService() error {
+	if s.smsService == nil {
+		return errors.New(errors.CodeInternal, "sms service not configured")
+	}
+	return nil
 }
 
 // SetSecurityConfig 设置安全配置
@@ -324,9 +329,8 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 	}
 
 	// 验证验证码
-	if s.smsService == nil {
-		defaultSMS := sms.NewService(&config.SMSConfig{}, s.cache)
-		s.smsService = defaultSMS
+	if err := s.ensureSMSService(); err != nil {
+		return nil, err
 	}
 
 	if !s.smsService.VerifyCode(ctx, phone, code) {
@@ -421,10 +425,8 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 
 // SendVerifyCode 发送验证码
 func (s *AuthService) SendVerifyCode(ctx context.Context, phone string) error {
-	if s.smsService == nil {
-		// 如果没有配置短信服务，使用默认实现
-		defaultSMS := sms.NewService(&config.SMSConfig{}, s.cache)
-		s.smsService = defaultSMS
+	if err := s.ensureSMSService(); err != nil {
+		return err
 	}
 
 	_, err := s.smsService.SendVerifyCode(ctx, phone)
@@ -434,9 +436,8 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, phone string) error {
 // ResetPassword 重置密码（通过短信验证码）
 func (s *AuthService) ResetPassword(ctx context.Context, phone, code, newPassword string) error {
 	// 验证验证码
-	if s.smsService == nil {
-		defaultSMS := sms.NewService(&config.SMSConfig{}, s.cache)
-		s.smsService = defaultSMS
+	if err := s.ensureSMSService(); err != nil {
+		return err
 	}
 
 	if !s.smsService.VerifyCode(ctx, phone, code) {

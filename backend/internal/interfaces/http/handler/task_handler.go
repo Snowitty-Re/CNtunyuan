@@ -5,6 +5,7 @@ import (
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
+	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
@@ -176,11 +177,17 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	task, err := h.taskService.Update(c.Request.Context(), id, &req)
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	task, err := h.taskService.Update(c.Request.Context(), id, &req, userID, isManager)
 	if err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
+		case service.ErrTaskForbidden:
+			response.Forbidden(c, "no permission to modify this task")
 		default:
 			logger.Error("Failed to update task", logger.Err(err))
 			response.InternalServerError(c, "failed to update")

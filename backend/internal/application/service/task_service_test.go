@@ -271,10 +271,10 @@ func TestTaskAppService_List(t *testing.T) {
 	testutil.MustCreate(t, tdb.DB, task3)
 
 	tests := []struct {
-		name         string
-		req          *dto.TaskListRequest
-		wantCount    int
-		wantTotal    int64
+		name          string
+		req           *dto.TaskListRequest
+		wantCount     int
+		wantTotal     int64
 		shouldContain []string
 	}{
 		{
@@ -432,7 +432,7 @@ func TestTaskAppService_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.Update(testutil.Context(), tt.taskID, tt.req)
+			resp, err := service.Update(testutil.Context(), tt.taskID, tt.req, creator.ID, false)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -497,7 +497,7 @@ func TestTaskAppService_Update_CannotUpdateCompletedTask(t *testing.T) {
 	req := &dto.UpdateTaskRequest{
 		Title: "尝试修改",
 	}
-	_, err := service.Update(testutil.Context(), completedTask.ID, req)
+	_, err := service.Update(testutil.Context(), completedTask.ID, req, creator.ID, false)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot update completed or cancelled task")
 }

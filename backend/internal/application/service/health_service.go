@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
+	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"gorm.io/gorm"
 )
@@ -31,20 +31,20 @@ type HealthCheck struct {
 
 // HealthStatus 整体健康状态
 type HealthStatusResult struct {
-	Status    HealthStatus          `json:"status"`
-	Version   string                `json:"version"`
-	Timestamp time.Time             `json:"timestamp"`
+	Status    HealthStatus           `json:"status"`
+	Version   string                 `json:"version"`
+	Timestamp time.Time              `json:"timestamp"`
 	Checks    map[string]HealthCheck `json:"checks"`
 }
 
 // HealthService 健康检查服务
 type HealthService struct {
 	db    *gorm.DB
-	cache cache.Cache
+	cache domainService.Cache
 }
 
 // NewHealthService 创建健康检查服务
-func NewHealthService(db *gorm.DB, cache cache.Cache) *HealthService {
+func NewHealthService(db *gorm.DB, cache domainService.Cache) *HealthService {
 	return &HealthService{
 		db:    db,
 		cache: cache,
@@ -197,7 +197,7 @@ func (s *HealthService) checkSystemResources(ctx context.Context) HealthCheck {
 	gcPause := m.PauseNs[(m.NumGC+255)%256]
 
 	check.Status = HealthStatusUP
-	check.Message = fmt.Sprintf("goroutines: %d, alloc: %dMB, gc_pause: %dms", 
+	check.Message = fmt.Sprintf("goroutines: %d, alloc: %dMB, gc_pause: %dms",
 		goroutines, m.Alloc/1024/1024, gcPause/1000000)
 	check.Response = time.Since(start).Milliseconds()
 
