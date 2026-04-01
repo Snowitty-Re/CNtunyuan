@@ -76,15 +76,21 @@
         <!-- 操作按钮区 -->
         <view class="card-actions" wx:if="{{item.status === 'processing' || item.status === 'assigned'}}">
           <block wx:if="{{item.status === 'assigned'}}">
-            <button class="action-btn btn-primary" bindtap="startTask" data-id="{{item.id}}">
+            <button class="action-btn btn-primary" catchtap="startTask" data-id="{{item.id}}">
               开始任务
             </button>
           </block>
           <block wx:if="{{item.status === 'processing'}}">
-            <button class="action-btn btn-outline" bindtap="updateProgress" data-id="{{item.id}}">
+            <button class="action-btn btn-outline" catchtap="updateProgress" data-id="{{item.id}}">
               更新进度
             </button>
-            <button class="action-btn btn-success" bindtap="completeTask" data-id="{{item.id}}">
+            <button class="action-btn btn-primary" catchtap="addFollowUp" data-id="{{item.id}}">
+              新增跟进
+            </button>
+            <button class="action-btn btn-primary" catchtap="submitFeedback" data-id="{{item.id}}">
+              提交反馈
+            </button>
+            <button class="action-btn btn-success" catchtap="completeTask" data-id="{{item.id}}">
               完成任务
             </button>
           </block>
@@ -102,6 +108,7 @@
       </view>
       <text class="empty-heading">暂无任务</text>
       <text class="empty-desc" wx:if="{{currentStatus === ''}}">您还没有任何任务</text>
+      <text class="empty-desc" wx:elif="{{currentStatus === 'assigned'}}">您还没有待开始的任务</text>
       <text class="empty-desc" wx:elif="{{currentStatus === 'processing'}}">您还没有进行中的任务</text>
       <text class="empty-desc" wx:elif="{{currentStatus === 'completed'}}">您还没有已完成的任务</text>
       <text class="empty-desc" wx:else>暂无相关任务</text>

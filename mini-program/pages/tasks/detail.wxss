@@ -653,6 +653,7 @@
   display: flex;
   gap: 20rpx;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .bar-btn {
@@ -704,6 +705,138 @@
   color: #C4B5A5;
 }
 
+.mini-action-btn {
+  margin: 0;
+  height: 56rpx;
+  line-height: 56rpx;
+  padding: 0 20rpx;
+  border-radius: 28rpx;
+  font-size: 22rpx;
+  color: #FF8C42;
+  background: #FFF3E9;
+}
+
+.mini-action-btn::after {
+  border: none;
+}
+
+.followup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.followup-item {
+  background: #FAF5F0;
+  border-radius: 14rpx;
+  padding: 18rpx;
+}
+
+.followup-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.followup-author {
+  font-size: 24rpx;
+  color: #5A4A3A;
+  font-weight: 600;
+}
+
+.followup-status {
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+}
+
+.followup-status-pending {
+  background: #FFF7E6;
+  color: #F2994A;
+}
+
+.followup-status-approved {
+  background: #E8F8EE;
+  color: #27AE60;
+}
+
+.followup-status-rejected {
+  background: #FFF1F0;
+  color: #EB5757;
+}
+
+.followup-content {
+  display: block;
+  color: #2D2016;
+  font-size: 26rpx;
+  line-height: 1.55;
+}
+
+.followup-meta {
+  margin-top: 10rpx;
+  display: flex;
+  justify-content: space-between;
+  color: #8C7B6B;
+  font-size: 22rpx;
+}
+
+.followup-attachments {
+  margin-top: 12rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+
+.followup-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 10rpx;
+}
+
+.followup-review {
+  margin-top: 10rpx;
+  background: #fff;
+  border-radius: 10rpx;
+  padding: 10rpx 12rpx;
+}
+
+.review-text {
+  font-size: 22rpx;
+  color: #6B5A4A;
+}
+
+.followup-actions {
+  margin-top: 12rpx;
+  display: flex;
+  gap: 10rpx;
+}
+
+.followup-btn {
+  margin: 0;
+  height: 56rpx;
+  line-height: 56rpx;
+  padding: 0 20rpx;
+  border-radius: 28rpx;
+  font-size: 22rpx;
+  background: #fff;
+  color: #5A4A3A;
+}
+
+.followup-btn::after {
+  border: none;
+}
+
+.followup-pass {
+  background: #E8F8EE;
+  color: #27AE60;
+}
+
+.followup-reject {
+  background: #FFF1F0;
+  color: #EB5757;
+}
+
 /* ========== 弹窗 ========== */
 .modal-overlay {
   position: fixed;
@@ -724,6 +857,13 @@
   border-radius: 28rpx;
   overflow: hidden;
   box-shadow: 0 24rpx 80rpx rgba(45, 32, 22, 0.2);
+}
+
+.followup-comment-modal {
+  width: 680rpx;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-top {
@@ -786,6 +926,102 @@
   display: flex;
   padding: 0 32rpx 32rpx;
   gap: 20rpx;
+}
+
+.followup-comment-list {
+  max-height: 560rpx;
+  padding: 0 28rpx;
+}
+
+.followup-comment-item {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #FAF5F0;
+}
+
+.followup-comment-item:last-child {
+  border-bottom: none;
+}
+
+.followup-comment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.followup-comment-user-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.followup-comment-user {
+  font-size: 24rpx;
+  color: #5A4A3A;
+  font-weight: 600;
+}
+
+.followup-comment-time {
+  font-size: 22rpx;
+  color: #A0917F;
+}
+
+.followup-comment-tag {
+  display: inline-block;
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+  font-size: 18rpx;
+  line-height: 1.4;
+}
+
+.tag-review {
+  background: #FFF1F0;
+  color: #EB5757;
+}
+
+.tag-normal {
+  background: #E8F8EE;
+  color: #27AE60;
+}
+
+.followup-comment-content {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 25rpx;
+  line-height: 1.55;
+  color: #2D2016;
+}
+
+.followup-comment-input-wrap {
+  border-top: 1rpx solid #FAF5F0;
+  padding: 16rpx 20rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.followup-comment-input {
+  flex: 1;
+  height: 68rpx;
+  border-radius: 34rpx;
+  background: #FAF5F0;
+  padding: 0 22rpx;
+  font-size: 26rpx;
+}
+
+.followup-comment-submit {
+  margin: 0;
+  min-width: 110rpx;
+  height: 68rpx;
+  line-height: 68rpx;
+  border-radius: 34rpx;
+  padding: 0 24rpx;
+  background: linear-gradient(135deg, #FF8C42 0%, #FF6B2C 100%);
+  color: #fff;
+  font-size: 24rpx;
+}
+
+.followup-comment-submit::after {
+  border: none;
 }
 
 .modal-btn {

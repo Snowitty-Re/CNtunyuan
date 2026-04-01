@@ -76,6 +76,12 @@
       </view>
       <text class="action-label">我的任务</text>
     </view>
+    <view class="action-item" bindtap="onCreateTask" hover-class="action-item--hover">
+      <view class="action-circle action-circle--amber">
+        <text class="iconfont icon-add"></text>
+      </view>
+      <text class="action-label">创建任务</text>
+    </view>
   </view>
 
   <!-- 最新案件 -->

@@ -35,12 +35,13 @@ Page({
     caseIndex: -1,
     users: [],
     userIndex: -1,
+    pendingCaseId: '',
     loading: false,
     submitting: false,
     minDate: ''
   },
 
-  onLoad() {
+  onLoad(options = {}) {
     if (!app.ensureAuth || !app.ensureAuth()) return
     // 检查权限
     const userInfo = wx.getStorageSync('userInfo') || {}
@@ -53,7 +54,8 @@ Page({
     // 设置最小日期为今天
     const today = new Date()
     this.setData({
-      minDate: formatDate(today)
+      minDate: formatDate(today),
+      pendingCaseId: options.caseId || ''
     })
 
     this.loadCases()
@@ -66,18 +68,50 @@ Page({
     try {
       const result = await missingPersonService.getList({ 
         page: 1, 
-        page_size: 100,
-        status: 'searching'
+        page_size: 100
       })
       const cases = result.list || result || []
       this.setData({ 
         cases,
         loading: false 
       })
+      this.applyPresetCase()
     } catch (error) {
       console.error('加载案件失败:', error)
       showToast('加载案件失败')
       this.setData({ loading: false })
+    }
+  },
+
+  async applyPresetCase() {
+    const presetID = this.data.pendingCaseId
+    if (!presetID) return
+
+    const hitIndex = this.data.cases.findIndex(item => item.id === presetID)
+    if (hitIndex >= 0) {
+      this.setData({
+        caseIndex: hitIndex,
+        'form.missing_person_id': presetID,
+        pendingCaseId: ''
+      })
+      return
+    }
+
+    try {
+      const caseItem = await missingPersonService.getById(presetID)
+      if (!caseItem || !caseItem.id) {
+        this.setData({ pendingCaseId: '' })
+        return
+      }
+      const mergedCases = [caseItem, ...this.data.cases]
+      this.setData({
+        cases: mergedCases,
+        caseIndex: 0,
+        'form.missing_person_id': caseItem.id,
+        pendingCaseId: ''
+      })
+    } catch (error) {
+      this.setData({ pendingCaseId: '' })
     }
   },
 

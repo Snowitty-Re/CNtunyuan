@@ -34,6 +34,11 @@ func (h *TaskHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *mi
 		tasks.GET("/stats", h.GetStats)
 		tasks.GET("/:id", h.GetByID)
 		tasks.GET("/:id/logs", h.GetLogs)
+		tasks.GET("/:id/follow-ups", h.GetFollowUps)
+		tasks.POST("/:id/follow-ups", h.CreateFollowUp)
+		tasks.POST("/:id/follow-ups/:follow_up_id/review", middleware.RequireManager(), h.ReviewFollowUp)
+		tasks.GET("/:id/follow-ups/:follow_up_id/comments", h.GetFollowUpComments)
+		tasks.POST("/:id/follow-ups/:follow_up_id/comments", h.AddFollowUpComment)
 		tasks.POST("", h.Create)
 		tasks.PUT("/:id", h.Update)
 		tasks.DELETE("/:id", middleware.RequireManager(), h.Delete)
@@ -437,6 +442,163 @@ func (h *TaskHandler) UpdateProgress(c *gin.Context) {
 	response.Success(c, nil)
 }
 
+// CreateFollowUp 创建任务跟进
+func (h *TaskHandler) CreateFollowUp(c *gin.Context) {
+	taskID := c.Param("id")
+	if taskID == "" {
+		response.BadRequest(c, "task id is required")
+		return
+	}
+
+	var req dto.CreateTaskFollowUpRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	followUp, err := h.taskService.CreateFollowUp(c.Request.Context(), taskID, &req, userID, isManager)
+	if err != nil {
+		switch err {
+		case service.ErrTaskNotFound:
+			response.NotFound(c, "task not found")
+		case service.ErrTaskForbidden:
+			response.Forbidden(c, "no permission to add follow up")
+		default:
+			response.BadRequest(c, err.Error())
+		}
+		return
+	}
+
+	response.Created(c, followUp)
+}
+
+// GetFollowUps 获取任务跟进列表
+func (h *TaskHandler) GetFollowUps(c *gin.Context) {
+	taskID := c.Param("id")
+	if taskID == "" {
+		response.BadRequest(c, "task id is required")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	result, err := h.taskService.ListFollowUps(c.Request.Context(), taskID, page, pageSize)
+	if err != nil {
+		switch err {
+		case service.ErrTaskNotFound:
+			response.NotFound(c, "task not found")
+		default:
+			response.InternalServerError(c, "failed to get follow ups")
+		}
+		return
+	}
+	response.Success(c, result)
+}
+
+// ReviewFollowUp 审核任务跟进
+func (h *TaskHandler) ReviewFollowUp(c *gin.Context) {
+	taskID := c.Param("id")
+	followUpID := c.Param("follow_up_id")
+	if taskID == "" || followUpID == "" {
+		response.BadRequest(c, "task id and follow up id are required")
+		return
+	}
+
+	var req dto.ReviewTaskFollowUpRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	if err := h.taskService.ReviewFollowUp(c.Request.Context(), taskID, followUpID, &req, userID, isManager); err != nil {
+		switch err {
+		case service.ErrTaskNotFound:
+			response.NotFound(c, "task not found")
+		case service.ErrTaskFollowUpNotFound:
+			response.NotFound(c, "follow up not found")
+		case service.ErrTaskForbidden:
+			response.Forbidden(c, "no permission to review follow up")
+		default:
+			response.BadRequest(c, err.Error())
+		}
+		return
+	}
+
+	response.Success(c, nil)
+}
+
+// AddFollowUpComment 添加任务跟进评论
+func (h *TaskHandler) AddFollowUpComment(c *gin.Context) {
+	taskID := c.Param("id")
+	followUpID := c.Param("follow_up_id")
+	if taskID == "" || followUpID == "" {
+		response.BadRequest(c, "task id and follow up id are required")
+		return
+	}
+
+	var req dto.CreateTaskFollowUpCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	comment, err := h.taskService.AddFollowUpComment(c.Request.Context(), taskID, followUpID, &req, userID, isManager)
+	if err != nil {
+		switch err {
+		case service.ErrTaskNotFound:
+			response.NotFound(c, "task not found")
+		case service.ErrTaskFollowUpNotFound:
+			response.NotFound(c, "follow up not found")
+		case service.ErrTaskForbidden:
+			response.Forbidden(c, "no permission to comment")
+		default:
+			response.BadRequest(c, err.Error())
+		}
+		return
+	}
+	response.Created(c, comment)
+}
+
+// GetFollowUpComments 获取任务跟进评论
+func (h *TaskHandler) GetFollowUpComments(c *gin.Context) {
+	taskID := c.Param("id")
+	followUpID := c.Param("follow_up_id")
+	if taskID == "" || followUpID == "" {
+		response.BadRequest(c, "task id and follow up id are required")
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	comments, err := h.taskService.GetFollowUpComments(c.Request.Context(), taskID, followUpID, page, pageSize)
+	if err != nil {
+		switch err {
+		case service.ErrTaskNotFound:
+			response.NotFound(c, "task not found")
+		case service.ErrTaskFollowUpNotFound:
+			response.NotFound(c, "follow up not found")
+		default:
+			response.InternalServerError(c, "failed to get follow up comments")
+		}
+		return
+	}
+	response.Success(c, comments)
+}
+
 // GetMyTasks 获取我的任务
 // @Summary      获取我的任务
 // @Description  获取当前登录用户的任务列表
@@ -452,10 +614,11 @@ func (h *TaskHandler) UpdateProgress(c *gin.Context) {
 // @Security     Bearer
 func (h *TaskHandler) GetMyTasks(c *gin.Context) {
 	userID := middleware.GetUserID(c)
+	status := c.Query("status")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	tasks, err := h.taskService.GetMyTasks(c.Request.Context(), userID, page, pageSize)
+	tasks, err := h.taskService.GetMyTasks(c.Request.Context(), userID, status, page, pageSize)
 	if err != nil {
 		response.InternalServerError(c, "failed to get my tasks")
 		return

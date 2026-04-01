@@ -420,6 +420,17 @@ Page({
     wx.navigateTo({ url: '/pages/tasks/my' })
   },
 
+  onCreateTask() {
+    if (!(app.isManager && app.isManager())) {
+      wx.showToast({
+        title: '仅管理员可创建任务',
+        icon: 'none'
+      })
+      return
+    }
+    wx.navigateTo({ url: '/pages/tasks/create' })
+  },
+
   // ========== 重试方法 ==========
 
   /**

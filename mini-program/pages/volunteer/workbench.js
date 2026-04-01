@@ -19,6 +19,7 @@ Page({
     // 快捷入口
     quickActions: [
       { key: 'myTasks', icon: 'task', label: '我的任务', color: '#FF8C42' },
+      { key: 'createTask', icon: 'add', label: '创建任务', color: '#E67E22', managerOnly: true },
       { key: 'createCase', icon: 'case', label: '发布案件', color: '#3498DB' },
       { key: 'recordDialect', icon: 'mic', label: '录制方言', color: '#27AE60' },
       { key: 'pendingAssign', icon: 'assign', label: '待分配', color: '#9B59B6', managerOnly: true },
@@ -94,9 +95,9 @@ Page({
       const stats = await taskService.getStats()
       this.setData({
         todayStats: {
-          myPending:    stats.my_pending    || 0,
-          myProcessing: stats.my_processing || 0,
-          myCompleted:  stats.my_completed  || 0
+          myPending:    stats.my_pending    ?? stats.myPending    ?? 0,
+          myProcessing: stats.my_processing ?? stats.myProcessing ?? 0,
+          myCompleted:  stats.my_completed  ?? stats.myCompleted  ?? 0
         }
       })
     } catch (error) {
@@ -130,6 +131,9 @@ Page({
     switch (key) {
       case 'myTasks':
         wx.navigateTo({ url: '/pages/tasks/my' })
+        break
+      case 'createTask':
+        wx.navigateTo({ url: '/pages/tasks/create' })
         break
       case 'createCase':
         wx.navigateTo({ url: '/pages/cases/create' })
@@ -165,7 +169,6 @@ Page({
 
   // 开始任务
   async startTask(e) {
-    e.stopPropagation()
     const { id } = e.currentTarget.dataset
     try {
       showLoading('处理中...')

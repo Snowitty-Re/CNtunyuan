@@ -123,9 +123,70 @@ module.exports = {
   },
 
   /**
+   * 获取任务跟进记录
+   * @param {String} id 任务ID
+   * @param {Object} params 分页参数
+   */
+  getFollowUps(id, params = {}) {
+    return get(`/tasks/${id}/follow-ups`, params)
+  },
+
+  /**
+   * 新增任务跟进记录
+   * @param {String} id 任务ID
+   * @param {Object} data 跟进数据
+   */
+  createFollowUp(id, data) {
+    return post(`/tasks/${id}/follow-ups`, data)
+  },
+
+  /**
+   * 审核任务跟进
+   * @param {String} taskId 任务ID
+   * @param {String} followUpId 跟进ID
+   * @param {Object} data 审核数据 {approve, remark}
+   */
+  reviewFollowUp(taskId, followUpId, data) {
+    return post(`/tasks/${taskId}/follow-ups/${followUpId}/review`, data)
+  },
+
+  /**
+   * 获取任务跟进评论
+   * @param {String} taskId 任务ID
+   * @param {String} followUpId 跟进ID
+   * @param {Object} params 分页参数
+   */
+  getFollowUpComments(taskId, followUpId, params = {}) {
+    return get(`/tasks/${taskId}/follow-ups/${followUpId}/comments`, params)
+  },
+
+  /**
+   * 发表评论到任务跟进
+   * @param {String} taskId 任务ID
+   * @param {String} followUpId 跟进ID
+   * @param {Object} data 评论数据 {content}
+   */
+  addFollowUpComment(taskId, followUpId, data) {
+    return post(`/tasks/${taskId}/follow-ups/${followUpId}/comments`, data)
+  },
+
+  /**
    * 获取统计数据
    */
   getStats() {
-    return get('/tasks/stats')
+    return get('/tasks/stats').then(res => ({
+      total: res.total ?? 0,
+      draft: res.draft ?? 0,
+      pending: res.pending ?? 0,
+      assigned: res.assigned ?? 0,
+      processing: res.processing ?? 0,
+      completed: res.completed ?? 0,
+      cancelled: res.cancelled ?? 0,
+      overdue: res.overdue ?? 0,
+      my_tasks: res.my_tasks ?? res.myTasks ?? 0,
+      my_pending: res.my_pending ?? res.myPending ?? 0,
+      my_processing: res.my_processing ?? res.myProcessing ?? 0,
+      my_completed: res.my_completed ?? res.myCompleted ?? 0
+    }))
   }
 }

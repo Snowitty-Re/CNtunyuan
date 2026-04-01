@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -14,6 +15,7 @@ type CreateTaskRequest struct {
 	Priority        string    `json:"priority"`
 	Deadline        time.Time `json:"deadline"`
 	MissingPersonID string    `json:"missing_person_id"`
+	AssigneeID      string    `json:"assignee_id"`
 	Location        string    `json:"location"`
 	Province        string    `json:"province"`
 	City            string    `json:"city"`
@@ -132,6 +134,53 @@ type TaskCommentResponse struct {
 	CreatedAt time.Time     `json:"created_at"`
 }
 
+// CreateTaskFollowUpRequest 创建任务跟进请求
+type CreateTaskFollowUpRequest struct {
+	Content     string   `json:"content" binding:"required"`
+	Progress    *int     `json:"progress,omitempty" binding:"omitempty,min=0,max=100"`
+	Attachments []string `json:"attachments"`
+}
+
+// ReviewTaskFollowUpRequest 审核任务跟进请求
+type ReviewTaskFollowUpRequest struct {
+	Approve bool   `json:"approve"`
+	Remark  string `json:"remark"`
+}
+
+// CreateTaskFollowUpCommentRequest 创建任务跟进评论请求
+type CreateTaskFollowUpCommentRequest struct {
+	Content string `json:"content" binding:"required"`
+}
+
+// TaskFollowUpResponse 任务跟进响应
+type TaskFollowUpResponse struct {
+	ID           string        `json:"id"`
+	TaskID       string        `json:"task_id"`
+	UserID       string        `json:"user_id"`
+	Content      string        `json:"content"`
+	Progress     *int          `json:"progress,omitempty"`
+	Attachments  []string      `json:"attachments"`
+	Status       string        `json:"status"`
+	ReviewRemark string        `json:"review_remark,omitempty"`
+	ReviewedBy   *string       `json:"reviewed_by,omitempty"`
+	ReviewedAt   *time.Time    `json:"reviewed_at,omitempty"`
+	CommentCount int           `json:"comment_count"`
+	User         *UserResponse `json:"user,omitempty"`
+	Reviewer     *UserResponse `json:"reviewer,omitempty"`
+	CreatedAt    time.Time     `json:"created_at"`
+}
+
+// TaskFollowUpCommentResponse 任务跟进评论响应
+type TaskFollowUpCommentResponse struct {
+	ID         string        `json:"id"`
+	TaskID     string        `json:"task_id"`
+	FollowUpID string        `json:"follow_up_id"`
+	UserID     string        `json:"user_id"`
+	Content    string        `json:"content"`
+	User       *UserResponse `json:"user,omitempty"`
+	CreatedAt  time.Time     `json:"created_at"`
+}
+
 // TaskLogResponse 任务日志响应
 type TaskLogResponse struct {
 	ID        string        `json:"id"`
@@ -225,6 +274,53 @@ func ToTaskLogResponse(log *entity.TaskLog) TaskLogResponse {
 		resp.User = &user
 	}
 
+	return resp
+}
+
+// ToTaskFollowUpResponse 转换为跟进响应
+func ToTaskFollowUpResponse(f *entity.TaskFollowUp) TaskFollowUpResponse {
+	resp := TaskFollowUpResponse{
+		ID:           f.ID,
+		TaskID:       f.TaskID,
+		UserID:       f.UserID,
+		Content:      f.Content,
+		Progress:     f.Progress,
+		Status:       string(f.Status),
+		ReviewRemark: f.ReviewRemark,
+		ReviewedBy:   f.ReviewedBy,
+		ReviewedAt:   f.ReviewedAt,
+		CommentCount: f.CommentCount,
+		CreatedAt:    f.CreatedAt,
+		Attachments:  []string{},
+	}
+	if f.Attachments != "" {
+		_ = json.Unmarshal([]byte(f.Attachments), &resp.Attachments)
+	}
+	if f.User != nil {
+		user := ToUserResponse(f.User)
+		resp.User = &user
+	}
+	if f.Reviewer != nil {
+		reviewer := ToUserResponse(f.Reviewer)
+		resp.Reviewer = &reviewer
+	}
+	return resp
+}
+
+// ToTaskFollowUpCommentResponse 转换为跟进评论响应
+func ToTaskFollowUpCommentResponse(c *entity.TaskFollowUpComment) TaskFollowUpCommentResponse {
+	resp := TaskFollowUpCommentResponse{
+		ID:         c.ID,
+		TaskID:     c.TaskID,
+		FollowUpID: c.FollowUpID,
+		UserID:     c.UserID,
+		Content:    c.Content,
+		CreatedAt:  c.CreatedAt,
+	}
+	if c.User != nil {
+		user := ToUserResponse(c.User)
+		resp.User = &user
+	}
 	return resp
 }
 

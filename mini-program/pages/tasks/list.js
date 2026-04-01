@@ -150,7 +150,6 @@ Page({
 
   // 快速领取任务
   async quickClaim(e) {
-    e.stopPropagation()
     const id = e.currentTarget.dataset.id
     const userInfo = wx.getStorageSync('userInfo') || {}
     if (!this.data.canCreate) {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -19,6 +20,8 @@ var (
 	ErrAlreadyAssigned       = errors.New("task already assigned")
 	ErrTaskNotAssignedToUser = errors.New("task not assigned to this user")
 	ErrTaskForbidden         = errors.New("no permission to modify this task")
+	ErrTaskFollowUpNotFound  = errors.New("task follow up not found")
+	ErrTaskFollowUpReviewed  = errors.New("task follow up already reviewed")
 )
 
 // TaskAppService 任务应用服务
@@ -46,7 +49,7 @@ func (s *TaskAppService) Create(ctx context.Context, req *dto.CreateTaskRequest,
 		Address:     req.Address,
 		Lat:         req.Lat,
 		Lng:         req.Lng,
-		Status:      entity.TaskStatusDraft,
+		Status:      entity.TaskStatusPending,
 	}
 
 	// 设置优先级
@@ -64,6 +67,13 @@ func (s *TaskAppService) Create(ctx context.Context, req *dto.CreateTaskRequest,
 	// 设置关联的走失人员（如果提供）
 	if req.MissingPersonID != "" {
 		task.MissingPersonID = &req.MissingPersonID
+	}
+
+	// 创建时允许直接分配执行人：有 assignee 则状态进入 assigned
+	if req.AssigneeID != "" {
+		if err := task.Assign(req.AssigneeID); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.taskRepo.Create(ctx, task); err != nil {
@@ -361,11 +371,219 @@ func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress
 	return nil
 }
 
-// GetMyTasks 获取我的任务
-func (s *TaskAppService) GetMyTasks(ctx context.Context, userID string, page, pageSize int) (*dto.TaskListResponse, error) {
+// CreateFollowUp 创建任务跟进记录
+func (s *TaskAppService) CreateFollowUp(ctx context.Context, taskID string, req *dto.CreateTaskFollowUpRequest, userID string, isManager bool) (*dto.TaskFollowUpResponse, error) {
+	task, err := s.taskRepo.FindByID(ctx, taskID)
+	if err != nil {
+		return nil, ErrTaskNotFound
+	}
+	if task.AssigneeID == nil || (*task.AssigneeID != userID && !isManager) {
+		return nil, ErrTaskForbidden
+	}
+	if task.Status != entity.TaskStatusAssigned && task.Status != entity.TaskStatusProcessing {
+		return nil, errors.New("当前状态不能提交跟进")
+	}
+
+	attachmentsJSON := "[]"
+	if len(req.Attachments) > 0 {
+		if b, err := json.Marshal(req.Attachments); err == nil {
+			attachmentsJSON = string(b)
+		}
+	}
+
+	followUp := &entity.TaskFollowUp{
+		TaskID:      taskID,
+		UserID:      userID,
+		Content:     req.Content,
+		Attachments: attachmentsJSON,
+		Status:      entity.TaskFollowUpStatusPending,
+	}
+	if req.Progress != nil {
+		followUp.Progress = req.Progress
+		if err := task.UpdateProgress(*req.Progress); err == nil {
+			_ = s.taskRepo.Update(ctx, task)
+		}
+	}
+
+	if err := s.taskRepo.AddFollowUp(ctx, followUp); err != nil {
+		return nil, err
+	}
+
+	log := &entity.TaskLog{
+		TaskID:  taskID,
+		UserID:  userID,
+		Action:  "follow_up_create",
+		Content: "提交任务跟进",
+	}
+	if err := s.taskRepo.AddLog(ctx, log); err != nil {
+		logger.Warn("Failed to add follow up create log", logger.Err(err), logger.String("task_id", taskID))
+	}
+
+	resp := dto.ToTaskFollowUpResponse(followUp)
+	return &resp, nil
+}
+
+// ListFollowUps 获取任务跟进列表
+func (s *TaskAppService) ListFollowUps(ctx context.Context, taskID string, page, pageSize int) (*dto.PageResult[dto.TaskFollowUpResponse], error) {
+	if _, err := s.taskRepo.FindByID(ctx, taskID); err != nil {
+		return nil, ErrTaskNotFound
+	}
+
 	page, pageSize = validator.SanitizePagination(page, pageSize)
 	pagination := repository.Pagination{Page: page, PageSize: pageSize}
-	result, err := s.taskRepo.FindByAssignee(ctx, userID, pagination)
+	result, err := s.taskRepo.GetFollowUps(ctx, taskID, pagination)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]dto.TaskFollowUpResponse, len(result.List))
+	for i, item := range result.List {
+		list[i] = dto.ToTaskFollowUpResponse(&item)
+	}
+
+	totalPages := int(result.Total) / pageSize
+	if int(result.Total)%pageSize > 0 {
+		totalPages++
+	}
+	return &dto.PageResult[dto.TaskFollowUpResponse]{
+		List:       list,
+		Total:      result.Total,
+		Page:       result.Page,
+		PageSize:   result.PageSize,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// ReviewFollowUp 审核任务跟进
+func (s *TaskAppService) ReviewFollowUp(ctx context.Context, taskID, followUpID string, req *dto.ReviewTaskFollowUpRequest, reviewerID string, isManager bool) error {
+	if !isManager {
+		return ErrTaskForbidden
+	}
+	if _, err := s.taskRepo.FindByID(ctx, taskID); err != nil {
+		return ErrTaskNotFound
+	}
+
+	followUp, err := s.taskRepo.FindFollowUpByID(ctx, taskID, followUpID)
+	if err != nil {
+		return ErrTaskFollowUpNotFound
+	}
+	if followUp.Status != entity.TaskFollowUpStatusPending {
+		return ErrTaskFollowUpReviewed
+	}
+
+	now := time.Now()
+	followUp.ReviewRemark = req.Remark
+	followUp.ReviewedBy = &reviewerID
+	followUp.ReviewedAt = &now
+	if req.Approve {
+		followUp.Status = entity.TaskFollowUpStatusApproved
+	} else {
+		followUp.Status = entity.TaskFollowUpStatusRejected
+	}
+
+	if err := s.taskRepo.UpdateFollowUp(ctx, followUp); err != nil {
+		return err
+	}
+
+	action := "follow_up_approve"
+	if !req.Approve {
+		action = "follow_up_reject"
+	}
+	log := &entity.TaskLog{
+		TaskID:  taskID,
+		UserID:  reviewerID,
+		Action:  action,
+		Content: req.Remark,
+	}
+	if err := s.taskRepo.AddLog(ctx, log); err != nil {
+		logger.Warn("Failed to add follow up review log", logger.Err(err), logger.String("task_id", taskID))
+	}
+	return nil
+}
+
+// AddFollowUpComment 添加任务跟进评论
+func (s *TaskAppService) AddFollowUpComment(ctx context.Context, taskID, followUpID string, req *dto.CreateTaskFollowUpCommentRequest, userID string, isManager bool) (*dto.TaskFollowUpCommentResponse, error) {
+	task, err := s.taskRepo.FindByID(ctx, taskID)
+	if err != nil {
+		return nil, ErrTaskNotFound
+	}
+	isCreator := task.CreatorID == userID
+	isAssignee := task.AssigneeID != nil && *task.AssigneeID == userID
+	if !isManager && !isCreator && !isAssignee {
+		return nil, ErrTaskForbidden
+	}
+
+	if _, err := s.taskRepo.FindFollowUpByID(ctx, taskID, followUpID); err != nil {
+		return nil, ErrTaskFollowUpNotFound
+	}
+
+	comment := &entity.TaskFollowUpComment{
+		TaskID:     taskID,
+		FollowUpID: followUpID,
+		UserID:     userID,
+		Content:    req.Content,
+	}
+	if err := s.taskRepo.AddFollowUpComment(ctx, comment); err != nil {
+		return nil, err
+	}
+
+	log := &entity.TaskLog{
+		TaskID:  taskID,
+		UserID:  userID,
+		Action:  "follow_up_comment",
+		Content: "任务跟进评论",
+	}
+	if err := s.taskRepo.AddLog(ctx, log); err != nil {
+		logger.Warn("Failed to add follow up comment log", logger.Err(err), logger.String("task_id", taskID))
+	}
+
+	resp := dto.ToTaskFollowUpCommentResponse(comment)
+	return &resp, nil
+}
+
+// GetFollowUpComments 获取任务跟进评论列表
+func (s *TaskAppService) GetFollowUpComments(ctx context.Context, taskID, followUpID string, page, pageSize int) (*dto.PageResult[dto.TaskFollowUpCommentResponse], error) {
+	if _, err := s.taskRepo.FindByID(ctx, taskID); err != nil {
+		return nil, ErrTaskNotFound
+	}
+	if _, err := s.taskRepo.FindFollowUpByID(ctx, taskID, followUpID); err != nil {
+		return nil, ErrTaskFollowUpNotFound
+	}
+
+	page, pageSize = validator.SanitizePagination(page, pageSize)
+	pagination := repository.Pagination{Page: page, PageSize: pageSize}
+	result, err := s.taskRepo.GetFollowUpComments(ctx, taskID, followUpID, pagination)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]dto.TaskFollowUpCommentResponse, len(result.List))
+	for i, item := range result.List {
+		list[i] = dto.ToTaskFollowUpCommentResponse(&item)
+	}
+
+	totalPages := int(result.Total) / pageSize
+	if int(result.Total)%pageSize > 0 {
+		totalPages++
+	}
+	return &dto.PageResult[dto.TaskFollowUpCommentResponse]{
+		List:       list,
+		Total:      result.Total,
+		Page:       result.Page,
+		PageSize:   result.PageSize,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// GetMyTasks 获取我的任务
+func (s *TaskAppService) GetMyTasks(ctx context.Context, userID string, status string, page, pageSize int) (*dto.TaskListResponse, error) {
+	page, pageSize = validator.SanitizePagination(page, pageSize)
+	query := repository.NewTaskQuery()
+	query.Page = page
+	query.PageSize = pageSize
+	query.AssigneeID = userID
+	query.Status = entity.TaskStatus(status)
+	result, err := s.taskRepo.List(ctx, query)
 	if err != nil {
 		return nil, err
 	}

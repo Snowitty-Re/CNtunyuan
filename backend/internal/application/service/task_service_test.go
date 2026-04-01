@@ -76,6 +76,7 @@ func TestTaskAppService_Create(t *testing.T) {
 	// 创建测试组织和用户
 	org := createTestOrg(t, tdb)
 	creator := createTestUser(t, tdb, "creator-id", "13800138000", string(entity.RoleManager))
+	assignee := createTestUser(t, tdb, "assignee-id", "13800138001", string(entity.RoleVolunteer))
 
 	tests := []struct {
 		name    string
@@ -141,6 +142,16 @@ func TestTaskAppService_Create(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "create task with assignee",
+			req: &dto.CreateTaskRequest{
+				Title:      "已分配任务",
+				Type:       string(entity.TaskTypeAssist),
+				Location:   "上海市",
+				AssigneeID: assignee.ID,
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -157,7 +168,13 @@ func TestTaskAppService_Create(t *testing.T) {
 			assert.Equal(t, tt.req.Type, resp.Type)
 			assert.Equal(t, creator.ID, resp.CreatorID)
 			assert.Equal(t, org.ID, resp.OrgID)
-			assert.Equal(t, string(entity.TaskStatusDraft), resp.Status)
+			if tt.req.AssigneeID != "" {
+				assert.Equal(t, string(entity.TaskStatusAssigned), resp.Status)
+				require.NotNil(t, resp.AssigneeID)
+				assert.Equal(t, tt.req.AssigneeID, *resp.AssigneeID)
+			} else {
+				assert.Equal(t, string(entity.TaskStatusPending), resp.Status)
+			}
 
 			// 验证优先级
 			if tt.req.Priority != "" {
@@ -912,7 +929,7 @@ func TestTaskAppService_GetMyTasks(t *testing.T) {
 	testutil.MustCreate(t, tdb.DB, task3)
 
 	// 获取我的任务
-	resp, err := service.GetMyTasks(testutil.Context(), assignee.ID, 1, 10)
+	resp, err := service.GetMyTasks(testutil.Context(), assignee.ID, "", 1, 10)
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), resp.Total)
 	assert.Len(t, resp.List, 2)

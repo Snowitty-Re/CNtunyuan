@@ -327,14 +327,94 @@ func (r *TaskRepositoryImpl) GetAttachments(ctx context.Context, taskID string) 
 	return attachments, err
 }
 
+// AddFollowUp 添加任务跟进
+func (r *TaskRepositoryImpl) AddFollowUp(ctx context.Context, followUp *entity.TaskFollowUp) error {
+	return r.db.WithContext(ctx).Create(followUp).Error
+}
+
+// GetFollowUps 获取任务跟进列表
+func (r *TaskRepositoryImpl) GetFollowUps(ctx context.Context, taskID string, pagination repository.Pagination) (*repository.PageResult[entity.TaskFollowUp], error) {
+	var list []entity.TaskFollowUp
+	var total int64
+
+	db := r.db.WithContext(ctx).Model(&entity.TaskFollowUp{}).Where("task_id = ?", taskID)
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	if err := db.Order("created_at DESC").
+		Preload("User").
+		Preload("Reviewer").
+		Offset((pagination.Page - 1) * pagination.PageSize).
+		Limit(pagination.PageSize).
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+
+	return repository.NewPageResult(list, total, pagination.Page, pagination.PageSize), nil
+}
+
+// FindFollowUpByID 根据ID获取任务跟进
+func (r *TaskRepositoryImpl) FindFollowUpByID(ctx context.Context, taskID, followUpID string) (*entity.TaskFollowUp, error) {
+	var followUp entity.TaskFollowUp
+	err := r.db.WithContext(ctx).
+		Where("id = ? AND task_id = ?", followUpID, taskID).
+		Preload("User").
+		Preload("Reviewer").
+		First(&followUp).Error
+	if err != nil {
+		return nil, err
+	}
+	return &followUp, nil
+}
+
+// UpdateFollowUp 更新任务跟进
+func (r *TaskRepositoryImpl) UpdateFollowUp(ctx context.Context, followUp *entity.TaskFollowUp) error {
+	return r.db.WithContext(ctx).Save(followUp).Error
+}
+
+// AddFollowUpComment 添加任务跟进评论
+func (r *TaskRepositoryImpl) AddFollowUpComment(ctx context.Context, comment *entity.TaskFollowUpComment) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(comment).Error; err != nil {
+			return err
+		}
+		return tx.Model(&entity.TaskFollowUp{}).
+			Where("id = ?", comment.FollowUpID).
+			UpdateColumn("comment_count", gorm.Expr("comment_count + 1")).Error
+	})
+}
+
+// GetFollowUpComments 获取任务跟进评论
+func (r *TaskRepositoryImpl) GetFollowUpComments(ctx context.Context, taskID, followUpID string, pagination repository.Pagination) (*repository.PageResult[entity.TaskFollowUpComment], error) {
+	var list []entity.TaskFollowUpComment
+	var total int64
+
+	db := r.db.WithContext(ctx).Model(&entity.TaskFollowUpComment{}).
+		Where("task_id = ? AND follow_up_id = ?", taskID, followUpID)
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	if err := db.Order("created_at DESC").
+		Preload("User").
+		Offset((pagination.Page - 1) * pagination.PageSize).
+		Limit(pagination.PageSize).
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+
+	return repository.NewPageResult(list, total, pagination.Page, pagination.PageSize), nil
+}
+
 // GetStats 获取统计
 func (r *TaskRepositoryImpl) GetStats(ctx context.Context, userID string) (*entity.TaskStats, error) {
 	stats := &entity.TaskStats{}
 
-	db := r.db.WithContext(ctx).Model(&entity.Task{})
+	baseDB := r.db.WithContext(ctx).Model(&entity.Task{})
 
 	// 总数
-	if err := db.Count(&stats.Total).Error; err != nil {
+	if err := baseDB.Count(&stats.Total).Error; err != nil {
 		return nil, err
 	}
 
@@ -351,7 +431,7 @@ func (r *TaskRepositoryImpl) GetStats(ctx context.Context, userID string) (*enti
 
 	for _, status := range statuses {
 		var count int64
-		if err := db.Where("status = ?", status).Count(&count).Error; err != nil {
+		if err := r.db.WithContext(ctx).Model(&entity.Task{}).Where("status = ?", status).Count(&count).Error; err != nil {
 			return nil, err
 		}
 		switch status {
@@ -375,28 +455,31 @@ func (r *TaskRepositoryImpl) GetStats(ctx context.Context, userID string) (*enti
 	// 我的任务统计
 	if userID != "" {
 		var myTasks int64
-		if err := db.Where("creator_id = ? OR assignee_id = ?", userID, userID).Count(&myTasks).Error; err != nil {
+		if err := r.db.WithContext(ctx).Model(&entity.Task{}).Where("assignee_id = ?", userID).Count(&myTasks).Error; err != nil {
 			return nil, err
 		}
 		stats.MyTasks = myTasks
 
 		var myPending int64
-		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status IN (?, ?, ?)",
-			userID, userID, entity.TaskStatusPending, entity.TaskStatusAssigned, entity.TaskStatusProcessing).Count(&myPending).Error; err != nil {
+		if err := r.db.WithContext(ctx).Model(&entity.Task{}).
+			Where("assignee_id = ? AND status IN (?, ?, ?)", userID, entity.TaskStatusPending, entity.TaskStatusAssigned, entity.TaskStatusProcessing).
+			Count(&myPending).Error; err != nil {
 			return nil, err
 		}
 		stats.MyPending = myPending
 
 		var myProcessing int64
-		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status = ?",
-			userID, userID, entity.TaskStatusProcessing).Count(&myProcessing).Error; err != nil {
+		if err := r.db.WithContext(ctx).Model(&entity.Task{}).
+			Where("assignee_id = ? AND status = ?", userID, entity.TaskStatusProcessing).
+			Count(&myProcessing).Error; err != nil {
 			return nil, err
 		}
 		stats.MyProcessing = myProcessing
 
 		var myCompleted int64
-		if err := db.Where("(creator_id = ? OR assignee_id = ?) AND status = ?",
-			userID, userID, entity.TaskStatusCompleted).Count(&myCompleted).Error; err != nil {
+		if err := r.db.WithContext(ctx).Model(&entity.Task{}).
+			Where("assignee_id = ? AND status = ?", userID, entity.TaskStatusCompleted).
+			Count(&myCompleted).Error; err != nil {
 			return nil, err
 		}
 		stats.MyCompleted = myCompleted
@@ -451,9 +534,9 @@ func (r *TaskRepositoryImpl) CountCompletedByDateRange(ctx context.Context, star
 func (r *TaskRepositoryImpl) FindOverdueTasks(ctx context.Context) ([]entity.Task, error) {
 	var tasks []entity.Task
 	err := r.db.WithContext(ctx).
-		Where("deadline < ? AND status NOT IN (?, ?, ?) AND deleted_at IS NULL", 
-			time.Now(), 
-			entity.TaskStatusCompleted, 
+		Where("deadline < ? AND status NOT IN (?, ?, ?) AND deleted_at IS NULL",
+			time.Now(),
+			entity.TaskStatusCompleted,
 			entity.TaskStatusCancelled,
 			entity.TaskStatusOverdue).
 		Find(&tasks).Error

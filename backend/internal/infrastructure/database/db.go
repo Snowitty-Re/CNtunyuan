@@ -182,6 +182,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&entity.TaskAttachment{},
 		&entity.TaskLog{},
 		&entity.TaskComment{},
+		&entity.TaskFollowUp{},
+		&entity.TaskFollowUpComment{},
 		// 方言相关
 		&entity.Dialect{},
 		&entity.DialectComment{},

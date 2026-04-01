@@ -1,0 +1,58 @@
+<view class="followup-page">
+  <view class="card">
+    <view class="field">
+      <text class="label">跟进内容</text>
+      <textarea
+        class="textarea"
+        placeholder="记录本次处理动作、线索核验结果、下一步计划..."
+        value="{{content}}"
+        maxlength="1000"
+        bindinput="onContentInput"
+      />
+      <text class="counter">{{content.length}}/1000</text>
+    </view>
+
+    <view class="field">
+      <view class="row">
+        <text class="label">同步进度</text>
+        <checkbox-group bindchange="onUseProgressChange">
+          <label class="checkbox-wrap">
+            <checkbox value="1" checked="{{useProgress}}" color="#FF8C42" />
+            <text class="checkbox-text">更新任务进度</text>
+          </label>
+        </checkbox-group>
+      </view>
+      <view wx:if="{{useProgress}}">
+        <slider
+          min="0"
+          max="100"
+          step="5"
+          value="{{progress}}"
+          activeColor="#FF8C42"
+          bindchange="onProgressChange"
+        />
+        <text class="progress-text">{{progress}}%</text>
+      </view>
+    </view>
+
+    <view class="field">
+      <view class="row">
+        <text class="label">相关附件</text>
+        <text class="tip">最多9张</text>
+      </view>
+      <view class="attachments">
+        <view class="attachment" wx:for="{{attachments}}" wx:key="*this">
+          <image class="attachment-image" src="{{item}}" mode="aspectFill" bindtap="previewAttachment" data-url="{{item}}" />
+          <view class="remove" bindtap="removeAttachment" data-index="{{index}}">x</view>
+        </view>
+        <view class="add-btn" bindtap="chooseAttachment" wx:if="{{attachments.length < 9}}">
+          <text class="add-text">+</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <button class="submit-btn" loading="{{submitting}}" bindtap="submit">提交跟进</button>
+  </view>
+</view>

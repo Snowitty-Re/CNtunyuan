@@ -1,0 +1,138 @@
+.followup-page {
+  min-height: 100vh;
+  background: #FDF8F3;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 20rpx rgba(90, 74, 58, 0.06);
+}
+
+.field {
+  margin-bottom: 28rpx;
+}
+
+.label {
+  font-size: 28rpx;
+  color: #2D2016;
+  font-weight: 600;
+}
+
+.textarea {
+  margin-top: 16rpx;
+  width: 100%;
+  height: 220rpx;
+  background: #FAF5F0;
+  border-radius: 14rpx;
+  padding: 20rpx;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  color: #2D2016;
+}
+
+.counter {
+  display: block;
+  margin-top: 10rpx;
+  text-align: right;
+  color: #A0917F;
+  font-size: 22rpx;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.checkbox-text {
+  font-size: 24rpx;
+  color: #8C7B6B;
+}
+
+.progress-text {
+  color: #FF8C42;
+  font-size: 24rpx;
+  font-weight: 600;
+  text-align: right;
+}
+
+.tip {
+  font-size: 22rpx;
+  color: #A0917F;
+}
+
+.attachments {
+  margin-top: 16rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.attachment {
+  position: relative;
+  width: 140rpx;
+  height: 140rpx;
+}
+
+.attachment-image {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 12rpx;
+}
+
+.remove {
+  position: absolute;
+  right: -8rpx;
+  top: -8rpx;
+  width: 34rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 20rpx;
+}
+
+.add-btn {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 12rpx;
+  border: 2rpx dashed #E8DACC;
+  background: #FFF9F4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-text {
+  color: #C7AE95;
+  font-size: 52rpx;
+}
+
+.footer {
+  margin-top: 24rpx;
+}
+
+.submit-btn {
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: linear-gradient(135deg, #FF8C42 0%, #FF6B2C 100%);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.submit-btn::after {
+  border: none;
+}

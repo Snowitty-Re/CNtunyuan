@@ -236,6 +236,10 @@ page {
   background: linear-gradient(145deg, #9B7ED8, #BFA8E8);
 }
 
+.action-circle--amber {
+  background: linear-gradient(145deg, #E67E22, #F2A356);
+}
+
 .action-label {
   font-size: 24rpx;
   color: var(--text-mid);

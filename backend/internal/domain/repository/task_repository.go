@@ -52,6 +52,24 @@ type TaskRepository interface {
 	// GetAttachments 获取附件
 	GetAttachments(ctx context.Context, taskID string) ([]entity.TaskAttachment, error)
 
+	// AddFollowUp 添加任务跟进
+	AddFollowUp(ctx context.Context, followUp *entity.TaskFollowUp) error
+
+	// GetFollowUps 获取任务跟进列表
+	GetFollowUps(ctx context.Context, taskID string, pagination Pagination) (*PageResult[entity.TaskFollowUp], error)
+
+	// FindFollowUpByID 根据ID获取任务跟进
+	FindFollowUpByID(ctx context.Context, taskID, followUpID string) (*entity.TaskFollowUp, error)
+
+	// UpdateFollowUp 更新任务跟进
+	UpdateFollowUp(ctx context.Context, followUp *entity.TaskFollowUp) error
+
+	// AddFollowUpComment 添加任务跟进评论
+	AddFollowUpComment(ctx context.Context, comment *entity.TaskFollowUpComment) error
+
+	// GetFollowUpComments 获取任务跟进评论
+	GetFollowUpComments(ctx context.Context, taskID, followUpID string, pagination Pagination) (*PageResult[entity.TaskFollowUpComment], error)
+
 	// GetStats 获取统计
 	GetStats(ctx context.Context, userID string) (*entity.TaskStats, error)
 

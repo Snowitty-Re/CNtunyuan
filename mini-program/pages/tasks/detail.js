@@ -8,6 +8,13 @@ Page({
     taskId: '',
     task: null,
     logs: [],
+    followUps: [],
+    showFollowUpComments: false,
+    activeFollowUpId: '',
+    activeFollowUpTitle: '',
+    followUpComments: [],
+    followUpCommentsLoading: false,
+    followUpCommentInput: '',
     loading: false,
     actionLoading: false,
     showProgressModal: false,
@@ -32,6 +39,7 @@ Page({
     if (options.id) {
       this.loadTaskDetail()
       this.loadTaskLogs()
+      this.loadFollowUps()
     }
   },
 
@@ -40,6 +48,7 @@ Page({
     if (this.data.taskId) {
       this.loadTaskDetail()
       this.loadTaskLogs()
+      this.loadFollowUps()
     }
   },
 
@@ -80,6 +89,21 @@ Page({
       this.setData({ logs: formattedLogs })
     } catch (error) {
       console.error('加载任务日志失败:', error)
+    }
+  },
+
+  // 加载任务跟进
+  async loadFollowUps() {
+    try {
+      const result = await taskService.getFollowUps(this.data.taskId, { page: 1, page_size: 20 })
+      const followUps = (result.list || []).map(item => ({
+        ...item,
+        createdAtText: formatTimeAgo(item.created_at),
+        attachments: Array.isArray(item.attachments) ? item.attachments : []
+      }))
+      this.setData({ followUps })
+    } catch (error) {
+      console.error('加载任务跟进失败:', error)
     }
   },
 
@@ -124,9 +148,10 @@ Page({
       showSuccess('任务已开始')
       this.loadTaskDetail()
       this.loadTaskLogs()
+      this.loadFollowUps()
     } catch (error) {
       console.error('开始任务失败:', error)
-      showToast('操作失败')
+      showToast(error.message || '开始任务失败')
     } finally {
       this.setData({ actionLoading: false })
     }
@@ -168,9 +193,10 @@ Page({
       this.setData({ showProgressModal: false })
       this.loadTaskDetail()
       this.loadTaskLogs()
+      this.loadFollowUps()
     } catch (error) {
       console.error('更新进度失败:', error)
-      showToast('更新失败')
+      showToast(error.message || '更新失败')
     } finally {
       this.setData({ actionLoading: false })
     }
@@ -195,12 +221,145 @@ Page({
       showSuccess('任务已完成')
       this.loadTaskDetail()
       this.loadTaskLogs()
+      this.loadFollowUps()
     } catch (error) {
       console.error('完成任务失败:', error)
-      showToast('操作失败')
+      showToast(error.message || '完成任务失败')
     } finally {
       this.setData({ actionLoading: false })
     }
+  },
+
+  // 跳转到反馈页（反馈+附件后完成任务）
+  submitFeedback() {
+    if (!this.data.isAssignee) {
+      showToast('只有执行人可以提交反馈')
+      return
+    }
+    wx.navigateTo({ url: `/pages/tasks/feedback?id=${this.data.taskId}` })
+  },
+
+  // 新增任务跟进
+  addFollowUp() {
+    if (!this.data.isAssignee && !this.data.isManager) {
+      showToast('无权限操作')
+      return
+    }
+    wx.navigateTo({ url: `/pages/tasks/follow-up-create?id=${this.data.taskId}` })
+  },
+
+  // 审核跟进
+  reviewFollowUp(e) {
+    if (!this.data.isManager) {
+      showToast('仅管理员可审核')
+      return
+    }
+    const id = e.currentTarget.dataset.id
+    const approve = !!e.currentTarget.dataset.approve
+    const title = approve ? '审核通过' : '审核驳回'
+
+    wx.showModal({
+      title,
+      editable: true,
+      placeholderText: approve ? '审核备注（可选）' : '请输入驳回原因',
+      success: async (res) => {
+        if (!res.confirm) return
+        try {
+          await taskService.reviewFollowUp(this.data.taskId, id, {
+            approve,
+            remark: res.content || ''
+          })
+          showSuccess(approve ? '已通过' : '已驳回')
+          this.loadFollowUps()
+          this.loadTaskLogs()
+        } catch (error) {
+          showToast(error.message || '审核失败')
+        }
+      }
+    })
+  },
+
+  // 评论跟进
+  addFollowUpComment(e) {
+    const id = e.currentTarget.dataset.id
+    const author = e.currentTarget.dataset.author || '执行人'
+    this.setData({
+      showFollowUpComments: true,
+      activeFollowUpId: id,
+      activeFollowUpTitle: author,
+      followUpComments: [],
+      followUpCommentInput: ''
+    })
+    this.loadFollowUpComments()
+  },
+
+  async loadFollowUpComments() {
+    const followUpID = this.data.activeFollowUpId
+    if (!followUpID) return
+    this.setData({ followUpCommentsLoading: true })
+    try {
+      const result = await taskService.getFollowUpComments(this.data.taskId, followUpID, { page: 1, page_size: 50 })
+      const list = (result.list || []).map(item => ({
+        ...item,
+        createdAtText: formatTimeAgo(item.created_at),
+        isReviewComment: ['super_admin', 'admin', 'manager'].includes((item.user && item.user.role) || ''),
+        commentTagText: ['super_admin', 'admin', 'manager'].includes((item.user && item.user.role) || '')
+          ? '审核意见'
+          : '执行备注'
+      }))
+      this.setData({ followUpComments: list })
+    } catch (error) {
+      showToast(error.message || '加载评论失败')
+    } finally {
+      this.setData({ followUpCommentsLoading: false })
+    }
+  },
+
+  closeFollowUpComments() {
+    this.setData({
+      showFollowUpComments: false,
+      activeFollowUpId: '',
+      activeFollowUpTitle: '',
+      followUpComments: [],
+      followUpCommentInput: ''
+    })
+  },
+
+  onFollowUpCommentInput(e) {
+    this.setData({ followUpCommentInput: e.detail.value || '' })
+  },
+
+  async submitFollowUpComment() {
+    const followUpID = this.data.activeFollowUpId
+    if (!followUpID) return
+    const content = (this.data.followUpCommentInput || '').trim()
+    if (!content) {
+      showToast('评论不能为空')
+      return
+    }
+    try {
+      await taskService.addFollowUpComment(this.data.taskId, followUpID, { content })
+      showSuccess('评论成功')
+      this.setData({ followUpCommentInput: '' })
+      this.loadFollowUpComments()
+      this.loadFollowUps()
+    } catch (error) {
+      showToast(error.message || '评论失败')
+    }
+  },
+
+  previewFollowUpAttachment(e) {
+    const current = e.currentTarget.dataset.url
+    const rawUrls = e.currentTarget.dataset.urls
+    const urls = Array.isArray(rawUrls) ? rawUrls : [current]
+    if (/\.(png|jpg|jpeg|gif|webp)$/i.test(current)) {
+      wx.previewImage({ current, urls })
+      return
+    }
+    wx.setClipboardData({
+      data: current,
+      success: () => showSuccess('附件链接已复制')
+    })
   },
 
   // 取消任务（管理者）
@@ -219,9 +378,10 @@ Page({
       showSuccess('任务已取消')
       this.loadTaskDetail()
       this.loadTaskLogs()
+      this.loadFollowUps()
     } catch (error) {
       console.error('取消任务失败:', error)
-      showToast('操作失败')
+      showToast(error.message || '取消任务失败')
     } finally {
       this.setData({ actionLoading: false })
     }
@@ -267,7 +427,8 @@ Page({
   onPullDownRefresh() {
     Promise.all([
       this.loadTaskDetail(),
-      this.loadTaskLogs()
+      this.loadTaskLogs(),
+      this.loadFollowUps()
     ]).finally(() => {
       wx.stopPullDownRefresh()
     })

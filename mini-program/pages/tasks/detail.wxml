@@ -174,6 +174,64 @@
         </view>
       </view>
 
+      <!-- 跟进记录 -->
+      <view class="info-card">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-blue">
+            <text class="section-icon-char">F</text>
+          </view>
+          <text class="section-heading">跟进记录</text>
+          <button class="mini-action-btn" wx:if="{{isAssignee || isManager}}" bindtap="addFollowUp">新增跟进</button>
+        </view>
+
+        <view class="followup-list" wx:if="{{followUps.length > 0}}">
+          <view class="followup-item" wx:for="{{followUps}}" wx:key="id">
+            <view class="followup-top">
+              <text class="followup-author">{{(item.user && (item.user.nickname || item.user.name)) || '执行人'}}</text>
+              <view class="followup-status followup-status-{{item.status}}">
+                <text>{{item.status === 'pending' ? '待审核' : (item.status === 'approved' ? '已通过' : '已驳回')}}</text>
+              </view>
+            </view>
+
+            <text class="followup-content">{{item.content}}</text>
+
+            <view class="followup-meta">
+              <text wx:if="{{item.progress !== undefined && item.progress !== null}}">进度：{{item.progress}}%</text>
+              <text>{{item.createdAtText}}</text>
+            </view>
+
+            <view class="followup-attachments" wx:if="{{item.attachments.length > 0}}">
+              <image
+                class="followup-image"
+                wx:for="{{item.attachments}}"
+                wx:for-item="att"
+                wx:key="*this"
+                src="{{att}}"
+                mode="aspectFill"
+                bindtap="previewFollowUpAttachment"
+                data-url="{{att}}"
+                data-urls="{{item.attachments}}"
+              />
+            </view>
+
+            <view class="followup-review" wx:if="{{item.review_remark}}">
+              <text class="review-text">审核意见：{{item.review_remark}}</text>
+            </view>
+
+            <view class="followup-actions">
+              <button class="followup-btn" bindtap="addFollowUpComment" data-id="{{item.id}}" data-author="{{(item.user && (item.user.nickname || item.user.name)) || '执行人'}}">评论({{item.comment_count || 0}})</button>
+              <block wx:if="{{isManager && item.status === 'pending'}}">
+                <button class="followup-btn followup-pass" bindtap="reviewFollowUp" data-id="{{item.id}}" data-approve="{{true}}">通过</button>
+                <button class="followup-btn followup-reject" bindtap="reviewFollowUp" data-id="{{item.id}}" data-approve="{{false}}">驳回</button>
+              </block>
+            </view>
+          </view>
+        </view>
+        <view class="empty-logs" wx:else>
+          <text class="empty-logs-text">暂无跟进记录</text>
+        </view>
+      </view>
+
       <!-- 操作记录 - 时间线 -->
       <view class="info-card timeline-card">
         <view class="card-section-header">
@@ -195,9 +253,9 @@
                 <text class="tl-action">{{item.action}}</text>
                 <text class="tl-time">{{item.created_at}}</text>
               </view>
-              <text class="tl-desc" wx:if="{{item.description}}">{{item.description}}</text>
-              <text class="tl-operator" wx:if="{{item.operator}}">
-                操作人：{{item.operator.nickname || item.operator.name}}
+              <text class="tl-desc" wx:if="{{item.content}}">{{item.content}}</text>
+              <text class="tl-operator" wx:if="{{item.user}}">
+                操作人：{{item.user.nickname || item.user.name}}
               </text>
             </view>
           </view>
@@ -235,7 +293,8 @@
           </block>
           <block wx:elif="{{task.status === 'processing'}}">
             <view class="bar-btn-group">
-              <button class="bar-btn btn-outline" bindtap="showProgressModal" loading="{{actionLoading}}">更新进度</button>
+              <button class="bar-btn btn-primary" bindtap="addFollowUp" loading="{{actionLoading}}">新增跟进</button>
+              <button class="bar-btn btn-primary" bindtap="submitFeedback" loading="{{actionLoading}}">提交反馈</button>
               <button class="bar-btn btn-success" bindtap="completeTask" loading="{{actionLoading}}">完成任务</button>
             </view>
           </block>
@@ -279,6 +338,45 @@
       <view class="modal-actions">
         <button class="modal-btn modal-btn-cancel" bindtap="hideProgressModal">取消</button>
         <button class="modal-btn modal-btn-confirm" bindtap="submitProgress" loading="{{actionLoading}}">确定</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 跟进评论弹层 -->
+  <view class="modal-overlay" wx:if="{{showFollowUpComments}}" bindtap="closeFollowUpComments">
+    <view class="modal-box followup-comment-modal" catchtap="stopPropagation">
+      <view class="modal-top">
+        <text class="modal-title">跟进评论 - {{activeFollowUpTitle}}</text>
+        <view class="modal-close-btn" bindtap="closeFollowUpComments">
+          <text class="close-x">x</text>
+        </view>
+      </view>
+
+      <scroll-view class="followup-comment-list" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="empty-logs" wx:if="{{!followUpCommentsLoading && followUpComments.length === 0}}">
+          <text class="empty-logs-text">暂无评论，先来一条</text>
+        </view>
+        <view class="followup-comment-item" wx:for="{{followUpComments}}" wx:key="id">
+          <view class="followup-comment-head">
+            <view class="followup-comment-user-wrap">
+              <text class="followup-comment-user">{{(item.user && (item.user.nickname || item.user.name)) || '用户'}}</text>
+              <text class="followup-comment-tag {{item.isReviewComment ? 'tag-review' : 'tag-normal'}}">{{item.commentTagText}}</text>
+            </view>
+            <text class="followup-comment-time">{{item.createdAtText}}</text>
+          </view>
+          <text class="followup-comment-content">{{item.content}}</text>
+        </view>
+      </scroll-view>
+
+      <view class="followup-comment-input-wrap">
+        <input
+          class="followup-comment-input"
+          placeholder="输入评论内容"
+          value="{{followUpCommentInput}}"
+          bindinput="onFollowUpCommentInput"
+          maxlength="300"
+        />
+        <button class="followup-comment-submit" bindtap="submitFollowUpComment">发送</button>
       </view>
     </view>
   </view>

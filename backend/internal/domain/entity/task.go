@@ -283,6 +283,54 @@ func (TaskComment) TableName() string {
 	return "ty_task_comments"
 }
 
+// TaskFollowUpStatus 任务跟进审核状态
+type TaskFollowUpStatus string
+
+const (
+	TaskFollowUpStatusPending  TaskFollowUpStatus = "pending"
+	TaskFollowUpStatusApproved TaskFollowUpStatus = "approved"
+	TaskFollowUpStatusRejected TaskFollowUpStatus = "rejected"
+)
+
+// TaskFollowUp 任务跟进记录
+type TaskFollowUp struct {
+	BaseEntity
+	TaskID       string             `gorm:"type:uuid;not null;index" json:"task_id"`
+	UserID       string             `gorm:"type:uuid;not null;index" json:"user_id"`
+	Content      string             `gorm:"type:text;not null" json:"content"`
+	Progress     *int               `json:"progress,omitempty"`
+	Attachments  string             `gorm:"type:json" json:"attachments,omitempty"`
+	Status       TaskFollowUpStatus `gorm:"size:20;default:'pending';index" json:"status"`
+	ReviewRemark string             `gorm:"type:text" json:"review_remark,omitempty"`
+	ReviewedBy   *string            `gorm:"type:uuid;index" json:"reviewed_by,omitempty"`
+	ReviewedAt   *time.Time         `json:"reviewed_at,omitempty"`
+	CommentCount int                `gorm:"default:0" json:"comment_count"`
+
+	User     *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	Reviewer *User `gorm:"foreignKey:ReviewedBy" json:"reviewer,omitempty"`
+}
+
+// TableName 表名
+func (TaskFollowUp) TableName() string {
+	return "ty_task_follow_ups"
+}
+
+// TaskFollowUpComment 任务跟进评论
+type TaskFollowUpComment struct {
+	BaseEntity
+	TaskID     string `gorm:"type:uuid;not null;index" json:"task_id"`
+	FollowUpID string `gorm:"type:uuid;not null;index" json:"follow_up_id"`
+	UserID     string `gorm:"type:uuid;not null;index" json:"user_id"`
+	Content    string `gorm:"type:text;not null" json:"content"`
+
+	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+}
+
+// TableName 表名
+func (TaskFollowUpComment) TableName() string {
+	return "ty_task_follow_up_comments"
+}
+
 // TaskStats 任务统计
 type TaskStats struct {
 	Total        int64 `json:"total"`

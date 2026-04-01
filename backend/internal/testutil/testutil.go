@@ -41,6 +41,8 @@ func NewTestDB(t *testing.T) *TestDB {
 		&entity.AuditLog{},
 		&entity.TaskLog{},
 		&entity.TaskAttachment{},
+		&entity.TaskFollowUp{},
+		&entity.TaskFollowUpComment{},
 		&entity.MissingPersonTrack{},
 		&entity.MissingPhoto{},
 		&entity.DialectComment{},

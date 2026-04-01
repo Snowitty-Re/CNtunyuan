@@ -17,6 +17,7 @@ Page({
     priorityMap: TASK_PRIORITY_MAP,
     tabs: [
       { key: '', label: '全部', count: 0 },
+      { key: 'assigned', label: '待开始', count: 0 },
       { key: 'processing', label: '进行中', count: 0 },
       { key: 'completed', label: '已完成', count: 0 }
     ],
@@ -27,12 +28,34 @@ Page({
     if (!app.ensureAuth || !app.ensureAuth()) return
     const userInfo = wx.getStorageSync('userInfo') || {}
     this.setData({ userRole: userInfo.role || '' })
+    this.loadStats()
     this.loadTasks()
   },
 
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
+    this.loadStats()
     this.loadTasks()
+  },
+
+  async loadStats() {
+    try {
+      const stats = await taskService.getStats()
+      const tabs = this.data.tabs.map(tab => {
+        if (tab.key === '') return { ...tab, count: stats.my_tasks || 0 }
+        if (tab.key === 'assigned') {
+          const assigned = Math.max((stats.my_pending || 0) - (stats.my_processing || 0), 0)
+          return { ...tab, count: assigned }
+        }
+        if (tab.key === 'processing') return { ...tab, count: stats.my_processing || 0 }
+        if (tab.key === 'completed') return { ...tab, count: stats.my_completed || 0 }
+        return tab
+      })
+      this.setData({ tabs })
+    } catch (error) {
+      // 统计失败不阻塞列表加载
+      console.error('加载任务统计失败:', error)
+    }
   },
 
   // 加载我的任务列表
@@ -65,18 +88,8 @@ Page({
                    item.status !== 'completed' && item.status !== 'cancelled'
       }))
 
-      // 更新标签计数（全量加载时统计各状态）
-      const allTasks = loadMore ? [...this.data.tasks, ...tasks] : tasks
-      const tabs = this.data.tabs.map(tab => {
-        if (tab.key === '') {
-          return { ...tab, count: result.total || allTasks.length }
-        }
-        return { ...tab, count: allTasks.filter(t => t.status === tab.key).length }
-      })
-
       this.setData({
         tasks: loadMore ? [...this.data.tasks, ...tasks] : tasks,
-        tabs,
         page: loadMore ? this.data.page + 1 : 2,
         hasMore: tasks.length === this.data.pageSize,
         loading: false,
@@ -131,22 +144,21 @@ Page({
 
   // 开始任务
   async startTask(e) {
-    e.stopPropagation()
     const id = e.currentTarget.dataset.id
     
     try {
       await taskService.start(id)
       showSuccess('任务已开始')
+      this.loadStats()
       this.loadTasks()
     } catch (error) {
       console.error('开始任务失败:', error)
-      showToast('操作失败')
+      showToast(error.message || '开始任务失败')
     }
   },
 
   // 更新进度
   async updateProgress(e) {
-    e.stopPropagation()
     const id = e.currentTarget.dataset.id
     
     wx.showActionSheet({
@@ -156,10 +168,11 @@ Page({
         try {
           await taskService.updateProgress(id, progress, `更新进度至${progress}%`)
           showSuccess('进度更新成功')
+          this.loadStats()
           this.loadTasks()
         } catch (error) {
           console.error('更新进度失败:', error)
-          showToast('更新失败')
+          showToast(error.message || '更新失败')
         }
       }
     })
@@ -167,7 +180,6 @@ Page({
 
   // 完成任务
   async completeTask(e) {
-    e.stopPropagation()
     const id = e.currentTarget.dataset.id
     
     const confirmed = await showConfirm('确认完成', '确定要将此任务标记为完成吗？')
@@ -176,10 +188,23 @@ Page({
     try {
       await taskService.complete(id, { result: '已完成任务', feedback: '' })
       showSuccess('任务已完成')
+      this.loadStats()
       this.loadTasks()
     } catch (error) {
       console.error('完成任务失败:', error)
-      showToast('操作失败')
+      showToast(error.message || '完成任务失败')
     }
+  },
+
+  // 填写反馈并完成
+  submitFeedback(e) {
+    const id = e.currentTarget.dataset.id
+    wx.navigateTo({ url: `/pages/tasks/feedback?id=${id}` })
+  },
+
+  // 新增跟进
+  addFollowUp(e) {
+    const id = e.currentTarget.dataset.id
+    wx.navigateTo({ url: `/pages/tasks/follow-up-create?id=${id}` })
   }
 })

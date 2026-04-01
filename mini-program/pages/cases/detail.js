@@ -90,10 +90,9 @@ Page({
       data.displayAge = normalizeAge(data.age)
       data.displayAgeText = data.displayAge ? `${data.displayAge}岁` : '未知'
       
-      // 衣着描述（后端字段为 clothes）
-      data.clothes = data.clothes || '暂无描述'
-      // 特征（后端字段为 features）
-      data.features = data.features || '无'
+      // 仅展示真实录入值，不再注入默认文案
+      data.clothes = (data.clothes || '').trim()
+      data.features = (data.features || '').trim()
       // 详细描述
       data.description = data.description || '暂无描述'
       
