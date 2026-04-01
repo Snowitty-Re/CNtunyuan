@@ -11,14 +11,14 @@
       <text class="hint">编码用于唯一标识，仅支持字母、数字、-、_</text>
     </view>
 
-    <view class="field">
+    <view class="field" wx:if="{{!isEdit}}">
       <text class="label required">组织类型</text>
       <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
         <view class="picker">{{typeOptions[typeIndex].label}}</view>
       </picker>
     </view>
 
-    <view class="field">
+    <view class="field" wx:if="{{!isEdit}}">
       <text class="label">父组织</text>
       <picker mode="selector" range="{{parentOptions}}" range-key="name" value="{{parentIndex}}" bindchange="onParentChange">
         <view class="picker">{{parentOptions[parentIndex].name}}</view>

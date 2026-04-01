@@ -39,6 +39,10 @@ Page({
       missingLongitude: '',
       // 详细描述（包含外貌、衣着、特征等）
       description: '',
+      // 外貌特征
+      appearance: '',
+      clothing: '',
+      specialFeatures: '',
       // 联系人信息
       contactName: '',
       contactRel: '',
@@ -102,7 +106,7 @@ Page({
           caseType: caseTypeValue,
           age: data.age ? String(data.age) : '',
           height: data.height ? String(data.height) : '',
-          missingTime: data.missing_time ? formatDate(data.missing_time, 'YYYY-MM-DD HH:mm') : '',
+          missingTime: data.missing_time ? formatDate(data.missing_time, 'YYYY-MM-DD') : '',
           // 位置信息
           province: data.province || '',
           city: data.city || '',
@@ -112,6 +116,9 @@ Page({
           missingLongitude: data.missing_longitude || '',
           // 详细描述（后端存储的是合并后的描述）
           description: data.description || '',
+          appearance: '',
+          clothing: data.clothes || '',
+          specialFeatures: data.features || '',
           // 联系人信息（注意字段名映射）
           contactName: data.contact_name || '',
           contactRel: data.contact_rel || '',  // 后端返回 contact_rel
@@ -139,11 +146,9 @@ Page({
     const year = now.getFullYear()
     const month = String(now.getMonth() + 1).padStart(2, '0')
     const day = String(now.getDate()).padStart(2, '0')
-    const hour = String(now.getHours()).padStart(2, '0')
-    const minute = String(now.getMinutes()).padStart(2, '0')
     
     this.setData({
-      'form.missingTime': `${year}-${month}-${day} ${hour}:${minute}`
+      'form.missingTime': `${year}-${month}-${day}`
     })
   },
 
@@ -454,6 +459,16 @@ Page({
         missing_longitude: Number(form.missingLongitude) || 0,
         // 详细描述
         description: form.description.trim(),
+        // 外貌特征（对齐后端字段）
+        clothes: form.clothing.trim(),
+        features: (() => {
+          const appearance = (form.appearance || '').trim()
+          const specialFeatures = (form.specialFeatures || '').trim()
+          if (appearance && specialFeatures) {
+            return `体貌特征：${appearance}\n特殊特征：${specialFeatures}`
+          }
+          return appearance || specialFeatures
+        })(),
         // 联系人信息（注意字段名与后端一致）
         contact_name: form.contactName.trim(),
         contact_rel: form.contactRel.trim(),      // 使用 contact_rel 而非 contact_relation
@@ -496,18 +511,18 @@ Page({
 
   /**
    * 解析本地日期时间字符串（兼容 iOS）
-   * 支持: YYYY-MM-DD HH:mm / YYYY-MM-DDTHH:mm / YYYY-MM-DD HH:mm:ss / YYYY-MM-DDTHH:mm:ss
+   * 支持: YYYY-MM-DD / YYYY-MM-DD HH:mm / YYYY-MM-DDTHH:mm / YYYY-MM-DD HH:mm:ss / YYYY-MM-DDTHH:mm:ss
    */
   parseLocalDateTime(value) {
     if (!value || typeof value !== 'string') return null
-    const matched = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/)
+    const matched = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/)
     if (!matched) return null
 
     const year = Number(matched[1])
     const month = Number(matched[2])
     const day = Number(matched[3])
-    const hour = Number(matched[4])
-    const minute = Number(matched[5])
+    const hour = matched[4] ? Number(matched[4]) : 0
+    const minute = matched[5] ? Number(matched[5]) : 0
     const second = matched[6] ? Number(matched[6]) : 0
 
     const d = new Date(year, month - 1, day, hour, minute, second)
@@ -539,6 +554,9 @@ Page({
               missingLatitude: '',
               missingLongitude: '',
               description: '',
+              appearance: '',
+              clothing: '',
+              specialFeatures: '',
               contactName: '',
               contactRel: '',
               contactPhone: '',

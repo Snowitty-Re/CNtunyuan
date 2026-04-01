@@ -117,7 +117,7 @@ Page({
   onCodeInput(e) {
     const { type } = e.currentTarget.dataset
     const { value } = e.detail
-    this.setData({ [`${type}Code`]: value })
+    this.setData({ [type]: value })
   },
 
   // 发送验证码
