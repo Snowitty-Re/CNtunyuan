@@ -11,7 +11,7 @@ let isRefreshing = false
 
 // 基础配置
 const BASE_CONFIG = {
-  timeout: 30000,
+  timeout: 45000,
   header: {
     'Content-Type': 'application/json'
   }
@@ -86,6 +86,7 @@ function refreshToken() {
       url: `${API_BASE_URL}/auth/refresh`,
       method: 'POST',
       data: { refresh_token: refreshToken },
+      timeout: BASE_CONFIG.timeout,
       header: {
         'Content-Type': 'application/json'
       },
@@ -98,7 +99,13 @@ function refreshToken() {
           reject(new Error('Refresh failed'))
         }
       },
-      fail: reject
+      fail: (err) => {
+        if (err && err.errMsg && err.errMsg.includes('timeout')) {
+          reject(new Error('Refresh timeout'))
+          return
+        }
+        reject(err)
+      }
     })
   })
 }
@@ -193,10 +200,28 @@ const request = (options) => {
           wx.hideLoading()
         }
 
+        const method = (config.method || 'GET').toUpperCase()
+        const retryCount = options._retryCount || 0
+        const isTimeoutError = !!(err.errMsg && err.errMsg.includes('timeout'))
+        const canRetryOnTimeout =
+          isTimeoutError &&
+          retryCount < 1 &&
+          (method === 'GET' || options.retryOnTimeout === true)
+
+        // GET 请求超时自动重试一次，减少弱网场景偶发报错
+        if (canRetryOnTimeout) {
+          request({
+            ...options,
+            _retryCount: retryCount + 1,
+            silent: true
+          }).then(resolve).catch(reject)
+          return
+        }
+
         // 网络错误处理
         let errorMsg = '网络错误'
         
-        if (err.errMsg && err.errMsg.includes('timeout')) {
+        if (isTimeoutError) {
           errorMsg = '请求超时，请稍后重试'
         } else if (err.errMsg && err.errMsg.includes('fail')) {
           errorMsg = '网络连接失败，请检查网络'

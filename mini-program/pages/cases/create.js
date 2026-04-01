@@ -439,13 +439,11 @@ Page({
         height: parseInt(form.height) || 0,
         // 走失时间
         missing_time: (() => {
-          try {
-            const d = new Date(form.missingTime)
-            if (isNaN(d.getTime())) throw new Error('invalid date')
-            return d.toISOString()
-          } catch (e) {
+          const d = this.parseLocalDateTime(form.missingTime)
+          if (!d) {
             throw new Error('走失时间格式无效，请重新选择')
           }
+          return d.toISOString()
         })(),
         // 位置信息（分别提交）
         province: form.province.trim(),
@@ -494,6 +492,27 @@ Page({
       console.error('提交失败:', error)
       showError(error.message || '提交失败，请重试')
     }
+  },
+
+  /**
+   * 解析本地日期时间字符串（兼容 iOS）
+   * 支持: YYYY-MM-DD HH:mm / YYYY-MM-DDTHH:mm / YYYY-MM-DD HH:mm:ss / YYYY-MM-DDTHH:mm:ss
+   */
+  parseLocalDateTime(value) {
+    if (!value || typeof value !== 'string') return null
+    const matched = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/)
+    if (!matched) return null
+
+    const year = Number(matched[1])
+    const month = Number(matched[2])
+    const day = Number(matched[3])
+    const hour = Number(matched[4])
+    const minute = Number(matched[5])
+    const second = matched[6] ? Number(matched[6]) : 0
+
+    const d = new Date(year, month - 1, day, hour, minute, second)
+    if (isNaN(d.getTime())) return null
+    return d
   },
 
   /**

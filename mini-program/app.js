@@ -37,7 +37,8 @@ App({
   },
 
   isDebugEnv() {
-    return this.globalData.apiBaseUrl && this.globalData.apiBaseUrl.includes('localhost')
+    return this.globalData.apiBaseUrl &&
+      (this.globalData.apiBaseUrl.includes('localhost') || this.globalData.apiBaseUrl.includes('127.0.0.1'))
   },
 
   // 获取系统信息

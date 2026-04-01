@@ -1,5 +1,5 @@
 const ENV = {
-  dev:  { API_BASE: 'http://localhost:8080/api/v1', WS_BASE: 'ws://localhost:8080/ws' },
+  dev:  { API_BASE: 'http://127.0.0.1:8080/api/v1', WS_BASE: 'ws://127.0.0.1:8080/ws' },
   prod: { API_BASE: 'https://cntuanyuan.com/api/v1', WS_BASE: 'wss://cntuanyuan.com/ws' },
 }
 
