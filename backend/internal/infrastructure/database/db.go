@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
@@ -59,6 +60,17 @@ func NewDatabase(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	sqlDB, err := gormDB.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sql.DB: %w", err)
+	}
+
+	// 显式设置会话时区，避免依赖数据库实例默认时区导致的时间边界偏差。
+	if cfg.Type == config.DatabaseTypePostgres {
+		timezone := strings.TrimSpace(cfg.Timezone)
+		if timezone == "" {
+			timezone = "Asia/Shanghai"
+		}
+		if err := gormDB.Exec("SELECT set_config('TimeZone', ?, false)", timezone).Error; err != nil {
+			return nil, fmt.Errorf("failed to set database timezone: %w", err)
+		}
 	}
 
 	// 连接池配置优化

@@ -17,6 +17,7 @@ database:
   password: "postgres"
   database: "cntunyuan"
   ssl_mode: "disable"
+  timezone: "Asia/Shanghai"
   charset: "UTF8"  # 字符集，默认 UTF8，支持中文和 Emoji
   max_idle_conns: 10
   max_open_conns: 100

@@ -60,6 +60,7 @@ type DatabaseConfig struct {
 	Password        string       `mapstructure:"password"`
 	Database        string       `mapstructure:"database"`
 	SSLMode         string       `mapstructure:"ssl_mode"` // PostgreSQL 使用
+	Timezone        string       `mapstructure:"timezone"` // 数据库会话时区
 	Charset         string       `mapstructure:"charset"`  // MySQL 使用，默认 utf8mb4
 	MaxIdleConns    int          `mapstructure:"max_idle_conns"`
 	MaxOpenConns    int          `mapstructure:"max_open_conns"`
@@ -74,6 +75,11 @@ func (c *DatabaseConfig) IsValid() bool {
 
 // GetDSN 获取数据库连接字符串
 func (c *DatabaseConfig) GetDSN() string {
+	timezone := strings.TrimSpace(c.Timezone)
+	if timezone == "" {
+		timezone = "Asia/Shanghai"
+	}
+
 	switch c.Type {
 	case DatabaseTypeMySQL:
 		charset := c.Charset
@@ -89,8 +95,8 @@ func (c *DatabaseConfig) GetDSN() string {
 		if sslMode == "" {
 			sslMode = "disable"
 		}
-		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s client_encoding=UTF8",
-			c.Host, c.Port, c.User, c.Password, c.Database, sslMode)
+		dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s client_encoding=UTF8 TimeZone=%s",
+			c.Host, c.Port, c.User, c.Password, c.Database, sslMode, timezone)
 		return dsn
 	default:
 		return ""

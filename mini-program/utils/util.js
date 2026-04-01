@@ -60,11 +60,38 @@ const normalizeAge = (age) => {
  * @param {String|Date} date 日期
  * @param {String} format 格式
  */
+const normalizeDateInput = (date) => {
+  if (!date) return null
+  if (date instanceof Date) return isNaN(date.getTime()) ? null : date
+
+  let value = String(date).trim()
+  if (!value) return null
+
+  // 兼容异常重复串：2026-04-01 ... +002026-04-01 ... +00
+  const half = Math.floor(value.length / 2)
+  if (value.length % 2 === 0 && value.slice(0, half) === value.slice(half)) {
+    value = value.slice(0, half)
+  }
+
+  // 统一为 ISO 风格，便于 JS Date 解析：
+  // 2026-04-01 11:09:29.538763+00 -> 2026-04-01T11:09:29.538+00:00
+  value = value.replace(/^(\d{4}-\d{2}-\d{2})\s+/, '$1T')
+  value = value.replace(/\.(\d{3})\d+(?=(Z|[+-]\d{2}:?\d{2}|[+-]\d{2})$)/, '.$1')
+  value = value.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
+  value = value.replace(/([+-]\d{2})$/, '$1:00')
+
+  const parsed = new Date(value)
+  if (!isNaN(parsed.getTime())) return parsed
+
+  const fallback = new Date(String(date))
+  return isNaN(fallback.getTime()) ? null : fallback
+}
+
 const formatDate = (date, format = 'YYYY-MM-DD') => {
   if (!date) return ''
-  
-  const d = new Date(date)
-  if (isNaN(d.getTime())) return ''
+
+  const d = normalizeDateInput(date)
+  if (!d) return ''
 
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
@@ -88,8 +115,10 @@ const formatDate = (date, format = 'YYYY-MM-DD') => {
  */
 const formatTimeAgo = (date) => {
   if (!date) return ''
-  
-  const d = new Date(date)
+
+  const d = normalizeDateInput(date)
+  if (!d) return ''
+
   const now = new Date()
   const diff = now.getTime() - d.getTime()
   

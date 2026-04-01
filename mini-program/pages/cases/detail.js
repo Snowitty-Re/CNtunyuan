@@ -75,7 +75,9 @@ Page({
       
       // 处理数据 - 使用后端实际返回的字段
       data.missing_time = formatDate(data.missing_time)
-      data.created_at = formatDate(data.created_at)
+      const createdAtRaw = data.created_at
+      data.created_at = formatDate(createdAtRaw)
+      data.created_at_full = formatDate(createdAtRaw, 'YYYY-MM-DD HH:mm:ss')
       data.photos = (data.photos || []).map((photo) => {
         if (photo && typeof photo === 'object') {
           return { ...photo, url: normalizeMediaUrl(photo.url) || photo.url }

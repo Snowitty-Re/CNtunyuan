@@ -1,5 +1,5 @@
 const services = require('../../services/index')
-const { showError, showToast, joinLocation } = require('../../utils/util')
+const { showError, showToast, joinLocation, formatDate } = require('../../utils/util')
 const app = getApp()
 
 const STATUS_COLOR = {
@@ -56,7 +56,8 @@ Page({
       const cases = (result.list || []).map(item => ({
         ...item,
         status_text:     STATUS_TEXT[item.status] || item.status,
-        displayLocation: joinLocation(item)
+        displayLocation: joinLocation(item),
+        missing_time:    item.missing_time ? formatDate(item.missing_time, 'YYYY-MM-DD HH:mm') : '未知时间'
       }))
       const markers = this._buildMarkers(cases)
       this.setData({ cases, markers, loading: false })

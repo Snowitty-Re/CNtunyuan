@@ -89,6 +89,10 @@
         <text class="row-label">走失时间</text>
         <text class="row-value">{{caseData.missing_time}}</text>
       </view>
+      <view class="info-row">
+        <text class="row-label">登记时间</text>
+        <text class="row-value">{{caseData.created_at_full || '未知'}}</text>
+      </view>
       <view class="info-row" bindtap="openLocation">
         <text class="row-label">走失地点</text>
         <view class="row-value row-link">

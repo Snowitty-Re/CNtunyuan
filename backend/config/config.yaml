@@ -15,6 +15,7 @@ database:
   password: "300133ys"
   database: cntuanyuan
   ssl_mode: disable
+  timezone: Asia/Shanghai
   charset: UTF8  # 数据库字符集，使用UTF8支持中文和Emoji
   max_idle_conns: 10
   max_open_conns: 100
