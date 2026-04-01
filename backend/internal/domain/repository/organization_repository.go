@@ -39,6 +39,9 @@ type OrganizationRepository interface {
 
 	// ExistsCode 检查编码是否存在
 	ExistsCode(ctx context.Context, code string) (bool, error)
+
+	// PurgeSoftDeletedByCode 清理指定编码的软删除残留记录
+	PurgeSoftDeletedByCode(ctx context.Context, code string) error
 }
 
 // OrgQuery 组织查询参数

@@ -22,6 +22,11 @@ func NewOrganizationRepository(db *gorm.DB) repository.OrganizationRepository {
 	}
 }
 
+// Delete 硬删除组织（组织删除应真正释放唯一编码）
+func (r *OrganizationRepositoryImpl) Delete(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).Unscoped().Delete(&entity.Organization{}, "id = ?", id).Error
+}
+
 // FindByCode 根据编码查找
 func (r *OrganizationRepositoryImpl) FindByCode(ctx context.Context, code string) (*entity.Organization, error) {
 	var org entity.Organization
@@ -221,4 +226,12 @@ func (r *OrganizationRepositoryImpl) ExistsCode(ctx context.Context, code string
 		Where("code = ?", code).
 		Count(&count).Error
 	return count > 0, err
+}
+
+// PurgeSoftDeletedByCode 清理指定编码的软删除残留记录
+func (r *OrganizationRepositoryImpl) PurgeSoftDeletedByCode(ctx context.Context, code string) error {
+	return r.db.WithContext(ctx).
+		Unscoped().
+		Where("code = ? AND deleted_at IS NOT NULL", code).
+		Delete(&entity.Organization{}).Error
 }

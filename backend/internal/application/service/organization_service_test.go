@@ -380,11 +380,10 @@ func TestOrganizationAppService_Delete(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			// 验证组织已被软删除
+			// 验证组织已被硬删除
 			var deletedOrg entity.Organization
 			err = tdb.DB.Unscoped().First(&deletedOrg, "id = ?", tt.orgID).Error
-			require.NoError(t, err)
-			assert.NotNil(t, deletedOrg.DeletedAt)
+			assert.Error(t, err)
 		})
 	}
 }

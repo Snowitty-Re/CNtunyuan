@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -30,6 +31,11 @@ func NewOrganizationAppService(orgRepo repository.OrganizationRepository) *Organ
 
 // Create 创建组织
 func (s *OrganizationAppService) Create(ctx context.Context, req *dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
+	// 历史兼容：清理同编码的软删除残留，避免唯一索引被“假删除”占用
+	if err := s.orgRepo.PurgeSoftDeletedByCode(ctx, req.Code); err != nil {
+		return nil, err
+	}
+
 	// 检查编码是否已存在
 	exists, err := s.orgRepo.ExistsCode(ctx, req.Code)
 	if err != nil {
@@ -64,6 +70,12 @@ func (s *OrganizationAppService) Create(ctx context.Context, req *dto.CreateOrga
 
 	// 保存
 	if err := s.orgRepo.Create(ctx, org); err != nil {
+		// 防御式兜底：数据库唯一索引冲突统一映射为业务冲突
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") ||
+			strings.Contains(err.Error(), "UNIQUE constraint failed") ||
+			strings.Contains(strings.ToLower(err.Error()), "duplicate entry") {
+			return nil, ErrOrganizationExists
+		}
 		logger.Error("Failed to create organization", logger.Err(err))
 		return nil, err
 	}
@@ -183,7 +195,12 @@ func (s *OrganizationAppService) Delete(ctx context.Context, id string) error {
 		return ErrCannotDeleteOrg
 	}
 
-	if err := s.orgRepo.SoftDelete(ctx, id); err != nil {
+	if err := s.orgRepo.Delete(ctx, id); err != nil {
+		// 硬删除时若仍被用户/案件/任务/方言等引用，会被外键阻止
+		if strings.Contains(err.Error(), "violates foreign key constraint") ||
+			strings.Contains(strings.ToLower(err.Error()), "foreign key constraint fails") {
+			return ErrCannotDeleteOrg
+		}
 		logger.Error("Failed to delete organization", logger.Err(err))
 		return err
 	}
