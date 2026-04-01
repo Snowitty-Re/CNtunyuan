@@ -43,13 +43,13 @@ func (r *BaseRepository[T]) Update(ctx context.Context, entity *T) error {
 	return r.db.WithContext(ctx).Save(entity).Error
 }
 
-// Delete 硬删除
+// Delete 硬删除（物理删除）
 func (r *BaseRepository[T]) Delete(ctx context.Context, id string) error {
 	var entity T
-	return r.db.WithContext(ctx).Delete(&entity, "id = ?", id).Error
+	return r.db.WithContext(ctx).Unscoped().Delete(&entity, "id = ?", id).Error
 }
 
-// SoftDelete 软删除
+// SoftDelete 软删除（仅设置 deleted_at）
 func (r *BaseRepository[T]) SoftDelete(ctx context.Context, id string) error {
 	var entity T
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&entity).Error

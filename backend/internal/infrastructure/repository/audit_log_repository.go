@@ -185,7 +185,10 @@ func (r *AuditLogRepositoryImpl) GetModuleStats(ctx context.Context, startTime, 
 
 // CleanupOldLogs 清理旧日志
 func (r *AuditLogRepositoryImpl) CleanupOldLogs(ctx context.Context, before time.Time) (int64, error) {
-	result := r.db.WithContext(ctx).Where("created_at < ?", before).Delete(&entity.AuditLog{})
+	result := r.db.WithContext(ctx).
+		Unscoped().
+		Where("created_at < ?", before).
+		Delete(&entity.AuditLog{})
 	if result.Error != nil {
 		return 0, result.Error
 	}

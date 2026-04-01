@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
@@ -38,9 +39,9 @@ func (r *FileRepositoryImpl) FindByUploader(ctx context.Context, uploaderID stri
 	var files []entity.File
 	var total int64
 
-	db := r.db.WithContext(ctx).Where("uploader_id = ? AND is_deleted = ?", uploaderID, false)
+	db := r.db.WithContext(ctx).Model(&entity.File{}).Where("uploader_id = ?", uploaderID)
 
-	if err := db.Model(&entity.File{}).Count(&total).Error; err != nil {
+	if err := db.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
@@ -56,9 +57,9 @@ func (r *FileRepositoryImpl) FindByType(ctx context.Context, fileType entity.Fil
 	var files []entity.File
 	var total int64
 
-	db := r.db.WithContext(ctx).Where("file_type = ? AND is_deleted = ?", fileType, false)
+	db := r.db.WithContext(ctx).Model(&entity.File{}).Where("file_type = ?", fileType)
 
-	if err := db.Model(&entity.File{}).Count(&total).Error; err != nil {
+	if err := db.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
@@ -73,7 +74,8 @@ func (r *FileRepositoryImpl) FindByType(ctx context.Context, fileType entity.Fil
 func (r *FileRepositoryImpl) FindByEntity(ctx context.Context, entityType string, entityID string) ([]entity.File, error) {
 	var files []entity.File
 	err := r.db.WithContext(ctx).
-		Where("entity_type = ? AND entity_id = ? AND is_deleted = ?", entityType, entityID, false).
+		Model(&entity.File{}).
+		Where("entity_type = ? AND entity_id = ?", entityType, entityID).
 		Order("created_at DESC").
 		Find(&files).Error
 	return files, err
@@ -84,9 +86,9 @@ func (r *FileRepositoryImpl) FindByStorageType(ctx context.Context, storageType 
 	var files []entity.File
 	var total int64
 
-	db := r.db.WithContext(ctx).Where("storage_type = ? AND is_deleted = ?", storageType, false)
+	db := r.db.WithContext(ctx).Model(&entity.File{}).Where("storage_type = ?", storageType)
 
-	if err := db.Model(&entity.File{}).Count(&total).Error; err != nil {
+	if err := db.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
@@ -103,10 +105,11 @@ func (r *FileRepositoryImpl) Search(ctx context.Context, keyword string, paginat
 	var total int64
 
 	db := r.db.WithContext(ctx).
-		Where("(file_name LIKE ? OR original_name LIKE ?) AND is_deleted = ?",
-			"%"+keyword+"%", "%"+keyword+"%", false)
+		Model(&entity.File{}).
+		Where("(file_name LIKE ? OR original_name LIKE ?)",
+			"%"+keyword+"%", "%"+keyword+"%")
 
-	if err := db.Model(&entity.File{}).Count(&total).Error; err != nil {
+	if err := db.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
@@ -140,62 +143,60 @@ func (r *FileRepositoryImpl) GetStats(ctx context.Context) (*entity.FileStats, e
 
 	// 总数
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("is_deleted = ?", false).
 		Count(&stats.TotalCount).Error; err != nil {
 		return nil, err
 	}
 
 	// 总大小
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("is_deleted = ?", false).
 		Select("COALESCE(SUM(size), 0)").Scan(&stats.TotalSize).Error; err != nil {
 		return nil, err
 	}
 
 	// 图片统计
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", entity.FileTypeImage, false).
+		Where("file_type = ?", entity.FileTypeImage).
 		Count(&stats.ImageCount).Error; err != nil {
 		return nil, err
 	}
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", entity.FileTypeImage, false).
+		Where("file_type = ?", entity.FileTypeImage).
 		Select("COALESCE(SUM(size), 0)").Scan(&stats.ImageSize).Error; err != nil {
 		return nil, err
 	}
 
 	// 音频统计
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", entity.FileTypeAudio, false).
+		Where("file_type = ?", entity.FileTypeAudio).
 		Count(&stats.AudioCount).Error; err != nil {
 		return nil, err
 	}
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", entity.FileTypeAudio, false).
+		Where("file_type = ?", entity.FileTypeAudio).
 		Select("COALESCE(SUM(size), 0)").Scan(&stats.AudioSize).Error; err != nil {
 		return nil, err
 	}
 
 	// 视频统计
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", entity.FileTypeVideo, false).
+		Where("file_type = ?", entity.FileTypeVideo).
 		Count(&stats.VideoCount).Error; err != nil {
 		return nil, err
 	}
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", entity.FileTypeVideo, false).
+		Where("file_type = ?", entity.FileTypeVideo).
 		Select("COALESCE(SUM(size), 0)").Scan(&stats.VideoSize).Error; err != nil {
 		return nil, err
 	}
 
 	// 文档统计
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", entity.FileTypeDocument, false).
+		Where("file_type = ?", entity.FileTypeDocument).
 		Count(&stats.DocCount).Error; err != nil {
 		return nil, err
 	}
 	if err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", entity.FileTypeDocument, false).
+		Where("file_type = ?", entity.FileTypeDocument).
 		Select("COALESCE(SUM(size), 0)").Scan(&stats.DocSize).Error; err != nil {
 		return nil, err
 	}
@@ -205,10 +206,14 @@ func (r *FileRepositoryImpl) GetStats(ctx context.Context) (*entity.FileStats, e
 
 // SoftDelete 软删除
 func (r *FileRepositoryImpl) SoftDelete(ctx context.Context, id string) error {
+	now := time.Now()
 	return r.db.WithContext(ctx).
 		Model(&entity.File{}).
-		Where("id = ?", id).
-		Update("is_deleted", true).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Updates(map[string]interface{}{
+			"is_deleted": true,
+			"deleted_at": now,
+		}).
 		Error
 }
 
@@ -216,7 +221,6 @@ func (r *FileRepositoryImpl) SoftDelete(ctx context.Context, id string) error {
 func (r *FileRepositoryImpl) GetTotalSize(ctx context.Context) (int64, error) {
 	var size int64
 	err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("is_deleted = ?", false).
 		Select("COALESCE(SUM(size), 0)").Scan(&size).Error
 	return size, err
 }
@@ -225,7 +229,7 @@ func (r *FileRepositoryImpl) GetTotalSize(ctx context.Context) (int64, error) {
 func (r *FileRepositoryImpl) CountByType(ctx context.Context, fileType entity.FileType) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).Model(&entity.File{}).
-		Where("file_type = ? AND is_deleted = ?", fileType, false).
+		Where("file_type = ?", fileType).
 		Count(&count).Error
 	return count, err
 }
