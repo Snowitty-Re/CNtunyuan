@@ -1,474 +1,368 @@
-/* ========================================
-   登录页面 - 团圆寻亲
-   色调: 暖橙 #FF8C42 / 奶油底 #FDF8F3
-   ======================================== */
+:root {
+  --bg: #f7f2ea;
+  --ink: #2b2b2b;
+  --muted: #837b72;
+  --primary: #d9652b;
+  --primary-deep: #bf4f1d;
+  --panel: #fffaf3;
+  --line: #eadfce;
+  --success: #07c160;
+}
 
 page {
-  background-color: #FDF8F3;
+  background: var(--bg);
   height: 100%;
 }
 
 .login-page {
   min-height: 100vh;
-  background: #FDF8F3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   position: relative;
+  padding: 56rpx 38rpx 48rpx;
+  box-sizing: border-box;
   overflow: hidden;
 }
 
-/* ---------- 顶部装饰 ---------- */
-.top-decoration {
+.bg-layer {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
+  inset: 0;
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(8rpx);
+}
+
+.orb-a {
+  width: 520rpx;
+  height: 520rpx;
+  top: -140rpx;
+  right: -140rpx;
+  background: radial-gradient(circle, rgba(217, 101, 43, 0.28) 0%, rgba(217, 101, 43, 0.06) 70%, rgba(217, 101, 43, 0) 100%);
+}
+
+.orb-b {
+  width: 420rpx;
   height: 420rpx;
-  overflow: hidden;
-  z-index: 0;
+  bottom: -120rpx;
+  left: -120rpx;
+  background: radial-gradient(circle, rgba(255, 181, 77, 0.22) 0%, rgba(255, 181, 77, 0.04) 72%, rgba(255, 181, 77, 0) 100%);
 }
 
-.wave {
+.mesh {
   position: absolute;
-  width: 200%;
-  left: -50%;
-  border-radius: 0 0 50% 50%;
+  width: 420rpx;
+  height: 420rpx;
+  border-radius: 32rpx;
+  border: 2rpx solid rgba(191, 79, 29, 0.08);
+  transform: rotate(24deg);
 }
 
-.wave-1 {
-  top: -80rpx;
-  height: 400rpx;
-  background: linear-gradient(135deg, #FF8C42 0%, #FFA866 60%, #FFB87A 100%);
+.mesh-1 {
+  top: 180rpx;
+  right: -240rpx;
 }
 
-.wave-2 {
-  top: -120rpx;
-  height: 380rpx;
-  background: linear-gradient(135deg, rgba(255, 140, 66, 0.25) 0%, rgba(255, 184, 122, 0.15) 100%);
+.mesh-2 {
+  bottom: 120rpx;
+  left: -250rpx;
 }
 
-/* ---------- 品牌区域 ---------- */
-.brand-section {
+.hero {
   position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 100rpx;
-  margin-bottom: 60rpx;
+  z-index: 2;
+  margin-bottom: 26rpx;
 }
 
-.logo-wrapper {
-  width: 160rpx;
-  height: 160rpx;
-  border-radius: 40rpx;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 12rpx 40rpx rgba(255, 140, 66, 0.3);
-  margin-bottom: 28rpx;
-  overflow: hidden;
-}
-
-.logo {
-  width: 140rpx;
-  height: 140rpx;
-}
-
-.app-name {
-  font-size: 52rpx;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 6rpx;
-  margin-bottom: 12rpx;
-  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
-}
-
-.app-slogan {
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.92);
-  letter-spacing: 2rpx;
-  text-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.08);
-}
-
-/* ---------- 登录卡片 ---------- */
-.login-card {
-  position: relative;
-  z-index: 1;
-  width: 88%;
-  max-width: 650rpx;
-  background: #fff;
-  border-radius: 36rpx;
-  padding: 34rpx 34rpx 40rpx;
-  box-shadow: 0 12rpx 68rpx rgba(255, 140, 66, 0.15), 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
-}
-
-/* ---------- 登录标签切换 ---------- */
-.login-tabs {
-  background: #f9f4ee;
+.hero-topline {
+  display: inline-block;
+  padding: 8rpx 20rpx;
   border-radius: 999rpx;
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 36rpx;
-  padding: 8rpx;
-}
-
-.tab-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 76rpx;
-  border-radius: 999rpx;
-  position: relative;
-}
-
-.tab-label {
-  font-size: 28rpx;
-  color: #9f978f;
-  font-weight: 600;
-  transition: color 0.3s;
-}
-
-.tab-item.active .tab-label {
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 30rpx;
-}
-
-.tab-indicator {
-  display: none;
-}
-
-.tab-item.active {
-  background: linear-gradient(135deg, #ff8b42 0%, #ff6f37 100%);
-  box-shadow: 0 6rpx 16rpx rgba(255, 122, 64, 0.35);
-}
-
-/* ---------- 微信登录区域 ---------- */
-.wechat-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.wechat-desc {
-  margin-bottom: 40rpx;
-  text-align: center;
-}
-
-.wechat-desc-text {
-  font-size: 26rpx;
-  color: #A0A0A0;
-  line-height: 1.6;
-}
-
-.wechat-login-btn {
-  width: 100% !important;
-  height: 100rpx;
-  background: linear-gradient(135deg, #07C160 0%, #06AD56 100%);
-  border-radius: 50rpx !important;
-  border: none !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 !important;
-  margin: 0;
-  box-shadow: 0 8rpx 30rpx rgba(7, 193, 96, 0.35);
-  transition: opacity 0.2s;
-}
-
-.wechat-login-btn::after {
-  border: none;
-}
-
-.wechat-login-btn[disabled] {
-  background: linear-gradient(135deg, #07C160 0%, #06AD56 100%) !important;
-  color: #fff !important;
-  opacity: 0.7;
-}
-
-.btn-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.wechat-icon {
-  font-size: 24rpx;
-  font-weight: 600;
-  margin-right: 16rpx;
-  background: rgba(255,255,255,0.3);
-  padding: 6rpx 12rpx;
-  border-radius: 8rpx;
-}
-
-.btn-text {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: #fff;
-  letter-spacing: 4rpx;
-}
-
-/* ---------- 手机登录区域 ---------- */
-.phone-section {
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
-  border-radius: 26rpx;
-  padding: 24rpx 20rpx 16rpx;
-}
-
-.phone-head {
-  margin-bottom: 24rpx;
-}
-
-.phone-title {
-  display: block;
-  font-size: 34rpx;
-  color: #3a3027;
-  font-weight: 700;
+  background: rgba(191, 79, 29, 0.08);
+  color: var(--primary-deep);
+  font-size: 20rpx;
   letter-spacing: 1rpx;
 }
 
-.phone-subtitle {
+.logo-wrap {
+  width: 126rpx;
+  height: 126rpx;
+  margin-top: 22rpx;
+  border-radius: 30rpx;
+  background: #fff;
+  box-shadow: 0 8rpx 24rpx rgba(191, 79, 29, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  width: 104rpx;
+  height: 104rpx;
+}
+
+.hero-title {
+  display: block;
+  margin-top: 20rpx;
+  font-size: 56rpx;
+  color: #271f16;
+  font-weight: 700;
+  letter-spacing: 4rpx;
+}
+
+.hero-subtitle {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #aa9f93;
-  line-height: 1.4;
+  color: var(--muted);
 }
 
-/* 绑定通知 */
-.binding-notice {
+.panel {
+  position: relative;
+  z-index: 2;
+  background: var(--panel);
+  border: 2rpx solid var(--line);
+  border-radius: 30rpx;
+  padding: 24rpx;
+  box-shadow: 0 10rpx 34rpx rgba(81, 56, 32, 0.08);
+}
+
+.mode-switch {
+  background: #f2e8da;
+  border-radius: 18rpx;
+  padding: 8rpx;
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 18rpx;
+}
+
+.mode-item {
+  flex: 1;
+  height: 72rpx;
+  border-radius: 14rpx;
   display: flex;
   align-items: center;
-  background: #FFF6ED;
-  border: 1rpx solid #FFE0C2;
-  border-radius: 16rpx;
-  padding: 18rpx 20rpx;
-  margin-bottom: 22rpx;
+  justify-content: center;
+  color: #6f665d;
+  font-size: 26rpx;
+  font-weight: 600;
 }
 
-.notice-icon {
-  width: 40rpx;
-  height: 40rpx;
-  line-height: 40rpx;
-  text-align: center;
-  font-size: 26rpx;
-  font-weight: 700;
+.mode-item.active {
+  background: linear-gradient(140deg, var(--primary) 0%, #f08d49 100%);
   color: #fff;
-  background: #FF8C42;
-  border-radius: 50%;
-  margin-right: 16rpx;
-  flex-shrink: 0;
+  box-shadow: 0 6rpx 18rpx rgba(217, 101, 43, 0.34);
 }
 
-.notice-text {
-  font-size: 26rpx;
-  color: #D4782E;
-  line-height: 1.5;
+.block {
+  border-radius: 22rpx;
+  padding: 20rpx;
 }
 
-/* 表单项 */
-.form-item {
-  margin-bottom: 22rpx;
+.wechat-block {
+  background: linear-gradient(180deg, rgba(7, 193, 96, 0.09) 0%, rgba(255, 255, 255, 0.8) 100%);
+  border: 2rpx solid rgba(7, 193, 96, 0.24);
 }
 
-.form-label {
+.phone-block {
+  background: #fff;
+  border: 2rpx solid #efe3d3;
+}
+
+.block-head {
+  margin-bottom: 16rpx;
+}
+
+.block-title {
   display: block;
-  margin: 0 0 10rpx 12rpx;
-  font-size: 24rpx;
-  color: #8e8173;
-  font-weight: 600;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #2f251b;
 }
 
-.input-box {
+.block-tip {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 23rpx;
+  color: #887f75;
+}
+
+.wechat-points {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-bottom: 18rpx;
+}
+
+.point {
+  font-size: 25rpx;
+  color: #2a6d45;
+}
+
+.point::before {
+  content: "• ";
+}
+
+.bind-banner {
+  margin-bottom: 14rpx;
+  padding: 12rpx 16rpx;
+  border-radius: 14rpx;
+  background: #fff1df;
+  border: 2rpx solid #ffd0a8;
+}
+
+.bind-banner-text {
+  font-size: 24rpx;
+  color: #a54f1e;
+}
+
+.field {
+  margin-bottom: 16rpx;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 24rpx;
+  color: #766d62;
+}
+
+.field-box {
+  height: 88rpx;
+  border-radius: 16rpx;
+  border: 2rpx solid #e6d9c7;
+  background: #fffdf8;
   display: flex;
   align-items: center;
-  background: #fff;
-  border: 2rpx solid #eadfd3;
-  border-radius: 24rpx;
-  padding: 0 24rpx;
-  height: 92rpx;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  padding: 0 20rpx;
+  box-sizing: border-box;
 }
 
-.input-box:focus-within {
-  border-color: #ff8c42;
-  box-shadow: 0 0 0 4rpx rgba(255, 140, 66, 0.13);
+.field-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4rpx rgba(217, 101, 43, 0.14);
 }
 
-.input-prefix {
-  flex-shrink: 0;
-  margin-right: 16rpx;
-  padding-right: 16rpx;
-  border-right: 2rpx solid #f1e6dc;
-}
-
-.field-icon {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #FF8C42;
-}
-
-.phone-icon {
-  font-size: 28rpx;
-}
-
-.code-icon-text,
-.pwd-icon-text {
-  font-size: 24rpx;
-  white-space: nowrap;
+.prefix {
+  margin-right: 14rpx;
+  padding-right: 14rpx;
+  border-right: 2rpx solid #ebdfcf;
+  font-size: 26rpx;
+  color: #9e9488;
 }
 
 .field-input {
   flex: 1;
+  height: 88rpx;
   font-size: 30rpx;
-  color: #333;
-  height: 92rpx;
+  color: var(--ink);
 }
 
 .placeholder-style {
-  color: #C5BEB6;
-  font-size: 28rpx;
+  color: #b8ab9b;
+  font-size: 27rpx;
 }
 
-/* 验证码输入行 */
-.code-input-box {
-  padding-right: 8rpx;
+.code-box {
+  gap: 12rpx;
 }
 
-.code-btn-wrapper {
-  flex-shrink: 0;
-  margin-left: 12rpx;
-}
-
-.send-code-btn {
+.code-btn {
   height: 62rpx;
   line-height: 62rpx;
+  min-width: 162rpx;
+  padding: 0 18rpx !important;
+  border-radius: 12rpx;
+  border: none;
+  background: #ece4da;
+  color: #8d857c;
   font-size: 24rpx;
-  color: #C0B8AE;
-  background: #EDE8E3;
-  border-radius: 20rpx;
-  padding: 0 24rpx !important;
-  margin: 0;
-  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.code-btn::after {
   border: none;
 }
 
-.send-code-btn::after {
-  border: none;
-}
-
-.send-code-btn.active {
+.code-btn.active {
   color: #fff;
-  background: linear-gradient(135deg, #FF8C42, #FFA866);
-  box-shadow: 0 4rpx 16rpx rgba(255, 140, 66, 0.3);
+  background: linear-gradient(140deg, var(--primary) 0%, #f08d49 100%);
 }
 
-.send-code-btn[disabled] {
-  opacity: 0.65;
-}
-
-/* 提交按钮 */
-.submit-btn {
+.btn {
   width: 100% !important;
-  height: 94rpx;
-  background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%);
-  border-radius: 24rpx !important;
+  height: 88rpx;
+  border-radius: 16rpx !important;
   border: none !important;
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #fff !important;
-  letter-spacing: 6rpx;
-  margin-top: 12rpx;
+  margin: 8rpx 0 0;
   padding: 0 !important;
-  box-shadow: 0 8rpx 30rpx rgba(255, 107, 53, 0.35);
-  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.submit-btn::after {
+.btn::after {
   border: none;
 }
 
-.submit-btn[disabled] {
-  background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%) !important;
-  color: #fff !important;
-  opacity: 0.6;
-}
-
-/* 额外链接 */
-.extra-links {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 24rpx;
-}
-
-.extra-link {
-  font-size: 26rpx;
-  color: #FF8C42;
-  padding: 8rpx 16rpx;
-}
-
-.link-dot {
-  width: 6rpx;
-  height: 6rpx;
-  border-radius: 50%;
-  background: #DDD;
-  margin: 0 8rpx;
-}
-
-/* 返回链接 */
-.back-link {
-  text-align: center;
-  margin-top: 24rpx;
-}
-
-.back-text {
-  font-size: 26rpx;
-  color: #B0A89E;
-  padding: 12rpx 0;
-}
-
-
-/* ---------- 底部协议 ---------- */
-.agreement-section {
-  position: relative;
-  z-index: 1;
-  margin-top: 48rpx;
-  text-align: center;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  padding: 0 60rpx;
-}
-
-.agreement-text {
-  font-size: 22rpx;
-  color: #B5AEA6;
-  line-height: 1.8;
-}
-
-.agreement-link {
-  font-size: 22rpx;
-  color: #FF8C42;
-  line-height: 1.8;
-}
-
-/* ---------- 版权 ---------- */
-.copyright {
-  margin-top: auto;
-  padding: 40rpx 0 60rpx;
-  text-align: center;
-}
-
-.copyright-text {
-  font-size: 22rpx;
-  color: #CBC4BC;
+.btn text {
+  font-size: 30rpx;
+  font-weight: 700;
   letter-spacing: 2rpx;
+}
+
+.btn-wechat {
+  background: linear-gradient(140deg, #07c160 0%, #07a652 100%);
+  box-shadow: 0 8rpx 20rpx rgba(7, 166, 82, 0.3);
+}
+
+.btn-wechat text {
+  color: #fff;
+}
+
+.btn-primary {
+  background: linear-gradient(140deg, var(--primary) 0%, #ec8344 100%);
+  box-shadow: 0 8rpx 20rpx rgba(217, 101, 43, 0.32);
+}
+
+.btn-primary text {
+  color: #fff;
+}
+
+.actions {
+  margin-top: 18rpx;
+  text-align: center;
+}
+
+.action-link {
+  font-size: 25rpx;
+  color: var(--primary);
+}
+
+.action-divider {
+  font-size: 24rpx;
+  color: #c8beb1;
+  margin: 0 12rpx;
+}
+
+.footer {
+  position: relative;
+  z-index: 2;
+  margin-top: 24rpx;
+  text-align: center;
+}
+
+.footer-text,
+.footer-link {
+  font-size: 22rpx;
+  line-height: 1.8;
+}
+
+.footer-text {
+  color: #a89f95;
+}
+
+.footer-link {
+  color: var(--primary);
 }
