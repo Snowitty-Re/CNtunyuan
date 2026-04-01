@@ -16,6 +16,7 @@
     "pages/tasks/feedback",
     "pages/admin/dialect-review",
     "pages/admin/user-manage",
+    "pages/admin/user-edit",
     "pages/admin/org-manage",
     "pages/admin/org-edit",
     "pages/volunteer/profile",

@@ -76,8 +76,12 @@ func (h *UserHandler) Create(c *gin.Context) {
 			response.Conflict(c, "phone already exists")
 		case service.ErrEmailExists:
 			response.Conflict(c, "email already exists")
+		case service.ErrUserAlreadyExists:
+			response.Conflict(c, "user already exists")
 		case service.ErrInvalidRole:
 			response.BadRequest(c, "invalid role")
+		case service.ErrInvalidOrgID:
+			response.BadRequest(c, "invalid organization id")
 		default:
 			logger.Error("Create user failed", logger.Err(err))
 			response.InternalServerError(c, "create user failed")
@@ -203,6 +207,14 @@ func (h *UserHandler) Update(c *gin.Context) {
 			response.Forbidden(c, "permission denied")
 		case service.ErrInvalidRole:
 			response.BadRequest(c, "invalid role")
+		case service.ErrPhoneExists:
+			response.Conflict(c, "phone already exists")
+		case service.ErrEmailExists:
+			response.Conflict(c, "email already exists")
+		case service.ErrUserAlreadyExists:
+			response.Conflict(c, "user already exists")
+		case service.ErrInvalidOrgID:
+			response.BadRequest(c, "invalid organization id")
 		default:
 			logger.Error("Update user failed", logger.Err(err))
 			response.InternalServerError(c, "update user failed")

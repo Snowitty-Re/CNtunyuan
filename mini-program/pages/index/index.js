@@ -457,8 +457,14 @@ Page({
         wx.switchTab({ url: '/pages/cases/list' })
         break
       case 'volunteers':
-        // 跳转到志愿者页面
-        wx.navigateTo({ url: '/pages/volunteer/profile' })
+        if (app.isManager && app.isManager()) {
+          wx.navigateTo({ url: '/pages/admin/user-manage?role=volunteer' })
+        } else {
+          wx.showToast({
+            title: '仅管理端可查看志愿者列表',
+            icon: 'none'
+          })
+        }
         break
       case 'dialects':
         this.goToDialects()

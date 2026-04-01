@@ -1,0 +1,51 @@
+<view class="page">
+  <view class="card" wx:if="{{!loading}}">
+    <view class="field">
+      <text class="label required">昵称</text>
+      <input class="input" value="{{form.nickname}}" data-field="nickname" bindinput="onInput" placeholder="请输入昵称" />
+    </view>
+
+    <view class="field">
+      <text class="label required">手机号</text>
+      <input class="input" type="number" maxlength="11" value="{{form.phone}}" data-field="phone" bindinput="onInput" placeholder="请输入手机号" disabled="{{isEdit}}" />
+      <text class="hint" wx:if="{{isEdit}}">编辑模式下手机号不可修改</text>
+    </view>
+
+    <view class="field" wx:if="{{!isEdit}}">
+      <text class="label required">初始密码</text>
+      <input class="input" password value="{{form.password}}" data-field="password" bindinput="onInput" placeholder="不少于8位" />
+    </view>
+
+    <view class="field">
+      <text class="label">邮箱</text>
+      <input class="input" value="{{form.email}}" data-field="email" bindinput="onInput" placeholder="可选" />
+    </view>
+
+    <view class="field">
+      <text class="label required">角色</text>
+      <picker mode="selector" range="{{roleOptions}}" range-key="label" value="{{roleIndex}}" bindchange="onRoleChange">
+        <view class="picker">{{roleOptions[roleIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label required">所属组织</text>
+      <picker mode="selector" range="{{orgOptions}}" range-key="name" value="{{orgIndex}}" bindchange="onOrgChange">
+        <view class="picker">{{orgOptions[orgIndex] && orgOptions[orgIndex].name ? orgOptions[orgIndex].name : '请选择组织'}}</view>
+      </picker>
+    </view>
+
+    <view class="field" wx:if="{{isEdit}}">
+      <text class="label">状态</text>
+      <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
+        <view class="picker">{{statusOptions[statusIndex].label}}</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">加载中...</view>
+
+  <view class="footer">
+    <button class="submit-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onSubmit">{{isEdit ? '保存用户' : '创建用户'}}</button>
+  </view>
+</view>

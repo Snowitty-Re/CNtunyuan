@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
@@ -17,6 +18,7 @@ var (
 	ErrPhoneExists       = errors.New("phone already exists")
 	ErrEmailExists       = errors.New("email already exists")
 	ErrInvalidRole       = errors.New("invalid role")
+	ErrInvalidOrgID      = errors.New("invalid organization id")
 	ErrCannotModify      = errors.New("cannot modify this user")
 	ErrOldPasswordWrong  = errors.New("old password is wrong")
 )
@@ -43,6 +45,13 @@ func NewUserAppService(
 
 // Create create user
 func (s *UserAppService) Create(ctx context.Context, req *dto.CreateUserRequest) (*dto.UserResponse, error) {
+	req.Email = strings.TrimSpace(req.Email)
+	req.OrgID = strings.TrimSpace(req.OrgID)
+
+	if req.OrgID == "" {
+		return nil, ErrInvalidOrgID
+	}
+
 	exists, err := s.userRepo.ExistsPhone(ctx, req.Phone)
 	if err != nil {
 		return nil, err
@@ -77,6 +86,22 @@ func (s *UserAppService) Create(ctx context.Context, req *dto.CreateUserRequest)
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
+		errMsg := strings.ToLower(err.Error())
+		if strings.Contains(errMsg, "duplicate key") || strings.Contains(errMsg, "unique constraint") ||
+			strings.Contains(errMsg, "unique") || strings.Contains(errMsg, "duplicate entry") {
+			if strings.Contains(errMsg, "phone") {
+				return nil, ErrPhoneExists
+			}
+			if strings.Contains(errMsg, "email") {
+				return nil, ErrEmailExists
+			}
+			return nil, ErrUserAlreadyExists
+		}
+		if strings.Contains(errMsg, "foreign key") ||
+			strings.Contains(errMsg, "fk_user_org") ||
+			(strings.Contains(errMsg, "org_id") && strings.Contains(errMsg, "constraint")) {
+			return nil, ErrInvalidOrgID
+		}
 		logger.Error("Failed to create user", logger.Err(err))
 		return nil, err
 	}
@@ -97,6 +122,9 @@ func (s *UserAppService) Update(ctx context.Context, id string, req *dto.UpdateU
 	if !s.canModify(operator, user) {
 		return nil, ErrCannotModify
 	}
+
+	req.Email = strings.TrimSpace(req.Email)
+	req.OrgID = strings.TrimSpace(req.OrgID)
 
 	if req.Nickname != "" {
 		user.Nickname = req.Nickname
@@ -121,6 +149,22 @@ func (s *UserAppService) Update(ctx context.Context, id string, req *dto.UpdateU
 	}
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
+		errMsg := strings.ToLower(err.Error())
+		if strings.Contains(errMsg, "duplicate key") || strings.Contains(errMsg, "unique constraint") ||
+			strings.Contains(errMsg, "unique") || strings.Contains(errMsg, "duplicate entry") {
+			if strings.Contains(errMsg, "phone") {
+				return nil, ErrPhoneExists
+			}
+			if strings.Contains(errMsg, "email") {
+				return nil, ErrEmailExists
+			}
+			return nil, ErrUserAlreadyExists
+		}
+		if strings.Contains(errMsg, "foreign key") ||
+			strings.Contains(errMsg, "fk_user_org") ||
+			(strings.Contains(errMsg, "org_id") && strings.Contains(errMsg, "constraint")) {
+			return nil, ErrInvalidOrgID
+		}
 		logger.Error("Failed to update user", logger.Err(err))
 		return nil, err
 	}

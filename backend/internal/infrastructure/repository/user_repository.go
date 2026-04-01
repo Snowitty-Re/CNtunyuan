@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
@@ -19,6 +20,60 @@ func NewUserRepository(db *gorm.DB) repository.UserRepository {
 	return &UserRepositoryImpl{
 		BaseRepository: NewBaseRepository[entity.User](db),
 	}
+}
+
+// Create 创建用户（空邮箱写 NULL，避免唯一索引被空字符串占用）
+func (r *UserRepositoryImpl) Create(ctx context.Context, user *entity.User) error {
+	db := r.db.WithContext(ctx)
+	omitFields := make([]string, 0, 3)
+
+	if strings.TrimSpace(user.Email) == "" {
+		user.Email = ""
+		omitFields = append(omitFields, "Email")
+	}
+	if strings.TrimSpace(user.WxOpenID) == "" {
+		user.WxOpenID = ""
+		omitFields = append(omitFields, "WxOpenID")
+	}
+	if strings.TrimSpace(user.WxUnionID) == "" {
+		user.WxUnionID = ""
+		omitFields = append(omitFields, "WxUnionID")
+	}
+	if len(omitFields) > 0 {
+		db = db.Omit(omitFields...)
+	}
+	return db.Create(user).Error
+}
+
+// Update 更新用户（空邮箱写 NULL）
+func (r *UserRepositoryImpl) Update(ctx context.Context, user *entity.User) error {
+	db := r.db.WithContext(ctx).Model(user).Select("*")
+	clearNullableCols := make([]string, 0, 3)
+
+	if strings.TrimSpace(user.Email) == "" {
+		db = db.Omit("Email")
+		clearNullableCols = append(clearNullableCols, "email")
+	}
+	if strings.TrimSpace(user.WxOpenID) == "" {
+		db = db.Omit("WxOpenID")
+		clearNullableCols = append(clearNullableCols, "wx_openid")
+	}
+	if strings.TrimSpace(user.WxUnionID) == "" {
+		db = db.Omit("WxUnionID")
+		clearNullableCols = append(clearNullableCols, "wx_unionid")
+	}
+
+	if err := db.Updates(user).Error; err != nil {
+		return err
+	}
+
+	for _, col := range clearNullableCols {
+		if err := r.db.WithContext(ctx).Model(user).Update(col, nil).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // FindByPhone 根据手机号查找
@@ -156,12 +211,12 @@ func (r *UserRepositoryImpl) List(ctx context.Context, query *repository.UserQue
 	order := "created_at DESC"
 	if query.SortField != "" {
 		allowedSortFields := map[string]bool{
-			"created_at":   true,
-			"updated_at":   true,
-			"nickname":     true,
-			"phone":        true,
-			"role":         true,
-			"status":       true,
+			"created_at":    true,
+			"updated_at":    true,
+			"nickname":      true,
+			"phone":         true,
+			"role":          true,
+			"status":        true,
 			"last_login_at": true,
 		}
 		if allowedSortFields[query.SortField] {
