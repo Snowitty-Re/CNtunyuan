@@ -1,4 +1,5 @@
 const userService = require('../../services/user')
+const organizationService = require('../../services/organization')
 const { showConfirm, showSuccess, showToast } = require('../../utils/util')
 const { ROLE_MAP } = require('../../utils/constants')
 const app = getApp()
@@ -77,6 +78,23 @@ Page({
     try {
       const userInfo = await app.getUserInfo() || wx.getStorageSync('userInfo') || {}
       const profile = await userService.getProfile().catch(() => ({}))
+
+      const resolveOrgName = (src) => {
+        if (!src) return ''
+        return src.org_name ||
+          src.orgName ||
+          src.organization_name ||
+          (src.org && src.org.name) ||
+          (src.organization && src.organization.name) ||
+          ''
+      }
+
+      let orgName = resolveOrgName(userInfo) || resolveOrgName(profile)
+      const orgID = userInfo.org_id || userInfo.orgId || profile.org_id || profile.orgId || ''
+      if (!orgName && orgID) {
+        const org = await organizationService.getById(orgID).catch(() => null)
+        orgName = (org && org.name) || ''
+      }
       
       const mergedUserInfo = {
         ...userInfo,
@@ -86,8 +104,8 @@ Page({
         nickname: userInfo.nickname || profile.nickname || '志愿者',
         realName: userInfo.real_name || profile.real_name || '',
         role: userInfo.role || profile.role || 'volunteer',
-        // 后端返回的是 org_name 字符串，不是 org 对象
-        orgName: userInfo.org_name || profile.org_name || (typeof userInfo.org === 'object' && userInfo.org ? userInfo.org.name : null) || '未知组织'
+        // 兼容 org_name / organization_name / org.name，最后兜底按 org_id 回查
+        orgName: orgName || '未知组织'
       }
       
       this.setData({ userInfo: mergedUserInfo })

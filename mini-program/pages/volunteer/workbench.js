@@ -21,7 +21,10 @@ Page({
       { key: 'myTasks', icon: 'task', label: '我的任务', color: '#FF8C42' },
       { key: 'createCase', icon: 'case', label: '发布案件', color: '#3498DB' },
       { key: 'recordDialect', icon: 'mic', label: '录制方言', color: '#27AE60' },
-      { key: 'pendingAssign', icon: 'assign', label: '待分配', color: '#9B59B6', managerOnly: true }
+      { key: 'pendingAssign', icon: 'assign', label: '待分配', color: '#9B59B6', managerOnly: true },
+      { key: 'dialectReview', icon: 'task', label: '方言审批', color: '#E67E22', managerOnly: true },
+      { key: 'userManage', icon: 'notification', label: '人员管理', color: '#16A085', managerOnly: true },
+      { key: 'orgManage', icon: 'settings', label: '组织管理', color: '#2C7BE5', managerOnly: true }
     ],
     
     // 最近任务列表
@@ -136,6 +139,15 @@ Page({
         break
       case 'pendingAssign':
         wx.navigateTo({ url: '/pages/tasks/list?status=pending' })
+        break
+      case 'dialectReview':
+        wx.navigateTo({ url: '/pages/admin/dialect-review' })
+        break
+      case 'userManage':
+        wx.navigateTo({ url: '/pages/admin/user-manage' })
+        break
+      case 'orgManage':
+        wx.navigateTo({ url: '/pages/admin/org-manage' })
         break
     }
   },

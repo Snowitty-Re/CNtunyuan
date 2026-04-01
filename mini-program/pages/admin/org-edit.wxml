@@ -1,0 +1,67 @@
+<view class="page">
+  <view class="card" wx:if="{{!loading}}">
+    <view class="field">
+      <text class="label required">组织名称</text>
+      <input class="input" value="{{form.name}}" data-field="name" bindinput="onInput" placeholder="请输入组织名称" />
+    </view>
+
+    <view class="field">
+      <text class="label required">组织编码</text>
+      <input class="input" value="{{form.code}}" data-field="code" bindinput="onInput" placeholder="如：GZ-YXQ-01" />
+      <text class="hint">编码用于唯一标识，仅支持字母、数字、-、_</text>
+    </view>
+
+    <view class="field">
+      <text class="label required">组织类型</text>
+      <picker mode="selector" range="{{typeOptions}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
+        <view class="picker">{{typeOptions[typeIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">父组织</text>
+      <picker mode="selector" range="{{parentOptions}}" range-key="name" value="{{parentIndex}}" bindchange="onParentChange">
+        <view class="picker">{{parentOptions[parentIndex].name}}</view>
+      </picker>
+      <text class="hint">建议按真实层级选择父组织，便于树形管理</text>
+    </view>
+
+    <view class="field" wx:if="{{isEdit}}">
+      <text class="label">组织状态</text>
+      <picker mode="selector" range="{{statusOptions}}" range-key="label" value="{{statusIndex}}" bindchange="onStatusChange">
+        <view class="picker">{{statusOptions[statusIndex].label}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">联系人</text>
+      <input class="input" value="{{form.contact_name}}" data-field="contact_name" bindinput="onInput" placeholder="请输入联系人姓名" />
+    </view>
+
+    <view class="field">
+      <text class="label">联系电话</text>
+      <input class="input" type="number" maxlength="11" value="{{form.contact_phone}}" data-field="contact_phone" bindinput="onInput" placeholder="请输入手机号" />
+    </view>
+
+    <view class="field">
+      <text class="label">组织地址</text>
+      <input class="input" value="{{form.address}}" data-field="address" bindinput="onInput" placeholder="请输入地址" />
+    </view>
+
+    <view class="field">
+      <text class="label">排序值</text>
+      <input class="input" type="number" value="{{form.sort_order}}" data-field="sort_order" bindinput="onInput" placeholder="默认 0，值越小越靠前" />
+    </view>
+
+    <view class="field">
+      <text class="label">组织描述</text>
+      <textarea class="textarea" value="{{form.description}}" data-field="description" bindinput="onInput" maxlength="500" placeholder="可选，补充组织职责、覆盖范围等" />
+    </view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">加载中...</view>
+
+  <view class="footer">
+    <button class="submit-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onSubmit">{{isEdit ? '保存组织' : '创建组织'}}</button>
+  </view>
+</view>

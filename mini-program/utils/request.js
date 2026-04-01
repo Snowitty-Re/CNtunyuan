@@ -141,7 +141,13 @@ const request = (options) => {
         }
 
         // 处理 HTTP 状态码
-        if (res.statusCode === 200 || res.statusCode === 201) {
+        if (res.statusCode === 200 || res.statusCode === 201 || res.statusCode === 204) {
+          // 204 No Content：后端已成功处理但不返回响应体
+          if (res.statusCode === 204) {
+            resolve(null)
+            return
+          }
+
           const data = res.data
           
           // 处理业务状态码

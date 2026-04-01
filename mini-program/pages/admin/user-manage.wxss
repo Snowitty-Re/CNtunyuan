@@ -1,0 +1,20 @@
+.page { min-height: 100vh; background: #FDF8F3; padding: 20rpx; box-sizing: border-box; }
+.search-row { display: flex; gap: 12rpx; }
+.search-input { flex: 1; height: 72rpx; background: #fff; border-radius: 12rpx; padding: 0 18rpx; border: 1rpx solid #eee; }
+.search-btn { height: 72rpx; line-height: 72rpx; background: #FF8C42; color: #fff; border-radius: 12rpx; padding: 0 24rpx; }
+.tabs { display: flex; gap: 12rpx; margin-top: 16rpx; }
+.tab { flex: 1; text-align: center; padding: 14rpx 0; border-radius: 10rpx; background: #fff; color: #8C7B6B; }
+.tab.active { background: #FF8C42; color: #fff; font-weight: 600; }
+.list { margin-top: 16rpx; }
+.card { background: #fff; border-radius: 14rpx; padding: 18rpx; margin-bottom: 14rpx; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05); }
+.top { display: flex; justify-content: space-between; align-items: center; }
+.name { font-size: 30rpx; color: #2D1F10; font-weight: 600; margin-right: 12rpx; }
+.phone { font-size: 24rpx; color: #8C7B6B; }
+.status { font-size: 22rpx; padding: 4rpx 10rpx; border-radius: 16rpx; }
+.status-active { color: #389E0D; background: #F6FFED; }
+.status-inactive { color: #D46B08; background: #FFF7E6; }
+.status-banned { color: #CF1322; background: #FFF1F0; }
+.meta { font-size: 24rpx; color: #8C7B6B; margin-top: 8rpx; }
+.actions { margin-top: 12rpx; display: flex; justify-content: flex-end; }
+.btn { background: #F2F4F8; color: #445; border-radius: 10rpx; }
+.empty, .loading, .nomore { text-align: center; color: #8C7B6B; padding: 22rpx 0; font-size: 24rpx; }
