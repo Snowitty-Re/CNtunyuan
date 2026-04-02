@@ -122,12 +122,10 @@ func (r *Router) Setup() {
 	api.GET("/health/detailed", r.detailedHealthCheck)
 
 	// Prometheus 指标端点（仅管理员可访问，避免泄露运维数据）
-	api.GET("/metrics", r.authMiddleware.Required(), middleware.RequireAdmin(), gin.WrapH(promhttp.Handler()))
+	api.GET("/metrics", r.authMiddleware.Required(), middleware.RequireAdmin(), r.metrics)
 
 	// Swagger JSON/YAML 文档端点
-	api.GET("/docs", func(c *gin.Context) {
-		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
-	})
+	api.GET("/docs", r.redirectDocs)
 
 	// 公开路由（不需要认证）
 	public := api.Group("/")
@@ -167,6 +165,12 @@ func (r *Router) GetEngine() *gin.Engine {
 }
 
 // welcome 欢迎信息
+// @Summary      欢迎信息
+// @Description  获取系统基础信息与文档入口
+// @Tags         健康检查
+// @Produce      json
+// @Success      200  {object}  response.Response
+// @Router       / [get]
 func (r *Router) welcome(c *gin.Context) {
 	response.Success(c, gin.H{
 		"name":        "助力团圆志愿者系统",
@@ -177,7 +181,25 @@ func (r *Router) welcome(c *gin.Context) {
 	})
 }
 
+// redirectDocs 跳转到 Swagger UI
+// @Summary      API 文档入口
+// @Description  跳转到 Swagger UI 页面
+// @Tags         健康检查
+// @Produce      json
+// @Success      301  {string}  string  "Moved Permanently"
+// @Router       /docs [get]
+func (r *Router) redirectDocs(c *gin.Context) {
+	c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
+}
+
 // healthCheck 健康检查
+// @Summary      健康检查
+// @Description  检查服务是否可用
+// @Tags         健康检查
+// @Produce      json
+// @Success      200  {object}  response.Response
+// @Failure      503  {object}  response.Response
+// @Router       /health [get]
 func (r *Router) healthCheck(c *gin.Context) {
 	if r.healthService == nil {
 		response.Success(c, gin.H{
@@ -196,6 +218,12 @@ func (r *Router) healthCheck(c *gin.Context) {
 }
 
 // detailedHealthCheck 详细健康检查
+// @Summary      详细健康检查
+// @Description  返回服务及依赖组件健康状态详情
+// @Tags         健康检查
+// @Produce      json
+// @Success      200  {object}  response.Response
+// @Router       /health/detailed [get]
 func (r *Router) detailedHealthCheck(c *gin.Context) {
 	if r.healthService == nil {
 		response.Success(c, gin.H{
@@ -213,4 +241,18 @@ func (r *Router) detailedHealthCheck(c *gin.Context) {
 
 	result := r.healthService.CheckHealth(c.Request.Context())
 	response.Success(c, result)
+}
+
+// metrics Prometheus 指标
+// @Summary      Prometheus 指标
+// @Description  获取系统运行指标（管理员权限）
+// @Tags         健康检查
+// @Produce      plain
+// @Success      200  {string}  string  "metrics"
+// @Failure      401  {object}  response.Response
+// @Failure      403  {object}  response.Response
+// @Router       /metrics [get]
+// @Security     Bearer
+func (r *Router) metrics(c *gin.Context) {
+	gin.WrapH(promhttp.Handler())(c)
 }

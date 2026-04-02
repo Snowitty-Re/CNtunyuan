@@ -65,11 +65,8 @@ Authorization: Bearer {your-jwt-token}
 ```bash
 cd backend
 
-# 安装 swag 工具
-go install github.com/swaggo/swag/cmd/swag@latest
-
-# 生成文档（需要 --parseDependency 和 --parseInternal 参数以正确解析所有类型）
-swag init -g cmd/app/main.go -o docs --parseDependency --parseInternal
+# 使用项目依赖兼容版本生成文档（与 go.mod 中 swag v1.8.12 对齐）
+go run github.com/swaggo/swag/cmd/swag@v1.8.12 init -g cmd/app/main.go -o docs --parseDependency --parseInternal
 ```
 
 ## Swagger 注释规范

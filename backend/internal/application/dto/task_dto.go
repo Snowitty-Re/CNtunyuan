@@ -181,6 +181,12 @@ type TaskFollowUpCommentResponse struct {
 	CreatedAt  time.Time     `json:"created_at"`
 }
 
+// TaskFollowUpListResponse 任务跟进列表响应
+type TaskFollowUpListResponse = PageResult[TaskFollowUpResponse]
+
+// TaskFollowUpCommentListResponse 任务跟进评论列表响应
+type TaskFollowUpCommentListResponse = PageResult[TaskFollowUpCommentResponse]
+
 // TaskLogResponse 任务日志响应
 type TaskLogResponse struct {
 	ID        string        `json:"id"`

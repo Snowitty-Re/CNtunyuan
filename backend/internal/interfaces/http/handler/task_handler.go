@@ -444,6 +444,21 @@ func (h *TaskHandler) UpdateProgress(c *gin.Context) {
 }
 
 // CreateFollowUp 创建任务跟进
+// @Summary      创建任务跟进
+// @Description  为指定任务新增跟进记录（执行人或管理者）
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id       path      string                         true  "任务ID"
+// @Param        request  body      dto.CreateTaskFollowUpRequest  true  "创建任务跟进请求"
+// @Success      201      {object}  response.Response{data=dto.TaskFollowUpResponse}  "创建成功"
+// @Failure      400      {object}  response.Response  "请求参数错误"
+// @Failure      401      {object}  response.Response  "未授权"
+// @Failure      403      {object}  response.Response  "权限不足"
+// @Failure      404      {object}  response.Response  "任务不存在"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id}/follow-ups [post]
+// @Security     Bearer
 func (h *TaskHandler) CreateFollowUp(c *gin.Context) {
 	taskID := c.Param("id")
 	if taskID == "" {
@@ -478,6 +493,21 @@ func (h *TaskHandler) CreateFollowUp(c *gin.Context) {
 }
 
 // GetFollowUps 获取任务跟进列表
+// @Summary      获取任务跟进列表
+// @Description  分页获取指定任务的跟进记录
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id         path      string  true   "任务ID"
+// @Param        page       query     int     false  "页码，默认1"
+// @Param        page_size  query     int     false  "每页数量，默认10"
+// @Success      200        {object}  response.Response{data=dto.TaskFollowUpListResponse}  "获取成功"
+// @Failure      400        {object}  response.Response  "请求参数错误"
+// @Failure      401        {object}  response.Response  "未授权"
+// @Failure      404        {object}  response.Response  "任务不存在"
+// @Failure      500        {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id}/follow-ups [get]
+// @Security     Bearer
 func (h *TaskHandler) GetFollowUps(c *gin.Context) {
 	taskID := c.Param("id")
 	if taskID == "" {
@@ -502,6 +532,21 @@ func (h *TaskHandler) GetFollowUps(c *gin.Context) {
 }
 
 // GetFollowUpByID 获取单条任务跟进
+// @Summary      获取任务跟进详情
+// @Description  获取指定任务下某条跟进记录详情
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id           path      string  true  "任务ID"
+// @Param        follow_up_id path      string  true  "跟进ID"
+// @Success      200          {object}  response.Response{data=dto.TaskFollowUpResponse}  "获取成功"
+// @Failure      400          {object}  response.Response  "请求参数错误"
+// @Failure      401          {object}  response.Response  "未授权"
+// @Failure      403          {object}  response.Response  "权限不足"
+// @Failure      404          {object}  response.Response  "任务或跟进不存在"
+// @Failure      500          {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id}/follow-ups/{follow_up_id} [get]
+// @Security     Bearer
 func (h *TaskHandler) GetFollowUpByID(c *gin.Context) {
 	taskID := c.Param("id")
 	followUpID := c.Param("follow_up_id")
@@ -532,6 +577,22 @@ func (h *TaskHandler) GetFollowUpByID(c *gin.Context) {
 }
 
 // ReviewFollowUp 审核任务跟进
+// @Summary      审核任务跟进
+// @Description  审核并通过/驳回任务跟进（管理者权限）
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id           path      string                         true  "任务ID"
+// @Param        follow_up_id path      string                         true  "跟进ID"
+// @Param        request      body      dto.ReviewTaskFollowUpRequest  true  "审核请求"
+// @Success      200          {object}  response.Response  "审核成功"
+// @Failure      400          {object}  response.Response  "请求参数错误"
+// @Failure      401          {object}  response.Response  "未授权"
+// @Failure      403          {object}  response.Response  "权限不足"
+// @Failure      404          {object}  response.Response  "任务或跟进不存在"
+// @Failure      500          {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id}/follow-ups/{follow_up_id}/review [post]
+// @Security     Bearer
 func (h *TaskHandler) ReviewFollowUp(c *gin.Context) {
 	taskID := c.Param("id")
 	followUpID := c.Param("follow_up_id")
@@ -568,6 +629,22 @@ func (h *TaskHandler) ReviewFollowUp(c *gin.Context) {
 }
 
 // AddFollowUpComment 添加任务跟进评论
+// @Summary      添加任务跟进评论
+// @Description  为任务跟进记录添加评论
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id           path      string                                true  "任务ID"
+// @Param        follow_up_id path      string                                true  "跟进ID"
+// @Param        request      body      dto.CreateTaskFollowUpCommentRequest  true  "评论请求"
+// @Success      201          {object}  response.Response{data=dto.TaskFollowUpCommentResponse}  "创建成功"
+// @Failure      400          {object}  response.Response  "请求参数错误"
+// @Failure      401          {object}  response.Response  "未授权"
+// @Failure      403          {object}  response.Response  "权限不足"
+// @Failure      404          {object}  response.Response  "任务或跟进不存在"
+// @Failure      500          {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id}/follow-ups/{follow_up_id}/comments [post]
+// @Security     Bearer
 func (h *TaskHandler) AddFollowUpComment(c *gin.Context) {
 	taskID := c.Param("id")
 	followUpID := c.Param("follow_up_id")
@@ -604,6 +681,22 @@ func (h *TaskHandler) AddFollowUpComment(c *gin.Context) {
 }
 
 // GetFollowUpComments 获取任务跟进评论
+// @Summary      获取任务跟进评论列表
+// @Description  分页获取指定任务跟进下的评论列表
+// @Tags         任务管理
+// @Accept       json
+// @Produce      json
+// @Param        id           path      string  true   "任务ID"
+// @Param        follow_up_id path      string  true   "跟进ID"
+// @Param        page         query     int     false  "页码，默认1"
+// @Param        page_size    query     int     false  "每页数量，默认10"
+// @Success      200          {object}  response.Response{data=dto.TaskFollowUpCommentListResponse}  "获取成功"
+// @Failure      400          {object}  response.Response  "请求参数错误"
+// @Failure      401          {object}  response.Response  "未授权"
+// @Failure      404          {object}  response.Response  "任务或跟进不存在"
+// @Failure      500          {object}  response.Response  "服务器内部错误"
+// @Router       /tasks/{id}/follow-ups/{follow_up_id}/comments [get]
+// @Security     Bearer
 func (h *TaskHandler) GetFollowUpComments(c *gin.Context) {
 	taskID := c.Param("id")
 	followUpID := c.Param("follow_up_id")
