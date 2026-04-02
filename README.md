@@ -1,6 +1,6 @@
 # 助力团圆志愿者系统 (CNtunyuan)
 
-一个生产级别的志愿者协作系统，核心目标是帮助走失人员寻找亲属、助力团圆。当前包含微信小程序端和后端 API 服务。
+一个生产级别的志愿者协作系统，核心目标是帮助走失人员寻找亲属、助力团圆。当前包含微信小程序端、Web 管理端和后端 API 服务。
 
 ## 功能特性
 
@@ -22,6 +22,7 @@
 | 后端 | Go 1.23+, Gin, GORM, PostgreSQL/MySQL, Redis, JWT |
 | API 文档 | Swagger UI (swaggo/swag 自动生成) |
 | 小程序 | 微信小程序原生开发 |
+| Web | Next.js 14, React 18, TypeScript |
 
 ## 快速开始
 
@@ -61,7 +62,18 @@ go run cmd/app/main.go
 - API 文档：http://localhost:8080/swagger/index.html
 - 健康检查：http://localhost:8080/api/v1/health
 
-### 3. 微信小程序
+### 3. 启动 Web 管理端（可选）
+
+```bash
+cd web
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+访问：http://localhost:3000
+
+### 4. 微信小程序
 
 使用微信开发者工具打开 `mini-program` 目录。
 
@@ -75,6 +87,7 @@ CNtunyuan/
 │   ├── pkg/          # 公共包 (logger/response/middleware)
 │   ├── docs/         # Swagger 自动生成文档
 │   └── migrations/   # 数据库迁移
+├── web/              # Web 管理端 (Next.js + TypeScript)
 └── mini-program/     # 微信小程序
 ```
 
@@ -109,6 +122,7 @@ CNtunyuan/
 | 文档 | 说明 |
 |------|------|
 | [backend/README.md](backend/README.md) | 后端开发指南（含完整 API 端点列表） |
+| [web/README.md](web/README.md) | Web 管理端说明 |
 | [mini-program/README.md](mini-program/README.md) | 小程序开发说明 |
 | [backend/REFACTORING.md](backend/REFACTORING.md) | Clean Architecture 设计文档 |
 | [backend/TESTING.md](backend/TESTING.md) | 单元测试文档 |
