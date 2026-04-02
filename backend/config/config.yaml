@@ -48,7 +48,7 @@ storage:
   # 【生产环境】修改为实际域名，用于生成文件访问URL
   base_url: http://localhost:8080/uploads
   max_file_size: 52428800  # 50MB
-  allowed_types: "jpg,png,gif,mp4,mp3,wav"
+  allowed_types: "jpg,jpeg,png,gif,webp,mp4,mp3,wav"
   
   # 阿里云OSS配置
   oss_access_key_id: ""

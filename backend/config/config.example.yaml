@@ -48,7 +48,7 @@ storage:
   local_path: ./uploads # 本地存储路径
   base_url: http://localhost:8080/uploads
   max_file_size: 52428800  # 50MB
-  allowed_types: "jpg,png,gif,mp4,mp3,wav,pdf,doc,docx"
+  allowed_types: "jpg,jpeg,png,gif,webp,mp4,mp3,wav,pdf,doc,docx"
   # OSS配置(使用阿里云时填写)
   oss_access_key_id: ""
   oss_access_key_secret: ""
