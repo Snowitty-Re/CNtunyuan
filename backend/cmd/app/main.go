@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/di"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	"github.com/gin-gonic/gin"
 	_ "gorm.io/gorm"
 )
 
@@ -60,6 +62,9 @@ func main() {
 		logger.Error("Configuration validation failed")
 		os.Exit(1)
 	}
+
+	// 根据配置设置 Gin 运行模式，确保 server.mode 生效
+	setGinMode(cfg.Server.Mode)
 
 	// 处理命令行参数
 	if len(os.Args) > 1 {
@@ -94,6 +99,20 @@ func main() {
 
 	// 启动 HTTP 服务器
 	startServer(cfg, container)
+}
+
+func setGinMode(mode string) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "release":
+		gin.SetMode(gin.ReleaseMode)
+	case "debug":
+		gin.SetMode(gin.DebugMode)
+	case "test":
+		gin.SetMode(gin.TestMode)
+	default:
+		// 配置校验已约束为 debug/release，这里保底用 release
+		gin.SetMode(gin.ReleaseMode)
+	}
 }
 
 // checkDatabase 检查数据库连接和表结构
