@@ -14,6 +14,8 @@ Page({
     loadingMore: false,
     refreshing: false,
     hasMore: true,
+    loadError: false,
+    errorMessage: '',
     stats: {
       total: 0,
       draft: 0,
@@ -30,8 +32,13 @@ Page({
     userRole: ''
   },
 
-  onLoad() {
+  onLoad(options = {}) {
     if (!app.ensureAuth || !app.ensureAuth()) return
+    const allowedStatus = ['', 'draft', 'pending', 'assigned', 'processing', 'completed', 'cancelled']
+    const incomingStatus = (options.status || '').trim()
+    if (allowedStatus.includes(incomingStatus)) {
+      this.setData({ currentStatus: incomingStatus })
+    }
     this.checkPermission()
     this.loadStats()
     this.loadTasks()
@@ -81,7 +88,7 @@ Page({
     if (loadMore) {
       this.setData({ loadingMore: true })
     } else {
-      this.setData({ loading: true })
+      this.setData({ loading: true, loadError: false, errorMessage: '' })
     }
 
     try {
@@ -110,7 +117,9 @@ Page({
         hasMore: tasks.length === this.data.pageSize,
         loading: false,
         loadingMore: false,
-        refreshing: false
+        refreshing: false,
+        loadError: false,
+        errorMessage: ''
       })
     } catch (error) {
       console.error('加载任务失败:', error)
@@ -118,7 +127,9 @@ Page({
       this.setData({ 
         loading: false, 
         loadingMore: false, 
-        refreshing: false 
+        refreshing: false,
+        loadError: !loadMore,
+        errorMessage: (error && error.message) ? error.message : '加载失败，请稍后重试'
       })
     }
   },
@@ -140,6 +151,13 @@ Page({
   // 下拉刷新
   onRefresh() {
     this.setData({ refreshing: true, page: 1, hasMore: true })
+    this.loadStats()
+    this.loadTasks()
+  },
+
+  // 重试加载
+  retryLoad() {
+    this.setData({ page: 1, tasks: [], hasMore: true })
     this.loadStats()
     this.loadTasks()
   },

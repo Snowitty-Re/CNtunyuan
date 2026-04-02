@@ -1,5 +1,5 @@
 const taskService = require('../../services/task')
-const { formatTimeAgo, showSuccess, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { formatTimeAgo, showSuccess, showToast } = require('../../utils/util')
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_TYPE_MAP, ROLE_MAP } = require('../../utils/constants')
 const app = getApp()
 
@@ -30,6 +30,9 @@ Page({
     
     // 最近任务列表
     recentTasks: [],
+    statsLoading: false,
+    tasksLoading: false,
+    tasksError: false,
     
     roleMap:     ROLE_MAP,
     priorityMap: TASK_PRIORITY_MAP,
@@ -44,19 +47,24 @@ Page({
 
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
-    this.loadUserInfo()
-    this.loadTodayStats()
-    this.loadRecentTasks()
+    const now = Date.now()
+    if (this._lastLoadTime && now - this._lastLoadTime < 15000) return
+    this._lastLoadTime = now
+    this.refreshPageData()
   },
 
   onPullDownRefresh() {
-    Promise.all([
+    this.refreshPageData().finally(() => {
+      wx.stopPullDownRefresh()
+    })
+  },
+
+  async refreshPageData() {
+    await Promise.all([
       this.loadUserInfo(),
       this.loadTodayStats(),
       this.loadRecentTasks()
-    ]).finally(() => {
-      wx.stopPullDownRefresh()
-    })
+    ])
   },
 
   // 设置当前日期
@@ -90,8 +98,8 @@ Page({
 
   // 加载今日统计
   async loadTodayStats() {
+    this.setData({ statsLoading: true })
     try {
-      showLoading('加载中...')
       const stats = await taskService.getStats()
       this.setData({
         todayStats: {
@@ -104,12 +112,13 @@ Page({
       console.error('加载统计失败:', error)
       showToast('统计加载失败')
     } finally {
-      hideLoading()
+      this.setData({ statsLoading: false })
     }
   },
 
   // 加载最近任务
   async loadRecentTasks() {
+    this.setData({ tasksLoading: true, tasksError: false })
     try {
       const result = await taskService.getMyTasks({ 
         page: 1, 
@@ -122,6 +131,9 @@ Page({
       this.setData({ recentTasks: tasks })
     } catch (error) {
       console.error('加载最近任务失败:', error)
+      this.setData({ tasksError: true })
+    } finally {
+      this.setData({ tasksLoading: false })
     }
   },
 
@@ -192,5 +204,9 @@ Page({
   isManager() {
     const { role } = this.data.userInfo
     return ['super_admin', 'admin', 'manager'].includes(role)
+  },
+
+  retryRecentTasks() {
+    this.loadRecentTasks()
   }
 })

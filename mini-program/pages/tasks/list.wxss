@@ -195,6 +195,56 @@
   padding: 0 24rpx;
 }
 
+.initial-state {
+  margin: 0 24rpx;
+  min-height: 360rpx;
+  border-radius: 20rpx;
+  background: #fff;
+  box-shadow: 0 4rpx 24rpx rgba(90, 74, 58, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 32rpx;
+}
+
+.initial-state-title {
+  margin-top: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2D2016;
+}
+
+.initial-state-desc {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #8C7B6B;
+  text-align: center;
+}
+
+.initial-error-icon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: #FFF1F0;
+  color: #EB5757;
+  font-size: 34rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.initial-retry-btn {
+  margin-top: 20rpx;
+  padding: 10rpx 32rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid #FF8C42;
+  color: #FF8C42;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
 .task-cards {
   display: flex;
   flex-direction: column;

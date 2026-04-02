@@ -66,6 +66,23 @@
     </scroll-view>
   </view>
 
+  <view class="initial-state initial-state--loading" wx:if="{{loading && tasks.length === 0}}">
+    <view class="loading-dots">
+      <view class="dot"></view>
+      <view class="dot"></view>
+      <view class="dot"></view>
+    </view>
+    <text class="initial-state-title">正在加载任务</text>
+    <text class="initial-state-desc">请稍候...</text>
+  </view>
+
+  <view class="initial-state initial-state--error" wx:elif="{{loadError && tasks.length === 0}}">
+    <view class="initial-error-icon">!</view>
+    <text class="initial-state-title">任务加载失败</text>
+    <text class="initial-state-desc">{{errorMessage || '请检查网络后重试'}}</text>
+    <view class="initial-retry-btn" bindtap="retryLoad">重新加载</view>
+  </view>
+
   <!-- 任务列表 -->
   <scroll-view
     class="task-list"
@@ -76,6 +93,7 @@
     bindscrolltolower="onLoadMore"
     enhanced
     show-scrollbar="{{false}}"
+    wx:else
   >
     <view class="task-cards">
       <view class="task-card" wx:for="{{tasks}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">

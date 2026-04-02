@@ -22,7 +22,7 @@
 
   <!-- 今日统计 -->
   <view class="stats-section">
-    <view class="stats-card">
+    <view class="stats-card" wx:if="{{!statsLoading}}">
       <view class="stat-item">
         <view class="stat-value-wrapper">
           <text class="stat-value">{{todayStats.myPending}}</text>
@@ -43,6 +43,9 @@
         </view>
         <text class="stat-label">已完成</text>
       </view>
+    </view>
+    <view class="stats-card stats-card--loading" wx:else>
+      <text class="stats-loading-text">统计加载中...</text>
     </view>
   </view>
 
@@ -78,8 +81,17 @@
       </view>
     </view>
 
+    <view class="task-loading" wx:if="{{tasksLoading}}">
+      <text class="task-loading-text">加载任务中...</text>
+    </view>
+
+    <view class="task-error" wx:elif="{{tasksError}}">
+      <text class="task-error-text">最近任务加载失败</text>
+      <view class="task-error-btn" bindtap="retryRecentTasks">重试</view>
+    </view>
+
     <!-- 任务列表 -->
-    <view class="task-list" wx:if="{{recentTasks.length > 0}}">
+    <view class="task-list" wx:elif="{{recentTasks.length > 0}}">
       <view class="task-card"
             wx:for="{{recentTasks}}"
             wx:key="id"

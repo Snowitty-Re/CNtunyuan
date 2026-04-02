@@ -188,9 +188,11 @@ page {
 /* ========== 快捷操作 ========== */
 .quick-actions {
   display: flex;
-  justify-content: space-around;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   align-items: flex-start;
-  padding: 0 24rpx;
+  padding: 0 20rpx;
+  row-gap: 18rpx;
   margin-bottom: 44rpx;
 }
 
@@ -199,6 +201,7 @@ page {
   flex-direction: column;
   align-items: center;
   gap: 14rpx;
+  width: 20%;
 }
 
 .action-item--hover {
