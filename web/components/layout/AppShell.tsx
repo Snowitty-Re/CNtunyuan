@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { PropsWithChildren } from 'react'
+import { PropsWithChildren, useEffect, useState } from 'react'
 import { clearAuth, getCurrentUser } from '@/lib/auth'
 import { hasMinRole } from '@/lib/rbac'
 
@@ -21,10 +21,15 @@ export function AppShell({ children }: PropsWithChildren) {
   const pathname = usePathname()
   const router = useRouter()
   const user = getCurrentUser()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
 
   return (
     <div className="shell">
-      <aside className="sidebar">
+      <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="brand">助力团圆 Web</div>
         <nav className="nav-list">
           {items.filter((item) => hasMinRole(user, item.minRole)).map((item) => {
@@ -37,8 +42,12 @@ export function AppShell({ children }: PropsWithChildren) {
           })}
         </nav>
       </aside>
+      {menuOpen ? <div className="sidebar-mask" onClick={() => setMenuOpen(false)} /> : null}
       <main className="main">
         <header className="topbar">
+          <button className="btn ghost menu-btn" type="button" onClick={() => setMenuOpen((v) => !v)}>
+            菜单
+          </button>
           <div>
             <h1 className="top-title">团圆寻亲志愿者系统</h1>
             <p className="top-subtitle">面向志愿协作的案件与任务闭环管理</p>

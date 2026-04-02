@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
@@ -14,6 +14,8 @@ import { taskService } from '@/services/tasks'
 import { uploadService } from '@/services/upload'
 import type { Task, TaskFollowUp } from '@/types/api'
 
+const TASK_LIST_IDS_KEY = 'web_tasks_list_ids_v1'
+
 type UploadedAttachment = {
   id: string
   url: string
@@ -22,6 +24,7 @@ type UploadedAttachment = {
 export default function TaskDetailPage() {
   const { ready } = useAuthGuard()
   const params = useParams<{ id: string }>()
+  const router = useRouter()
   const id = params.id
 
   const [loading, setLoading] = useState(true)
@@ -34,6 +37,14 @@ export default function TaskDetailPage() {
   const [uploading, setUploading] = useState(false)
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([])
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [listIds, setListIds] = useState<string[]>([])
+  const nav = useMemo(() => {
+    const idx = listIds.indexOf(id)
+    return {
+      prevId: idx > 0 ? listIds[idx - 1] : '',
+      nextId: idx >= 0 && idx < listIds.length - 1 ? listIds[idx + 1] : '',
+    }
+  }, [id, listIds])
 
   async function load() {
     setLoading(true)
@@ -109,12 +120,30 @@ export default function TaskDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, id])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const ids = JSON.parse(localStorage.getItem(TASK_LIST_IDS_KEY) || '[]')
+      setListIds(Array.isArray(ids) ? ids : [])
+    } catch {
+      setListIds([])
+    }
+  }, [id])
+
   if (!ready) return null
 
   return (
     <AppShell>
       <ModuleHeader title="任务详情" desc="执行进度、跟进记录与审批协作" />
       <NoticeBar notice={notice} onClose={() => setNotice(null)} />
+      <div className="panel row wrap" style={{ marginTop: 0 }}>
+        <button className="btn ghost" type="button" disabled={!nav.prevId} onClick={() => nav.prevId && router.push(`/tasks/${nav.prevId}`)}>
+          上一个任务
+        </button>
+        <button className="btn ghost" type="button" disabled={!nav.nextId} onClick={() => nav.nextId && router.push(`/tasks/${nav.nextId}`)}>
+          下一个任务
+        </button>
+      </div>
       <PageState loading={loading} error={error} onRetry={load} />
       {!loading && !error && item ? (
         <div className="grid">

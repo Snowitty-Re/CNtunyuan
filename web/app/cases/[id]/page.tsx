@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ConfirmButton } from '@/components/shared/ConfirmButton'
@@ -15,6 +15,8 @@ import { missingPersonService } from '@/services/missingPersons'
 import { taskService } from '@/services/tasks'
 import { uploadService } from '@/services/upload'
 import type { MissingPerson, MissingTrack, Task } from '@/types/api'
+
+const CASE_LIST_IDS_KEY = 'web_cases_list_ids_v1'
 
 export default function CaseDetailPage() {
   const { ready } = useAuthGuard()
@@ -39,6 +41,14 @@ export default function CaseDetailPage() {
   const [taskPriority, setTaskPriority] = useState('medium')
   const [photoUploading, setPhotoUploading] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [listIds, setListIds] = useState<string[]>([])
+  const nav = useMemo(() => {
+    const idx = listIds.indexOf(id)
+    return {
+      prevId: idx > 0 ? listIds[idx - 1] : '',
+      nextId: idx >= 0 && idx < listIds.length - 1 ? listIds[idx + 1] : '',
+    }
+  }, [id, listIds])
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -189,12 +199,30 @@ export default function CaseDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, id])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const ids = JSON.parse(localStorage.getItem(CASE_LIST_IDS_KEY) || '[]')
+      setListIds(Array.isArray(ids) ? ids : [])
+    } catch {
+      setListIds([])
+    }
+  }, [id])
+
   if (!ready) return null
 
   return (
     <AppShell>
       <ModuleHeader title="案件详情" desc="维护案件状态、线索与闭环信息" />
       <NoticeBar notice={notice} onClose={() => setNotice(null)} />
+      <div className="panel row wrap" style={{ marginTop: 0 }}>
+        <button className="btn ghost" type="button" disabled={!nav.prevId} onClick={() => nav.prevId && router.push(`/cases/${nav.prevId}`)}>
+          上一个案件
+        </button>
+        <button className="btn ghost" type="button" disabled={!nav.nextId} onClick={() => nav.nextId && router.push(`/cases/${nav.nextId}`)}>
+          下一个案件
+        </button>
+      </div>
       <PageState loading={loading} error={error} onRetry={load} />
       {!loading && !error && item ? (
         <div className="grid">

@@ -16,6 +16,10 @@ import { taskService } from '@/services/tasks'
 import { userService } from '@/services/users'
 import type { Task, User } from '@/types/api'
 
+const TASK_FILTER_KEY = 'web_tasks_filters_v1'
+const TASK_COL_KEY = 'web_tasks_columns_v1'
+const TASK_LIST_IDS_KEY = 'web_tasks_list_ids_v1'
+
 export default function TasksPage() {
   const { ready } = useAuthGuard()
   const [loading, setLoading] = useState(true)
@@ -42,6 +46,15 @@ export default function TasksPage() {
   const [batchCancelOpen, setBatchCancelOpen] = useState(false)
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [booted, setBooted] = useState(false)
+  const [columnVisible, setColumnVisible] = useState<Record<string, boolean>>({
+    title: true,
+    status: true,
+    priority: true,
+    progress: true,
+    deadline: true,
+    actions: true,
+  })
   const sortedItems = useMemo(() => {
     const list = [...items]
     const factor = sortOrder === 'asc' ? 1 : -1
@@ -278,13 +291,65 @@ export default function TasksPage() {
   }
 
   useEffect(() => {
-    if (ready) {
-      load(1)
+    if (ready && !booted) {
+      if (typeof window !== 'undefined') {
+        try {
+          const savedFilter = JSON.parse(localStorage.getItem(TASK_FILTER_KEY) || '{}')
+          const savedCols = JSON.parse(localStorage.getItem(TASK_COL_KEY) || '{}')
+          if (savedFilter && typeof savedFilter === 'object') {
+            setStatus(savedFilter.status || '')
+            setKeyword(savedFilter.keyword || '')
+            setPriority(savedFilter.priority || '')
+            setTypeFilter(savedFilter.typeFilter || '')
+            setAssigneeId(savedFilter.assigneeId || '')
+            setStartTime(savedFilter.startTime || '')
+            setEndTime(savedFilter.endTime || '')
+            setSortBy(savedFilter.sortBy || 'deadline')
+            setSortOrder(savedFilter.sortOrder || 'asc')
+            load(1, savedFilter.status || '', {
+              keyword: savedFilter.keyword || '',
+              priority: savedFilter.priority || '',
+              type: savedFilter.typeFilter || '',
+              assigneeId: savedFilter.assigneeId || '',
+              startTime: savedFilter.startTime || '',
+              endTime: savedFilter.endTime || '',
+            })
+          } else {
+            load(1)
+          }
+          if (savedCols && typeof savedCols === 'object') {
+            setColumnVisible((prev) => ({ ...prev, ...savedCols }))
+          }
+        } catch {
+          load(1)
+        }
+      } else {
+        load(1)
+      }
       loadUsers()
       loadStats()
+      setBooted(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready])
+  }, [ready, booted])
+
+  useEffect(() => {
+    if (!ready || !booted || typeof window === 'undefined') return
+    localStorage.setItem(
+      TASK_FILTER_KEY,
+      JSON.stringify({ status, keyword, priority, typeFilter, assigneeId, startTime, endTime, sortBy, sortOrder }),
+    )
+  }, [ready, booted, status, keyword, priority, typeFilter, assigneeId, startTime, endTime, sortBy, sortOrder])
+
+  useEffect(() => {
+    if (!ready || !booted || typeof window === 'undefined') return
+    localStorage.setItem(TASK_COL_KEY, JSON.stringify(columnVisible))
+  }, [ready, booted, columnVisible])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(TASK_LIST_IDS_KEY, JSON.stringify(sortedItems.map((x) => x.id)))
+  }, [sortedItems])
 
   if (!ready) return null
 
@@ -471,6 +536,15 @@ export default function TasksPage() {
           </button>
         </div>
       </div>
+      <div className="panel row wrap">
+        <b>列显示</b>
+        <label><input type="checkbox" checked={columnVisible.title} onChange={(e) => setColumnVisible((v) => ({ ...v, title: e.target.checked }))} /> 标题</label>
+        <label><input type="checkbox" checked={columnVisible.status} onChange={(e) => setColumnVisible((v) => ({ ...v, status: e.target.checked }))} /> 状态</label>
+        <label><input type="checkbox" checked={columnVisible.priority} onChange={(e) => setColumnVisible((v) => ({ ...v, priority: e.target.checked }))} /> 优先级</label>
+        <label><input type="checkbox" checked={columnVisible.progress} onChange={(e) => setColumnVisible((v) => ({ ...v, progress: e.target.checked }))} /> 进度</label>
+        <label><input type="checkbox" checked={columnVisible.deadline} onChange={(e) => setColumnVisible((v) => ({ ...v, deadline: e.target.checked }))} /> 截止时间</label>
+        <label><input type="checkbox" checked={columnVisible.actions} onChange={(e) => setColumnVisible((v) => ({ ...v, actions: e.target.checked }))} /> 操作</label>
+      </div>
 
       <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
       {!loading && !error && items.length > 0 ? (
@@ -482,12 +556,12 @@ export default function TasksPage() {
                   <th>
                     <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
                   </th>
-                  <th>标题</th>
-                  <th>状态</th>
-                  <th>优先级</th>
-                  <th>进度</th>
-                  <th>截止时间</th>
-                  <th>操作</th>
+                  {columnVisible.title ? <th>标题</th> : null}
+                  {columnVisible.status ? <th>状态</th> : null}
+                  {columnVisible.priority ? <th>优先级</th> : null}
+                  {columnVisible.progress ? <th>进度</th> : null}
+                  {columnVisible.deadline ? <th>截止时间</th> : null}
+                  {columnVisible.actions ? <th>操作</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -496,14 +570,16 @@ export default function TasksPage() {
                     <td>
                       <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} />
                     </td>
-                    <td>{row.title}</td>
-                    <td>
-                      <StatusTag status={row.status || '-'} />
-                    </td>
-                    <td>{row.priority || '-'}</td>
-                    <td>{row.progress ?? 0}%</td>
-                    <td>{fmtTime(row.deadline || row.created_at)}</td>
-                    <td>
+                    {columnVisible.title ? <td>{row.title}</td> : null}
+                    {columnVisible.status ? (
+                      <td>
+                        <StatusTag status={row.status || '-'} />
+                      </td>
+                    ) : null}
+                    {columnVisible.priority ? <td>{row.priority || '-'}</td> : null}
+                    {columnVisible.progress ? <td>{row.progress ?? 0}%</td> : null}
+                    {columnVisible.deadline ? <td>{fmtTime(row.deadline || row.created_at)}</td> : null}
+                    {columnVisible.actions ? <td>
                       <div className="row wrap">
                         <Link className="btn ghost" href={`/tasks/${row.id}`}>
                           详情
@@ -572,7 +648,7 @@ export default function TasksPage() {
                           className="btn danger"
                         />
                       </div>
-                    </td>
+                    </td> : null}
                   </tr>
                 ))}
               </tbody>

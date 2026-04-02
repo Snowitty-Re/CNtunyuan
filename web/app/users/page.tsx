@@ -17,6 +17,9 @@ import { organizationService } from '@/services/organizations'
 import { userService } from '@/services/users'
 import type { Organization, User } from '@/types/api'
 
+const USER_FILTER_KEY = 'web_users_filters_v1'
+const USER_COL_KEY = 'web_users_columns_v1'
+
 export default function UsersPage() {
   const { ready, user } = useAuthGuard()
   const [loading, setLoading] = useState(true)
@@ -46,6 +49,15 @@ export default function UsersPage() {
   const [editRole, setEditRole] = useState('volunteer')
   const [editStatus, setEditStatus] = useState('active')
   const [editOrgId, setEditOrgId] = useState('')
+  const [booted, setBooted] = useState(false)
+  const [columnVisible, setColumnVisible] = useState<Record<string, boolean>>({
+    nickname: true,
+    phone: true,
+    role: true,
+    status: true,
+    organization: true,
+    actions: true,
+  })
   const allSelected = items.length > 0 && selectedIds.length === items.length
   const [notice, setNotice] = useState<Notice | null>(null)
 
@@ -225,12 +237,43 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    if (ready) {
-      load(1)
+    if (ready && !booted) {
+      if (typeof window !== 'undefined') {
+        try {
+          const savedFilter = JSON.parse(localStorage.getItem(USER_FILTER_KEY) || '{}')
+          const savedCols = JSON.parse(localStorage.getItem(USER_COL_KEY) || '{}')
+          if (savedFilter && typeof savedFilter === 'object') {
+            setKeyword(savedFilter.keyword || '')
+            setStatusFilter(savedFilter.statusFilter || '')
+            setRoleFilter(savedFilter.roleFilter || '')
+            load(1, { keyword: savedFilter.keyword || '', status: savedFilter.statusFilter || '', role: savedFilter.roleFilter || '' })
+          } else {
+            load(1)
+          }
+          if (savedCols && typeof savedCols === 'object') {
+            setColumnVisible((prev) => ({ ...prev, ...savedCols }))
+          }
+        } catch {
+          load(1)
+        }
+      } else {
+        load(1)
+      }
       loadOrgs()
+      setBooted(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready])
+  }, [ready, booted])
+
+  useEffect(() => {
+    if (!ready || !booted || typeof window === 'undefined') return
+    localStorage.setItem(USER_FILTER_KEY, JSON.stringify({ keyword, statusFilter, roleFilter }))
+  }, [ready, booted, keyword, statusFilter, roleFilter])
+
+  useEffect(() => {
+    if (!ready || !booted || typeof window === 'undefined') return
+    localStorage.setItem(USER_COL_KEY, JSON.stringify(columnVisible))
+  }, [ready, booted, columnVisible])
 
   if (!ready) return null
   if (!hasMinRole(user, 'admin')) {
@@ -327,6 +370,15 @@ export default function UsersPage() {
           导出CSV
         </button>
       </div>
+      <div className="panel row wrap">
+        <b>列显示</b>
+        <label><input type="checkbox" checked={columnVisible.nickname} onChange={(e) => setColumnVisible((v) => ({ ...v, nickname: e.target.checked }))} /> 昵称</label>
+        <label><input type="checkbox" checked={columnVisible.phone} onChange={(e) => setColumnVisible((v) => ({ ...v, phone: e.target.checked }))} /> 手机号</label>
+        <label><input type="checkbox" checked={columnVisible.role} onChange={(e) => setColumnVisible((v) => ({ ...v, role: e.target.checked }))} /> 角色</label>
+        <label><input type="checkbox" checked={columnVisible.status} onChange={(e) => setColumnVisible((v) => ({ ...v, status: e.target.checked }))} /> 状态</label>
+        <label><input type="checkbox" checked={columnVisible.organization} onChange={(e) => setColumnVisible((v) => ({ ...v, organization: e.target.checked }))} /> 组织</label>
+        <label><input type="checkbox" checked={columnVisible.actions} onChange={(e) => setColumnVisible((v) => ({ ...v, actions: e.target.checked }))} /> 操作</label>
+      </div>
       <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
       {!loading && !error && items.length > 0 ? (
         <>
@@ -337,12 +389,12 @@ export default function UsersPage() {
                   <th>
                     <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
                   </th>
-                  <th>昵称</th>
-                  <th>手机号</th>
-                  <th>角色</th>
-                  <th>状态</th>
-                  <th>组织</th>
-                  <th>操作</th>
+                  {columnVisible.nickname ? <th>昵称</th> : null}
+                  {columnVisible.phone ? <th>手机号</th> : null}
+                  {columnVisible.role ? <th>角色</th> : null}
+                  {columnVisible.status ? <th>状态</th> : null}
+                  {columnVisible.organization ? <th>组织</th> : null}
+                  {columnVisible.actions ? <th>操作</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -351,9 +403,9 @@ export default function UsersPage() {
                     <td>
                       <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} />
                     </td>
-                    <td>{row.nickname || '-'}</td>
-                    <td>{row.phone || '-'}</td>
-                    <td>
+                    {columnVisible.nickname ? <td>{row.nickname || '-'}</td> : null}
+                    {columnVisible.phone ? <td>{row.phone || '-'}</td> : null}
+                    {columnVisible.role ? <td>
                       <div className="row wrap">
                         <select
                           className="select"
@@ -379,12 +431,12 @@ export default function UsersPage() {
                           保存角色
                         </button>
                       </div>
-                    </td>
-                    <td>
+                    </td> : null}
+                    {columnVisible.status ? <td>
                       <StatusTag status={row.status || '-'} />
-                    </td>
-                    <td>{row.organization?.name || '-'}</td>
-                    <td>
+                    </td> : null}
+                    {columnVisible.organization ? <td>{row.organization?.name || '-'}</td> : null}
+                    {columnVisible.actions ? <td>
                       <div className="row wrap">
                         <button className="btn" type="button" onClick={() => userService.updateStatus(row.id, 'active').then(() => load(page))}>
                           激活
@@ -407,7 +459,7 @@ export default function UsersPage() {
                           审计记录
                         </Link>
                       </div>
-                    </td>
+                    </td> : null}
                   </tr>
                 ))}
               </tbody>

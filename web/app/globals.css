@@ -44,6 +44,11 @@ a {
   color: #fff;
   padding: 18px 14px;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.25s ease;
+}
+
+.sidebar-mask {
+  display: none;
 }
 
 .brand {
@@ -94,6 +99,10 @@ a {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.menu-btn {
+  display: none;
 }
 
 .top-title {
@@ -520,14 +529,35 @@ a {
   }
 
   .sidebar {
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 20;
+    left: 0;
+    bottom: 0;
+    width: min(78vw, 300px);
+    z-index: 40;
+    transform: translateX(-100%);
+    overflow-y: auto;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-mask {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.35);
+    z-index: 30;
   }
 
   .nav-list {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .menu-btn {
+    display: inline-flex;
   }
 
   .kpi-grid,
@@ -537,8 +567,35 @@ a {
   }
 
   .topbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+  }
+
+  .top-user {
+    margin-left: auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .content {
+    padding: 14px;
+  }
+
+  .module-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+  }
+
+  .bar-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .pagination {
+    justify-content: center;
+    flex-wrap: wrap;
   }
 }

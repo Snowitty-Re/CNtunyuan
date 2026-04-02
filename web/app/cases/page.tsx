@@ -15,6 +15,10 @@ import { joinLocation, listFrom, fmtTime } from '@/lib/data'
 import { missingPersonService } from '@/services/missingPersons'
 import type { MissingPerson } from '@/types/api'
 
+const CASE_FILTER_KEY = 'web_cases_filters_v1'
+const CASE_COL_KEY = 'web_cases_columns_v1'
+const CASE_LIST_IDS_KEY = 'web_cases_list_ids_v1'
+
 export default function CasesPage() {
   const { ready } = useAuthGuard()
   const [loading, setLoading] = useState(true)
@@ -36,6 +40,15 @@ export default function CasesPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [batchDeleteOpen, setBatchDeleteOpen] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [booted, setBooted] = useState(false)
+  const [columnVisible, setColumnVisible] = useState<Record<string, boolean>>({
+    name: true,
+    profile: true,
+    status: true,
+    missingTime: true,
+    location: true,
+    actions: true,
+  })
   const allSelected = items.length > 0 && selectedIds.length === items.length
 
   async function load(
@@ -180,9 +193,57 @@ export default function CasesPage() {
   }
 
   useEffect(() => {
-    if (ready) load(1)
+    if (ready && !booted) {
+      if (typeof window !== 'undefined') {
+        try {
+          const savedFilter = JSON.parse(localStorage.getItem(CASE_FILTER_KEY) || '{}')
+          const savedCols = JSON.parse(localStorage.getItem(CASE_COL_KEY) || '{}')
+          if (savedFilter && typeof savedFilter === 'object') {
+            setKeyword(savedFilter.keyword || '')
+            setStatus(savedFilter.status || '')
+            setCaseType(savedFilter.caseType || '')
+            setCity(savedFilter.city || '')
+            setStartTime(savedFilter.startTime || '')
+            setEndTime(savedFilter.endTime || '')
+            load(1, {
+              keyword: savedFilter.keyword || '',
+              status: savedFilter.status || '',
+              caseType: savedFilter.caseType || '',
+              city: savedFilter.city || '',
+              startTime: savedFilter.startTime || '',
+              endTime: savedFilter.endTime || '',
+            })
+          } else {
+            load(1)
+          }
+          if (savedCols && typeof savedCols === 'object') {
+            setColumnVisible((prev) => ({ ...prev, ...savedCols }))
+          }
+        } catch {
+          load(1)
+        }
+      } else {
+        load(1)
+      }
+      setBooted(true)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready])
+  }, [ready, booted])
+
+  useEffect(() => {
+    if (!ready || !booted || typeof window === 'undefined') return
+    localStorage.setItem(CASE_FILTER_KEY, JSON.stringify({ keyword, status, caseType, city, startTime, endTime }))
+  }, [ready, booted, keyword, status, caseType, city, startTime, endTime])
+
+  useEffect(() => {
+    if (!ready || !booted || typeof window === 'undefined') return
+    localStorage.setItem(CASE_COL_KEY, JSON.stringify(columnVisible))
+  }, [ready, booted, columnVisible])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(CASE_LIST_IDS_KEY, JSON.stringify(items.map((x) => x.id)))
+  }, [items])
 
   if (!ready) return null
 
@@ -259,6 +320,15 @@ export default function CasesPage() {
           导出CSV
         </button>
       </div>
+      <div className="panel row wrap">
+        <b>列显示</b>
+        <label><input type="checkbox" checked={columnVisible.name} onChange={(e) => setColumnVisible((v) => ({ ...v, name: e.target.checked }))} /> 姓名</label>
+        <label><input type="checkbox" checked={columnVisible.profile} onChange={(e) => setColumnVisible((v) => ({ ...v, profile: e.target.checked }))} /> 性别/年龄</label>
+        <label><input type="checkbox" checked={columnVisible.status} onChange={(e) => setColumnVisible((v) => ({ ...v, status: e.target.checked }))} /> 状态</label>
+        <label><input type="checkbox" checked={columnVisible.missingTime} onChange={(e) => setColumnVisible((v) => ({ ...v, missingTime: e.target.checked }))} /> 走失时间</label>
+        <label><input type="checkbox" checked={columnVisible.location} onChange={(e) => setColumnVisible((v) => ({ ...v, location: e.target.checked }))} /> 走失地点</label>
+        <label><input type="checkbox" checked={columnVisible.actions} onChange={(e) => setColumnVisible((v) => ({ ...v, actions: e.target.checked }))} /> 操作</label>
+      </div>
       <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
       {!loading && !error && items.length > 0 ? (
         <>
@@ -269,12 +339,12 @@ export default function CasesPage() {
                   <th>
                     <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
                   </th>
-                  <th>姓名</th>
-                  <th>性别/年龄</th>
-                  <th>状态</th>
-                  <th>走失时间</th>
-                  <th>走失地点</th>
-                  <th>操作</th>
+                  {columnVisible.name ? <th>姓名</th> : null}
+                  {columnVisible.profile ? <th>性别/年龄</th> : null}
+                  {columnVisible.status ? <th>状态</th> : null}
+                  {columnVisible.missingTime ? <th>走失时间</th> : null}
+                  {columnVisible.location ? <th>走失地点</th> : null}
+                  {columnVisible.actions ? <th>操作</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -283,16 +353,16 @@ export default function CasesPage() {
                     <td>
                       <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} />
                     </td>
-                    <td>{row.name}</td>
-                    <td>
+                    {columnVisible.name ? <td>{row.name}</td> : null}
+                    {columnVisible.profile ? <td>
                       {row.gender} {row.age ? `${row.age}岁` : '-'}
-                    </td>
-                    <td>
+                    </td> : null}
+                    {columnVisible.status ? <td>
                       <StatusTag status={row.status || '-'} />
-                    </td>
-                    <td>{fmtTime(row.missing_time)}</td>
-                    <td>{joinLocation(row)}</td>
-                    <td>
+                    </td> : null}
+                    {columnVisible.missingTime ? <td>{fmtTime(row.missing_time)}</td> : null}
+                    {columnVisible.location ? <td>{joinLocation(row)}</td> : null}
+                    {columnVisible.actions ? <td>
                       <div className="row wrap">
                         <Link className="btn ghost" href={`/cases/${row.id}`}>
                           查看详情
@@ -306,7 +376,7 @@ export default function CasesPage() {
                           className="btn danger"
                         />
                       </div>
-                    </td>
+                    </td> : null}
                   </tr>
                 ))}
               </tbody>
