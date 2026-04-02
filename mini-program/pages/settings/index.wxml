@@ -46,7 +46,7 @@
 
   <!-- 版本信息 -->
   <view class="footer-info">
-    <text class="app-name">团圆寻亲志愿者系统</text>
+    <text class="app-name">助力团圆志愿者系统</text>
     <text class="version-text">v1.0.0</text>
   </view>
 

@@ -227,7 +227,7 @@ func Seed(db *gorm.DB) error {
 	}
 
 	// 创建根组织
-	rootOrg, err := entity.NewRootOrganization("团圆寻亲志愿者协会", "ROOT")
+	rootOrg, err := entity.NewRootOrganization("助力团圆志愿者协会", "ROOT")
 	if err != nil {
 		return fmt.Errorf("failed to create root organization: %w", err)
 	}

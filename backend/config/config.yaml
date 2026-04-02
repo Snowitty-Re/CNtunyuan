@@ -65,7 +65,7 @@ storage:
 
 sms:
   provider: aliyun  # aliyun/tencent
-  sign_name: "团圆寻亲"
+  sign_name: "助力团圆"
   
   # 阿里云短信
   aliyun_access_key_id: ""
@@ -82,7 +82,7 @@ email:
   smtp_port: 587
   smtp_user: ""
   smtp_password: ""  # 授权码
-  from_name: "团圆寻亲"
+  from_name: "助力团圆"
   use_tls: true
 
 map:
@@ -123,7 +123,7 @@ notification:
 
 # 系统配置
 system:
-  default_org_name: "团圆寻亲志愿者协会"
+  default_org_name: "助力团圆志愿者协会"
   default_org_code: "ROOT"
   enable_register: true  # 是否开放注册
   enable_wechat_login: false  # 是否启用微信登录

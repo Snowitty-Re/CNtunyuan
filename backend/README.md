@@ -1,4 +1,4 @@
-# 团圆寻亲系统 - 后端
+# 助力团圆系统 - 后端
 
 基于 Clean Architecture 的 Go 后端服务。
 

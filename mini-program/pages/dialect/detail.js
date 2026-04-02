@@ -338,7 +338,7 @@ Page({
   onShareAppMessage() {
     const dialect = this.data.dialect
     return {
-      title: `${dialect?.title || '方言录音'} - 团圆寻亲志愿者`,
+      title: `${dialect?.title || '方言录音'} - 团圆助归志愿者`,
       path: `/pages/dialect/detail?id=${this.data.id}`,
       imageUrl: '/images/share-dialect.png'
     }

@@ -53,7 +53,7 @@ func (h *TaskHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *mi
 
 // Create 创建任务
 // @Summary      创建任务
-// @Description  创建新的寻人任务，需要登录
+// @Description  创建新的团圆任务，需要登录
 // @Tags         任务管理
 // @Accept       json
 // @Produce      json

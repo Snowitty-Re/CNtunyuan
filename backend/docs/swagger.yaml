@@ -1559,12 +1559,12 @@ info:
     email: support@cntunyuan.org
     name: CNtunyuan Team
     url: https://github.com/Snowitty-Re/CNtunyuan
-  description: 团圆寻亲志愿者系统后端 API 文档
+  description: 助力团圆志愿者系统后端 API 文档
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
   termsOfService: https://github.com/Snowitty-Re/CNtunyuan
-  title: 团圆寻亲志愿者系统 API
+  title: 助力团圆志愿者系统 API
   version: 1.0.0
 paths:
   /audit/cleanup:
@@ -4179,7 +4179,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: 创建新的寻人任务，需要登录
+      description: 创建新的团圆任务，需要登录
       parameters:
       - description: 创建任务请求参数
         in: body

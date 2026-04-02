@@ -169,9 +169,9 @@ func (r *Router) GetEngine() *gin.Engine {
 // welcome 欢迎信息
 func (r *Router) welcome(c *gin.Context) {
 	response.Success(c, gin.H{
-		"name":        "团圆寻亲志愿者系统",
+		"name":        "助力团圆志愿者系统",
 		"version":     "2.0.0",
-		"description": "帮助寻找走失人员的公益平台",
+		"description": "帮助走失人员寻找亲属、助力团圆的公益平台",
 		"docs":        "/api/v1/docs",
 		"health":      "/api/v1/health",
 	})

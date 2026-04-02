@@ -1,4 +1,4 @@
-# 团圆寻亲系统 - 示例配置文件
+# 助力团圆系统 - 示例配置文件
 # 复制此文件为 config.yaml 并根据实际情况修改
 
 server:
@@ -63,7 +63,7 @@ storage:
 
 sms:
   provider: "aliyun"    # aliyun/tencent
-  sign_name: "团圆寻亲"
+  sign_name: "助力团圆"
   dev_mode: false       # 开发模式（true时不实际发送短信）
   code_expiry: 300      # 验证码有效期（秒）
   aliyun_access_key_id: ""
@@ -78,7 +78,7 @@ email:
   smtp_port: 587
   smtp_user: ""
   smtp_password: ""
-  from_name: "团圆寻亲"
+  from_name: "助力团圆"
   use_tls: true
 
 map:
@@ -107,7 +107,7 @@ notification:
   jpush_master_secret: ""
 
 system:
-  default_org_name: "团圆寻亲志愿者协会"
+  default_org_name: "助力团圆志愿者协会"
   default_org_code: "ROOT"
   enable_register: true
   enable_wechat_login: true

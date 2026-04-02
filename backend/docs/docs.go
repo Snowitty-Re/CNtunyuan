@@ -4256,7 +4256,7 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "创建新的寻人任务，需要登录",
+                "description": "创建新的团圆任务，需要登录",
                 "consumes": [
                     "application/json"
                 ],
@@ -8569,8 +8569,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
-	Title:            "团圆寻亲志愿者系统 API",
-	Description:      "团圆寻亲志愿者系统后端 API 文档",
+	Title:            "助力团圆志愿者系统 API",
+	Description:      "助力团圆志愿者系统后端 API 文档",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 }

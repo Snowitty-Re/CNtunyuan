@@ -317,7 +317,7 @@ func setDefaults() {
 
 	// SMS defaults
 	viper.SetDefault("sms.provider", "aliyun")
-	viper.SetDefault("sms.sign_name", "团圆寻亲")
+	viper.SetDefault("sms.sign_name", "助力团圆")
 	viper.SetDefault("sms.dev_mode", false)
 	viper.SetDefault("sms.code_expiry", 300)
 
@@ -344,7 +344,7 @@ func setDefaults() {
 	viper.SetDefault("notification.push_enabled", false)
 
 	// System defaults
-	viper.SetDefault("system.default_org_name", "团圆寻亲志愿者协会")
+	viper.SetDefault("system.default_org_name", "助力团圆志愿者协会")
 	viper.SetDefault("system.default_org_code", "ROOT")
 	viper.SetDefault("system.enable_register", true)
 	viper.SetDefault("system.enable_wechat_login", true)

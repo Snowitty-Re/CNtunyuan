@@ -125,7 +125,7 @@ var (
 	cities    = []string{"北京市", "上海市", "广州市", "深圳市", "杭州市", "南京市", "济南市", "郑州市", "成都市", "武汉市", "长沙市"}
 	districts = []string{"朝阳区", "海淀区", "浦东新区", "天河区", "南山区", "西湖区", "鼓楼区", "历下区", "金水区", "锦江区"}
 
-	orgNames       = []string{"志愿者协会", "寻亲服务中心", "救助站", "公益组织", "救援队", "社区服务中心", "民政服务中心"}
+	orgNames       = []string{"志愿者协会", "团圆服务中心", "救助站", "公益组织", "救援队", "社区服务中心", "民政服务中心"}
 	firstNames     = []string{"伟", "芳", "娜", "敏", "静", "强", "磊", "洋", "艳", "杰", "勇", "军", "平", "刚", "桂"}
 	lastNames      = []string{"张", "王", "李", "刘", "陈", "杨", "黄", "赵", "周", "吴", "徐", "孙", "马", "朱", "胡"}
 	genders        = []string{"男", "女"}
@@ -217,7 +217,7 @@ func importOrganizations(db *gorm.DB, count int) error {
 		if err == gorm.ErrRecordNotFound {
 			rootOrg = entity.Organization{
 				BaseEntity: entity.BaseEntity{ID: uuid.New().String()},
-				Name:       "团圆寻亲志愿者总会",
+				Name:       "助力团圆志愿者总会",
 				Code:       "ROOT",
 				Type:       "root",
 				Level:      1,
@@ -495,8 +495,8 @@ func importDialects(db *gorm.DB, count int) error {
 			IsFeatured:  rand.Intn(10) == 0, // 10% 概率设为精选
 			PlayCount:   rand.Intn(1000),
 			LikeCount:   rand.Intn(500),
-			Tags:        `["方言", "寻亲", "语音"]`,
-			Description: fmt.Sprintf("这是一段%s的方言录音，用于寻亲识别", randomChoice(regions)),
+			Tags:        `["方言", "团圆", "语音"]`,
+			Description: fmt.Sprintf("这是一段%s的方言录音，用于助力寻属识别", randomChoice(regions)),
 			UploaderID:  users[rand.Intn(len(users))].ID,
 			OrgID:       orgs[rand.Intn(len(orgs))].ID,
 		}

@@ -11,7 +11,7 @@
     <view class="logo-wrap">
       <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
     </view>
-    <text class="hero-title">团圆寻亲</text>
+    <text class="hero-title">助力团圆</text>
     <text class="hero-subtitle">线索协作 · 快速联动 · 真实可追溯</text>
   </view>
 

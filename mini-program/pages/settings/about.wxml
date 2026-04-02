@@ -51,7 +51,7 @@
 
   <!-- 底部 -->
   <view class="footer">
-    <text class="copyright">2024 团圆寻亲志愿者系统</text>
+    <text class="copyright">2024 助力团圆志愿者系统</text>
     <text class="rights">All Rights Reserved</text>
   </view>
 </view>

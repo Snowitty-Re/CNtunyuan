@@ -6,7 +6,7 @@
       <view class="greeting-row">
         <view class="greeting-text-wrap">
           <text class="greeting-hello">{{greeting}}</text>
-          <text class="greeting-welcome">欢迎使用团圆寻亲平台</text>
+          <text class="greeting-welcome">欢迎使用助力团圆平台</text>
         </view>
         <view class="greeting-logo">
           <image src="/assets/images/logo.png" mode="aspectFit" class="logo-img" />
@@ -150,7 +150,7 @@
     <view class="section-head">
       <view class="section-title-group">
         <text class="section-title">方言录音</text>
-        <text class="section-desc">乡音寻亲，传递希望</text>
+        <text class="section-desc">乡音连亲，传递希望</text>
       </view>
       <view class="section-more" bindtap="goToDialects" hover-class="section-more--hover">
         <text>查看全部</text>

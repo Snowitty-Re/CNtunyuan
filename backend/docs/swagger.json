@@ -1,8 +1,8 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "团圆寻亲志愿者系统后端 API 文档",
-        "title": "团圆寻亲志愿者系统 API",
+        "description": "助力团圆志愿者系统后端 API 文档",
+        "title": "助力团圆志愿者系统 API",
         "termsOfService": "https://github.com/Snowitty-Re/CNtunyuan",
         "contact": {
             "name": "CNtunyuan Team",
@@ -4250,7 +4250,7 @@
                         "Bearer": []
                     }
                 ],
-                "description": "创建新的寻人任务，需要登录",
+                "description": "创建新的团圆任务，需要登录",
                 "consumes": [
                     "application/json"
                 ],

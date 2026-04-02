@@ -399,7 +399,7 @@ Page({
   onShareAppMessage() {
     const { caseData } = this.data
     return {
-      title: `寻亲：${caseData.name}，${caseData.age}岁，${caseData.displayLocation || '未知地点'}`,
+      title: `助力团圆：${caseData.name}，${caseData.age}岁，${caseData.displayLocation || '未知地点'}`,
       path: `/pages/cases/detail?id=${caseData.id}`,
       imageUrl: caseData.photoUrl || '/assets/images/share-default.png'
     }
@@ -411,7 +411,7 @@ Page({
   onShareTimeline() {
     const { caseData } = this.data
     return {
-      title: `寻亲：${caseData.name}，${caseData.age}岁`,
+      title: `助力团圆：${caseData.name}，${caseData.age}岁`,
       query: `id=${caseData.id}`,
       imageUrl: caseData.photoUrl || '/assets/images/share-default.png'
     }

@@ -2,7 +2,7 @@
   "usingComponents": {},
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
-  "navigationBarTitleText": "团圆寻亲",
+  "navigationBarTitleText": "助力团圆",
   "navigationBarBackgroundColor": "#FFF9F5",
   "navigationBarTextStyle": "black",
   "backgroundColor": "#FDF8F3"

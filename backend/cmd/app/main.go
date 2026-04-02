@@ -1,6 +1,6 @@
-// @title 团圆寻亲志愿者系统 API
+// @title 助力团圆志愿者系统 API
 // @version 1.0.0
-// @description 团圆寻亲志愿者系统后端 API 文档
+// @description 助力团圆志愿者系统后端 API 文档
 // @termsOfService https://github.com/Snowitty-Re/CNtunyuan
 
 // @contact.name CNtunyuan Team
