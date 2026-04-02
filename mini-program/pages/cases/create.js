@@ -407,6 +407,33 @@ Page({
       showError('请输入正确的手机号')
       return false
     }
+
+    const latRaw = (form.missingLatitude === undefined || form.missingLatitude === null)
+      ? ''
+      : String(form.missingLatitude).trim()
+    const lngRaw = (form.missingLongitude === undefined || form.missingLongitude === null)
+      ? ''
+      : String(form.missingLongitude).trim()
+    const hasLat = latRaw !== ''
+    const hasLng = lngRaw !== ''
+
+    if (hasLat !== hasLng) {
+      showError('经纬度请成对填写')
+      return false
+    }
+
+    if (hasLat && hasLng) {
+      const lat = Number(latRaw)
+      const lng = Number(lngRaw)
+      if (Number.isNaN(lat) || Number.isNaN(lng)) {
+        showError('经纬度格式无效')
+        return false
+      }
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        showError('经纬度超出范围')
+        return false
+      }
+    }
     
     return true
   },
@@ -434,6 +461,13 @@ Page({
       showLoading('保存信息...')
 
       const { form } = this.data
+      const latRaw = (form.missingLatitude === undefined || form.missingLatitude === null)
+        ? ''
+        : String(form.missingLatitude).trim()
+      const lngRaw = (form.missingLongitude === undefined || form.missingLongitude === null)
+        ? ''
+        : String(form.missingLongitude).trim()
+      const hasCoordinate = latRaw !== '' && lngRaw !== ''
       
       // 构建提交数据（按照后端API要求的字段名）
       const submitData = {
@@ -455,8 +489,8 @@ Page({
         city: form.city.trim(),
         district: form.district.trim(),
         address: form.address.trim(),
-        missing_latitude: Number(form.missingLatitude) || 0,
-        missing_longitude: Number(form.missingLongitude) || 0,
+        missing_latitude: hasCoordinate ? Number(latRaw) : null,
+        missing_longitude: hasCoordinate ? Number(lngRaw) : null,
         // 详细描述
         description: form.description.trim(),
         // 外貌特征（对齐后端字段）

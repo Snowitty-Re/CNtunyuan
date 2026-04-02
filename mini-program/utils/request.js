@@ -17,6 +17,44 @@ const BASE_CONFIG = {
   }
 }
 
+function normalizeErrorMessage(message, statusCode) {
+  const raw = (message || '').toString()
+  const lower = raw.toLowerCase()
+
+  if (
+    lower.includes('missing_latitude') ||
+    lower.includes('missing_longitude') ||
+    lower.includes('latitude') ||
+    lower.includes('longitude') ||
+    lower.includes('经纬度')
+  ) {
+    if (lower.includes('range') || lower.includes('超出')) {
+      return '经纬度超出范围'
+    }
+    if (lower.includes('invalid') || lower.includes('syntax') || lower.includes('format')) {
+      return '经纬度格式无效'
+    }
+    return '经纬度数据不合法'
+  }
+
+  if (
+    statusCode === 409 ||
+    lower.includes('duplicate key') ||
+    lower.includes('violates unique constraint') ||
+    lower.includes('already exists') ||
+    lower.includes('唯一') ||
+    lower.includes('已存在')
+  ) {
+    return '数据已存在，请勿重复提交'
+  }
+
+  if (statusCode === 400) {
+    return raw || '请求参数不合法'
+  }
+
+  return raw || '请求失败'
+}
+
 /**
  * 获取 token
  */
@@ -165,7 +203,7 @@ const request = (options) => {
             handleTokenExpired(options, resolve, reject)
           } else {
             // 业务错误
-            const errorMsg = data.message || '请求失败'
+            const errorMsg = normalizeErrorMessage(data.message, res.statusCode)
             
             if (options.silent !== true) {
               wx.showToast({
@@ -182,7 +220,11 @@ const request = (options) => {
           handleTokenExpired(options, resolve, reject)
         } else {
           // HTTP 错误
-          const errorMsg = `请求失败: ${res.statusCode}`
+          const backendMsg = res.data && typeof res.data === 'object'
+            ? (res.data.message || res.data.error || '')
+            : ''
+          const normalized = normalizeErrorMessage(backendMsg, res.statusCode)
+          const errorMsg = normalized || `请求失败: ${res.statusCode}`
           
           if (options.silent !== true) {
             wx.showToast({
