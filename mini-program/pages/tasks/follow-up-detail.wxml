@@ -1,0 +1,89 @@
+<view class="followup-detail-page">
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <scroll-view wx:elif="{{followUp}}" class="scroll" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="card">
+      <view class="head">
+        <text class="title">跟进记录详情</text>
+        <view class="status status-{{followUp.status}}">
+          <text>{{followUp.statusText}}</text>
+        </view>
+      </view>
+      <view class="meta">
+        <text>提交人：{{(followUp.user && (followUp.user.nickname || followUp.user.name)) || '执行人'}}</text>
+        <text>提交时间：{{followUp.createdAtText}}</text>
+      </view>
+      <view class="content">{{followUp.content}}</view>
+      <view class="meta" wx:if="{{followUp.progress !== undefined && followUp.progress !== null}}">
+        <text>同步进度：{{followUp.progress}}%</text>
+      </view>
+
+      <view class="attachments" wx:if="{{followUp.attachments.length > 0}}">
+        <view class="section-title">相关附件</view>
+        <view class="attachment-list">
+          <image
+            class="attachment-item"
+            wx:for="{{followUp.attachments}}"
+            wx:key="*this"
+            src="{{item}}"
+            mode="aspectFill"
+            bindtap="previewAttachment"
+            data-url="{{item}}"
+          />
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">审批信息</view>
+      <view class="meta" wx:if="{{followUp.status === 'pending'}}">
+        <text>当前状态：待审核</text>
+      </view>
+      <view wx:else>
+        <view class="meta">
+          <text>审批人：{{(followUp.reviewer && (followUp.reviewer.nickname || followUp.reviewer.name)) || '-'}}</text>
+          <text>审批时间：{{followUp.reviewedAtText || '-'}}</text>
+        </view>
+        <view class="review-remark" wx:if="{{followUp.review_remark}}">
+          <text>审批意见：{{followUp.review_remark}}</text>
+        </view>
+      </view>
+      <view class="review-actions" wx:if="{{isManager && followUp.status === 'pending'}}">
+        <button class="review-btn pass" bindtap="reviewFollowUp" data-approve="{{true}}">通过</button>
+        <button class="review-btn reject" bindtap="reviewFollowUp" data-approve="{{false}}">驳回</button>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">评论与审批讨论（{{comments.length}}）</view>
+      <view class="comment-list" wx:if="{{comments.length > 0}}">
+        <view class="comment-item" wx:for="{{comments}}" wx:key="id">
+          <view class="comment-head">
+            <view class="comment-user-wrap">
+              <text class="comment-user">{{(item.user && (item.user.nickname || item.user.name)) || '用户'}}</text>
+              <text class="comment-tag {{item.isReviewComment ? 'tag-review' : 'tag-normal'}}">{{item.commentTagText}}</text>
+            </view>
+            <text class="comment-time">{{item.createdAtText}}</text>
+          </view>
+          <text class="comment-content">{{item.content}}</text>
+        </view>
+      </view>
+      <view class="empty" wx:else>
+        <text>暂无评论</text>
+      </view>
+
+      <view class="comment-editor">
+        <input
+          class="comment-input"
+          placeholder="输入评论或审批补充意见"
+          maxlength="300"
+          value="{{commentInput}}"
+          bindinput="onCommentInput"
+        />
+        <button class="comment-submit" loading="{{submitting}}" bindtap="submitComment">发送</button>
+      </view>
+    </view>
+  </scroll-view>
+</view>

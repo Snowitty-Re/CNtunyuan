@@ -414,6 +414,86 @@
   color: #A89888;
 }
 
+/* ========== Related Tasks ========== */
+.related-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.related-task-item {
+  background: #FFFBF7;
+  border-radius: 14rpx;
+  border: 1rpx solid #F5EDE4;
+  padding: 18rpx 20rpx;
+}
+
+.related-task-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14rpx;
+}
+
+.related-task-title {
+  flex: 1;
+  font-size: 28rpx;
+  color: #2D1F10;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.related-task-status {
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  white-space: nowrap;
+}
+
+.related-task-status.status-pending {
+  background: #FFF7E6;
+  color: #F2994A;
+}
+
+.related-task-status.status-assigned {
+  background: #E6F4FF;
+  color: #4A90D9;
+}
+
+.related-task-status.status-processing {
+  background: #E8F8EE;
+  color: #27AE60;
+}
+
+.related-task-status.status-completed {
+  background: #F0F2F5;
+  color: #95A5A6;
+}
+
+.related-task-status.status-cancelled {
+  background: #FFF1F0;
+  color: #EB5757;
+}
+
+.related-task-status.status-overdue {
+  background: #FFF1F0;
+  color: #EB5757;
+}
+
+.related-task-status.status-draft {
+  background: #F0F2F5;
+  color: #8C7B6B;
+}
+
+.related-task-meta {
+  margin-top: 10rpx;
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+  font-size: 22rpx;
+  color: #A89888;
+}
+
 /* ========== Empty Tip ========== */
 .empty-tip {
   display: flex;

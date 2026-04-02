@@ -2,6 +2,7 @@ const taskService = require('../../services/task')
 const { formatDate, formatTimeAgo, showSuccess, showToast, showConfirm, showLoading, hideLoading } = require('../../utils/util')
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_PRIORITY_COLOR } = require('../../utils/constants')
 const app = getApp()
+const TASK_LIST_DIRTY_KEY = 'tasks_list_dirty'
 
 Page({
   data: {
@@ -9,12 +10,6 @@ Page({
     task: null,
     logs: [],
     followUps: [],
-    showFollowUpComments: false,
-    activeFollowUpId: '',
-    activeFollowUpTitle: '',
-    followUpComments: [],
-    followUpCommentsLoading: false,
-    followUpCommentInput: '',
     loading: false,
     actionLoading: false,
     showProgressModal: false,
@@ -99,7 +94,9 @@ Page({
       const followUps = (result.list || []).map(item => ({
         ...item,
         createdAtText: formatTimeAgo(item.created_at),
-        attachments: Array.isArray(item.attachments) ? item.attachments : []
+        statusText: item.status === 'pending' ? '待审核' : (item.status === 'approved' ? '已通过' : '已驳回'),
+        reviewerName: item.reviewer ? (item.reviewer.nickname || item.reviewer.name || '') : '',
+        reviewedAtText: item.reviewed_at ? formatTimeAgo(item.reviewed_at) : ''
       }))
       this.setData({ followUps })
     } catch (error) {
@@ -248,117 +245,11 @@ Page({
     wx.navigateTo({ url: `/pages/tasks/follow-up-create?id=${this.data.taskId}` })
   },
 
-  // 审核跟进
-  reviewFollowUp(e) {
-    if (!this.data.isManager) {
-      showToast('仅管理员可审核')
-      return
-    }
-    const id = e.currentTarget.dataset.id
-    const approve = !!e.currentTarget.dataset.approve
-    const title = approve ? '审核通过' : '审核驳回'
-
-    wx.showModal({
-      title,
-      editable: true,
-      placeholderText: approve ? '审核备注（可选）' : '请输入驳回原因',
-      success: async (res) => {
-        if (!res.confirm) return
-        try {
-          await taskService.reviewFollowUp(this.data.taskId, id, {
-            approve,
-            remark: res.content || ''
-          })
-          showSuccess(approve ? '已通过' : '已驳回')
-          this.loadFollowUps()
-          this.loadTaskLogs()
-        } catch (error) {
-          showToast(error.message || '审核失败')
-        }
-      }
-    })
-  },
-
-  // 评论跟进
-  addFollowUpComment(e) {
-    const id = e.currentTarget.dataset.id
-    const author = e.currentTarget.dataset.author || '执行人'
-    this.setData({
-      showFollowUpComments: true,
-      activeFollowUpId: id,
-      activeFollowUpTitle: author,
-      followUpComments: [],
-      followUpCommentInput: ''
-    })
-    this.loadFollowUpComments()
-  },
-
-  async loadFollowUpComments() {
-    const followUpID = this.data.activeFollowUpId
-    if (!followUpID) return
-    this.setData({ followUpCommentsLoading: true })
-    try {
-      const result = await taskService.getFollowUpComments(this.data.taskId, followUpID, { page: 1, page_size: 50 })
-      const list = (result.list || []).map(item => ({
-        ...item,
-        createdAtText: formatTimeAgo(item.created_at),
-        isReviewComment: ['super_admin', 'admin', 'manager'].includes((item.user && item.user.role) || ''),
-        commentTagText: ['super_admin', 'admin', 'manager'].includes((item.user && item.user.role) || '')
-          ? '审核意见'
-          : '执行备注'
-      }))
-      this.setData({ followUpComments: list })
-    } catch (error) {
-      showToast(error.message || '加载评论失败')
-    } finally {
-      this.setData({ followUpCommentsLoading: false })
-    }
-  },
-
-  closeFollowUpComments() {
-    this.setData({
-      showFollowUpComments: false,
-      activeFollowUpId: '',
-      activeFollowUpTitle: '',
-      followUpComments: [],
-      followUpCommentInput: ''
-    })
-  },
-
-  onFollowUpCommentInput(e) {
-    this.setData({ followUpCommentInput: e.detail.value || '' })
-  },
-
-  async submitFollowUpComment() {
-    const followUpID = this.data.activeFollowUpId
-    if (!followUpID) return
-    const content = (this.data.followUpCommentInput || '').trim()
-    if (!content) {
-      showToast('评论不能为空')
-      return
-    }
-    try {
-      await taskService.addFollowUpComment(this.data.taskId, followUpID, { content })
-      showSuccess('评论成功')
-      this.setData({ followUpCommentInput: '' })
-      this.loadFollowUpComments()
-      this.loadFollowUps()
-    } catch (error) {
-      showToast(error.message || '评论失败')
-    }
-  },
-
-  previewFollowUpAttachment(e) {
-    const current = e.currentTarget.dataset.url
-    const rawUrls = e.currentTarget.dataset.urls
-    const urls = Array.isArray(rawUrls) ? rawUrls : [current]
-    if (/\.(png|jpg|jpeg|gif|webp)$/i.test(current)) {
-      wx.previewImage({ current, urls })
-      return
-    }
-    wx.setClipboardData({
-      data: current,
-      success: () => showSuccess('附件链接已复制')
+  // 打开跟进详情
+  goToFollowUpDetail(e) {
+    const followUpID = e.currentTarget.dataset.id
+    wx.navigateTo({
+      url: `/pages/tasks/follow-up-detail?taskId=${this.data.taskId}&followUpId=${followUpID}`
     })
   },
 
@@ -382,6 +273,30 @@ Page({
     } catch (error) {
       console.error('取消任务失败:', error)
       showToast(error.message || '取消任务失败')
+    } finally {
+      this.setData({ actionLoading: false })
+    }
+  },
+
+  // 删除任务（管理者）
+  async deleteTask() {
+    if (!this.data.isManager) {
+      showToast('无权限操作')
+      return
+    }
+
+    const confirmed = await showConfirm('确认删除', '删除后不可恢复，是否继续？')
+    if (!confirmed) return
+
+    this.setData({ actionLoading: true })
+    try {
+      await taskService.delete(this.data.taskId)
+      showSuccess('任务已删除')
+      wx.setStorageSync(TASK_LIST_DIRTY_KEY, 1)
+      setTimeout(() => wx.navigateBack(), 400)
+    } catch (error) {
+      console.error('删除任务失败:', error)
+      showToast(error.message || '删除失败')
     } finally {
       this.setData({ actionLoading: false })
     }

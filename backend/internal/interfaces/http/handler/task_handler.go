@@ -35,6 +35,7 @@ func (h *TaskHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *mi
 		tasks.GET("/:id", h.GetByID)
 		tasks.GET("/:id/logs", h.GetLogs)
 		tasks.GET("/:id/follow-ups", h.GetFollowUps)
+		tasks.GET("/:id/follow-ups/:follow_up_id", h.GetFollowUpByID)
 		tasks.POST("/:id/follow-ups", h.CreateFollowUp)
 		tasks.POST("/:id/follow-ups/:follow_up_id/review", middleware.RequireManager(), h.ReviewFollowUp)
 		tasks.GET("/:id/follow-ups/:follow_up_id/comments", h.GetFollowUpComments)
@@ -498,6 +499,36 @@ func (h *TaskHandler) GetFollowUps(c *gin.Context) {
 		return
 	}
 	response.Success(c, result)
+}
+
+// GetFollowUpByID 获取单条任务跟进
+func (h *TaskHandler) GetFollowUpByID(c *gin.Context) {
+	taskID := c.Param("id")
+	followUpID := c.Param("follow_up_id")
+	if taskID == "" || followUpID == "" {
+		response.BadRequest(c, "task id and follow up id are required")
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	role := middleware.GetUserRole(c)
+	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+
+	followUp, err := h.taskService.GetFollowUpByID(c.Request.Context(), taskID, followUpID, userID, isManager)
+	if err != nil {
+		switch err {
+		case service.ErrTaskNotFound:
+			response.NotFound(c, "task not found")
+		case service.ErrTaskFollowUpNotFound:
+			response.NotFound(c, "follow up not found")
+		case service.ErrTaskForbidden:
+			response.Forbidden(c, "no permission to view follow up")
+		default:
+			response.InternalServerError(c, "failed to get follow up")
+		}
+		return
+	}
+	response.Success(c, followUp)
 }
 
 // ReviewFollowUp 审核任务跟进

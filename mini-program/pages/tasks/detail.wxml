@@ -185,46 +185,29 @@
         </view>
 
         <view class="followup-list" wx:if="{{followUps.length > 0}}">
-          <view class="followup-item" wx:for="{{followUps}}" wx:key="id">
+          <view class="followup-item" wx:for="{{followUps}}" wx:key="id" bindtap="goToFollowUpDetail" data-id="{{item.id}}">
             <view class="followup-top">
               <text class="followup-author">{{(item.user && (item.user.nickname || item.user.name)) || '执行人'}}</text>
               <view class="followup-status followup-status-{{item.status}}">
-                <text>{{item.status === 'pending' ? '待审核' : (item.status === 'approved' ? '已通过' : '已驳回')}}</text>
+                <text>{{item.statusText}}</text>
               </view>
             </view>
 
-            <text class="followup-content">{{item.content}}</text>
-
             <view class="followup-meta">
-              <text wx:if="{{item.progress !== undefined && item.progress !== null}}">进度：{{item.progress}}%</text>
-              <text>{{item.createdAtText}}</text>
+              <text>提交于 {{item.createdAtText}}</text>
+              <text>评论 {{item.comment_count || 0}} 条</text>
             </view>
 
-            <view class="followup-attachments" wx:if="{{item.attachments.length > 0}}">
-              <image
-                class="followup-image"
-                wx:for="{{item.attachments}}"
-                wx:for-item="att"
-                wx:key="*this"
-                src="{{att}}"
-                mode="aspectFill"
-                bindtap="previewFollowUpAttachment"
-                data-url="{{att}}"
-                data-urls="{{item.attachments}}"
-              />
+            <view class="followup-review-summary">
+              <text class="review-text" wx:if="{{item.status === 'pending'}}">审批状态：待审核</text>
+              <text class="review-text" wx:if="{{item.status !== 'pending' && item.reviewerName}}">
+                审批人：{{item.reviewerName}} {{item.reviewedAtText}}
+              </text>
+              <text class="review-text" wx:if="{{item.status !== 'pending' && item.review_remark}}">
+                审批意见：{{item.review_remark}}
+              </text>
             </view>
-
-            <view class="followup-review" wx:if="{{item.review_remark}}">
-              <text class="review-text">审核意见：{{item.review_remark}}</text>
-            </view>
-
-            <view class="followup-actions">
-              <button class="followup-btn" bindtap="addFollowUpComment" data-id="{{item.id}}" data-author="{{(item.user && (item.user.nickname || item.user.name)) || '执行人'}}">评论({{item.comment_count || 0}})</button>
-              <block wx:if="{{isManager && item.status === 'pending'}}">
-                <button class="followup-btn followup-pass" bindtap="reviewFollowUp" data-id="{{item.id}}" data-approve="{{true}}">通过</button>
-                <button class="followup-btn followup-reject" bindtap="reviewFollowUp" data-id="{{item.id}}" data-approve="{{false}}">驳回</button>
-              </block>
-            </view>
+            <text class="followup-detail-link">查看记录详情 ></text>
           </view>
         </view>
         <view class="empty-logs" wx:else>
@@ -266,6 +249,27 @@
         </view>
       </view>
 
+      <!-- 任务管理（管理员） -->
+      <view class="info-card" wx:if="{{isManager}}">
+        <view class="card-section-header">
+          <view class="section-icon-box icon-gray">
+            <text class="section-icon-char">M</text>
+          </view>
+          <text class="section-heading">任务管理</text>
+        </view>
+        <view class="manager-action-grid">
+          <button class="manager-action-btn btn-outline" wx:if="{{task.status === 'pending'}}" bindtap="assignTask" loading="{{actionLoading}}">
+            分配任务
+          </button>
+          <button class="manager-action-btn btn-warning" wx:if="{{task.status !== 'completed' && task.status !== 'cancelled'}}" bindtap="cancelTask" loading="{{actionLoading}}">
+            取消任务
+          </button>
+          <button class="manager-action-btn btn-danger" bindtap="deleteTask" loading="{{actionLoading}}">
+            删除任务
+          </button>
+        </view>
+      </view>
+
       <!-- 底部留白 -->
       <view style="height: 180rpx;"></view>
     </scroll-view>
@@ -273,19 +277,6 @@
     <!-- 底部操作栏 -->
     <view class="bottom-action-bar" wx:if="{{task.status !== 'completed' && task.status !== 'cancelled'}}">
       <view class="action-bar-inner">
-        <!-- 管理者操作 -->
-        <block wx:if="{{isManager}}">
-          <block wx:if="{{task.status === 'pending'}}">
-            <view class="bar-btn-group">
-              <button class="bar-btn btn-outline" bindtap="cancelTask" loading="{{actionLoading}}">取消任务</button>
-              <button class="bar-btn btn-primary" bindtap="assignTask" loading="{{actionLoading}}">分配任务</button>
-            </view>
-          </block>
-          <block wx:elif="{{task.status === 'assigned' || task.status === 'processing'}}">
-            <button class="bar-btn btn-danger full-width" bindtap="cancelTask" loading="{{actionLoading}}">取消任务</button>
-          </block>
-        </block>
-
         <!-- 执行人操作 -->
         <block wx:if="{{isAssignee}}">
           <block wx:if="{{task.status === 'assigned'}}">
@@ -342,42 +333,4 @@
     </view>
   </view>
 
-  <!-- 跟进评论弹层 -->
-  <view class="modal-overlay" wx:if="{{showFollowUpComments}}" bindtap="closeFollowUpComments">
-    <view class="modal-box followup-comment-modal" catchtap="stopPropagation">
-      <view class="modal-top">
-        <text class="modal-title">跟进评论 - {{activeFollowUpTitle}}</text>
-        <view class="modal-close-btn" bindtap="closeFollowUpComments">
-          <text class="close-x">x</text>
-        </view>
-      </view>
-
-      <scroll-view class="followup-comment-list" scroll-y enhanced show-scrollbar="{{false}}">
-        <view class="empty-logs" wx:if="{{!followUpCommentsLoading && followUpComments.length === 0}}">
-          <text class="empty-logs-text">暂无评论，先来一条</text>
-        </view>
-        <view class="followup-comment-item" wx:for="{{followUpComments}}" wx:key="id">
-          <view class="followup-comment-head">
-            <view class="followup-comment-user-wrap">
-              <text class="followup-comment-user">{{(item.user && (item.user.nickname || item.user.name)) || '用户'}}</text>
-              <text class="followup-comment-tag {{item.isReviewComment ? 'tag-review' : 'tag-normal'}}">{{item.commentTagText}}</text>
-            </view>
-            <text class="followup-comment-time">{{item.createdAtText}}</text>
-          </view>
-          <text class="followup-comment-content">{{item.content}}</text>
-        </view>
-      </scroll-view>
-
-      <view class="followup-comment-input-wrap">
-        <input
-          class="followup-comment-input"
-          placeholder="输入评论内容"
-          value="{{followUpCommentInput}}"
-          bindinput="onFollowUpCommentInput"
-          maxlength="300"
-        />
-        <button class="followup-comment-submit" bindtap="submitFollowUpComment">发送</button>
-      </view>
-    </view>
-  </view>
 </view>

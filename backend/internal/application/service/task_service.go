@@ -454,6 +454,28 @@ func (s *TaskAppService) ListFollowUps(ctx context.Context, taskID string, page,
 	}, nil
 }
 
+// GetFollowUpByID 获取任务跟进详情
+func (s *TaskAppService) GetFollowUpByID(ctx context.Context, taskID, followUpID, userID string, isManager bool) (*dto.TaskFollowUpResponse, error) {
+	task, err := s.taskRepo.FindByID(ctx, taskID)
+	if err != nil {
+		return nil, ErrTaskNotFound
+	}
+
+	isCreator := task.CreatorID == userID
+	isAssignee := task.AssigneeID != nil && *task.AssigneeID == userID
+	if !isManager && !isCreator && !isAssignee {
+		return nil, ErrTaskForbidden
+	}
+
+	followUp, err := s.taskRepo.FindFollowUpByID(ctx, taskID, followUpID)
+	if err != nil {
+		return nil, ErrTaskFollowUpNotFound
+	}
+
+	resp := dto.ToTaskFollowUpResponse(followUp)
+	return &resp, nil
+}
+
 // ReviewFollowUp 审核任务跟进
 func (s *TaskAppService) ReviewFollowUp(ctx context.Context, taskID, followUpID string, req *dto.ReviewTaskFollowUpRequest, reviewerID string, isManager bool) error {
 	if !isManager {

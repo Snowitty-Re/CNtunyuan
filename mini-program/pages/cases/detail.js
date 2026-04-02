@@ -1,4 +1,5 @@
 const missingPersonService = require('../../services/missingPerson')
+const taskService = require('../../services/task')
 const { formatDate, showConfirm, showSuccess, showLoading, hideLoading, joinLocation, normalizeMediaUrl, normalizeAge } = require('../../utils/util')
 const app = getApp()
 const CASES_LIST_DIRTY_KEY = 'cases_list_dirty'
@@ -19,17 +20,29 @@ const GENDER_MAP = {
   'other': '其他'
 }
 
+const TASK_STATUS_MAP = {
+  draft: '草稿',
+  pending: '待分配',
+  assigned: '已分配',
+  processing: '进行中',
+  completed: '已完成',
+  cancelled: '已取消',
+  overdue: '已逾期'
+}
+
 Page({
   data: {
     id: '',
     caseData: {},
     tracks: [],
+    relatedTasks: [],
     loading: false,
     isManager: false, // 是否为管理者
     
     // 映射常量
     statusMap: STATUS_MAP,
-    genderMap: GENDER_MAP
+    genderMap: GENDER_MAP,
+    taskStatusMap: TASK_STATUS_MAP
   },
 
   onLoad(options) {
@@ -48,13 +61,14 @@ Page({
     
     this.loadCaseDetail()
     this.loadTracks()
+    this.loadRelatedTasks()
   },
 
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
     // 返回时刷新数据
     if (this.data.id) {
-      Promise.all([this.loadCaseDetail(), this.loadTracks()]).catch(err => console.error('刷新详情失败:', err))
+      Promise.all([this.loadCaseDetail(), this.loadTracks(), this.loadRelatedTasks()]).catch(err => console.error('刷新详情失败:', err))
     }
   },
 
@@ -128,6 +142,28 @@ Page({
       })
     } catch (error) {
       console.error('加载轨迹失败:', error)
+    }
+  },
+
+  /**
+   * 加载关联任务
+   */
+  async loadRelatedTasks() {
+    try {
+      const result = await taskService.getList({
+        page: 1,
+        page_size: 20,
+        missing_person_id: this.data.id
+      })
+      const list = (result && result.list) || []
+      const relatedTasks = list.map(item => ({
+        ...item,
+        assigneeName: (item.assignee && (item.assignee.nickname || item.assignee.name)) || '未分配',
+        updatedAtText: formatDate(item.updated_at || item.created_at, 'YYYY-MM-DD HH:mm')
+      }))
+      this.setData({ relatedTasks })
+    } catch (error) {
+      console.error('加载关联任务失败:', error)
     }
   },
 
@@ -305,6 +341,17 @@ Page({
     const { id } = this.data
     wx.navigateTo({
       url: `/pages/tasks/create?caseId=${id}`
+    })
+  },
+
+  /**
+   * 跳转任务详情
+   */
+  goTaskDetail(e) {
+    const { id } = e.currentTarget.dataset
+    if (!id) return
+    wx.navigateTo({
+      url: `/pages/tasks/detail?id=${id}`
     })
   },
 

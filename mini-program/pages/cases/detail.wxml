@@ -191,6 +191,36 @@
     </view>
   </view>
 
+  <!-- Related Tasks Card -->
+  <view class="card">
+    <view class="card-header">
+      <view class="card-title-bar"></view>
+      <text class="card-title">关联任务</text>
+      <text class="card-count">{{relatedTasks.length}}项</text>
+    </view>
+
+    <view class="related-task-list" wx:if="{{relatedTasks.length > 0}}">
+      <view class="related-task-item" wx:for="{{relatedTasks}}" wx:key="id" bindtap="goTaskDetail" data-id="{{item.id}}">
+        <view class="related-task-top">
+          <text class="related-task-title">{{item.title}}</text>
+          <view class="related-task-status status-{{item.status}}">
+            <text>{{taskStatusMap[item.status] || item.status}}</text>
+          </view>
+        </view>
+        <view class="related-task-meta">
+          <text>执行人：{{item.assigneeName}}</text>
+          <text>{{item.updatedAtText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty-tip" wx:else>
+      <view class="empty-tip-icon"></view>
+      <text class="empty-tip-title">暂无关联任务</text>
+      <text class="empty-tip-desc">可在管理操作中创建任务</text>
+    </view>
+  </view>
+
   <!-- Manager Operations -->
   <view class="card manager-card" wx:if="{{isManager}}">
     <view class="card-header">

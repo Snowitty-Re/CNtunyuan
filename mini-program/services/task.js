@@ -132,6 +132,15 @@ module.exports = {
   },
 
   /**
+   * 获取单条任务跟进详情
+   * @param {String} taskId 任务ID
+   * @param {String} followUpId 跟进ID
+   */
+  getFollowUpById(taskId, followUpId) {
+    return get(`/tasks/${taskId}/follow-ups/${followUpId}`)
+  },
+
+  /**
    * 新增任务跟进记录
    * @param {String} id 任务ID
    * @param {Object} data 跟进数据

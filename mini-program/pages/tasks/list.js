@@ -2,6 +2,7 @@ const taskService = require('../../services/task')
 const { formatDate, showSuccess, showToast, showConfirm } = require('../../utils/util')
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_PRIORITY_COLOR } = require('../../utils/constants')
 const app = getApp()
+const TASK_LIST_DIRTY_KEY = 'tasks_list_dirty'
 
 Page({
   data: {
@@ -38,6 +39,13 @@ Page({
 
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
+    const listDirty = wx.getStorageSync(TASK_LIST_DIRTY_KEY)
+    if (listDirty) {
+      wx.removeStorageSync(TASK_LIST_DIRTY_KEY)
+      this.loadStats()
+      this.loadTasks()
+      return
+    }
     // Throttle: skip if loaded less than 30s ago
     const now = Date.now()
     if (this._lastLoadTime && now - this._lastLoadTime < 30000) return

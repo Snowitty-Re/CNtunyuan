@@ -14,6 +14,7 @@
     "pages/tasks/create",
     "pages/tasks/my",
     "pages/tasks/follow-up-create",
+    "pages/tasks/follow-up-detail",
     "pages/tasks/feedback",
     "pages/admin/dialect-review",
     "pages/admin/user-manage",
