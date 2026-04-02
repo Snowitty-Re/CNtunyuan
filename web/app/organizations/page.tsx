@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { ConfirmButton } from '@/components/shared/ConfirmButton'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
 import { Dialog } from '@/components/ui/Dialog'
@@ -20,6 +21,8 @@ export default function OrganizationsPage() {
   const [tree, setTree] = useState<Organization[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [keyword, setKeyword] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
   const [moveTarget, setMoveTarget] = useState<Record<string, string>>({})
 
   const [name, setName] = useState('')
@@ -37,13 +40,22 @@ export default function OrganizationsPage() {
   const [editContactName, setEditContactName] = useState('')
   const [editContactPhone, setEditContactPhone] = useState('')
   const [editSortOrder, setEditSortOrder] = useState('0')
+  const [notice, setNotice] = useState<Notice | null>(null)
 
-  async function load(nextPage = page) {
+  async function load(
+    nextPage = page,
+    filters?: {
+      keyword?: string
+      type?: string
+    },
+  ) {
     setLoading(true)
     setError('')
     try {
+      const qKeyword = filters?.keyword ?? keyword
+      const qType = filters?.type ?? typeFilter
       const [data, treeData] = await Promise.all([
-        organizationService.list({ page: nextPage, page_size: 20 }),
+        organizationService.list({ page: nextPage, page_size: 20, keyword: qKeyword || undefined, type: qType || undefined }),
         organizationService.tree(),
       ])
       const normalized = listFrom<Organization>(data)
@@ -74,9 +86,16 @@ export default function OrganizationsPage() {
     try {
       await organizationService.move(id, parentId || null)
       load(page)
+      setNotice({ type: 'success', text: '组织移动成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '移动失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '移动失败' })
     }
+  }
+
+  function resetFilters() {
+    setKeyword('')
+    setTypeFilter('')
+    load(1, { keyword: '', type: '' })
   }
 
   async function quickCreate(e: FormEvent) {
@@ -92,8 +111,9 @@ export default function OrganizationsPage() {
       setCode('')
       setType('team')
       load(1)
+      setNotice({ type: 'success', text: '组织创建成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '创建失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
     }
   }
 
@@ -130,11 +150,43 @@ export default function OrganizationsPage() {
       setDetailOpen(false)
       setEditingOrg(null)
       load(page)
+      setNotice({ type: 'success', text: '组织信息已更新' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '保存失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '保存失败' })
     } finally {
       setSavingDetail(false)
     }
+  }
+
+  function exportCsv() {
+    const rows = items
+    if (rows.length === 0) return
+    const headers = ['id', 'name', 'code', 'type', 'parent_id', 'contact_name', 'contact_phone', 'address', 'sort_order', 'created_at']
+    const lines = rows.map((row) =>
+      [
+        row.id,
+        row.name || '',
+        row.code || '',
+        row.type || '',
+        row.parent_id || '',
+        row.contact_name || '',
+        row.contact_phone || '',
+        row.address || '',
+        row.sort_order ?? '',
+        row.created_at || '',
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(','),
+    )
+    const content = `\ufeff${[headers.join(','), ...lines].join('\n')}`
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `organizations-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    setNotice({ type: 'success', text: `已导出 ${rows.length} 条组织数据` })
   }
 
   useEffect(() => {
@@ -147,6 +199,28 @@ export default function OrganizationsPage() {
   return (
     <AppShell>
       <ModuleHeader title="组织管理" desc="组织结构维护、编码治理与组织信息管理" />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
+      <form
+        className="panel row wrap"
+        onSubmit={(e) => {
+          e.preventDefault()
+          load(1)
+        }}
+      >
+        <input className="input" placeholder="组织名称/编码关键词" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+        <select className="select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+          <option value="">全部类型</option>
+          <option value="team">team</option>
+          <option value="group">group</option>
+          <option value="branch">branch</option>
+        </select>
+        <button className="btn" type="submit">
+          筛选
+        </button>
+        <button className="btn ghost" type="button" onClick={resetFilters}>
+          重置
+        </button>
+      </form>
       <form className="panel row wrap" onSubmit={quickCreate}>
         <input className="input" placeholder="组织名称" value={name} onChange={(e) => setName(e.target.value)} />
         <input className="input" placeholder="组织编码（唯一）" value={code} onChange={(e) => setCode(e.target.value)} />
@@ -157,6 +231,9 @@ export default function OrganizationsPage() {
         </select>
         <button className="btn primary" type="submit">
           创建组织
+        </button>
+        <button className="btn" type="button" onClick={exportCsv}>
+          导出CSV
         </button>
       </form>
       <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />

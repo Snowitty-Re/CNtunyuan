@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ConfirmButton } from '@/components/shared/ConfirmButton'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
@@ -37,6 +38,7 @@ export default function CaseDetailPage() {
   const [taskDesc, setTaskDesc] = useState('')
   const [taskPriority, setTaskPriority] = useState('medium')
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [notice, setNotice] = useState<Notice | null>(null)
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -101,8 +103,9 @@ export default function CaseDetailPage() {
       setTrackContent('')
       setTrackLocation('')
       load()
+      setNotice({ type: 'success', text: '线索添加成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '新增线索失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '新增线索失败' })
     }
   }
 
@@ -127,8 +130,9 @@ export default function CaseDetailPage() {
       })
       setEditing(false)
       load()
+      setNotice({ type: 'success', text: '案件信息已保存' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '保存失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '保存失败' })
     } finally {
       setSaving(false)
     }
@@ -148,8 +152,9 @@ export default function CaseDetailPage() {
       })
       setTaskDesc('')
       load()
+      setNotice({ type: 'success', text: '关联任务创建成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '创建关联任务失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建关联任务失败' })
     } finally {
       setTaskCreating(false)
     }
@@ -171,8 +176,9 @@ export default function CaseDetailPage() {
       if (url) {
         setEditForm((s) => ({ ...s, photo_url: url }))
       }
+      setNotice({ type: 'success', text: '案件照片上传成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '上传照片失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '上传照片失败' })
     } finally {
       setPhotoUploading(false)
     }
@@ -188,6 +194,7 @@ export default function CaseDetailPage() {
   return (
     <AppShell>
       <ModuleHeader title="案件详情" desc="维护案件状态、线索与闭环信息" />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <PageState loading={loading} error={error} onRetry={load} />
       {!loading && !error && item ? (
         <div className="grid">

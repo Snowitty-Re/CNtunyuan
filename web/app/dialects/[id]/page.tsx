@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
@@ -20,6 +21,7 @@ export default function DialectDetailPage() {
   const [item, setItem] = useState<Dialect | null>(null)
   const [comments, setComments] = useState<any[]>([])
   const [comment, setComment] = useState('')
+  const [notice, setNotice] = useState<Notice | null>(null)
 
   async function load() {
     setLoading(true)
@@ -49,14 +51,16 @@ export default function DialectDetailPage() {
       await dialectService.addComment(id, comment.trim())
       setComment('')
       load()
+      setNotice({ type: 'success', text: '评论发布成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '评论失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '评论失败' })
     }
   }
 
   return (
     <AppShell>
       <ModuleHeader title="方言详情" desc="查看录音信息、状态与使用情况" />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <PageState loading={loading} error={error} onRetry={load} />
       {!loading && !error && item ? (
         <div className="section-card">

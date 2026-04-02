@@ -1,11 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { FormEvent, useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { ConfirmButton } from '@/components/shared/ConfirmButton'
 import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
@@ -43,6 +45,8 @@ export default function UsersPage() {
   const [editRole, setEditRole] = useState('volunteer')
   const [editStatus, setEditStatus] = useState('active')
   const [editOrgId, setEditOrgId] = useState('')
+  const allSelected = items.length > 0 && selectedIds.length === items.length
+  const [notice, setNotice] = useState<Notice | null>(null)
 
   async function load(nextPage = page) {
     setLoading(true)
@@ -93,8 +97,9 @@ export default function UsersPage() {
       setRole('volunteer')
       setOrgId('')
       load(1)
+      setNotice({ type: 'success', text: '用户创建成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '创建失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
     }
   }
 
@@ -102,13 +107,23 @@ export default function UsersPage() {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
+  function toggleSelectAll(checked: boolean) {
+    setSelectedIds(checked ? items.map((x) => x.id) : [])
+  }
+
+  function invertSelection() {
+    const visibleIds = items.map((x) => x.id)
+    setSelectedIds((prev) => visibleIds.filter((id) => !prev.includes(id)))
+  }
+
   async function batchUpdateStatus(status: string) {
     if (selectedIds.length === 0) return
     try {
       await Promise.all(selectedIds.map((id) => userService.updateStatus(id, status)))
       load(page)
+      setNotice({ type: 'success', text: `已更新 ${selectedIds.length} 位用户状态` })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '批量操作失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量操作失败' })
     }
   }
 
@@ -117,8 +132,9 @@ export default function UsersPage() {
     try {
       await Promise.all(selectedIds.map((id) => userService.updateRole(id, batchRole)))
       load(page)
+      setNotice({ type: 'success', text: `已更新 ${selectedIds.length} 位用户角色` })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '批量角色更新失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量角色更新失败' })
     }
   }
 
@@ -153,11 +169,41 @@ export default function UsersPage() {
       setDetailOpen(false)
       setEditingUser(null)
       load(page)
+      setNotice({ type: 'success', text: '用户信息已更新' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '保存失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '保存失败' })
     } finally {
       setSavingDetail(false)
     }
+  }
+
+  function exportCsv() {
+    const rows = selectedIds.length > 0 ? items.filter((x) => selectedIds.includes(x.id)) : items
+    if (rows.length === 0) return
+    const headers = ['id', 'nickname', 'phone', 'email', 'role', 'status', 'organization', 'created_at']
+    const lines = rows.map((row) =>
+      [
+        row.id,
+        row.nickname || '',
+        row.phone || '',
+        row.email || '',
+        row.role || '',
+        row.status || '',
+        row.organization?.name || '',
+        row.created_at || '',
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(','),
+    )
+    const content = `\ufeff${[headers.join(','), ...lines].join('\n')}`
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `users-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    setNotice({ type: 'success', text: `已导出 ${rows.length} 位用户` })
   }
 
   useEffect(() => {
@@ -173,6 +219,7 @@ export default function UsersPage() {
   return (
     <AppShell>
       <ModuleHeader title="人员管理" desc="用户账号、角色、组织归属与状态管理" />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <form
         className="panel row wrap"
         onSubmit={(e) => {
@@ -223,6 +270,15 @@ export default function UsersPage() {
       <div className="panel row wrap">
         <b>批量操作</b>
         <span>已选 {selectedIds.length} 人</span>
+        <button className="btn ghost" type="button" onClick={() => toggleSelectAll(true)}>
+          全选本页
+        </button>
+        <button className="btn ghost" type="button" onClick={() => toggleSelectAll(false)}>
+          清空选择
+        </button>
+        <button className="btn ghost" type="button" onClick={invertSelection}>
+          反选
+        </button>
         <button className="btn" type="button" onClick={() => batchUpdateStatus('active')}>
           批量激活
         </button>
@@ -238,6 +294,9 @@ export default function UsersPage() {
         <button className="btn" type="button" onClick={batchUpdateRole}>
           批量更新角色
         </button>
+        <button className="btn" type="button" onClick={exportCsv}>
+          导出CSV
+        </button>
       </div>
       <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
       {!loading && !error && items.length > 0 ? (
@@ -246,7 +305,9 @@ export default function UsersPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>选择</th>
+                  <th>
+                    <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
+                  </th>
                   <th>昵称</th>
                   <th>手机号</th>
                   <th>角色</th>
@@ -313,6 +374,9 @@ export default function UsersPage() {
                         <button className="btn ghost" type="button" onClick={() => openDetail(row)}>
                           详情/编辑
                         </button>
+                        <Link className="btn ghost" href={`/audit?user_id=${row.id}`}>
+                          审计记录
+                        </Link>
                       </div>
                     </td>
                   </tr>

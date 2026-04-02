@@ -103,8 +103,9 @@ export default function AuditPage() {
     }
   }
 
-  async function loadUserActivity() {
-    if (!activityUserId.trim()) {
+  async function loadUserActivity(targetUserId?: string) {
+    const uid = (targetUserId ?? activityUserId).trim()
+    if (!uid) {
       setActivityItems([])
       setActivityError('')
       return
@@ -112,7 +113,7 @@ export default function AuditPage() {
     setActivityLoading(true)
     setActivityError('')
     try {
-      const data = await auditService.userActivity(activityUserId.trim(), { page: 1, page_size: 50, days: 7 })
+      const data = await auditService.userActivity(uid, { page: 1, page_size: 50, days: 7 })
       setActivityItems(listFrom<any>(data).list)
     } catch (err) {
       setActivityError(err instanceof Error ? err.message : '查询失败')
@@ -126,6 +127,11 @@ export default function AuditPage() {
     if (ready) {
       load(1)
       loadStats()
+      const uid = new URLSearchParams(window.location.search).get('user_id') || ''
+      if (uid) {
+        setActivityUserId(uid)
+        loadUserActivity(uid)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])

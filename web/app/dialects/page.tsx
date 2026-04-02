@@ -7,6 +7,7 @@ import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { ConfirmButton } from '@/components/shared/ConfirmButton'
 import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { fmtTime, listFrom } from '@/lib/data'
@@ -24,6 +25,7 @@ export default function DialectsPage() {
   const [title, setTitle] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [region, setRegion] = useState('')
+  const [notice, setNotice] = useState<Notice | null>(null)
 
   async function load(nextPage = page) {
     setLoading(true)
@@ -54,8 +56,9 @@ export default function DialectsPage() {
       setRegion('')
       setAudioUrl('')
       load(1)
+      setNotice({ type: 'success', text: '方言记录创建成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '创建失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
     }
   }
 
@@ -69,6 +72,7 @@ export default function DialectsPage() {
   return (
     <AppShell>
       <ModuleHeader title="方言中心" desc="管理方言录音、审核状态与精选内容" />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <div className="grid cols-2">
         <form className="panel grid" onSubmit={quickCreate}>
           <b>快速新建方言记录</b>

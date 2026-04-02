@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
@@ -22,6 +23,7 @@ export default function TaskFollowUpDetailPage() {
   const [followUp, setFollowUp] = useState<TaskFollowUp | null>(null)
   const [comments, setComments] = useState<any[]>([])
   const [comment, setComment] = useState('')
+  const [notice, setNotice] = useState<Notice | null>(null)
 
   async function load() {
     setLoading(true)
@@ -47,8 +49,9 @@ export default function TaskFollowUpDetailPage() {
       await taskService.addFollowUpComment(taskId, followUpId, comment.trim())
       setComment('')
       load()
+      setNotice({ type: 'success', text: '评论发送成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '评论失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '评论失败' })
     }
   }
 
@@ -62,6 +65,7 @@ export default function TaskFollowUpDetailPage() {
   return (
     <AppShell>
       <ModuleHeader title="跟进记录详情" desc="查看跟进内容、审批结果与评论讨论" />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <PageState loading={loading} error={error} onRetry={load} />
       {!loading && !error && followUp ? (
         <div className="grid">

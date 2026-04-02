@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { FormEvent, useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
 import { StatusTag } from '@/components/shared/StatusTag'
@@ -33,6 +34,9 @@ export default function CasesPage() {
   const [contactPhone, setContactPhone] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [createOpen, setCreateOpen] = useState(false)
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false)
+  const [notice, setNotice] = useState<Notice | null>(null)
+  const allSelected = items.length > 0 && selectedIds.length === items.length
 
   async function load(
     nextPage = page,
@@ -94,8 +98,9 @@ export default function CasesPage() {
       setContactPhone('')
       load(1)
       setCreateOpen(false)
+      setNotice({ type: 'success', text: '案件创建成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '创建失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
     }
   }
 
@@ -103,24 +108,34 @@ export default function CasesPage() {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
+  function toggleSelectAll(checked: boolean) {
+    setSelectedIds(checked ? items.map((x) => x.id) : [])
+  }
+
+  function invertSelection() {
+    const visibleIds = items.map((x) => x.id)
+    setSelectedIds((prev) => visibleIds.filter((id) => !prev.includes(id)))
+  }
+
   async function batchUpdateStatus(nextStatus: string) {
     if (selectedIds.length === 0) return
     try {
       await Promise.all(selectedIds.map((id) => missingPersonService.updateStatus(id, nextStatus)))
       load(page)
+      setNotice({ type: 'success', text: `已更新 ${selectedIds.length} 条案件状态` })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '批量更新失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量更新失败' })
     }
   }
 
   async function batchDelete() {
     if (selectedIds.length === 0) return
-    if (!window.confirm(`确认删除选中的 ${selectedIds.length} 条案件？`)) return
     try {
       await Promise.all(selectedIds.map((id) => missingPersonService.remove(id)))
       load(page)
+      setNotice({ type: 'success', text: `已删除 ${selectedIds.length} 条案件` })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '批量删除失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量删除失败' })
     }
   }
 
@@ -182,6 +197,7 @@ export default function CasesPage() {
           </button>
         }
       />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <form
         className="panel row wrap"
         onSubmit={(e: FormEvent) => {
@@ -218,6 +234,15 @@ export default function CasesPage() {
       <div className="panel row wrap">
         <b>批量操作</b>
         <span>已选 {selectedIds.length} 条</span>
+        <button className="btn ghost" type="button" onClick={() => toggleSelectAll(true)}>
+          全选本页
+        </button>
+        <button className="btn ghost" type="button" onClick={() => toggleSelectAll(false)}>
+          清空选择
+        </button>
+        <button className="btn ghost" type="button" onClick={invertSelection}>
+          反选
+        </button>
         <button className="btn" type="button" onClick={() => batchUpdateStatus('searching')}>
           批量设为寻找中
         </button>
@@ -227,7 +252,7 @@ export default function CasesPage() {
         <button className="btn" type="button" onClick={() => batchUpdateStatus('reunited')}>
           批量设为已团圆
         </button>
-        <button className="btn danger" type="button" onClick={batchDelete}>
+        <button className="btn danger" type="button" onClick={() => setBatchDeleteOpen(true)} disabled={selectedIds.length === 0}>
           批量删除
         </button>
         <button className="btn" type="button" onClick={exportCsv}>
@@ -241,7 +266,9 @@ export default function CasesPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>选择</th>
+                  <th>
+                    <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
+                  </th>
                   <th>姓名</th>
                   <th>性别/年龄</th>
                   <th>状态</th>
@@ -304,6 +331,26 @@ export default function CasesPage() {
             </button>
           </div>
         </form>
+      </Dialog>
+      <Dialog open={batchDeleteOpen} title="确认批量删除" onClose={() => setBatchDeleteOpen(false)}>
+        <div className="grid">
+          <div>确认删除选中的 {selectedIds.length} 条案件？该操作不可恢复。</div>
+          <div className="row">
+            <button className="btn ghost" type="button" onClick={() => setBatchDeleteOpen(false)}>
+              取消
+            </button>
+            <button
+              className="btn danger"
+              type="button"
+              onClick={() => {
+                setBatchDeleteOpen(false)
+                batchDelete()
+              }}
+            >
+              确认删除
+            </button>
+          </div>
+        </div>
       </Dialog>
     </AppShell>
   )

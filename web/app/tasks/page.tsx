@@ -7,6 +7,7 @@ import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { ConfirmButton } from '@/components/shared/ConfirmButton'
 import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
@@ -37,6 +38,9 @@ export default function TasksPage() {
   const [stats, setStats] = useState<Record<string, number>>({})
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [createOpen, setCreateOpen] = useState(false)
+  const [batchCancelOpen, setBatchCancelOpen] = useState(false)
+  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false)
+  const [notice, setNotice] = useState<Notice | null>(null)
   const sortedItems = useMemo(() => {
     const list = [...items]
     const factor = sortOrder === 'asc' ? 1 : -1
@@ -54,6 +58,7 @@ export default function TasksPage() {
     })
     return list
   }, [items, sortBy, sortOrder])
+  const allSelected = sortedItems.length > 0 && selectedIds.length === sortedItems.length
 
   async function load(
     nextPage = page,
@@ -113,8 +118,9 @@ export default function TasksPage() {
       load(1)
       loadStats()
       setCreateOpen(false)
+      setNotice({ type: 'success', text: '任务创建成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '创建失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
     }
   }
 
@@ -144,10 +150,19 @@ export default function TasksPage() {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
+  function toggleSelectAll(checked: boolean) {
+    setSelectedIds(checked ? sortedItems.map((x) => x.id) : [])
+  }
+
+  function invertSelection() {
+    const visibleIds = sortedItems.map((x) => x.id)
+    setSelectedIds((prev) => visibleIds.filter((id) => !prev.includes(id)))
+  }
+
   async function batchAssign() {
     const selectedUserIds = Array.from(new Set(selectedIds.map((id) => assignMap[id]).filter(Boolean))) as string[]
     if (selectedIds.length === 0 || selectedUserIds.length !== 1) {
-      alert('请先勾选任务，并为它们选择同一个执行人后再批量分配')
+      setNotice({ type: 'info', text: '请先勾选任务，并为它们选择同一个执行人后再批量分配' })
       return
     }
     const assigneeId = selectedUserIds[0]
@@ -155,8 +170,9 @@ export default function TasksPage() {
       await Promise.all(selectedIds.map((id) => taskService.assign(id, assigneeId)))
       load(page)
       loadStats()
+      setNotice({ type: 'success', text: `已批量分配 ${selectedIds.length} 个任务` })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '批量分配失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量分配失败' })
     }
   }
 
@@ -166,21 +182,77 @@ export default function TasksPage() {
       await Promise.all(selectedIds.map((id) => taskService.start(id)))
       load(page)
       loadStats()
+      setNotice({ type: 'success', text: `已批量开始 ${selectedIds.length} 个任务` })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '批量开始失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量开始失败' })
     }
   }
 
   async function batchCancel() {
     if (selectedIds.length === 0) return
-    if (!window.confirm(`确认批量取消 ${selectedIds.length} 个任务？`)) return
     try {
       await Promise.all(selectedIds.map((id) => taskService.cancel(id, '批量取消')))
       load(page)
       loadStats()
+      setNotice({ type: 'success', text: `已批量取消 ${selectedIds.length} 个任务` })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '批量取消失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量取消失败' })
     }
+  }
+
+  async function batchComplete() {
+    if (selectedIds.length === 0) return
+    try {
+      await Promise.all(selectedIds.map((id) => taskService.complete(id, { result: '批量完成', feedback: 'web批量操作' })))
+      load(page)
+      loadStats()
+      setNotice({ type: 'success', text: `已批量完成 ${selectedIds.length} 个任务` })
+    } catch (err) {
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量完成失败' })
+    }
+  }
+
+  async function batchDelete() {
+    if (selectedIds.length === 0) return
+    try {
+      await Promise.all(selectedIds.map((id) => taskService.remove(id)))
+      load(page)
+      loadStats()
+      setNotice({ type: 'success', text: `已批量删除 ${selectedIds.length} 个任务` })
+    } catch (err) {
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量删除失败' })
+    }
+  }
+
+  function exportCsv() {
+    const rows = selectedIds.length > 0 ? sortedItems.filter((x) => selectedIds.includes(x.id)) : sortedItems
+    if (rows.length === 0) return
+    const headers = ['id', 'title', 'type', 'priority', 'status', 'progress', 'assignee', 'missing_person', 'deadline', 'created_at']
+    const lines = rows.map((row) =>
+      [
+        row.id,
+        row.title || '',
+        row.type || '',
+        row.priority || '',
+        row.status || '',
+        row.progress ?? 0,
+        row.assignee?.nickname || row.assignee?.phone || row.assignee_id || '',
+        row.missing_person?.name || row.missing_person_id || '',
+        row.deadline || '',
+        row.created_at || '',
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(','),
+    )
+    const content = `\ufeff${[headers.join(','), ...lines].join('\n')}`
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tasks-${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    setNotice({ type: 'success', text: `已导出 ${rows.length} 条任务` })
   }
 
   async function loadStats() {
@@ -226,6 +298,7 @@ export default function TasksPage() {
           </div>
         }
       />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <div className="kpi-grid" style={{ marginBottom: 12 }}>
         <div className="kpi">
           <div className="label">总任务</div>
@@ -355,14 +428,32 @@ export default function TasksPage() {
         <div className="panel row wrap">
           <b>批量操作</b>
           <span>已选 {selectedIds.length} 项</span>
+          <button className="btn ghost" type="button" onClick={() => toggleSelectAll(true)}>
+            全选本页
+          </button>
+          <button className="btn ghost" type="button" onClick={() => toggleSelectAll(false)}>
+            清空选择
+          </button>
+          <button className="btn ghost" type="button" onClick={invertSelection}>
+            反选
+          </button>
           <button className="btn" type="button" onClick={batchAssign}>
             批量分配
           </button>
           <button className="btn" type="button" onClick={batchStart}>
             批量开始
           </button>
-          <button className="btn danger" type="button" onClick={batchCancel}>
+          <button className="btn" type="button" onClick={batchComplete}>
+            批量完成
+          </button>
+          <button className="btn danger" type="button" onClick={() => setBatchCancelOpen(true)} disabled={selectedIds.length === 0}>
             批量取消
+          </button>
+          <button className="btn danger" type="button" onClick={() => setBatchDeleteOpen(true)} disabled={selectedIds.length === 0}>
+            批量删除
+          </button>
+          <button className="btn" type="button" onClick={exportCsv}>
+            导出CSV
           </button>
         </div>
       </div>
@@ -374,7 +465,9 @@ export default function TasksPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>选择</th>
+                  <th>
+                    <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
+                  </th>
                   <th>标题</th>
                   <th>状态</th>
                   <th>优先级</th>
@@ -481,6 +574,46 @@ export default function TasksPage() {
             创建任务
           </button>
         </form>
+      </Dialog>
+      <Dialog open={batchCancelOpen} title="确认批量取消" onClose={() => setBatchCancelOpen(false)}>
+        <div className="grid">
+          <div>确认批量取消 {selectedIds.length} 个任务？</div>
+          <div className="row">
+            <button className="btn ghost" type="button" onClick={() => setBatchCancelOpen(false)}>
+              取消
+            </button>
+            <button
+              className="btn danger"
+              type="button"
+              onClick={() => {
+                setBatchCancelOpen(false)
+                batchCancel()
+              }}
+            >
+              确认取消
+            </button>
+          </div>
+        </div>
+      </Dialog>
+      <Dialog open={batchDeleteOpen} title="确认批量删除" onClose={() => setBatchDeleteOpen(false)}>
+        <div className="grid">
+          <div>确认批量删除 {selectedIds.length} 个任务？该操作不可恢复。</div>
+          <div className="row">
+            <button className="btn ghost" type="button" onClick={() => setBatchDeleteOpen(false)}>
+              取消
+            </button>
+            <button
+              className="btn danger"
+              type="button"
+              onClick={() => {
+                setBatchDeleteOpen(false)
+                batchDelete()
+              }}
+            >
+              确认删除
+            </button>
+          </div>
+        </div>
       </Dialog>
     </AppShell>
   )

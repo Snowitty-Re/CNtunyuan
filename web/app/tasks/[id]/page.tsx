@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
@@ -32,6 +33,7 @@ export default function TaskDetailPage() {
   const [progress, setProgress] = useState('50')
   const [uploading, setUploading] = useState(false)
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([])
+  const [notice, setNotice] = useState<Notice | null>(null)
 
   async function load() {
     setLoading(true)
@@ -72,8 +74,9 @@ export default function TaskDetailPage() {
       setProgress('50')
       setAttachments([])
       load()
+      setNotice({ type: 'success', text: '跟进记录提交成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '新增失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '新增失败' })
     }
   }
 
@@ -93,8 +96,9 @@ export default function TaskDetailPage() {
           setAttachments((prev) => [...prev, { id: '', url }])
         }
       }
+      setNotice({ type: 'success', text: '附件上传成功' })
     } catch (err) {
-      alert(err instanceof Error ? err.message : '上传失败')
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '上传失败' })
     } finally {
       setUploading(false)
     }
@@ -110,6 +114,7 @@ export default function TaskDetailPage() {
   return (
     <AppShell>
       <ModuleHeader title="任务详情" desc="执行进度、跟进记录与审批协作" />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <PageState loading={loading} error={error} onRetry={load} />
       {!loading && !error && item ? (
         <div className="grid">
