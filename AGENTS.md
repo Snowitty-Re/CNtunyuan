@@ -47,9 +47,7 @@
 ```
 backend/
 ├── cmd/                      # 应用程序入口
-│   ├── app/                 # HTTP 服务器（统一入口）
-│   ├── seed/                # 数据填充工具
-│   └── resetpassword/       # 密码重置工具
+│   └── app/                 # HTTP 服务器（统一入口）
 │
 ├── internal/                # 私有应用代码
 │   ├── domain/              # 领域层
@@ -138,17 +136,11 @@ cd backend
 # 启动服务
 go run cmd/app/main.go
 
-# 数据库迁移
-go run cmd/app/main.go -migrate
-
 # 检查数据库
 go run cmd/app/main.go -check-db
 
-# 生成测试数据
-go run cmd/seed/main.go -all
-
-# 重置密码
-go run cmd/resetpassword/main.go -phone=13800138000 -password=newpassword
+# 首次初始化数据库（PostgreSQL）
+psql -U postgres -d cntuanyuan -f migrations/postgres/00_bootstrap.sql
 
 # 运行测试
 go test ./...
@@ -162,15 +154,13 @@ swag init -g cmd/app/main.go -o docs --parseDependency --parseInternal
 **PostgreSQL:**
 ```bash
 createdb -U postgres -E UTF8 cntuanyuan
-psql -U postgres -d cntuanyuan -f backend/migrations/postgres/01_schema.sql
-psql -U postgres -d cntuanyuan -f backend/migrations/postgres/02_seed.sql
+psql -U postgres -d cntuanyuan -f backend/migrations/postgres/00_bootstrap.sql
 ```
 
 **MySQL:**
 ```bash
 mysql -u root -p -e "CREATE DATABASE cntuanyuan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p cntuanyuan < backend/migrations/mysql/01_schema.sql
-mysql -u root -p cntuanyuan < backend/migrations/mysql/02_seed.sql
+mysql -u root -p cntuanyuan < backend/migrations/mysql/00_bootstrap.sql
 ```
 
 ## 配置说明 (config/config.yaml)

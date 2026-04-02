@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
-	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/metrics"
 	"gorm.io/driver/mysql"
@@ -161,47 +160,6 @@ func TestConnection(cfg *config.DatabaseConfig) error {
 	return sqlDB.PingContext(ctx)
 }
 
-// AutoMigrate 自动迁移数据库（仅用于开发环境）
-func AutoMigrate(db *gorm.DB) error {
-	logger.Info("Starting database migration...")
-
-	// 迁移所有实体
-	err := db.AutoMigrate(
-		// 核心实体
-		&entity.Organization{},
-		&entity.OrgStats{},
-		&entity.User{},
-		&entity.Permission{},
-		&entity.UserPermission{},
-		// 走失人员相关
-		&entity.MissingPerson{},
-		&entity.MissingPersonTrack{},
-		&entity.MissingPhoto{},
-		// 任务相关
-		&entity.Task{},
-		&entity.TaskAttachment{},
-		&entity.TaskLog{},
-		&entity.TaskComment{},
-		&entity.TaskFollowUp{},
-		&entity.TaskFollowUpComment{},
-		// 方言相关
-		&entity.Dialect{},
-		&entity.DialectComment{},
-		&entity.DialectLike{},
-		&entity.DialectPlayLog{},
-		// 文件和日志
-		&entity.File{},
-		&entity.AuditLog{},
-	)
-
-	if err != nil {
-		return fmt.Errorf("migration failed: %w", err)
-	}
-
-	logger.Info("Database migration completed successfully")
-	return nil
-}
-
 // TableExists 检查表是否存在
 func TableExists(db *gorm.DB, tableName string) (bool, error) {
 	var count int64
@@ -210,44 +168,6 @@ func TableExists(db *gorm.DB, tableName string) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
-}
-
-// Seed 插入种子数据（仅用于开发环境）
-func Seed(db *gorm.DB) error {
-	logger.Info("Starting database seeding...")
-
-	// 检查是否已有数据
-	var count int64
-	if err := db.Model(&entity.Organization{}).Count(&count).Error; err != nil {
-		return fmt.Errorf("failed to check organizations: %w", err)
-	}
-	if count > 0 {
-		logger.Info("Database already has data, skipping seed")
-		return nil
-	}
-
-	// 创建根组织
-	rootOrg, err := entity.NewRootOrganization("助力团圆志愿者协会", "ROOT")
-	if err != nil {
-		return fmt.Errorf("failed to create root organization: %w", err)
-	}
-	if err := db.Create(rootOrg).Error; err != nil {
-		return fmt.Errorf("failed to save root organization: %w", err)
-	}
-	logger.Info("Created root organization")
-
-	// 创建超级管理员
-	admin, err := entity.NewSuperAdmin("超级管理员", "13800138000", "admin123")
-	if err != nil {
-		return fmt.Errorf("failed to create super admin: %w", err)
-	}
-	if err := db.Create(admin).Error; err != nil {
-		return fmt.Errorf("failed to save super admin: %w", err)
-	}
-	logger.Info("Created super admin")
-
-	logger.Info("Database seeding completed successfully")
-	return nil
 }
 
 // gormLogger GORM 日志适配器

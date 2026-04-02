@@ -2,6 +2,22 @@
 
 本项目所有重大变更都将记录在此文件中。
 
+## [2.3.0] - 2026-04-02
+
+### 架构收敛与文档清理
+
+- 移除废弃 `web/` 管理端代码，项目收敛为「后端 API + 微信小程序」双端形态
+- 更新根文档与部署文档，移除 `web` 启动、构建和目录说明
+- 移除仓库内 `docker/` 与 `scripts/` 目录，避免维护重复且过时的部署链路
+- 部署文档改为无 Docker 的标准部署方式（数据库初始化 + 二进制/systemd）
+
+### 启动与迁移流程整合
+
+- 新增 `migrations/postgres/00_bootstrap.sql` 与 `migrations/mysql/00_bootstrap.sql`，新环境可一键初始化
+- `cmd/app` 移除过时 `-migrate/-seed` 入口，仅保留 `-check-db` 与运行服务
+- 删除过时工具目录：`cmd/seed`、`cmd/resetpassword`、`cmd/debug_*`
+- 全量更新 README/AGENTS/迁移文档，统一为「首次执行 00_bootstrap.sql，历史库按增量脚本升级」
+
 ## [2.2.0] - 2026-03-20
 
 ### 后端 Bug 修复与质量加固（第 3-4 轮 + 全栈对齐第 1-2 轮）

@@ -15,7 +15,7 @@ database:
   port: 5432
   user: "postgres"
   password: "postgres"
-  database: "cntunyuan"
+  database: "cntuanyuan"
   ssl_mode: "disable"
   timezone: "Asia/Shanghai"
   charset: "UTF8"  # 字符集，默认 UTF8，支持中文和 Emoji

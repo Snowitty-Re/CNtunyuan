@@ -1,208 +1,127 @@
-# 团圆寻亲系统 - 生产环境部署指南
+# 助力团圆系统 - 生产环境部署指南（无 Docker）
+
+本文档描述当前仓库的推荐部署方式：**系统服务 + 反向代理（可选）**。
 
 ## 系统要求
 
-- Docker 20.10+
-- Docker Compose 2.0+
+- Linux（推荐 Ubuntu 22.04+）
+- Go 1.23+
+- PostgreSQL 14+ 或 MySQL 8+
 - 至少 2GB 可用内存
 - 至少 10GB 可用磁盘空间
 
-## 快速开始
+## 快速部署
 
-### 1. 克隆代码
+### 1. 获取代码
 
 ```bash
 git clone <your-repo-url>
-cd CNtunyuan
+cd CNtunyuan/backend
 ```
 
-### 2. 配置环境变量
+### 2. 配置后端
 
 ```bash
-cd docker
-cp .env.example .env
-# 编辑 .env 文件，填入实际配置
-nano .env
+cp config/config.example.yaml config/config.yaml
+# 编辑 config/config.yaml
 ```
 
-**重要配置项：**
-
-| 配置项 | 说明 | 必填 |
-|--------|------|------|
-| `DB_PASSWORD` | 数据库密码 | 是 |
-| `JWT_SECRET` | JWT密钥（至少32位） | 是 |
-| `WECHAT_APP_ID` | 微信小程序AppID | 微信登录时必填 |
-| `WECHAT_APP_SECRET` | 微信小程序AppSecret | 微信登录时必填 |
+重点检查：
+- `database.*`
+- `jwt.secret`（至少 32 位）
+- `wechat.*`（如启用微信登录）
+- `storage.*`
 
 ### 3. 初始化数据库
 
+PostgreSQL：
 ```bash
-# 启动数据库
-docker-compose -f docker-compose.prod.yml up -d postgres
+createdb -U postgres -E UTF8 cntuanyuan
+psql -U postgres -d cntuanyuan -f migrations/postgres/00_bootstrap.sql
+```
 
-# 等待数据库启动完成（约10秒）
-sleep 10
-
-# 执行数据库迁移
-docker-compose -f docker-compose.prod.yml exec postgres psql -U postgres -d cntuanyuan -f /docker-entrypoint-initdb.d/01_schema.sql
+MySQL：
+```bash
+mysql -u root -p -e "CREATE DATABASE cntuanyuan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
 ```
 
 ### 4. 启动服务
 
+开发/验证：
 ```bash
-# 启动所有服务
-docker-compose -f docker-compose.prod.yml up -d
-
-# 查看服务状态
-docker-compose -f docker-compose.prod.yml ps
-
-# 查看日志
-docker-compose -f docker-compose.prod.yml logs -f backend
+go run cmd/app/main.go
 ```
 
-### 5. 验证部署
+生产建议：
+```bash
+CGO_ENABLED=0 GOOS=linux go build -o /opt/cntuanyuan/app cmd/app/main.go
+/opt/cntuanyuan/app
+```
+
+### 5. 验证
 
 ```bash
-# 健康检查
 curl http://localhost:8080/api/v1/health
-
-# 详细健康检查
 curl http://localhost:8080/api/v1/health/detailed
 ```
 
-## 数据库迁移
+## systemd（推荐）
 
-### 首次部署
+示例服务文件 `/etc/systemd/system/cntuanyuan.service`：
 
+```ini
+[Unit]
+Description=CNtunyuan Backend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/cntuanyuan
+ExecStart=/opt/cntuanyuan/app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+启用：
 ```bash
-# 进入后端目录
-cd backend
-
-# 检查数据库连接
-go run cmd/app/main.go -check-db
+sudo systemctl daemon-reload
+sudo systemctl enable cntuanyuan
+sudo systemctl start cntuanyuan
+sudo systemctl status cntuanyuan
 ```
 
-### 数据备份
+## 备份与恢复
 
-系统内置自动备份功能，在 `config/config.yaml` 中启用：
-
-```yaml
-backup:
-  enabled: true           # 启用自动备份
-  backup_dir: ./backups   # 备份存储目录
-  retention: 7            # 保留天数（自动清理过期备份）
-```
-
-启用后，系统每日凌晨 3 点自动执行：
-- 数据库备份（pg_dump/mysqldump + gzip 压缩）
-- 过期备份文件清理
-- 旧审计日志清理（90 天前）
-
-手动备份：
-
+数据库备份（PostgreSQL）：
 ```bash
-# 备份数据库
-docker-compose -f docker-compose.prod.yml exec postgres pg_dump -U postgres cntuanyuan > backup_$(date +%Y%m%d_%H%M%S).sql
-
-# 备份上传文件
-docker-compose -f docker-compose.prod.yml exec backend tar czf /tmp/uploads_backup.tar.gz /app/uploads
-docker cp cntuanyuan-backend:/tmp/uploads_backup.tar.gz ./
+pg_dump -U postgres cntuanyuan > backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
-### 数据恢复
-
+数据库恢复（PostgreSQL）：
 ```bash
-# 恢复数据库
-docker-compose -f docker-compose.prod.yml exec -T postgres psql -U postgres -d cntuanyuan < backup_file.sql
-
-# 恢复上传文件
-docker cp uploads_backup.tar.gz cntuanyuan-backend:/tmp/
-docker-compose -f docker-compose.prod.yml exec backend tar xzf /tmp/uploads_backup.tar.gz -C /
+psql -U postgres -d cntuanyuan < backup_file.sql
 ```
 
-## 安全配置检查清单
+上传目录备份（默认本地存储）：
+```bash
+tar czf uploads_backup_$(date +%Y%m%d_%H%M%S).tar.gz /path/to/uploads
+```
 
-在上线前，请确保完成以下检查：
+## 安全检查清单
 
-- [ ] JWT 密钥已修改为随机生成的强密钥（至少32位）
-- [ ] 数据库密码已修改为强密码
-- [ ] 微信小程序 AppSecret 已配置正确
-- [ ] 生产环境使用 release 模式运行
-- [ ] 已配置 HTTPS（使用 Nginx 反向代理）
-- [ ] 文件上传目录已设置正确的权限
-- [ ] 已配置日志轮转防止磁盘占满
-- [ ] 已配置数据库备份（系统内置自动备份，见下方说明）
+- [ ] `jwt.secret` 已设置强随机值（>=32）
+- [ ] 数据库账号非超级管理员，且密码强度达标
+- [ ] 上传目录权限最小化
+- [ ] 开启日志轮转
+- [ ] 已配置定期备份
 
 ## 常见问题
 
-### 服务无法启动
-
-```bash
-# 检查日志
-docker-compose -f docker-compose.prod.yml logs backend
-
-# 检查配置验证
-docker-compose -f docker-compose.prod.yml run --rm backend ./main -check-db
-```
-
-### 数据库连接失败
-
-```bash
-# 检查数据库服务状态
-docker-compose -f docker-compose.prod.yml ps postgres
-
-# 检查数据库日志
-docker-compose -f docker-compose.prod.yml logs postgres
-```
-
-### 文件上传失败
-
-```bash
-# 检查上传目录权限
-docker-compose -f docker-compose.prod.yml exec backend ls -la /app/uploads
-
-# 检查磁盘空间
-docker system df
-```
-
-## 更新部署
-
-```bash
-# 拉取最新代码
-git pull
-
-# 重新构建镜像
-docker-compose -f docker-compose.prod.yml build
-
-# 重启服务
-docker-compose -f docker-compose.prod.yml up -d
-
-# 清理旧镜像
-docker image prune -f
-```
-
-## 监控和告警
-
-系统内置 Prometheus 指标端点：
-
-```
-http://localhost:8080/api/v1/metrics
-```
-
-建议配置的告警项：
-
-- 数据库连接池使用率 > 80%
-- API 响应时间 > 500ms
-- 错误率 > 1%
-- 磁盘使用率 > 80%
-
-## 技术支持
-
-如有问题，请检查：
-
-1. 应用日志：`docker-compose logs backend`
-2. 数据库日志：`docker-compose logs postgres`
-3. 配置文件是否正确
-4. 端口是否被占用
-
-更多问题参考项目 Wiki 或提交 Issue
+1. 服务启动失败：检查 `config/config.yaml` 与数据库连接
+2. 登录失败：确认是否已执行 `00_bootstrap.sql`（默认管理员是否存在）
+3. 上传失败：检查 `storage.local_path` 路径和读写权限

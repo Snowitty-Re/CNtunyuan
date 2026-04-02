@@ -30,11 +30,11 @@ import (
 	"time"
 
 	_ "github.com/Snowitty-Re/CNtunyuan/docs"
-	_ "gorm.io/gorm"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/di"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
+	_ "gorm.io/gorm"
 )
 
 func main() {
@@ -71,22 +71,17 @@ func main() {
 				os.Exit(1)
 			}
 			return
-		case "-migrate":
-			// 使用 GORM AutoMigrate（开发环境用）
-			logger.Warn("Using GORM AutoMigrate is deprecated. Please use SQL migration files instead.")
-			if err := runAutoMigrate(cfg); err != nil {
-				logger.Error("Migration failed", logger.Err(err))
-				os.Exit(1)
-			}
+		case "-help", "--help", "-h":
+			fmt.Println("Usage: go run cmd/app/main.go [option]")
+			fmt.Println()
+			fmt.Println("Options:")
+			fmt.Println("  -check-db   Check database connectivity and required tables")
+			fmt.Println("  -help       Show this help message")
 			return
-		case "-seed":
-			// 使用 GORM 插入种子数据（开发环境用）
-			logger.Warn("Using GORM seed is deprecated. Please use SQL seed files instead.")
-			if err := runSeed(cfg); err != nil {
-				logger.Error("Seed failed", logger.Err(err))
-				os.Exit(1)
-			}
-			return
+		default:
+			logger.Error("Unknown option", logger.String("option", os.Args[1]))
+			fmt.Println("Use -help to see available options.")
+			os.Exit(1)
 		}
 	}
 
@@ -116,6 +111,8 @@ func checkDatabase(cfg *config.Config) error {
 		"ty_missing_persons",
 		"ty_missing_person_tracks",
 		"ty_tasks",
+		"ty_task_follow_ups",
+		"ty_task_follow_up_comments",
 		"ty_dialects",
 		"ty_files",
 		"ty_audit_logs",
@@ -144,36 +141,6 @@ func checkDatabase(cfg *config.Config) error {
 		return fmt.Errorf("some tables are missing, please run SQL migration files first")
 	}
 
-	return nil
-}
-
-// runAutoMigrate 使用 GORM AutoMigrate（仅用于开发环境）
-func runAutoMigrate(cfg *config.Config) error {
-	db, err := database.NewDatabase(&cfg.Database)
-	if err != nil {
-		return fmt.Errorf("failed to connect database: %w", err)
-	}
-
-	logger.Info("Starting database migration with GORM AutoMigrate...")
-	if err := database.AutoMigrate(db); err != nil {
-		return fmt.Errorf("migration failed: %w", err)
-	}
-	logger.Info("Database migration completed")
-	return nil
-}
-
-// runSeed 使用 GORM 插入种子数据（仅用于开发环境）
-func runSeed(cfg *config.Config) error {
-	db, err := database.NewDatabase(&cfg.Database)
-	if err != nil {
-		return fmt.Errorf("failed to connect database: %w", err)
-	}
-
-	logger.Info("Starting database seeding with GORM...")
-	if err := database.Seed(db); err != nil {
-		return fmt.Errorf("seed failed: %w", err)
-	}
-	logger.Info("Database seeding completed")
 	return nil
 }
 

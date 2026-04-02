@@ -19,9 +19,7 @@
 ```
 backend/
 ├── cmd/
-│   ├── app/                # 主应用入口（HTTP 服务器）
-│   ├── seed/               # 种子数据导入工具
-│   └── resetpassword/      # 密码重置工具
+│   └── app/                # 主应用入口（HTTP 服务器）
 ├── internal/
 │   ├── config/             # 配置管理
 │   ├── domain/             # 领域层
@@ -91,11 +89,15 @@ jwt:
 
 > **安全要求**：`jwt.secret` 必须至少 32 个字符，否则服务启动失败。建议使用随机生成的强密钥（64+ 字符）。
 
-### 3. 数据库迁移
+### 3. 数据库初始化（首次）
 
 ```bash
 cd backend
-go run cmd/app/main.go -migrate
+# PostgreSQL
+psql -U postgres -d cntuanyuan -f migrations/postgres/00_bootstrap.sql
+
+# MySQL
+# mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
 ```
 
 ### 4. 启动服务
@@ -280,17 +282,8 @@ go run cmd/app/main.go
 # 启动服务
 go run cmd/app/main.go
 
-# 数据库迁移
-go run cmd/app/main.go -migrate
-
 # 检查数据库
 go run cmd/app/main.go -check-db
-
-# 生成测试数据
-go run cmd/seed/main.go -all
-
-# 重置密码
-go run cmd/resetpassword/main.go -phone=13800138000 -password=newpassword
 
 # 生成 Swagger 文档
 swag init -g cmd/app/main.go -o docs --parseDependency --parseInternal
@@ -318,13 +311,6 @@ go test -race ./...
 
 ```bash
 CGO_ENABLED=0 GOOS=linux go build -o app cmd/app/main.go
-```
-
-### Docker
-
-```bash
-docker build -t cntuanyuan-backend .
-docker run -p 8080:8080 cntuanyuan-backend
 ```
 
 ### 生产配置检查清单

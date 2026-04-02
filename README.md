@@ -1,6 +1,6 @@
-# 团圆寻亲志愿者系统 (CNtunyuan)
+# 助力团圆志愿者系统 (CNtunyuan)
 
-一个生产级别的寻亲志愿者管理系统，包含微信小程序端和后端 API 服务。
+一个生产级别的志愿者协作系统，核心目标是帮助走失人员寻找亲属、助力团圆。当前包含微信小程序端和后端 API 服务。
 
 ## 功能特性
 
@@ -20,7 +20,6 @@
 | 模块 | 技术 |
 |------|------|
 | 后端 | Go 1.23+, Gin, GORM, PostgreSQL/MySQL, Redis, JWT |
-| Web 管理后台 | React 18, TypeScript, Vite, Ant Design 5, Zustand, React Router 6 |
 | API 文档 | Swagger UI (swaggo/swag 自动生成) |
 | 小程序 | 微信小程序原生开发 |
 
@@ -33,17 +32,20 @@ git clone https://github.com/Snowitty-Re/CNtunyuan.git
 cd CNtunyuan
 ```
 
-### 2. 启动后端
+### 2. 初始化数据库并启动后端
 
 ```bash
 cd backend
 
 # 配置数据库 (config/config.yaml)
-cp config/config.yaml.example config/config.yaml
+cp config/config.example.yaml config/config.yaml
 # 编辑 config.yaml 填写数据库信息
 
-# 数据库迁移
-go run cmd/app/main.go -migrate
+# 首次初始化数据库（二选一）
+# PostgreSQL:
+psql -U postgres -d cntuanyuan -f migrations/postgres/00_bootstrap.sql
+# MySQL:
+# mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
 
 # 启动服务
 go run cmd/app/main.go
@@ -53,24 +55,7 @@ go run cmd/app/main.go
 - API 文档：http://localhost:8080/swagger/index.html
 - 健康检查：http://localhost:8080/api/v1/health
 
-### 3. 启动 Web 管理后台
-
-```bash
-cd web
-npm install
-npm run dev
-```
-
-访问 http://localhost:5173，使用默认账号登录。
-
-生产构建：
-
-```bash
-cd web
-npm run build    # 输出到 dist/
-```
-
-### 4. 微信小程序
+### 3. 微信小程序
 
 使用微信开发者工具打开 `mini-program` 目录。
 
@@ -84,16 +69,7 @@ CNtunyuan/
 │   ├── pkg/          # 公共包 (logger/response/middleware)
 │   ├── docs/         # Swagger 自动生成文档
 │   └── migrations/   # 数据库迁移
-├── web/              # React Web 管理后台
-│   ├── src/api/      # API 层 (Axios + 拦截器 + Token 刷新)
-│   ├── src/types/    # TypeScript 类型 (镜像后端 DTO)
-│   ├── src/pages/    # 25+ 页面 (9 大模块全覆盖)
-│   ├── src/components/ # 11 个共享组件
-│   ├── src/stores/   # Zustand 状态管理
-│   ├── src/router/   # 路由 + 权限守卫
-│   └── src/utils/    # 工具函数
-├── mini-program/     # 微信小程序
-└── docker/           # Docker 部署配置
+└── mini-program/     # 微信小程序
 ```
 
 ## API 模块
@@ -127,6 +103,7 @@ CNtunyuan/
 | 文档 | 说明 |
 |------|------|
 | [backend/README.md](backend/README.md) | 后端开发指南（含完整 API 端点列表） |
+| [mini-program/README.md](mini-program/README.md) | 小程序开发说明 |
 | [backend/REFACTORING.md](backend/REFACTORING.md) | Clean Architecture 设计文档 |
 | [backend/TESTING.md](backend/TESTING.md) | 单元测试文档 |
 | [backend/SWAGGER.md](backend/SWAGGER.md) | Swagger API 文档使用 |
@@ -138,15 +115,6 @@ CNtunyuan/
 ```
 手机号: 13800138000
 密码: admin123
-```
-
-## Docker 部署
-
-```bash
-cd docker
-cp .env.example .env
-# 编辑 .env 配置
-docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ## 许可证
