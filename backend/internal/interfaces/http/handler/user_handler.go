@@ -12,7 +12,7 @@ import (
 
 // UserHandler user handler
 // @Description User management endpoints
-// @Tags users
+// @Tags 用户管理
 // @BasePath /api/v1
 type UserHandler struct {
 	userService *service.UserAppService
@@ -50,7 +50,7 @@ func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *mi
 // Create create user
 // @Summary Create user
 // @Description Create a new user (admin only)
-// @Tags users
+// @Tags 用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -95,7 +95,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 // GetByID get user by ID
 // @Summary Get user by ID
 // @Description Get user details by ID
-// @Tags users
+// @Tags 用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -129,7 +129,7 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 // List user list
 // @Summary List users
 // @Description Get paginated list of users with optional filters
-// @Tags users
+// @Tags 用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -162,7 +162,7 @@ func (h *UserHandler) List(c *gin.Context) {
 // Update update user
 // @Summary Update user
 // @Description Update user details (admin only)
-// @Tags users
+// @Tags 用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -228,7 +228,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 // Delete delete user
 // @Summary Delete user
 // @Description Delete a user (admin only)
-// @Tags users
+// @Tags 用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -276,7 +276,7 @@ func (h *UserHandler) Delete(c *gin.Context) {
 // UpdateStatus update user status
 // @Summary Update user status
 // @Description Update user status (manager and above)
-// @Tags users
+// @Tags 用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -332,7 +332,7 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 // UpdateRole update user role
 // @Summary Update user role
 // @Description Update user role (admin only)
-// @Tags users
+// @Tags 用户管理
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -390,7 +390,7 @@ func (h *UserHandler) UpdateRole(c *gin.Context) {
 // GetProfile get profile
 // @Summary Get current user profile
 // @Description Get the profile information of the currently authenticated user
-// @Tags profile
+// @Tags 个人中心
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -417,7 +417,7 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 // UpdateProfile update profile
 // @Summary Update current user profile
 // @Description Update the profile information of the currently authenticated user
-// @Tags profile
+// @Tags 个人中心
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -452,7 +452,7 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 // ChangePassword change password
 // @Summary Change password
 // @Description Change the password of the currently authenticated user
-// @Tags profile
+// @Tags 个人中心
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
@@ -490,7 +490,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 // GetStats get stats
 // @Summary Get user statistics
 // @Description Get statistics for the currently authenticated user
-// @Tags profile
+// @Tags 个人中心
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth

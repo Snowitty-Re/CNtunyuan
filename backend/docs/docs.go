@@ -560,7 +560,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "管理员登录",
                 "parameters": [
@@ -630,7 +630,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "绑定手机号",
                 "parameters": [
@@ -708,7 +708,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "用户登录",
                 "parameters": [
@@ -778,7 +778,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "用户登出",
                 "parameters": [
@@ -817,7 +817,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "获取当前用户信息",
                 "parameters": [
@@ -880,7 +880,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "刷新访问令牌",
                 "parameters": [
@@ -950,7 +950,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "重置密码",
                 "parameters": [
@@ -1002,7 +1002,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "发送短信验证码",
                 "parameters": [
@@ -1066,7 +1066,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "认证授权"
                 ],
                 "summary": "微信小程序登录",
                 "parameters": [
@@ -4054,7 +4054,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "profile"
+                    "个人中心"
                 ],
                 "summary": "Get current user profile",
                 "responses": {
@@ -4104,7 +4104,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "profile"
+                    "个人中心"
                 ],
                 "summary": "Update current user profile",
                 "parameters": [
@@ -4173,7 +4173,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "profile"
+                    "个人中心"
                 ],
                 "summary": "Change password",
                 "parameters": [
@@ -4230,7 +4230,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "profile"
+                    "个人中心"
                 ],
                 "summary": "Get user statistics",
                 "responses": {
@@ -6369,7 +6369,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "用户管理"
                 ],
                 "summary": "List users",
                 "parameters": [
@@ -6462,7 +6462,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "用户管理"
                 ],
                 "summary": "Create user",
                 "parameters": [
@@ -6543,7 +6543,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "用户管理"
                 ],
                 "summary": "Get user by ID",
                 "parameters": [
@@ -6614,7 +6614,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "用户管理"
                 ],
                 "summary": "Update user",
                 "parameters": [
@@ -6700,7 +6700,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "用户管理"
                 ],
                 "summary": "Delete user",
                 "parameters": [
@@ -6764,7 +6764,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "用户管理"
                 ],
                 "summary": "Update user role",
                 "parameters": [
@@ -6845,7 +6845,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "用户管理"
                 ],
                 "summary": "Update user status",
                 "parameters": [

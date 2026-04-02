@@ -2063,7 +2063,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 管理员登录
       tags:
-      - Authentication
+      - 认证授权
   /auth/bind-phone:
     post:
       consumes:
@@ -2112,7 +2112,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 绑定手机号
       tags:
-      - Authentication
+      - 认证授权
   /auth/login:
     post:
       consumes:
@@ -2155,7 +2155,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 用户登录
       tags:
-      - Authentication
+      - 认证授权
   /auth/logout:
     post:
       consumes:
@@ -2181,7 +2181,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 用户登出
       tags:
-      - Authentication
+      - 认证授权
   /auth/me:
     get:
       consumes:
@@ -2220,7 +2220,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 获取当前用户信息
       tags:
-      - Authentication
+      - 认证授权
   /auth/refresh:
     post:
       consumes:
@@ -2263,7 +2263,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 刷新访问令牌
       tags:
-      - Authentication
+      - 认证授权
   /auth/reset-password:
     post:
       consumes:
@@ -2297,7 +2297,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 重置密码
       tags:
-      - Authentication
+      - 认证授权
   /auth/send-code:
     post:
       consumes:
@@ -2336,7 +2336,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 发送短信验证码
       tags:
-      - Authentication
+      - 认证授权
   /auth/wechat-login:
     post:
       consumes:
@@ -2371,7 +2371,7 @@ paths:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 微信小程序登录
       tags:
-      - Authentication
+      - 认证授权
   /dashboard/overview:
     get:
       consumes:
@@ -4212,7 +4212,7 @@ paths:
       - ApiKeyAuth: []
       summary: Get current user profile
       tags:
-      - profile
+      - 个人中心
     put:
       consumes:
       - application/json
@@ -4252,7 +4252,7 @@ paths:
       - ApiKeyAuth: []
       summary: Update current user profile
       tags:
-      - profile
+      - 个人中心
   /profile/password:
     put:
       consumes:
@@ -4288,7 +4288,7 @@ paths:
       - ApiKeyAuth: []
       summary: Change password
       tags:
-      - profile
+      - 个人中心
   /profile/stats:
     get:
       consumes:
@@ -4318,7 +4318,7 @@ paths:
       - ApiKeyAuth: []
       summary: Get user statistics
       tags:
-      - profile
+      - 个人中心
   /tasks:
     get:
       consumes:
@@ -5666,7 +5666,7 @@ paths:
       - ApiKeyAuth: []
       summary: List users
       tags:
-      - users
+      - 用户管理
     post:
       consumes:
       - application/json
@@ -5714,7 +5714,7 @@ paths:
       - ApiKeyAuth: []
       summary: Create user
       tags:
-      - users
+      - 用户管理
   /users/{id}:
     delete:
       consumes:
@@ -5755,7 +5755,7 @@ paths:
       - ApiKeyAuth: []
       summary: Delete user
       tags:
-      - users
+      - 用户管理
     get:
       consumes:
       - application/json
@@ -5798,7 +5798,7 @@ paths:
       - ApiKeyAuth: []
       summary: Get user by ID
       tags:
-      - users
+      - 用户管理
     put:
       consumes:
       - application/json
@@ -5851,7 +5851,7 @@ paths:
       - ApiKeyAuth: []
       summary: Update user
       tags:
-      - users
+      - 用户管理
   /users/{id}/role:
     put:
       consumes:
@@ -5903,7 +5903,7 @@ paths:
       - ApiKeyAuth: []
       summary: Update user role
       tags:
-      - users
+      - 用户管理
   /users/{id}/status:
     put:
       consumes:
@@ -5955,7 +5955,7 @@ paths:
       - ApiKeyAuth: []
       summary: Update user status
       tags:
-      - users
+      - 用户管理
 securityDefinitions:
   Bearer:
     description: 请输入 JWT Token，格式：Bearer {token}
