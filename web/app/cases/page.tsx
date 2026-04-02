@@ -35,6 +35,8 @@ export default function CasesPage() {
   const [endTime, setEndTime] = useState('')
   const [name, setName] = useState('')
   const [gender, setGender] = useState('male')
+  const [quickCaseType, setQuickCaseType] = useState('other')
+  const [quickMissingTime, setQuickMissingTime] = useState('')
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -102,13 +104,16 @@ export default function CasesPage() {
       await missingPersonService.create({
         name: name.trim(),
         gender,
-        missing_time: new Date().toISOString(),
+        case_type: quickCaseType,
+        missing_time: quickMissingTime ? new Date(quickMissingTime).toISOString() : new Date().toISOString(),
         contact_name: contactName.trim(),
         contact_phone: contactPhone.trim(),
         status: 'missing',
       })
       setName('')
       setGender('male')
+      setQuickCaseType('other')
+      setQuickMissingTime('')
       setContactName('')
       setContactPhone('')
       load(1)
@@ -261,9 +266,14 @@ export default function CasesPage() {
         title="案件中心"
         desc="管理走失人员案件，维护状态与线索轨迹"
         right={
-          <button className="btn primary" type="button" onClick={() => setCreateOpen(true)}>
-            新建案件
-          </button>
+          <div className="row wrap">
+            <button className="btn" type="button" onClick={() => setCreateOpen(true)}>
+              快速新建
+            </button>
+            <Link className="btn primary" href="/cases/create">
+              完整新建
+            </Link>
+          </div>
         }
       />
       <NoticeBar notice={notice} onClose={() => setNotice(null)} />
@@ -408,6 +418,14 @@ export default function CasesPage() {
             <option value="female">female</option>
             <option value="other">other</option>
           </select>
+          <select className="select" value={quickCaseType} onChange={(e) => setQuickCaseType(e.target.value)}>
+            <option value="other">other</option>
+            <option value="child">child</option>
+            <option value="adult">adult</option>
+            <option value="elderly">elderly</option>
+            <option value="disability">disability</option>
+          </select>
+          <input className="input" type="datetime-local" value={quickMissingTime} onChange={(e) => setQuickMissingTime(e.target.value)} />
           <input className="input" placeholder="联系人（必填）" value={contactName} onChange={(e) => setContactName(e.target.value)} />
           <input className="input" placeholder="联系电话（必填）" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
           <div className="row" style={{ gridColumn: '1 / -1' }}>

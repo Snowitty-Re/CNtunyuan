@@ -25,6 +25,7 @@ export default function DialectsPage() {
   const [title, setTitle] = useState('')
   const [audioUrl, setAudioUrl] = useState('')
   const [region, setRegion] = useState('')
+  const [quickOpen, setQuickOpen] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
 
   async function load(nextPage = page) {
@@ -71,18 +72,43 @@ export default function DialectsPage() {
 
   return (
     <AppShell>
-      <ModuleHeader title="方言中心" desc="管理方言录音、审核状态与精选内容" />
+      <ModuleHeader
+        title="方言中心"
+        desc="管理方言录音、审核状态与精选内容"
+        right={
+          <div className="row wrap">
+            <button className="btn" type="button" onClick={() => setQuickOpen((v) => !v)}>
+              {quickOpen ? '收起快速录入' : '快速录入'}
+            </button>
+            <Link className="btn primary" href="/dialects/create">
+              完整新建
+            </Link>
+          </div>
+        }
+      />
       <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <div className="grid cols-2">
-        <form className="panel grid" onSubmit={quickCreate}>
-          <b>快速新建方言记录</b>
-          <input className="input" placeholder="标题" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <input className="input" placeholder="区域（必填）" value={region} onChange={(e) => setRegion(e.target.value)} />
-          <input className="input" placeholder="音频URL（必填）" value={audioUrl} onChange={(e) => setAudioUrl(e.target.value)} />
-          <button className="btn primary" type="submit">
-            创建
-          </button>
-        </form>
+        {quickOpen ? (
+          <form className="panel grid" onSubmit={quickCreate}>
+            <b>快速新建方言记录</b>
+            <input className="input" placeholder="标题（必填）" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <input className="input" placeholder="区域（必填）" value={region} onChange={(e) => setRegion(e.target.value)} />
+            <input className="input" placeholder="音频URL（必填）" value={audioUrl} onChange={(e) => setAudioUrl(e.target.value)} />
+            <div className="row wrap">
+              <button className="btn primary" type="submit">
+                创建
+              </button>
+              <span className="hint">复杂字段请使用“完整新建”页面</span>
+            </div>
+          </form>
+        ) : (
+          <div className="panel">
+            <b>快速录入已收起</b>
+            <div className="hint" style={{ marginTop: 8 }}>
+              推荐使用“完整新建”录入标题、区域、语音元数据、标签和关联案件。
+            </div>
+          </div>
+        )}
         <form
           className="panel row wrap"
           onSubmit={(e) => {

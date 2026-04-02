@@ -165,6 +165,32 @@ a {
   animation: fadeInUp 0.32s ease both;
 }
 
+.form-section {
+  border: 1px solid #f0dbc4;
+  border-radius: 13px;
+  background: #fffdf8;
+  padding: 12px;
+}
+
+.form-section-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #7d4e22;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #7a6554;
+  font-size: 13px;
+}
+
+.required {
+  color: #be123c;
+  margin-left: 4px;
+}
+
 .page-title {
   margin: 0;
   font-size: 25px;
