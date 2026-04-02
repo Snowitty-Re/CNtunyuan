@@ -19,7 +19,7 @@
 - `ty_missing_person_tracks`：软删除。
 - `ty_tasks`：软删除。
 - `ty_dialects`：软删除。
-- `ty_files`：软删除（以 `deleted_at` 为准，`is_deleted` 仅保留兼容）。
+- `ty_files`：软删除（仅使用 `deleted_at`）。
 - `ty_audit_logs`：按保留期物理删除（定时任务）。
 
 ## 3. 代码约束
@@ -34,11 +34,13 @@
 
 ## 4. 迁移要求
 
-执行 `04_data_lifecycle_alignment.sql`（PostgreSQL / MySQL）后，需验证：
+执行 `04_data_lifecycle_alignment.sql` 与 `06_schema_consistency_and_performance.sql`（PostgreSQL / MySQL）后，需验证：
 
-1. `ty_files` 中 `is_deleted=true` 的记录均有 `deleted_at`。
+1. `ty_files` 仅使用 `deleted_at` 作为软删除标记（`is_deleted` 已移除）。
 2. `ty_users` 唯一约束对软删除记录不再占用。
-3. 删除用户后可复用手机号/邮箱/OpenID（若业务允许）。
+3. `ty_missing_person_tracks` / `ty_tasks` 的经纬度约束已生效。
+4. `ty_audit_logs.user_id` 外键约束存在且删除用户时置空。
+5. 高频查询复合索引已创建（users/missing_persons/tasks）。
 
 ## 5. 回归检查清单
 
@@ -47,3 +49,10 @@
 3. 审计日志清理任务执行后：行数真实下降。
 4. 组织删除时若仍被引用：应被外键拦截并返回业务错误。
 
+## 6. 权限模型说明
+
+当前运行时权限模型采用 **RBAC（角色层级）**：
+
+- `super_admin > admin > manager > volunteer`
+- 鉴权基于角色中间件（`RequireRole/RequireAdmin/RequireManager/RequireSuperAdmin`）
+- `ty_permissions` / `ty_user_permissions` 当前作为权限字典与扩展保留，不作为运行时判定主路径

@@ -1,7 +1,7 @@
 -- 任务跟进工作流：跟进记录 + 评论 + 审核
 
 CREATE TABLE IF NOT EXISTS ty_task_follow_ups (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   task_id UUID NOT NULL REFERENCES ty_tasks(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES ty_users(id),
   content TEXT NOT NULL,
@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_task_follow_ups_status ON ty_task_follow_ups(stat
 CREATE INDEX IF NOT EXISTS idx_task_follow_ups_created_at ON ty_task_follow_ups(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS ty_task_follow_up_comments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   task_id UUID NOT NULL REFERENCES ty_tasks(id) ON DELETE CASCADE,
   follow_up_id UUID NOT NULL REFERENCES ty_task_follow_ups(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES ty_users(id),

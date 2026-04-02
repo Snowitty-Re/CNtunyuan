@@ -45,7 +45,13 @@ cp config/config.example.yaml config/config.yaml
 # PostgreSQL:
 psql -U postgres -d cntuanyuan -f migrations/postgres/00_bootstrap.sql
 # MySQL:
-# mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
+mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
+
+# 历史库升级（仅旧环境）
+# PostgreSQL:
+# psql -U postgres -d cntuanyuan -f migrations/postgres/06_schema_consistency_and_performance.sql
+# MySQL:
+# mysql -u root -p cntuanyuan < migrations/mysql/06_schema_consistency_and_performance.sql
 
 # 启动服务
 go run cmd/app/main.go

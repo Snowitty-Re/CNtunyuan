@@ -90,6 +90,8 @@ CREATE INDEX idx_users_role ON ty_users(role);
 CREATE INDEX idx_users_status ON ty_users(status);
 CREATE INDEX idx_users_wx_openid ON ty_users(wx_openid);
 CREATE INDEX idx_users_deleted_at ON ty_users(deleted_at);
+CREATE INDEX idx_users_org_status_created_at ON ty_users(org_id, status, created_at);
+CREATE INDEX idx_users_role_status_created_at ON ty_users(role, status, created_at);
 
 -- ============================================================
 -- 3. 权限表 (ty_permissions)
@@ -220,6 +222,7 @@ CREATE INDEX idx_missing_persons_missing_time ON ty_missing_persons(missing_time
 CREATE INDEX idx_missing_persons_location ON ty_missing_persons(province, city, district);
 CREATE INDEX idx_missing_persons_geo ON ty_missing_persons(missing_latitude, missing_longitude);
 CREATE INDEX idx_missing_persons_deleted_at ON ty_missing_persons(deleted_at);
+CREATE INDEX idx_missing_persons_status_urgency_created_at ON ty_missing_persons(status, urgency, created_at);
 
 -- ============================================================
 -- 7. 走失人员轨迹表 (ty_missing_person_tracks)
@@ -249,7 +252,9 @@ CREATE TABLE IF NOT EXISTS ty_missing_person_tracks (
     
     CONSTRAINT fk_mpt_missing_person FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_mpt_reporter FOREIGN KEY (reporter_id) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT chk_mpt_status CHECK (status IN ('pending', 'confirmed', 'rejected'))
+    CONSTRAINT chk_mpt_status CHECK (status IN ('pending', 'confirmed', 'rejected')),
+    CONSTRAINT chk_mpt_lat CHECK (lat IS NULL OR (lat BETWEEN -90 AND 90)),
+    CONSTRAINT chk_mpt_lng CHECK (lng IS NULL OR (lng BETWEEN -180 AND 180))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='走失人员轨迹表';
 
 -- 轨迹表索引
@@ -330,7 +335,9 @@ CREATE TABLE IF NOT EXISTS ty_tasks (
     CONSTRAINT chk_task_type CHECK (type IN ('search', 'verify', 'assist', 'follow', 'interview', 'other')),
     CONSTRAINT chk_task_priority CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
     CONSTRAINT chk_task_status CHECK (status IN ('draft', 'pending', 'assigned', 'processing', 'completed', 'cancelled', 'overdue')),
-    CONSTRAINT chk_task_progress CHECK (progress >= 0 AND progress <= 100)
+    CONSTRAINT chk_task_progress CHECK (progress >= 0 AND progress <= 100),
+    CONSTRAINT chk_task_lat CHECK (lat IS NULL OR (lat BETWEEN -90 AND 90)),
+    CONSTRAINT chk_task_lng CHECK (lng IS NULL OR (lng BETWEEN -180 AND 180))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务表';
 
 -- 任务表索引
@@ -343,6 +350,9 @@ CREATE INDEX idx_tasks_org ON ty_tasks(org_id);
 CREATE INDEX idx_tasks_missing_person ON ty_tasks(missing_person_id);
 CREATE INDEX idx_tasks_deadline ON ty_tasks(deadline);
 CREATE INDEX idx_tasks_deleted_at ON ty_tasks(deleted_at);
+CREATE INDEX idx_tasks_status_created_at ON ty_tasks(status, created_at);
+CREATE INDEX idx_tasks_org_status_created_at ON ty_tasks(org_id, status, created_at);
+CREATE INDEX idx_tasks_assignee_status_created_at ON ty_tasks(assignee_id, status, created_at);
 
 -- ============================================================
 -- 9. 任务附件表 (ty_task_attachments)
@@ -553,7 +563,6 @@ CREATE TABLE IF NOT EXISTS ty_files (
     entity_type VARCHAR(50) COMMENT '关联实体类型',
     entity_id CHAR(36) COMMENT '关联实体ID',
     description TEXT COMMENT '描述',
-    is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否已删除',
     
     CONSTRAINT fk_file_uploader FOREIGN KEY (uploader_id) REFERENCES ty_users(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT chk_file_type CHECK (file_type IN ('image', 'audio', 'video', 'document')),
@@ -564,7 +573,6 @@ CREATE TABLE IF NOT EXISTS ty_files (
 CREATE INDEX idx_files_type ON ty_files(file_type);
 CREATE INDEX idx_files_uploader ON ty_files(uploader_id);
 CREATE INDEX idx_files_entity ON ty_files(entity_type, entity_id);
-CREATE INDEX idx_files_deleted ON ty_files(is_deleted);
 CREATE INDEX idx_files_deleted_at ON ty_files(deleted_at);
 
 -- ============================================================
@@ -596,7 +604,8 @@ CREATE TABLE IF NOT EXISTS ty_audit_logs (
     trace_id VARCHAR(100) COMMENT '追踪ID',
     
     CONSTRAINT chk_audit_type CHECK (type IN ('login', 'logout', 'create', 'update', 'delete', 'query', 'export', 'upload', 'download', 'other')),
-    CONSTRAINT chk_audit_status CHECK (status IN ('success', 'failure'))
+    CONSTRAINT chk_audit_status CHECK (status IN ('success', 'failure')),
+    CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES ty_users(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='审计日志表';
 
 -- 审计日志表索引
@@ -623,19 +632,10 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 START TRANSACTION;
 
--- 1. ty_files 历史数据回填：is_deleted=1 的记录补齐 deleted_at
-UPDATE ty_files
-SET deleted_at = IFNULL(deleted_at, CURRENT_TIMESTAMP),
-    is_deleted = 1
-WHERE is_deleted = 1
-   OR deleted_at IS NOT NULL;
+-- 1. ty_files 软删除统一使用 deleted_at
+ALTER TABLE ty_files DROP COLUMN IF EXISTS is_deleted;
 
--- 2. ty_files 状态对齐：未软删记录统一标记为 is_deleted=0
-UPDATE ty_files
-SET is_deleted = 0
-WHERE deleted_at IS NULL;
-
--- 3. ty_users 唯一约束改为“仅未删除记录唯一”
+-- 2. ty_users 唯一约束改为“仅未删除记录唯一”
 ALTER TABLE ty_users
   DROP INDEX uk_user_phone,
   DROP INDEX uk_user_email,

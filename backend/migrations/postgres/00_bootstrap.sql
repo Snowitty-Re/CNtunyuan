@@ -88,6 +88,8 @@ CREATE INDEX idx_users_role ON ty_users(role) WHERE deleted_at IS NULL;
 CREATE INDEX idx_users_status ON ty_users(status) WHERE deleted_at IS NULL;
 CREATE INDEX idx_users_wx_openid ON ty_users(wx_openid) WHERE deleted_at IS NULL;
 CREATE INDEX idx_users_deleted_at ON ty_users(deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX idx_users_org_status_created_at ON ty_users(org_id, status, created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX idx_users_role_status_created_at ON ty_users(role, status, created_at DESC) WHERE deleted_at IS NULL;
 
 -- ============================================================
 -- 3. 权限表 (ty_permissions)
@@ -222,6 +224,7 @@ CREATE INDEX idx_missing_persons_missing_time ON ty_missing_persons(missing_time
 CREATE INDEX idx_missing_persons_location ON ty_missing_persons(province, city, district) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_geo ON ty_missing_persons(missing_latitude, missing_longitude) WHERE deleted_at IS NULL;
 CREATE INDEX idx_missing_persons_deleted_at ON ty_missing_persons(deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX idx_missing_persons_status_urgency_created_at ON ty_missing_persons(status, urgency, created_at DESC) WHERE deleted_at IS NULL;
 
 -- ============================================================
 -- 7. 走失人员轨迹表 (ty_missing_person_tracks)
@@ -244,8 +247,8 @@ CREATE TABLE IF NOT EXISTS ty_missing_person_tracks (
     photos JSONB,
     video_url VARCHAR(255),
     audio_url VARCHAR(255),
-    lat DOUBLE PRECISION,
-    lng DOUBLE PRECISION,
+    lat DOUBLE PRECISION CHECK (lat IS NULL OR (lat BETWEEN -90 AND 90)),
+    lng DOUBLE PRECISION CHECK (lng IS NULL OR (lng BETWEEN -180 AND 180)),
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'rejected')),
     is_key_point BOOLEAN NOT NULL DEFAULT FALSE,
     
@@ -319,8 +322,8 @@ CREATE TABLE IF NOT EXISTS ty_tasks (
     city VARCHAR(50),
     district VARCHAR(50),
     address VARCHAR(255),
-    lat DOUBLE PRECISION,
-    lng DOUBLE PRECISION,
+    lat DOUBLE PRECISION CHECK (lat IS NULL OR (lat BETWEEN -90 AND 90)),
+    lng DOUBLE PRECISION CHECK (lng IS NULL OR (lng BETWEEN -180 AND 180)),
     
     result TEXT,
     result_photos JSONB,
@@ -349,6 +352,9 @@ CREATE INDEX idx_tasks_org ON ty_tasks(org_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_tasks_missing_person ON ty_tasks(missing_person_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_tasks_deadline ON ty_tasks(deadline) WHERE deleted_at IS NULL;
 CREATE INDEX idx_tasks_deleted_at ON ty_tasks(deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE INDEX idx_tasks_status_created_at ON ty_tasks(status, created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX idx_tasks_org_status_created_at ON ty_tasks(org_id, status, created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX idx_tasks_assignee_status_created_at ON ty_tasks(assignee_id, status, created_at DESC) WHERE deleted_at IS NULL;
 
 -- ============================================================
 -- 9. 任务附件表 (ty_task_attachments)
@@ -573,7 +579,6 @@ CREATE TABLE IF NOT EXISTS ty_files (
     entity_type VARCHAR(50),
     entity_id UUID,
     description TEXT,
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     
     CONSTRAINT fk_file_uploader FOREIGN KEY (uploader_id) REFERENCES ty_users(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -586,7 +591,6 @@ COMMENT ON COLUMN ty_files.storage_type IS '存储类型: local-本地, oss-阿�
 CREATE INDEX idx_files_type ON ty_files(file_type) WHERE deleted_at IS NULL;
 CREATE INDEX idx_files_uploader ON ty_files(uploader_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_files_entity ON ty_files(entity_type, entity_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_files_deleted ON ty_files(is_deleted) WHERE is_deleted = TRUE AND deleted_at IS NULL;
 CREATE INDEX idx_files_deleted_at ON ty_files(deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- ============================================================
@@ -615,7 +619,8 @@ CREATE TABLE IF NOT EXISTS ty_audit_logs (
     duration_ms BIGINT,
     status VARCHAR(20) NOT NULL CHECK (status IN ('success', 'failure')),
     error_message TEXT,
-    trace_id VARCHAR(100)
+    trace_id VARCHAR(100),
+    CONSTRAINT fk_audit_user FOREIGN KEY (user_id) REFERENCES ty_users(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 COMMENT ON TABLE ty_audit_logs IS '审计日志表';
@@ -687,19 +692,10 @@ CREATE TRIGGER update_audit_logs_updated_at BEFORE UPDATE ON ty_audit_logs
 
 BEGIN;
 
--- 1. ty_files 历史数据回填：is_deleted=true 的记录补齐 deleted_at
-UPDATE ty_files
-SET deleted_at = COALESCE(deleted_at, CURRENT_TIMESTAMP),
-    is_deleted = TRUE
-WHERE is_deleted = TRUE
-   OR deleted_at IS NOT NULL;
+-- 1. ty_files 软删除统一使用 deleted_at
+ALTER TABLE ty_files DROP COLUMN IF EXISTS is_deleted;
 
--- 2. ty_files 状态对齐：未软删记录统一标记为 is_deleted=false
-UPDATE ty_files
-SET is_deleted = FALSE
-WHERE deleted_at IS NULL;
-
--- 3. ty_users 唯一约束改为“仅未删除记录唯一”
+-- 2. ty_users 唯一约束改为“仅未删除记录唯一”
 ALTER TABLE ty_users DROP CONSTRAINT IF EXISTS ty_users_phone_key;
 ALTER TABLE ty_users DROP CONSTRAINT IF EXISTS ty_users_email_key;
 ALTER TABLE ty_users DROP CONSTRAINT IF EXISTS ty_users_wx_openid_key;
@@ -722,7 +718,7 @@ COMMIT;
 -- 任务跟进工作流：跟进记录 + 评论 + 审核
 
 CREATE TABLE IF NOT EXISTS ty_task_follow_ups (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   task_id UUID NOT NULL REFERENCES ty_tasks(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES ty_users(id),
   content TEXT NOT NULL,
@@ -744,7 +740,7 @@ CREATE INDEX IF NOT EXISTS idx_task_follow_ups_status ON ty_task_follow_ups(stat
 CREATE INDEX IF NOT EXISTS idx_task_follow_ups_created_at ON ty_task_follow_ups(created_at DESC);
 
 CREATE TABLE IF NOT EXISTS ty_task_follow_up_comments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   task_id UUID NOT NULL REFERENCES ty_tasks(id) ON DELETE CASCADE,
   follow_up_id UUID NOT NULL REFERENCES ty_task_follow_ups(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES ty_users(id),

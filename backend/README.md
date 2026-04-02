@@ -97,7 +97,19 @@ cd backend
 psql -U postgres -d cntuanyuan -f migrations/postgres/00_bootstrap.sql
 
 # MySQL
-# mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
+mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
+```
+
+### 3.1 旧环境增量升级（历史库）
+
+仅当历史库未使用 `00_bootstrap.sql` 初始化时执行：
+
+```bash
+# PostgreSQL
+psql -U postgres -d cntuanyuan -f migrations/postgres/06_schema_consistency_and_performance.sql
+
+# MySQL
+mysql -u root -p cntuanyuan < migrations/mysql/06_schema_consistency_and_performance.sql
 ```
 
 ### 4. 启动服务
@@ -235,7 +247,7 @@ go run cmd/app/main.go
 | 用户状态 | `active` / `inactive` / `banned` |
 | 走失人员状态 | `missing` / `searching` / `found` / `reunited` / `closed` |
 | 紧急程度 | `critical` / `high` / `medium` / `low` |
-| 任务类型 | `search` / `rescue` / `follow_up` / `other` |
+| 任务类型 | `search` / `verify` / `assist` / `follow` / `interview` / `other` |
 | 任务状态 | `draft` → `pending` → `assigned` → `processing` → `completed` / `cancelled` |
 
 ## HTTP 状态码
@@ -262,7 +274,11 @@ go run cmd/app/main.go
 - **备份**：数据库密码通过环境变量传递（`PGPASSWORD` / `MYSQL_PWD`），不嵌入命令行
 - **监控**：Prometheus `/metrics` 端点需要管理员认证
 - **RBAC**：四级角色权限（super_admin > admin > manager > volunteer）
+- **权限判定**：运行时采用 RBAC 角色层级；`ty_permissions/ty_user_permissions` 作为扩展字典保留
 - **任务**：Start/Complete 操作仅允许被分配者本人执行
+- **数据一致性**：`ty_files` 软删除统一为 `deleted_at`，不再使用 `is_deleted`
+- **约束补齐**：任务与轨迹经纬度范围约束、审计日志 `user_id` 外键约束
+- **索引优化**：users/missing_persons/tasks 增加高频复合索引
 
 ## 开发指南
 

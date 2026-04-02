@@ -1196,7 +1196,7 @@ func (r *GormFileRepository) Delete(ctx context.Context, id string) error {
 }
 
 func (r *GormFileRepository) SoftDelete(ctx context.Context, id string) error {
-	return r.db.WithContext(ctx).Model(&entity.File{}).Where("id = ?", id).Update("is_deleted", true).Error
+	return r.db.WithContext(ctx).Model(&entity.File{}).Where("id = ?", id).Update("deleted_at", time.Now()).Error
 }
 
 func (r *GormFileRepository) FindByID(ctx context.Context, id string) (*entity.File, error) {

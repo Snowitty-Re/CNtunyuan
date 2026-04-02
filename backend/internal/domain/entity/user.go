@@ -91,7 +91,6 @@ type User struct {
 	WxOpenID     string        `gorm:"column:wx_openid;size:100;uniqueIndex" json:"wx_openid,omitempty"`
 	WxUnionID    string        `gorm:"column:wx_unionid;size:100" json:"wx_unionid,omitempty"`
 	Org          *Organization `gorm:"foreignKey:OrgID" json:"org,omitempty"`
-	Permissions  []Permission  `gorm:"many2many:ty_user_permissions;" json:"permissions,omitempty"`
 }
 
 // TableName 表名

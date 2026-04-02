@@ -210,10 +210,7 @@ func (r *FileRepositoryImpl) SoftDelete(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).
 		Model(&entity.File{}).
 		Where("id = ? AND deleted_at IS NULL", id).
-		Updates(map[string]interface{}{
-			"is_deleted": true,
-			"deleted_at": now,
-		}).
+		Update("deleted_at", now).
 		Error
 }
 

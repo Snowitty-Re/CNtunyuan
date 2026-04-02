@@ -5,7 +5,7 @@
 ## 迁移策略
 
 - `00_bootstrap.sql`：**全新数据库首次初始化**（一键完成 Schema + 对齐补丁 + 任务跟进工作流 + 默认种子数据）
-- `01~05`：历史增量脚本，保留用于旧环境升级与审计追溯
+- `01~06`：历史增量脚本，保留用于旧环境升级与审计追溯
 
 ## 目录结构
 
@@ -17,14 +17,16 @@ migrations/
 │   ├── 02_seed.sql
 │   ├── 03_missing_person_geo_case_type.sql
 │   ├── 04_data_lifecycle_alignment.sql
-│   └── 05_task_follow_up_workflow.sql
+│   ├── 05_task_follow_up_workflow.sql
+│   └── 06_schema_consistency_and_performance.sql
 ├── mysql/
 │   ├── 00_bootstrap.sql
 │   ├── 01_schema.sql
 │   ├── 02_seed.sql
 │   ├── 03_missing_person_geo_case_type.sql
 │   ├── 04_data_lifecycle_alignment.sql
-│   └── 05_task_follow_up_workflow.sql
+│   ├── 05_task_follow_up_workflow.sql
+│   └── 06_schema_consistency_and_performance.sql
 └── README.md
 ```
 
@@ -54,6 +56,7 @@ mysql -u root -p cntuanyuan < backend/migrations/mysql/00_bootstrap.sql
 psql -U postgres -d cntuanyuan -f backend/migrations/postgres/03_missing_person_geo_case_type.sql
 psql -U postgres -d cntuanyuan -f backend/migrations/postgres/04_data_lifecycle_alignment.sql
 psql -U postgres -d cntuanyuan -f backend/migrations/postgres/05_task_follow_up_workflow.sql
+psql -U postgres -d cntuanyuan -f backend/migrations/postgres/06_schema_consistency_and_performance.sql
 ```
 
 ### MySQL
@@ -62,6 +65,7 @@ psql -U postgres -d cntuanyuan -f backend/migrations/postgres/05_task_follow_up_
 mysql -u root -p cntuanyuan < backend/migrations/mysql/03_missing_person_geo_case_type.sql
 mysql -u root -p cntuanyuan < backend/migrations/mysql/04_data_lifecycle_alignment.sql
 mysql -u root -p cntuanyuan < backend/migrations/mysql/05_task_follow_up_workflow.sql
+mysql -u root -p cntuanyuan < backend/migrations/mysql/06_schema_consistency_and_performance.sql
 ```
 
 ## 验证
@@ -78,6 +82,6 @@ go run cmd/app/main.go -check-db
 
 ## 注意事项
 
-1. 新环境只执行 `00_bootstrap.sql`，不要再重复执行 `01~05`
+1. 新环境只执行 `00_bootstrap.sql`，不要再重复执行 `01~06`
 2. 升级环境只执行“未执行过”的增量脚本
 3. 生产环境迁移前务必先做数据库备份

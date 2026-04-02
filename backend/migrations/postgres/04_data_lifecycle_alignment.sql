@@ -7,19 +7,10 @@
 
 BEGIN;
 
--- 1. ty_files 历史数据回填：is_deleted=true 的记录补齐 deleted_at
-UPDATE ty_files
-SET deleted_at = COALESCE(deleted_at, CURRENT_TIMESTAMP),
-    is_deleted = TRUE
-WHERE is_deleted = TRUE
-   OR deleted_at IS NOT NULL;
+-- 1. ty_files 软删除统一使用 deleted_at
+ALTER TABLE ty_files DROP COLUMN IF EXISTS is_deleted;
 
--- 2. ty_files 状态对齐：未软删记录统一标记为 is_deleted=false
-UPDATE ty_files
-SET is_deleted = FALSE
-WHERE deleted_at IS NULL;
-
--- 3. ty_users 唯一约束改为“仅未删除记录唯一”
+-- 2. ty_users 唯一约束改为“仅未删除记录唯一”
 ALTER TABLE ty_users DROP CONSTRAINT IF EXISTS ty_users_phone_key;
 ALTER TABLE ty_users DROP CONSTRAINT IF EXISTS ty_users_email_key;
 ALTER TABLE ty_users DROP CONSTRAINT IF EXISTS ty_users_wx_openid_key;
@@ -37,4 +28,3 @@ ON ty_users(wx_openid)
 WHERE deleted_at IS NULL AND wx_openid IS NOT NULL;
 
 COMMIT;
-

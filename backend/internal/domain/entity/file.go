@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // FileType 文件类型
@@ -40,7 +41,6 @@ type File struct {
 	EntityType   string      `gorm:"size:50;index" json:"entity_type"` // 关联实体类型
 	EntityID     string      `gorm:"type:uuid;index" json:"entity_id"` // 关联实体ID
 	Description  string      `gorm:"type:text" json:"description"`
-	IsDeleted    bool        `gorm:"default:false" json:"is_deleted"`
 }
 
 // TableName 表名
@@ -89,7 +89,8 @@ func (f *File) IsDocument() bool {
 
 // MarkAsDeleted 标记为已删除
 func (f *File) MarkAsDeleted() {
-	f.IsDeleted = true
+	f.DeletedAt.Time = time.Now()
+	f.DeletedAt.Valid = true
 }
 
 // FileStats 文件统计

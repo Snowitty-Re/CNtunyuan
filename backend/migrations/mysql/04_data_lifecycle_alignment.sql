@@ -7,19 +7,10 @@
 
 START TRANSACTION;
 
--- 1. ty_files 历史数据回填：is_deleted=1 的记录补齐 deleted_at
-UPDATE ty_files
-SET deleted_at = IFNULL(deleted_at, CURRENT_TIMESTAMP),
-    is_deleted = 1
-WHERE is_deleted = 1
-   OR deleted_at IS NOT NULL;
+-- 1. ty_files 软删除统一使用 deleted_at
+ALTER TABLE ty_files DROP COLUMN IF EXISTS is_deleted;
 
--- 2. ty_files 状态对齐：未软删记录统一标记为 is_deleted=0
-UPDATE ty_files
-SET is_deleted = 0
-WHERE deleted_at IS NULL;
-
--- 3. ty_users 唯一约束改为“仅未删除记录唯一”
+-- 2. ty_users 唯一约束改为“仅未删除记录唯一”
 ALTER TABLE ty_users
   DROP INDEX uk_user_phone,
   DROP INDEX uk_user_email,
@@ -39,4 +30,3 @@ ALTER TABLE ty_users
   ADD UNIQUE KEY uk_user_wx_openid_active (active_wx_openid);
 
 COMMIT;
-

@@ -104,7 +104,7 @@ backend/
 - 使用下划线命名法
 - 常用字段: `created_at`, `updated_at`, `deleted_at`
 - 外键使用 `_id` 后缀
-- 布尔值使用 `is_` 前缀
+- 布尔值建议使用 `is_` 前缀（历史兼容除外）
 
 ### API 设计规范
 
@@ -161,6 +161,16 @@ psql -U postgres -d cntuanyuan -f backend/migrations/postgres/00_bootstrap.sql
 ```bash
 mysql -u root -p -e "CREATE DATABASE cntuanyuan CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 mysql -u root -p cntuanyuan < backend/migrations/mysql/00_bootstrap.sql
+```
+
+历史库增量升级（若未执行最新结构对齐）：
+
+```bash
+# PostgreSQL
+psql -U postgres -d cntuanyuan -f backend/migrations/postgres/06_schema_consistency_and_performance.sql
+
+# MySQL
+mysql -u root -p cntuanyuan < backend/migrations/mysql/06_schema_consistency_and_performance.sql
 ```
 
 ## 配置说明 (config/config.yaml)
@@ -221,6 +231,8 @@ backup:
 - `RequireAdmin()`: 需要管理员权限
 - `RequireManager()`: 需要管理者权限
 - `RequireSuperAdmin()`: 需要超级管理员权限
+
+说明：当前运行时权限判定采用 RBAC（角色层级），`ty_permissions` / `ty_user_permissions` 作为扩展字典保留。
 
 ## 后端模块状态
 
