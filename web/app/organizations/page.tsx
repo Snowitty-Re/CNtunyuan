@@ -9,12 +9,13 @@ import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
 import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { hasMinRole } from '@/lib/rbac'
 import { fmtTime, listFrom } from '@/lib/data'
 import { organizationService } from '@/services/organizations'
 import type { Organization } from '@/types/api'
 
 export default function OrganizationsPage() {
-  const { ready } = useAuthGuard()
+  const { ready, user } = useAuthGuard()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [items, setItems] = useState<Organization[]>([])
@@ -195,6 +196,14 @@ export default function OrganizationsPage() {
   }, [ready])
 
   if (!ready) return null
+  if (!hasMinRole(user, 'admin')) {
+    return (
+      <AppShell>
+        <ModuleHeader title="组织管理" desc="组织结构维护、编码治理与组织信息管理" />
+        <PageState error="当前账号无权限访问该页面（需要 admin 及以上）" />
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>

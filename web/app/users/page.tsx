@@ -11,13 +11,14 @@ import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { hasMinRole } from '@/lib/rbac'
 import { fmtTime, listFrom } from '@/lib/data'
 import { organizationService } from '@/services/organizations'
 import { userService } from '@/services/users'
 import type { Organization, User } from '@/types/api'
 
 export default function UsersPage() {
-  const { ready } = useAuthGuard()
+  const { ready, user } = useAuthGuard()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [items, setItems] = useState<User[]>([])
@@ -48,16 +49,26 @@ export default function UsersPage() {
   const allSelected = items.length > 0 && selectedIds.length === items.length
   const [notice, setNotice] = useState<Notice | null>(null)
 
-  async function load(nextPage = page) {
+  async function load(
+    nextPage = page,
+    filters?: {
+      keyword?: string
+      status?: string
+      role?: string
+    },
+  ) {
     setLoading(true)
     setError('')
     try {
+      const qKeyword = filters?.keyword ?? keyword
+      const qStatus = filters?.status ?? statusFilter
+      const qRole = filters?.role ?? roleFilter
       const data = await userService.list({
         page: nextPage,
         page_size: 20,
-        keyword: keyword || undefined,
-        status: statusFilter || undefined,
-        role: roleFilter || undefined,
+        keyword: qKeyword || undefined,
+        status: qStatus || undefined,
+        role: qRole || undefined,
       })
       const normalized = listFrom<User>(data)
       setItems(normalized.list)
@@ -206,6 +217,13 @@ export default function UsersPage() {
     setNotice({ type: 'success', text: `已导出 ${rows.length} 位用户` })
   }
 
+  function resetFilters() {
+    setKeyword('')
+    setStatusFilter('')
+    setRoleFilter('')
+    load(1, { keyword: '', status: '', role: '' })
+  }
+
   useEffect(() => {
     if (ready) {
       load(1)
@@ -215,6 +233,14 @@ export default function UsersPage() {
   }, [ready])
 
   if (!ready) return null
+  if (!hasMinRole(user, 'admin')) {
+    return (
+      <AppShell>
+        <ModuleHeader title="人员管理" desc="用户账号、角色、组织归属与状态管理" />
+        <PageState error="当前账号无权限访问该页面（需要 admin 及以上）" />
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
@@ -243,6 +269,9 @@ export default function UsersPage() {
         </select>
         <button className="btn" type="submit">
           筛选
+        </button>
+        <button className="btn ghost" type="button" onClick={resetFilters}>
+          重置
         </button>
       </form>
       <form className="panel grid cols-3" onSubmit={quickCreate}>

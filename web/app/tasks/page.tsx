@@ -35,6 +35,7 @@ export default function TasksPage() {
   const [newTitle, setNewTitle] = useState('')
   const [users, setUsers] = useState<User[]>([])
   const [assignMap, setAssignMap] = useState<Record<string, string>>({})
+  const [batchAssigneeId, setBatchAssigneeId] = useState('')
   const [stats, setStats] = useState<Record<string, number>>({})
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [createOpen, setCreateOpen] = useState(false)
@@ -160,16 +161,21 @@ export default function TasksPage() {
   }
 
   async function batchAssign() {
-    const selectedUserIds = Array.from(new Set(selectedIds.map((id) => assignMap[id]).filter(Boolean))) as string[]
-    if (selectedIds.length === 0 || selectedUserIds.length !== 1) {
-      setNotice({ type: 'info', text: '请先勾选任务，并为它们选择同一个执行人后再批量分配' })
+    if (selectedIds.length === 0) {
+      setNotice({ type: 'info', text: '请先勾选任务' })
       return
     }
-    const assigneeId = selectedUserIds[0]
+    const fallbackIds = Array.from(new Set(selectedIds.map((id) => assignMap[id]).filter(Boolean))) as string[]
+    const assigneeId = batchAssigneeId || (fallbackIds.length === 1 ? fallbackIds[0] : '')
+    if (!assigneeId) {
+      setNotice({ type: 'info', text: '请选择批量执行人，或为所选任务设置同一个执行人' })
+      return
+    }
     try {
       await Promise.all(selectedIds.map((id) => taskService.assign(id, assigneeId)))
       load(page)
       loadStats()
+      setBatchAssigneeId('')
       setNotice({ type: 'success', text: `已批量分配 ${selectedIds.length} 个任务` })
     } catch (err) {
       setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量分配失败' })
@@ -437,6 +443,14 @@ export default function TasksPage() {
           <button className="btn ghost" type="button" onClick={invertSelection}>
             反选
           </button>
+          <select className="select" style={{ minWidth: 180 }} value={batchAssigneeId} onChange={(e) => setBatchAssigneeId(e.target.value)}>
+            <option value="">选择批量执行人</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nickname || u.phone || u.id}
+              </option>
+            ))}
+          </select>
           <button className="btn" type="button" onClick={batchAssign}>
             批量分配
           </button>

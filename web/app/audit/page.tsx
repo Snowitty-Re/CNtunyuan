@@ -7,11 +7,12 @@ import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { hasMinRole } from '@/lib/rbac'
 import { fmtTime, listFrom } from '@/lib/data'
 import { auditService, type AuditLog } from '@/services/audit'
 
 export default function AuditPage() {
-  const { ready } = useAuthGuard()
+  const { ready, user } = useAuthGuard()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [items, setItems] = useState<AuditLog[]>([])
@@ -137,6 +138,14 @@ export default function AuditPage() {
   }, [ready])
 
   if (!ready) return null
+  if (!hasMinRole(user, 'admin')) {
+    return (
+      <AppShell>
+        <ModuleHeader title="审计中心" desc="追踪关键操作、请求状态与风险行为" />
+        <PageState error="当前账号无权限访问该页面（需要 admin 及以上）" />
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
