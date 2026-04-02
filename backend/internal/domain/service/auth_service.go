@@ -497,27 +497,21 @@ func (s *AuthService) recordFailedLogin(ctx context.Context, username string) {
 	}
 
 	attemptsKey := fmt.Sprintf("login_attempts:%s", username)
-	var attempts int
-	if err := s.cache.Get(ctx, attemptsKey, &attempts); err != nil {
-		attempts = 0
-	}
-	attempts++
-
-	// Store attempts with a window equal to lockout duration
 	window := time.Duration(lockoutDuration) * time.Second
-	if err := s.cache.Set(ctx, attemptsKey, attempts, window); err != nil {
+	attempts, err := s.cache.IncrWithTTL(ctx, attemptsKey, window)
+	if err != nil {
 		logger.Error("Failed to record login attempt", logger.Err(err))
 		return
 	}
 
-	if attempts >= maxAttempts {
+	if attempts >= int64(maxAttempts) {
 		lockKey := fmt.Sprintf("login_lock:%s", username)
 		if err := s.cache.Set(ctx, lockKey, true, window); err != nil {
 			logger.Error("Failed to set login lock", logger.Err(err))
 		}
 		logger.Warn("Account locked due to too many failed login attempts",
 			logger.String("username", username),
-			logger.Int("attempts", attempts),
+			logger.Int64("attempts", attempts),
 		)
 	}
 }

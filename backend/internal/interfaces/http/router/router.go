@@ -3,10 +3,12 @@ package router
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	_ "github.com/Snowitty-Re/CNtunyuan/docs"
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
+	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
 	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/middleware"
 	pkgmiddleware "github.com/Snowitty-Re/CNtunyuan/pkg/middleware"
@@ -31,6 +33,7 @@ type Router struct {
 	auditHandler         *handler.AuditHandler
 	authMiddleware       *middleware.AuthMiddleware
 	healthService        *service.HealthService
+	cache                domainService.Cache
 }
 
 // NewRouter 创建路由管理器
@@ -47,6 +50,7 @@ func NewRouter(
 	authMiddleware *middleware.AuthMiddleware,
 	auditMiddleware *middleware.AuditMiddleware,
 	healthService *service.HealthService,
+	cache domainService.Cache,
 ) *Router {
 	engine := gin.New()
 
@@ -74,8 +78,13 @@ func NewRouter(
 	// 5. 请求大小限制（50MB）
 	engine.Use(pkgmiddleware.RequestSizeMiddleware(50 * 1024 * 1024))
 
-	// 6. 限流中间件（每秒100请求，突发200）
-	engine.Use(pkgmiddleware.RateLimitMiddleware(100, 200))
+	// 6. 限流中间件
+	// 生产优先使用 Redis 分布式限流；无缓存时回退到进程内限流。
+	if cache != nil {
+		engine.Use(middleware.DistributedRateLimitMiddleware(cache, 100, time.Second))
+	} else {
+		engine.Use(pkgmiddleware.RateLimitMiddleware(100, 200))
+	}
 
 	// 7. 审计日志中间件（记录所有请求）
 	if auditMiddleware != nil {
@@ -101,6 +110,7 @@ func NewRouter(
 		auditHandler:         auditHandler,
 		authMiddleware:       authMiddleware,
 		healthService:        healthService,
+		cache:                cache,
 	}
 }
 

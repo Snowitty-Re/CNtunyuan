@@ -12,6 +12,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/cache"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 var (
@@ -87,6 +88,7 @@ func (s *JWTService) generateToken(user *entity.User, expiry time.Duration) (str
 			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    "cntuanyuan",
 			Subject:   user.ID,
+			ID:        uuid.NewString(),
 		},
 	}
 
@@ -96,13 +98,6 @@ func (s *JWTService) generateToken(user *entity.User, expiry time.Duration) (str
 
 // ValidateToken validate token
 func (s *JWTService) ValidateToken(ctx context.Context, tokenString string) (*service.TokenClaims, error) {
-	if s.cache != nil {
-		blacklisted, err := s.cache.Exists(ctx, cacheKeyBlacklisted(tokenString))
-		if err == nil && blacklisted {
-			return nil, ErrTokenInvalid
-		}
-	}
-
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -121,6 +116,18 @@ func (s *JWTService) ValidateToken(ctx context.Context, tokenString string) (*se
 	claims, ok := token.Claims.(*JWTClaims)
 	if !ok || !token.Valid {
 		return nil, ErrTokenInvalid
+	}
+
+	if s.cache != nil {
+		blacklistID := claims.ID
+		if blacklistID == "" {
+			// 兼容历史 token（无 jti）
+			blacklistID = tokenString
+		}
+		blacklisted, cacheErr := s.cache.Exists(ctx, cacheKeyBlacklisted(blacklistID))
+		if cacheErr == nil && blacklisted {
+			return nil, ErrTokenInvalid
+		}
 	}
 
 	return &service.TokenClaims{
@@ -146,9 +153,13 @@ func (s *JWTService) RevokeToken(ctx context.Context, tokenString string) error 
 	}
 
 	if claims, ok := token.Claims.(*JWTClaims); ok {
+		blacklistID := claims.ID
+		if blacklistID == "" {
+			blacklistID = tokenString
+		}
 		remaining := time.Until(claims.ExpiresAt.Time)
 		if remaining > 0 {
-			return s.cache.Set(ctx, cacheKeyBlacklisted(tokenString), true, remaining)
+			return s.cache.Set(ctx, cacheKeyBlacklisted(blacklistID), true, remaining)
 		}
 	}
 

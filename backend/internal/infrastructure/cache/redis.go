@@ -15,6 +15,8 @@ import (
 type Cache interface {
 	Get(ctx context.Context, key string, dest interface{}) error
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error
+	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error)
+	IncrWithTTL(ctx context.Context, key string, expiration time.Duration) (int64, error)
 	Delete(ctx context.Context, keys ...string) error
 	Exists(ctx context.Context, key string) (bool, error)
 	TTL(ctx context.Context, key string) (time.Duration, error)
@@ -91,6 +93,49 @@ func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, exp
 	}
 
 	return c.client.Set(ctx, c.prefix+key, data, expiration).Err()
+}
+
+// SetNX 仅在 key 不存在时设置缓存
+func (c *RedisCache) SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error) {
+	if c == nil || c.client == nil {
+		return false, nil
+	}
+
+	data, err := json.Marshal(value)
+	if err != nil {
+		return false, err
+	}
+
+	return c.client.SetNX(ctx, c.prefix+key, data, expiration).Result()
+}
+
+// IncrWithTTL 原子递增并设置过期时间（仅首次递增时设置）
+func (c *RedisCache) IncrWithTTL(ctx context.Context, key string, expiration time.Duration) (int64, error) {
+	if c == nil || c.client == nil {
+		return 0, fmt.Errorf("cache not available")
+	}
+
+	script := redis.NewScript(`
+local current = redis.call("INCR", KEYS[1])
+if current == 1 then
+  redis.call("PEXPIRE", KEYS[1], ARGV[1])
+end
+return current
+`)
+
+	result, err := script.Run(ctx, c.client, []string{c.prefix + key}, expiration.Milliseconds()).Result()
+	if err != nil {
+		return 0, err
+	}
+
+	switch v := result.(type) {
+	case int64:
+		return v, nil
+	case int:
+		return int64(v), nil
+	default:
+		return 0, fmt.Errorf("unexpected INCR result type: %T", result)
+	}
 }
 
 // Delete 删除缓存

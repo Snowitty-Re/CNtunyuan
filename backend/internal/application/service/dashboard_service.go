@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
+	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
+	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 )
 
 // DashboardService 仪表盘服务
@@ -16,6 +18,7 @@ type DashboardService struct {
 	taskRepo    repository.TaskRepository
 	dialectRepo repository.DialectRepository
 	fileRepo    repository.FileRepository
+	cache       domainService.Cache
 }
 
 // NewDashboardService 创建仪表盘服务
@@ -26,6 +29,7 @@ func NewDashboardService(
 	taskRepo repository.TaskRepository,
 	dialectRepo repository.DialectRepository,
 	fileRepo repository.FileRepository,
+	cache domainService.Cache,
 ) *DashboardService {
 	return &DashboardService{
 		userRepo:    userRepo,
@@ -34,6 +38,7 @@ func NewDashboardService(
 		taskRepo:    taskRepo,
 		dialectRepo: dialectRepo,
 		fileRepo:    fileRepo,
+		cache:       cache,
 	}
 }
 
@@ -113,6 +118,13 @@ type Activity struct {
 
 // GetDashboardStats 获取仪表盘统计
 func (s *DashboardService) GetDashboardStats(ctx context.Context) (*DashboardStats, error) {
+	if s.cache != nil {
+		var cached DashboardStats
+		if err := s.cache.Get(ctx, "dashboard:stats", &cached); err == nil {
+			return &cached, nil
+		}
+	}
+
 	stats := &DashboardStats{}
 
 	// 用户统计
@@ -162,11 +174,24 @@ func (s *DashboardService) GetDashboardStats(ctx context.Context) (*DashboardSta
 	stats.Files.TotalCount = fileStats.TotalCount
 	stats.Files.TotalSize = fileStats.TotalSize
 
+	if s.cache != nil {
+		if err := s.cache.Set(ctx, "dashboard:stats", stats, 30*time.Second); err != nil {
+			logger.Warn("Failed to cache dashboard stats", logger.Err(err))
+		}
+	}
+
 	return stats, nil
 }
 
 // GetOverview 获取概览数据
 func (s *DashboardService) GetOverview(ctx context.Context) (map[string]interface{}, error) {
+	if s.cache != nil {
+		var cached map[string]interface{}
+		if err := s.cache.Get(ctx, "dashboard:overview", &cached); err == nil {
+			return cached, nil
+		}
+	}
+
 	overview := make(map[string]interface{})
 
 	// 关键数据
@@ -190,6 +215,12 @@ func (s *DashboardService) GetOverview(ctx context.Context) (map[string]interfac
 	overview["pending_tasks"] = taskStats.Pending
 	overview["processing_tasks"] = taskStats.Processing
 
+	if s.cache != nil {
+		if err := s.cache.Set(ctx, "dashboard:overview", overview, 30*time.Second); err != nil {
+			logger.Warn("Failed to cache dashboard overview", logger.Err(err))
+		}
+	}
+
 	return overview, nil
 }
 
@@ -200,6 +231,14 @@ func (s *DashboardService) GetTrendData(ctx context.Context, days int) ([]TrendD
 	}
 	if days > 90 {
 		days = 90
+	}
+
+	cacheKey := fmt.Sprintf("dashboard:trend:%d", days)
+	if s.cache != nil {
+		var cached []TrendData
+		if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+			return cached, nil
+		}
 	}
 
 	trends := make([]TrendData, 0, days)
@@ -249,6 +288,12 @@ func (s *DashboardService) GetTrendData(ctx context.Context, days int) ([]TrendD
 		trend.NewUsers = newUsers
 
 		trends = append(trends, trend)
+	}
+
+	if s.cache != nil {
+		if err := s.cache.Set(ctx, cacheKey, trends, 30*time.Second); err != nil {
+			logger.Warn("Failed to cache dashboard trend", logger.Err(err))
+		}
 	}
 
 	return trends, nil

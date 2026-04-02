@@ -91,6 +91,34 @@ func (m *MockCache) Set(ctx context.Context, key string, value interface{}, expi
 	return nil
 }
 
+func (m *MockCache) SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (bool, error) {
+	if _, exists := m.data[key]; exists {
+		return false, nil
+	}
+	m.data[key] = value
+	return true, nil
+}
+
+func (m *MockCache) IncrWithTTL(ctx context.Context, key string, expiration time.Duration) (int64, error) {
+	val, exists := m.data[key]
+	if !exists {
+		m.data[key] = int64(1)
+		return 1, nil
+	}
+	switch v := val.(type) {
+	case int:
+		n := int64(v + 1)
+		m.data[key] = n
+		return n, nil
+	case int64:
+		n := v + 1
+		m.data[key] = n
+		return n, nil
+	default:
+		return 0, errors.New("type mismatch")
+	}
+}
+
 func (m *MockCache) Delete(ctx context.Context, keys ...string) error {
 	for _, key := range keys {
 		delete(m.data, key)

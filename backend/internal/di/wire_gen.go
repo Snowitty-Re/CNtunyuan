@@ -150,6 +150,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		taskRepo,
 		dialectRepo,
 		fileRepo,
+		redisCache,
 	)
 	healthService := service.NewHealthService(db, redisCache)
 	auditLogService := service.NewAuditLogService(auditRepo)
@@ -185,6 +186,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		authMiddleware,
 		auditMiddleware,
 		healthService,
+		redisCache,
 	)
 	r.Setup()
 
