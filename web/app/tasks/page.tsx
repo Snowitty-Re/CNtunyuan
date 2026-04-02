@@ -19,6 +19,7 @@ import type { Task, User } from '@/types/api'
 const TASK_FILTER_KEY = 'web_tasks_filters_v1'
 const TASK_COL_KEY = 'web_tasks_columns_v1'
 const TASK_LIST_IDS_KEY = 'web_tasks_list_ids_v1'
+const TASK_DENSITY_KEY = 'web_tasks_density_v1'
 
 export default function TasksPage() {
   const { ready } = useAuthGuard()
@@ -55,6 +56,7 @@ export default function TasksPage() {
     deadline: true,
     actions: true,
   })
+  const [compactTable, setCompactTable] = useState(false)
   const sortedItems = useMemo(() => {
     const list = [...items]
     const factor = sortOrder === 'asc' ? 1 : -1
@@ -320,6 +322,7 @@ export default function TasksPage() {
           if (savedCols && typeof savedCols === 'object') {
             setColumnVisible((prev) => ({ ...prev, ...savedCols }))
           }
+          setCompactTable(localStorage.getItem(TASK_DENSITY_KEY) === 'compact')
         } catch {
           load(1)
         }
@@ -345,6 +348,11 @@ export default function TasksPage() {
     if (!ready || !booted || typeof window === 'undefined') return
     localStorage.setItem(TASK_COL_KEY, JSON.stringify(columnVisible))
   }, [ready, booted, columnVisible])
+
+  useEffect(() => {
+    if (!ready || !booted || typeof window === 'undefined') return
+    localStorage.setItem(TASK_DENSITY_KEY, compactTable ? 'compact' : 'comfortable')
+  }, [ready, booted, compactTable])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -544,13 +552,20 @@ export default function TasksPage() {
         <label><input type="checkbox" checked={columnVisible.progress} onChange={(e) => setColumnVisible((v) => ({ ...v, progress: e.target.checked }))} /> 进度</label>
         <label><input type="checkbox" checked={columnVisible.deadline} onChange={(e) => setColumnVisible((v) => ({ ...v, deadline: e.target.checked }))} /> 截止时间</label>
         <label><input type="checkbox" checked={columnVisible.actions} onChange={(e) => setColumnVisible((v) => ({ ...v, actions: e.target.checked }))} /> 操作</label>
+        <span style={{ marginLeft: 'auto' }} />
+        <button className={`btn ${compactTable ? '' : 'primary'}`} type="button" onClick={() => setCompactTable(false)}>
+          舒适
+        </button>
+        <button className={`btn ${compactTable ? 'primary' : ''}`} type="button" onClick={() => setCompactTable(true)}>
+          紧凑
+        </button>
       </div>
 
       <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
       {!loading && !error && items.length > 0 ? (
         <>
           <div className="table-wrap">
-            <table className="table">
+            <table className={`table ${compactTable ? 'compact' : ''}`}>
               <thead>
                 <tr>
                   <th>

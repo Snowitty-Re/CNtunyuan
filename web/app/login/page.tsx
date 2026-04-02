@@ -31,7 +31,7 @@ export default function LoginPage() {
     <div className="login-page">
       <form className="login-card" onSubmit={onSubmit}>
         <h1 className="login-title">助力团圆 Web</h1>
-        <p className="login-subtitle">专业协作管理端</p>
+        <p className="login-subtitle">让每一条线索都更快抵达家人</p>
         <div className="grid">
           <label>
             <div>账号（手机号）</div>

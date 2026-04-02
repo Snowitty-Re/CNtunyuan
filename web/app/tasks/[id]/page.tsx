@@ -149,7 +149,7 @@ export default function TaskDetailPage() {
         <div className="grid">
           <div className="section-card">
             <div className="row wrap" style={{ justifyContent: 'space-between' }}>
-              <b>{item.title}</b>
+              <h3 className="card-title">{item.title}</h3>
               <div className="row wrap">
                 {item.status === 'pending' || item.status === 'assigned' ? (
                   <button className="btn" type="button" onClick={() => taskService.start(id).then(load)}>
@@ -168,24 +168,51 @@ export default function TaskDetailPage() {
                 ) : null}
               </div>
             </div>
-            <div className="grid cols-3" style={{ marginTop: 12 }}>
-              <div>
-                状态：<StatusTag status={item.status || '-'} />
+            <div className="meta-grid">
+              <div className="meta-item">
+                <div className="k">状态</div>
+                <div className="v">
+                  <StatusTag status={item.status || '-'} />
+                </div>
               </div>
-              <div>优先级：{item.priority || '-'}</div>
-              <div>进度：{item.progress ?? 0}%</div>
-              <div>执行人：{item.assignee?.nickname || '-'}</div>
-              <div>关联案件：{item.missing_person?.name || '-'}</div>
-              <div>更新时间：{fmtTime(item.created_at)}</div>
+              <div className="meta-item">
+                <div className="k">优先级</div>
+                <div className="v">{item.priority || '-'}</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">进度</div>
+                <div className="v">{item.progress ?? 0}%</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">执行人</div>
+                <div className="v">{item.assignee?.nickname || '-'}</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">关联案件</div>
+                <div className="v">{item.missing_person?.name || '-'}</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">更新时间</div>
+                <div className="v">{fmtTime(item.created_at)}</div>
+              </div>
             </div>
-            <div style={{ marginTop: 10, color: '#6b7280' }}>{item.description || '暂无描述'}</div>
+            <div className="panel" style={{ marginTop: 10 }}>
+              <div className="hint">任务描述</div>
+              <div style={{ marginTop: 6 }}>{item.description || '暂无描述'}</div>
+            </div>
           </div>
 
           <div className="section-card">
-            <b>新增跟进记录</b>
+            <h3 className="card-title">新增跟进记录</h3>
+            <div className="hint" style={{ marginTop: 4 }}>
+              记录任务阶段性动作，支持附件上传，后续可评论与审批。
+            </div>
             <form className="grid" style={{ marginTop: 10 }} onSubmit={onCreateFollowUp}>
               <textarea className="textarea" value={content} onChange={(e) => setContent(e.target.value)} placeholder="跟进内容" />
-              <input className="input" value={progress} onChange={(e) => setProgress(e.target.value.replace(/[^\d]/g, ''))} placeholder="进度 0-100" />
+              <div className="progress-input-wrap">
+                <input className="input" value={progress} onChange={(e) => setProgress(e.target.value.replace(/[^\d]/g, ''))} placeholder="进度 0-100" />
+                <span className="progress-badge">{progress || 0}%</span>
+              </div>
               <label>
                 <div style={{ marginBottom: 6 }}>附件上传</div>
                 <input className="input" type="file" multiple onChange={(e) => onUploadFiles(e.target.files)} />
@@ -226,8 +253,9 @@ export default function TaskDetailPage() {
             </form>
           </div>
 
-          <div className="section-card">
-            <b>跟进记录</b>
+          <details className="section-toggle" open>
+            <summary>跟进记录</summary>
+            <div className="section-toggle-body">
             {followUps.length === 0 ? (
               <div style={{ marginTop: 10, color: '#6b7280' }}>暂无记录</div>
             ) : (
@@ -278,10 +306,12 @@ export default function TaskDetailPage() {
                 </table>
               </div>
             )}
-          </div>
+            </div>
+          </details>
 
-          <div className="section-card">
-            <b>任务日志</b>
+          <details className="section-toggle">
+            <summary>任务日志</summary>
+            <div className="section-toggle-body">
             {logs.length === 0 ? (
               <div style={{ marginTop: 10, color: '#6b7280' }}>暂无日志</div>
             ) : (
@@ -308,7 +338,8 @@ export default function TaskDetailPage() {
                 </table>
               </div>
             )}
-          </div>
+            </div>
+          </details>
         </div>
       ) : null}
     </AppShell>

@@ -70,19 +70,35 @@ export default function TaskFollowUpDetailPage() {
       {!loading && !error && followUp ? (
         <div className="grid">
           <div className="section-card">
-            <div className="grid cols-3">
-              <div>创建时间：{fmtTime(followUp.created_at)}</div>
-              <div>进度：{followUp.progress ?? 0}%</div>
-              <div>
-                审批状态：<StatusTag status={followUp.review_status || 'pending'} />
+            <h3 className="card-title">记录概览</h3>
+            <div className="meta-grid">
+              <div className="meta-item">
+                <div className="k">创建时间</div>
+                <div className="v">{fmtTime(followUp.created_at)}</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">进度</div>
+                <div className="v">{followUp.progress ?? 0}%</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">审批状态</div>
+                <div className="v">
+                  <StatusTag status={followUp.review_status || 'pending'} />
+                </div>
               </div>
             </div>
-            <div style={{ marginTop: 12 }}>{followUp.content}</div>
-            <div style={{ marginTop: 10, color: '#6b7280' }}>审批意见：{followUp.review_remark || '暂无'}</div>
+            <div className="panel" style={{ marginTop: 10 }}>
+              <div className="hint">跟进内容</div>
+              <div style={{ marginTop: 6 }}>{followUp.content}</div>
+            </div>
+            <div className="panel" style={{ marginTop: 10 }}>
+              <div className="hint">审批意见</div>
+              <div style={{ marginTop: 6 }}>{followUp.review_remark || '暂无'}</div>
+            </div>
             {followUp.attachments && followUp.attachments.length > 0 ? (
               <div style={{ marginTop: 12 }}>
-                <b>附件</b>
-                <ul>
+                <h3 className="card-title">附件</h3>
+                <ul className="soft-list">
                   {followUp.attachments.map((a) => (
                     <li key={a}>
                       <a href={a} target="_blank" rel="noreferrer">
@@ -95,8 +111,9 @@ export default function TaskFollowUpDetailPage() {
             ) : null}
           </div>
 
-          <div className="section-card">
-            <b>评论讨论</b>
+          <details className="section-toggle" open>
+            <summary>评论讨论</summary>
+            <div className="section-toggle-body">
             <form className="row" style={{ marginTop: 10 }} onSubmit={submitComment}>
               <input className="input" placeholder="输入评论内容" value={comment} onChange={(e) => setComment(e.target.value)} />
               <button className="btn primary" type="submit">
@@ -129,7 +146,8 @@ export default function TaskFollowUpDetailPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+            </div>
+          </details>
         </div>
       ) : null}
     </AppShell>

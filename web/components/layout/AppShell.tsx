@@ -34,7 +34,10 @@ export function AppShell({ children }: PropsWithChildren) {
   return (
     <div className="shell">
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
-        <div className="brand">助力团圆 Web</div>
+        <div className="brand">
+          助力团圆 Web
+          <small>走失人员寻亲协作平台</small>
+        </div>
         <nav className="nav-list">
           {items.filter((item) => hasMinRole(user, item.minRole)).map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -54,7 +57,7 @@ export function AppShell({ children }: PropsWithChildren) {
           </button>
           <div>
             <h1 className="top-title">团圆寻亲志愿者系统</h1>
-            <p className="top-subtitle">面向志愿协作的案件与任务闭环管理</p>
+            <p className="top-subtitle">以温暖协作连接每一次线索与团圆</p>
           </div>
           <div className="top-user">
             <span>{user?.nickname || user?.phone || '未登录'}</span>

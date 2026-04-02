@@ -155,10 +155,13 @@ export default function DashboardPage() {
               {pendingTasks.length === 0 ? (
                 <div style={{ marginTop: 10, color: '#6b7280' }}>当前无待分配任务</div>
               ) : (
-                <ul style={{ marginTop: 10 }}>
+                <ul className="soft-list">
                   {pendingTasks.map((t) => (
                     <li key={t.id}>
-                      <Link href={`/tasks/${t.id}`}>{t.title}</Link>（{fmtTime(t.deadline)}）
+                      <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+                        <Link href={`/tasks/${t.id}`}>{t.title}</Link>
+                        <span className="hint">{fmtTime(t.deadline)}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -174,10 +177,13 @@ export default function DashboardPage() {
               {activeCases.length === 0 ? (
                 <div style={{ marginTop: 10, color: '#6b7280' }}>当前无进行中案件</div>
               ) : (
-                <ul style={{ marginTop: 10 }}>
+                <ul className="soft-list">
                   {activeCases.map((c) => (
                     <li key={c.id}>
-                      <Link href={`/cases/${c.id}`}>{c.name}</Link>（{fmtTime(c.missing_time)}）
+                      <div className="row wrap" style={{ justifyContent: 'space-between' }}>
+                        <Link href={`/cases/${c.id}`}>{c.name}</Link>
+                        <span className="hint">{fmtTime(c.missing_time)}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>

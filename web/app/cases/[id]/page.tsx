@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
@@ -228,7 +229,7 @@ export default function CaseDetailPage() {
         <div className="grid">
           <div className="section-card">
             <div className="row wrap" style={{ justifyContent: 'space-between' }}>
-              <b>{item.name}</b>
+              <h3 className="card-title">{item.name}</h3>
               <div className="row wrap">
                 <button className="btn" type="button" onClick={() => setEditing((v) => !v)}>
                   {editing ? '取消编辑' : '编辑案件'}
@@ -263,14 +264,26 @@ export default function CaseDetailPage() {
                 />
               </div>
             </div>
-            <div className="grid cols-3" style={{ marginTop: 12 }}>
-              <div>
-                状态：<StatusTag status={item.status || '-'} />
+            <div className="meta-grid">
+              <div className="meta-item">
+                <div className="k">状态</div>
+                <div className="v">
+                  <StatusTag status={item.status || '-'} />
+                </div>
               </div>
-              <div>走失时间：{fmtTime(item.missing_time)}</div>
-              <div>走失地点：{joinLocation(item)}</div>
+              <div className="meta-item">
+                <div className="k">走失时间</div>
+                <div className="v">{fmtTime(item.missing_time)}</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">走失地点</div>
+                <div className="v">{joinLocation(item)}</div>
+              </div>
             </div>
-            <div style={{ marginTop: 10, color: '#6b7280' }}>{item.description || '暂无描述'}</div>
+            <div className="panel" style={{ marginTop: 10 }}>
+              <div className="hint">案件描述</div>
+              <div style={{ marginTop: 6 }}>{item.description || '暂无描述'}</div>
+            </div>
             {item.photo_url ? (
               <div style={{ marginTop: 10 }}>
                 <Image
@@ -352,7 +365,10 @@ export default function CaseDetailPage() {
           </div>
 
           <div className="section-card">
-            <b>新增线索</b>
+            <h3 className="card-title">新增线索</h3>
+            <div className="hint" style={{ marginTop: 4 }}>
+              补充新的目击信息或排查结果，支持地点摘要与详细描述。
+            </div>
             <form className="grid" style={{ marginTop: 10 }} onSubmit={submitTrack}>
               <input className="input" placeholder="地点摘要（可选）" value={trackLocation} onChange={(e) => setTrackLocation(e.target.value)} />
               <textarea className="textarea" placeholder="线索描述（必填）" value={trackContent} onChange={(e) => setTrackContent(e.target.value)} />
@@ -364,8 +380,12 @@ export default function CaseDetailPage() {
             </form>
           </div>
 
-          <div className="section-card">
-            <b>关联任务</b>
+          <details className="section-toggle" open>
+            <summary>关联任务</summary>
+            <div className="section-toggle-body">
+            <div className="hint" style={{ marginTop: 2 }}>
+              可从案件直接创建任务并分配执行，形成案件处理闭环。
+            </div>
             <form className="grid cols-3" style={{ margin: '10px 0' }} onSubmit={createRelatedTask}>
               <input className="input" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="任务标题" />
               <select className="select" value={taskPriority} onChange={(e) => setTaskPriority(e.target.value)}>
@@ -397,50 +417,52 @@ export default function CaseDetailPage() {
                       <th>状态</th>
                       <th>优先级</th>
                       <th>执行人</th>
+                      <th>操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     {tasks.map((t) => (
                       <tr key={t.id}>
                         <td>{t.title}</td>
-                        <td>{t.status || '-'}</td>
+                        <td>
+                          <StatusTag status={t.status || '-'} />
+                        </td>
                         <td>{t.priority || '-'}</td>
                         <td>{t.assignee?.nickname || '-'}</td>
+                        <td>
+                          <Link className="btn ghost" href={`/tasks/${t.id}`}>
+                            查看
+                          </Link>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-          </div>
+            </div>
+          </details>
 
-          <div className="section-card">
-            <b>线索记录</b>
+          <details className="section-toggle" open>
+            <summary>线索记录</summary>
+            <div className="section-toggle-body">
             {tracks.length === 0 ? (
               <div style={{ marginTop: 10, color: '#6b7280' }}>暂无线索</div>
             ) : (
-              <div className="table-wrap" style={{ marginTop: 10 }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>时间</th>
-                      <th>地点</th>
-                      <th>内容</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tracks.map((t) => (
-                      <tr key={t.id}>
-                        <td>{fmtTime(t.time || t.created_at)}</td>
-                        <td>{joinLocation(t) || t.location || '-'}</td>
-                        <td>{t.description || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="timeline" style={{ marginTop: 10 }}>
+                {tracks.map((t) => (
+                  <div className="timeline-item" key={t.id}>
+                    <div className="timeline-head">
+                      <b>{joinLocation(t) || t.location || '地点待补充'}</b>
+                      <span className="timeline-time">{fmtTime(t.time || t.created_at)}</span>
+                    </div>
+                    <div className="timeline-body">{t.description || '-'}</div>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
+            </div>
+          </details>
         </div>
       ) : null}
     </AppShell>
