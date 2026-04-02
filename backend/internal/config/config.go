@@ -276,6 +276,11 @@ func GetConfig() *Config {
 	return globalConfig
 }
 
+// SetConfig 设置全局配置（用于配置热更新）
+func SetConfig(cfg *Config) {
+	globalConfig = cfg
+}
+
 func setDefaults() {
 	// Server defaults
 	viper.SetDefault("server.port", "8080")

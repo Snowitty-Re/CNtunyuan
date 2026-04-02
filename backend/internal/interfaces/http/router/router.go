@@ -31,6 +31,7 @@ type Router struct {
 	uploadHandler        *handler.UploadHandler
 	dashboardHandler     *handler.DashboardHandler
 	auditHandler         *handler.AuditHandler
+	systemConfigHandler  *handler.SystemConfigHandler
 	authMiddleware       *middleware.AuthMiddleware
 	healthService        *service.HealthService
 	cache                domainService.Cache
@@ -47,6 +48,7 @@ func NewRouter(
 	uploadHandler *handler.UploadHandler,
 	dashboardHandler *handler.DashboardHandler,
 	auditHandler *handler.AuditHandler,
+	systemConfigHandler *handler.SystemConfigHandler,
 	authMiddleware *middleware.AuthMiddleware,
 	auditMiddleware *middleware.AuditMiddleware,
 	healthService *service.HealthService,
@@ -108,6 +110,7 @@ func NewRouter(
 		uploadHandler:        uploadHandler,
 		dashboardHandler:     dashboardHandler,
 		auditHandler:         auditHandler,
+		systemConfigHandler:  systemConfigHandler,
 		authMiddleware:       authMiddleware,
 		healthService:        healthService,
 		cache:                cache,
@@ -152,6 +155,9 @@ func (r *Router) Setup() {
 	r.taskHandler.RegisterRoutes(api, r.authMiddleware)
 	r.uploadHandler.RegisterRoutes(api, r.authMiddleware)
 	r.dashboardHandler.RegisterRoutes(api, r.authMiddleware)
+	if r.systemConfigHandler != nil {
+		r.systemConfigHandler.RegisterRoutes(api, r.authMiddleware)
+	}
 
 	// 注册审计日志路由（如果配置了）
 	if r.auditHandler != nil {

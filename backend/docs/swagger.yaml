@@ -1684,6 +1684,12 @@ definitions:
         example: active
         type: string
     type: object
+  internal_interfaces_http_handler.updateSystemConfigRequest:
+    properties:
+      config:
+        additionalProperties: true
+        type: object
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -4319,6 +4325,72 @@ paths:
       summary: Get user statistics
       tags:
       - 个人中心
+  /system/config:
+    get:
+      description: 获取当前系统配置（敏感字段已掩码，仅管理员可访问）
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取系统配置
+      tags:
+      - 系统配置
+    put:
+      consumes:
+      - application/json
+      description: 更新并持久化系统配置到 config.yaml（敏感字段传掩码将保留原值）
+      parameters:
+      - description: 配置项（扁平 key-value）
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.updateSystemConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 更新系统配置
+      tags:
+      - 系统配置
   /tasks:
     get:
       consumes:
