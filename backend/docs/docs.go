@@ -698,6 +698,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/bind-wechat": {
+            "post": {
+                "description": "为已登录账号绑定微信 openid，绑定后可直接微信登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证授权"
+                ],
+                "summary": "绑定微信账号",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003ctoken\u003e",
+                        "description": "Bearer 访问令牌",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "绑定微信请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.BindWechatRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "绑定成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "微信已被其他账号绑定",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "使用用户名和密码登录系统，返回访问令牌和用户信息",
@@ -1107,6 +1173,70 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "服务器内部错误或微信服务异常",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/wechat-web-login": {
+            "post": {
+                "description": "Web 端微信扫码登录回调后，携带 code 调用此接口换取系统访问令牌（需先绑定微信账号）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证授权"
+                ],
+                "summary": "微信网页扫码登录",
+                "parameters": [
+                    {
+                        "description": "微信网页扫码登录请求",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.WechatWebLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "登录成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_internal_application_dto.LoginResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "微信未绑定或账号无权限",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
                         "schema": {
                             "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
                         }
@@ -7112,6 +7242,15 @@ const docTemplate = `{
                 "city": {
                     "type": "string"
                 },
+                "collect_address": {
+                    "type": "string"
+                },
+                "collect_latitude": {
+                    "type": "number"
+                },
+                "collect_longitude": {
+                    "type": "number"
+                },
                 "content": {
                     "type": "string"
                 },
@@ -7501,6 +7640,15 @@ const docTemplate = `{
                 },
                 "city": {
                     "type": "string"
+                },
+                "collect_address": {
+                    "type": "string"
+                },
+                "collect_latitude": {
+                    "type": "number"
+                },
+                "collect_longitude": {
+                    "type": "number"
                 },
                 "comment_count": {
                     "type": "integer"
@@ -8576,6 +8724,9 @@ const docTemplate = `{
                 "address": {
                     "type": "string"
                 },
+                "avatar": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -8769,6 +8920,9 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "wx_bound": {
+                    "type": "boolean"
                 }
             }
         },
@@ -8807,6 +8961,9 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "wx_bound": {
+                    "type": "boolean"
                 }
             }
         },
@@ -9305,19 +9462,34 @@ const docTemplate = `{
         "internal_interfaces_http_handler.BindPhoneRequest": {
             "description": "绑定手机号请求参数",
             "type": "object",
-            "required": [
-                "phone"
-            ],
             "properties": {
                 "code": {
-                    "description": "验证码（测试阶段可选）",
+                    "description": "验证码（短信绑定模式）",
                     "type": "string",
                     "example": "123456"
                 },
                 "phone": {
-                    "description": "手机号",
+                    "description": "手机号（短信绑定模式必填）",
                     "type": "string",
                     "example": "13800138000"
+                },
+                "wechat_code": {
+                    "description": "微信 getPhoneNumber 返回的 code（一键绑定模式）",
+                    "type": "string",
+                    "example": "phone_code_12345"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.BindWechatRequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
+                    "description": "微信登录临时凭证",
+                    "type": "string",
+                    "example": "wx_login_code_123"
                 }
             }
         },
@@ -9512,6 +9684,18 @@ const docTemplate = `{
                     "description": "状态",
                     "type": "string",
                     "example": "active"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.WechatWebLoginRequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "021ZlG1005f8lN1dR4100vP4oJ0ZlG1M"
                 }
             }
         },

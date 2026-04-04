@@ -52,6 +52,14 @@ type WechatPhoneInfo struct {
 	CountryCode     string
 }
 
+// WechatWebUserInfo 微信网页扫码登录用户信息
+type WechatWebUserInfo struct {
+	OpenID   string
+	UnionID  string
+	Nickname string
+	Avatar   string
+}
+
 // WechatClient 微信客户端接口
 type WechatClient interface {
 	Code2Session(code string) (*WechatSession, error)
@@ -345,6 +353,84 @@ func (s *AuthService) ValidateToken(ctx context.Context, token string) (*TokenCl
 // GenerateTokenPair 生成token对（供handler使用）
 func (s *AuthService) GenerateTokenPair(user *entity.User) (*TokenPair, error) {
 	return s.tokenService.GenerateTokenPair(context.Background(), user)
+}
+
+// WechatWebLogin 微信网页扫码登录（Web）
+func (s *AuthService) WechatWebLogin(ctx context.Context, code, ip string) (*valueobject.LoginResult, *entity.User, error) {
+	type wechatWebClient interface {
+		GetWebUserByCode(code string) (*WechatWebUserInfo, error)
+	}
+
+	if s.wechatClient == nil {
+		return nil, nil, errors.New(errors.CodeInternal, "wechat service not configured")
+	}
+	if strings.TrimSpace(code) == "" {
+		return nil, nil, errors.New(errors.CodeInvalidParam, "微信登录 code 不能为空")
+	}
+
+	client, ok := s.wechatClient.(wechatWebClient)
+	if !ok {
+		return nil, nil, errors.New(errors.CodeInternal, "wechat web login is not supported by current client")
+	}
+
+	wxUser, err := client.GetWebUserByCode(code)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, errors.CodeInternal, "wechat web login failed")
+	}
+
+	var user *entity.User
+	if strings.TrimSpace(wxUser.UnionID) != "" {
+		user, err = s.userRepo.FindByUnionID(ctx, wxUser.UnionID)
+	}
+	if (err != nil || user == nil) && strings.TrimSpace(wxUser.OpenID) != "" {
+		user, err = s.userRepo.FindByOpenID(ctx, wxUser.OpenID)
+	}
+	if err != nil || user == nil {
+		return nil, nil, errors.New(errors.CodeForbidden, "该微信未绑定系统账号，请先使用账号密码登录后在个人设置绑定微信")
+	}
+
+	if !user.IsActive() {
+		return nil, nil, errors.ErrAccountDisabled
+	}
+
+	needUpdate := false
+	if strings.TrimSpace(user.WxOpenID) == "" && strings.TrimSpace(wxUser.OpenID) != "" {
+		user.WxOpenID = strings.TrimSpace(wxUser.OpenID)
+		needUpdate = true
+	}
+	if strings.TrimSpace(user.WxUnionID) == "" && strings.TrimSpace(wxUser.UnionID) != "" {
+		user.WxUnionID = strings.TrimSpace(wxUser.UnionID)
+		needUpdate = true
+	}
+	if strings.TrimSpace(wxUser.Nickname) != "" && user.Nickname != strings.TrimSpace(wxUser.Nickname) {
+		user.Nickname = strings.TrimSpace(wxUser.Nickname)
+		needUpdate = true
+	}
+	if strings.TrimSpace(wxUser.Avatar) != "" && user.Avatar != strings.TrimSpace(wxUser.Avatar) {
+		user.Avatar = strings.TrimSpace(wxUser.Avatar)
+		needUpdate = true
+	}
+
+	user.RecordLogin(ip)
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		if needUpdate {
+			logger.Warn("Failed to update wechat web profile/login", logger.Err(err))
+		} else {
+			logger.Warn("Failed to record wechat web login", logger.Err(err))
+		}
+	}
+
+	tokens, err := s.tokenService.GenerateTokenPair(ctx, user)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, errors.CodeInternal, "token generation failed")
+	}
+
+	return &valueobject.LoginResult{
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
+		ExpiresIn:    tokens.ExpiresIn,
+		TokenType:    "Bearer",
+	}, user, nil
 }
 
 // getDefaultOrgID 获取默认组织ID

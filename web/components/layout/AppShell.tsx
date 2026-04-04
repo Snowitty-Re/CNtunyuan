@@ -60,6 +60,14 @@ export function AppShell({ children }: PropsWithChildren) {
             <p className="top-subtitle">以温暖协作连接每一次线索与团圆</p>
           </div>
           <div className="top-user">
+            <img
+              className="top-avatar"
+              src={user?.avatar || '/default-avatar.svg'}
+              alt={user?.nickname || 'avatar'}
+              onError={(e) => {
+                ;(e.currentTarget as HTMLImageElement).src = '/default-avatar.svg'
+              }}
+            />
             <span>{user?.nickname || user?.phone || '未登录'}</span>
             <span className="role-badge">{user?.role || '-'}</span>
             <button

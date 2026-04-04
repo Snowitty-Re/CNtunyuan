@@ -17,9 +17,12 @@ export type User = {
   username?: string
   phone?: string
   email?: string
+  avatar?: string
   role: 'super_admin' | 'admin' | 'manager' | 'volunteer' | string
   status?: string
+  wx_bound?: boolean
   org_id?: string | null
+  org_name?: string
   organization?: { id: string; name: string } | null
   created_at?: string
 }
@@ -27,6 +30,17 @@ export type User = {
 export type AuthLoginResponse = {
   access_token: string
   refresh_token: string
+  expires_in?: number
+  token_type?: string
+  user: User
+}
+
+export type WechatLoginResponse = {
+  need_bind_phone: boolean
+  access_token: string
+  refresh_token: string
+  expires_in?: number
+  token_type?: string
   user: User
 }
 
@@ -101,6 +115,9 @@ export type Dialect = {
   region?: string
   province?: string
   city?: string
+  collect_address?: string
+  collect_latitude?: number
+  collect_longitude?: number
   status?: string
   audio_url?: string
   featured?: boolean

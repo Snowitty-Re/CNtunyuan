@@ -7,8 +7,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
@@ -225,6 +227,83 @@ func (c *Client) GetAccessToken() (string, int, error) {
 	}
 
 	return result.AccessToken, result.ExpiresIn, nil
+}
+
+// GetWebUserByCode 通过网页扫码登录 code 获取微信用户信息
+// 适用于微信开放平台网站应用（scope=snsapi_login）
+func (c *Client) GetWebUserByCode(code string) (*service.WechatWebUserInfo, error) {
+	tokenURL := fmt.Sprintf(
+		"https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code",
+		url.QueryEscape(c.appID),
+		url.QueryEscape(c.appSecret),
+		url.QueryEscape(code),
+	)
+
+	tokenResp, err := c.httpClient.Get(tokenURL)
+	if err != nil {
+		return nil, fmt.Errorf("wechat web access_token request failed: %w", err)
+	}
+	defer tokenResp.Body.Close()
+
+	body, _ := io.ReadAll(tokenResp.Body)
+	var tokenResult struct {
+		AccessToken string `json:"access_token"`
+		OpenID      string `json:"openid"`
+		UnionID     string `json:"unionid"`
+		ErrCode     int    `json:"errcode"`
+		ErrMsg      string `json:"errmsg"`
+	}
+	if err := json.Unmarshal(body, &tokenResult); err != nil {
+		return nil, fmt.Errorf("decode wechat web token response failed: %w", err)
+	}
+	if tokenResult.ErrCode != 0 {
+		return nil, fmt.Errorf("wechat web token error: code=%d, msg=%s", tokenResult.ErrCode, tokenResult.ErrMsg)
+	}
+
+	user := &service.WechatWebUserInfo{
+		OpenID:  tokenResult.OpenID,
+		UnionID: tokenResult.UnionID,
+	}
+	if strings.TrimSpace(tokenResult.AccessToken) == "" || strings.TrimSpace(tokenResult.OpenID) == "" {
+		return user, nil
+	}
+
+	userInfoURL := fmt.Sprintf(
+		"https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN",
+		url.QueryEscape(tokenResult.AccessToken),
+		url.QueryEscape(tokenResult.OpenID),
+	)
+	userInfoResp, err := c.httpClient.Get(userInfoURL)
+	if err != nil {
+		return user, nil
+	}
+	defer userInfoResp.Body.Close()
+
+	userInfoBody, _ := io.ReadAll(userInfoResp.Body)
+	var userInfoResult struct {
+		OpenID     string `json:"openid"`
+		UnionID    string `json:"unionid"`
+		Nickname   string `json:"nickname"`
+		HeadImgURL string `json:"headimgurl"`
+		ErrCode    int    `json:"errcode"`
+		ErrMsg     string `json:"errmsg"`
+	}
+	if err := json.Unmarshal(userInfoBody, &userInfoResult); err != nil {
+		return user, nil
+	}
+	if userInfoResult.ErrCode != 0 {
+		return user, nil
+	}
+
+	if strings.TrimSpace(userInfoResult.OpenID) != "" {
+		user.OpenID = strings.TrimSpace(userInfoResult.OpenID)
+	}
+	if strings.TrimSpace(userInfoResult.UnionID) != "" {
+		user.UnionID = strings.TrimSpace(userInfoResult.UnionID)
+	}
+	user.Nickname = strings.TrimSpace(userInfoResult.Nickname)
+	user.Avatar = strings.TrimSpace(userInfoResult.HeadImgURL)
+	return user, nil
 }
 
 // decrypt AES-128-CBC解密微信加密数据

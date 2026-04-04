@@ -22,6 +22,9 @@ type UserRepository interface {
 	// FindByOpenID 根据微信OpenID查找
 	FindByOpenID(ctx context.Context, openID string) (*entity.User, error)
 
+	// FindByUnionID 根据微信UnionID查找
+	FindByUnionID(ctx context.Context, unionID string) (*entity.User, error)
+
 	// FindByOrgID 根据组织ID查找用户
 	FindByOrgID(ctx context.Context, orgID string, pagination Pagination) (*PageResult[entity.User], error)
 

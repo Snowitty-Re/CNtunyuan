@@ -76,11 +76,8 @@ export default function DialectDetailPage() {
           </div>
           <div style={{ marginTop: 10, color: '#6b7280' }}>{item.content || '暂无内容'}</div>
           <div className="row wrap" style={{ marginTop: 10 }}>
-            <button className="btn" type="button" onClick={() => dialectService.updateStatus(id, 'approved').then(load)}>
+            <button className="btn" type="button" onClick={() => dialectService.updateStatus(id, 'active').then(load)}>
               审核通过
-            </button>
-            <button className="btn danger" type="button" onClick={() => dialectService.updateStatus(id, 'rejected').then(load)}>
-              审核驳回
             </button>
             <button className="btn" type="button" onClick={() => dialectService.updateStatus(id, 'inactive').then(load)}>
               设为不可见

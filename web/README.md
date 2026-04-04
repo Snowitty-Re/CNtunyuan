@@ -16,10 +16,22 @@ npm run dev
 ## 2. 环境变量
 
 - `NEXT_PUBLIC_API_BASE`：后端 API 基础地址，默认 `http://localhost:8080/api/v1`
+- `NEXT_PUBLIC_WECHAT_WEB_APP_ID`：微信开放平台“网站应用”AppID（用于 Web 微信扫码登录）
+- `NEXT_PUBLIC_WECHAT_WEB_REDIRECT_URI`：扫码回调地址（建议固定为 `https://你的域名/login`）
+
+### Web 微信扫码登录配置说明
+
+1. 在微信开放平台创建/配置“网站应用”（不是小程序应用）。
+2. 获取网站应用 AppID（和 AppSecret），并在后端 `config.yaml` 中配置对应微信参数。
+3. 将 `NEXT_PUBLIC_WECHAT_WEB_APP_ID` 配置为网站应用 AppID。
+4. 将回调地址配置为同一个域名下的 `/login`，并在微信开放平台白名单中放行该回调域名。
+5. Web 登录页会自动渲染微信扫码组件；扫码后微信回跳到 `/login?code=...`，前端调用后端 `/auth/wechat-web-login` 完成登录。
+
+> 注意：若提示“该微信未绑定系统账号”，请先使用账号密码登录，再到“个人设置”执行微信绑定。
 
 ## 3. 当前实现范围
 
-- 登录认证（账号密码）
+- 登录认证（账号密码 + 微信网页扫码登录）
 - 工作台总览
 - 案件中心（列表、筛选、快速建案、详情、状态操作、线索新增）
 - 案件闭环动作（标记已找到/已团圆）

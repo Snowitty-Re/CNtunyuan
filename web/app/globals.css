@@ -140,6 +140,15 @@ a {
   gap: 8px;
 }
 
+.top-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #f2d1ad;
+  background: #fff;
+}
+
 .role-badge {
   background: #fff1dc;
   color: #9a5b1c;
@@ -147,6 +156,24 @@ a {
   padding: 4px 8px;
   border-radius: 999px;
   font-size: 12px;
+}
+
+.cell-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: #fff;
 }
 
 .content {

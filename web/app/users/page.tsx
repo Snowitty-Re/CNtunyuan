@@ -51,10 +51,12 @@ export default function UsersPage() {
   const [editOrgId, setEditOrgId] = useState('')
   const [booted, setBooted] = useState(false)
   const [columnVisible, setColumnVisible] = useState<Record<string, boolean>>({
+    avatar: true,
     nickname: true,
     phone: true,
     role: true,
     status: true,
+    wxBound: true,
     organization: true,
     actions: true,
   })
@@ -372,10 +374,12 @@ export default function UsersPage() {
       </div>
       <div className="panel row wrap">
         <b>列显示</b>
+        <label><input type="checkbox" checked={columnVisible.avatar} onChange={(e) => setColumnVisible((v) => ({ ...v, avatar: e.target.checked }))} /> 头像</label>
         <label><input type="checkbox" checked={columnVisible.nickname} onChange={(e) => setColumnVisible((v) => ({ ...v, nickname: e.target.checked }))} /> 昵称</label>
         <label><input type="checkbox" checked={columnVisible.phone} onChange={(e) => setColumnVisible((v) => ({ ...v, phone: e.target.checked }))} /> 手机号</label>
         <label><input type="checkbox" checked={columnVisible.role} onChange={(e) => setColumnVisible((v) => ({ ...v, role: e.target.checked }))} /> 角色</label>
         <label><input type="checkbox" checked={columnVisible.status} onChange={(e) => setColumnVisible((v) => ({ ...v, status: e.target.checked }))} /> 状态</label>
+        <label><input type="checkbox" checked={columnVisible.wxBound} onChange={(e) => setColumnVisible((v) => ({ ...v, wxBound: e.target.checked }))} /> 微信绑定</label>
         <label><input type="checkbox" checked={columnVisible.organization} onChange={(e) => setColumnVisible((v) => ({ ...v, organization: e.target.checked }))} /> 组织</label>
         <label><input type="checkbox" checked={columnVisible.actions} onChange={(e) => setColumnVisible((v) => ({ ...v, actions: e.target.checked }))} /> 操作</label>
       </div>
@@ -389,10 +393,12 @@ export default function UsersPage() {
                   <th>
                     <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
                   </th>
+                  {columnVisible.avatar ? <th>头像</th> : null}
                   {columnVisible.nickname ? <th>昵称</th> : null}
                   {columnVisible.phone ? <th>手机号</th> : null}
                   {columnVisible.role ? <th>角色</th> : null}
                   {columnVisible.status ? <th>状态</th> : null}
+                  {columnVisible.wxBound ? <th>微信绑定</th> : null}
                   {columnVisible.organization ? <th>组织</th> : null}
                   {columnVisible.actions ? <th>操作</th> : null}
                 </tr>
@@ -403,6 +409,16 @@ export default function UsersPage() {
                     <td>
                       <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} />
                     </td>
+                    {columnVisible.avatar ? <td>
+                      <img
+                        className="cell-avatar"
+                        src={row.avatar || '/default-avatar.svg'}
+                        alt={row.nickname || row.phone || 'avatar'}
+                        onError={(e) => {
+                          ;(e.currentTarget as HTMLImageElement).src = '/default-avatar.svg'
+                        }}
+                      />
+                    </td> : null}
                     {columnVisible.nickname ? <td>{row.nickname || '-'}</td> : null}
                     {columnVisible.phone ? <td>{row.phone || '-'}</td> : null}
                     {columnVisible.role ? <td>
@@ -435,6 +451,7 @@ export default function UsersPage() {
                     {columnVisible.status ? <td>
                       <StatusTag status={row.status || '-'} />
                     </td> : null}
+                    {columnVisible.wxBound ? <td>{row.wx_bound ? '已绑定' : '未绑定'}</td> : null}
                     {columnVisible.organization ? <td>{row.organization?.name || '-'}</td> : null}
                     {columnVisible.actions ? <td>
                       <div className="row wrap">

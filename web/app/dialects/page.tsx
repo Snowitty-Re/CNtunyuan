@@ -119,8 +119,7 @@ export default function DialectsPage() {
           <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">全部状态</option>
             <option value="pending">待审核</option>
-            <option value="approved">已通过</option>
-            <option value="rejected">已驳回</option>
+            <option value="active">已通过</option>
             <option value="inactive">不可见</option>
           </select>
           <button className="btn" type="submit">
@@ -163,11 +162,8 @@ export default function DialectsPage() {
                         <button className="btn" type="button" onClick={() => dialectService.feature(row.id).then(() => load(page))}>
                           设为精选
                         </button>
-                        <button className="btn" type="button" onClick={() => dialectService.updateStatus(row.id, 'approved').then(() => load(page))}>
+                        <button className="btn" type="button" onClick={() => dialectService.updateStatus(row.id, 'active').then(() => load(page))}>
                           通过
-                        </button>
-                        <button className="btn danger" type="button" onClick={() => dialectService.updateStatus(row.id, 'rejected').then(() => load(page))}>
-                          驳回
                         </button>
                         <button className="btn" type="button" onClick={() => dialectService.updateStatus(row.id, 'inactive').then(() => load(page))}>
                           设为不可见

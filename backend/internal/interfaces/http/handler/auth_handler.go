@@ -64,6 +64,11 @@ type BindWechatRequest struct {
 	Code string `json:"code" binding:"required" example:"wx_login_code_123"` // 微信登录临时凭证
 }
 
+// WechatWebLoginRequest 微信网页扫码登录请求
+type WechatWebLoginRequest struct {
+	Code string `json:"code" binding:"required" example:"021ZlG1005f8lN1dR4100vP4oJ0ZlG1M"`
+}
+
 // WechatLoginResponse 微信登录响应（需要绑定手机号）
 // @Description 微信登录响应，当need_bind_phone为true时需要绑定手机号
 type WechatLoginResponse struct {
@@ -108,6 +113,7 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 		auth.POST("/refresh", h.RefreshToken)
 		auth.POST("/logout", h.Logout)
 		auth.POST("/wechat-login", h.WechatLogin)
+		auth.POST("/wechat-web-login", h.WechatWebLogin)
 		auth.POST("/bind-phone", h.authMiddleware.Required(), h.BindPhone)
 		auth.POST("/bind-wechat", h.authMiddleware.Required(), h.BindWechat)
 		auth.POST("/send-code", h.SendVerifyCode)
@@ -360,6 +366,39 @@ func (h *AuthHandler) WechatLogin(c *gin.Context) {
 				"status":   user.Status,
 			},
 		})
+		return
+	}
+
+	response.Success(c, dto.LoginResponse{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresIn:    result.ExpiresIn,
+		TokenType:    result.TokenType,
+		User:         dto.ToUserResponse(user),
+	})
+}
+
+// WechatWebLogin 微信网页扫码登录
+// @Summary      微信网页扫码登录
+// @Description  Web 端微信扫码登录回调后，携带 code 调用此接口换取系统访问令牌（需先绑定微信账号）
+// @Tags         认证授权
+// @Accept       json
+// @Produce      json
+// @Param        request  body      WechatWebLoginRequest  true  "微信网页扫码登录请求"
+// @Success      200      {object}  response.Response{data=dto.LoginResponse}  "登录成功"
+// @Failure      400      {object}  response.Response  "参数错误"
+// @Failure      403      {object}  response.Response  "微信未绑定或账号无权限"
+// @Failure      500      {object}  response.Response  "服务器内部错误"
+// @Router       /auth/wechat-web-login [post]
+func (h *AuthHandler) WechatWebLogin(c *gin.Context) {
+	var req WechatWebLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, validator.ValidateStruct(&req))
+		return
+	}
+	result, user, err := h.authService.WechatWebLogin(c.Request.Context(), req.Code, c.ClientIP())
+	if err != nil {
+		response.Error(c, err)
 		return
 	}
 
