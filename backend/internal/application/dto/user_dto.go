@@ -35,6 +35,7 @@ type UserResponse struct {
 	Status      string     `json:"status"`
 	OrgID       string     `json:"org_id"`
 	OrgName     string     `json:"org_name,omitempty"`
+	WxBound     bool       `json:"wx_bound"`
 	Avatar      string     `json:"avatar"`
 	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -97,6 +98,7 @@ type ResetPasswordRequest struct {
 
 // UpdateProfileRequest 更新资料请求
 type UpdateProfileRequest struct {
+	Avatar       string `json:"avatar"`
 	Nickname     string `json:"nickname"`
 	Email        string `json:"email"`
 	RealName     string `json:"real_name"`
@@ -145,6 +147,7 @@ func ToUserResponse(user *entity.User) UserResponse {
 		Status:      string(user.Status),
 		OrgID:       user.OrgID,
 		OrgName:     orgName,
+		WxBound:     user.WxOpenID != "",
 		Avatar:      user.Avatar,
 		LastLoginAt: user.LastLoginAt,
 		CreatedAt:   user.CreatedAt,

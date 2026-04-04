@@ -1,6 +1,8 @@
 const dashboardService = require('../../services/dashboard')
 const missingPersonService = require('../../services/missingPerson')
 const dialectService = require('../../services/dialect')
+const userService = require('../../services/user')
+const taskService = require('../../services/task')
 const { formatDate, formatTimeAgo, showError, showLoading, hideLoading, joinLocation, normalizeMediaUrl, normalizeAge } = require('../../utils/util')
 const app = getApp()
 const CASES_STATUS_FILTER_KEY = 'cases_status_filter'
@@ -13,13 +15,22 @@ Page({
     hasError: false,
     errorMessage: '',
 
-    // 统计数据
+    // 统计数据（原始）
     stats: {
       totalCases: 0,
       resolvedCases: 0,
       volunteers: 0,
-      dialects: 0
+      dialects: 0,
+      activeCases: 0,
+      pendingTasks: 0,
+      totalTasks: 0
     },
+    statCards: [
+      { type: 'cases', value: 0, label: '走失人员', icon: 'icon-people', bgClass: 'orange-bg' },
+      { type: 'resolved', value: 0, label: '已找到', icon: 'icon-success', bgClass: 'green-bg' },
+      { type: 'volunteers', value: 0, label: '志愿者', icon: 'icon-volunteer', bgClass: 'blue-bg' },
+      { type: 'dialects', value: 0, label: '方言录音', icon: 'icon-audio', bgClass: 'purple-bg' }
+    ],
 
     // 最新案件列表
     recentCases: [],
@@ -120,102 +131,139 @@ Page({
    */
   async loadStats() {
     try {
+      const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo') || {}
+      const role = userInfo.role || ''
+      const isManagerRole = ['super_admin', 'admin', 'manager'].includes(role)
+
       // 初始化统计数据
       let stats = {
         totalCases: 0,
         resolvedCases: 0,
         volunteers: 0,
-        dialects: 0
+        dialects: 0,
+        activeCases: 0,
+        pendingTasks: 0,
+        totalTasks: 0
       }
 
-      // 获取仪表盘统计数据
-      try {
-        const dashboardStats = await dashboardService.getStats()
-        
-        if (dashboardStats) {
-          // 处理嵌套结构：missing_persons.total, users.total, dialects.total
-          if (dashboardStats.missing_persons) {
-            stats.totalCases = dashboardStats.missing_persons.total || 0
-            stats.resolvedCases = (dashboardStats.missing_persons.found || 0) + (dashboardStats.missing_persons.reunited || 0)
+      if (isManagerRole) {
+        // 管理角色：全局统计
+        try {
+          const dashboardStats = await dashboardService.getStats()
+
+          if (dashboardStats) {
+            // 处理嵌套结构：missing_persons.total, users.total, dialects.total
+            if (dashboardStats.missing_persons) {
+              stats.totalCases = dashboardStats.missing_persons.total || 0
+              stats.resolvedCases = (dashboardStats.missing_persons.found || 0) + (dashboardStats.missing_persons.reunited || 0)
+            }
+
+            if (dashboardStats.users) {
+              stats.volunteers = dashboardStats.users.total || 0
+            }
+
+            if (dashboardStats.dialects) {
+              stats.dialects = dashboardStats.dialects.total || 0
+            }
+
+            // 也尝试平铺结构的兼容
+            stats.totalCases = stats.totalCases || dashboardStats.total_cases || 0
+            stats.resolvedCases = stats.resolvedCases || dashboardStats.resolved_cases || 0
+            stats.volunteers = stats.volunteers || dashboardStats.total_users || 0
+            stats.dialects = stats.dialects || dashboardStats.total_dialects || 0
           }
-          
-          if (dashboardStats.users) {
-            stats.volunteers = dashboardStats.users.total || 0
+        } catch (e) {
+          if (this.isPermissionDenied(e)) {
+            console.log('仪表盘统计无权限，跳过管理端统计接口')
+          } else {
+            console.log('仪表盘统计获取失败:', e)
           }
-          
-          if (dashboardStats.dialects) {
-            stats.dialects = dashboardStats.dialects.total || 0
-          }
-          
-          // 也尝试平铺结构的兼容
-          stats.totalCases = stats.totalCases || dashboardStats.total_cases || 0
-          stats.resolvedCases = stats.resolvedCases || dashboardStats.resolved_cases || 0
-          stats.volunteers = stats.volunteers || dashboardStats.total_users || 0
-          stats.dialects = stats.dialects || dashboardStats.total_dialects || 0
         }
-      } catch (e) {
-        console.log('仪表盘统计获取失败:', e)
-      }
+        // 如果仪表盘数据不完整，尝试单独获取
+        const promises = []
 
-      // 如果仪表盘数据不完整，尝试单独获取
-      const promises = []
-
-      if (stats.totalCases === 0) {
-        promises.push(
-          missingPersonService.getStats().then(res => {
-            if (res) {
-              // 处理嵌套或平铺结构
-              if (res.missing_persons) {
-                stats.totalCases = res.missing_persons.total || 0
-                stats.resolvedCases = (res.missing_persons.found || 0) + (res.missing_persons.reunited || 0)
-              } else {
-                stats.totalCases = res.total || res.total_cases || 0
-                stats.resolvedCases = res.found || res.resolved || 0
+        if (stats.totalCases === 0) {
+          promises.push(
+            missingPersonService.getStats().then(res => {
+              if (res) {
+                // 处理嵌套或平铺结构
+                if (res.missing_persons) {
+                  stats.totalCases = res.missing_persons.total || 0
+                  stats.resolvedCases = (res.missing_persons.found || 0) + (res.missing_persons.reunited || 0)
+                } else {
+                  stats.totalCases = res.total || res.total_cases || 0
+                  stats.resolvedCases = res.found || res.resolved || 0
+                }
               }
-            }
-          }).catch((err) => {
-            console.warn('missingPerson stats fallback failed', err)
-          })
-        )
-      }
+            }).catch((err) => {
+              console.warn('missingPerson stats fallback failed', err)
+            })
+          )
+        }
 
-      if (stats.dialects === 0) {
-        promises.push(
-          dialectService.getStats().then(res => {
-            if (res) {
-              if (res.dialects) {
-                stats.dialects = res.dialects.total || 0
-              } else {
-                stats.dialects = res.total || res.total_dialects || 0
+        if (stats.dialects === 0) {
+          promises.push(
+            dialectService.getStats().then(res => {
+              if (res) {
+                if (res.dialects) {
+                  stats.dialects = res.dialects.total || 0
+                } else {
+                  stats.dialects = res.total || res.total_dialects || 0
+                }
               }
-            }
-          }).catch((err) => {
-            console.warn('dialect stats fallback failed', err)
-          })
-        )
+            }).catch((err) => {
+              if (!this.isPermissionDenied(err)) {
+                console.warn('dialect stats fallback failed', err)
+              }
+            })
+          )
+        }
+
+        // 尝试获取概览数据
+        if (stats.volunteers === 0 || stats.totalCases === 0) {
+          promises.push(
+            dashboardService.getOverview().then(res => {
+              if (res) {
+                stats.volunteers = stats.volunteers || res.total_users || 0
+                stats.totalCases = stats.totalCases || res.total_cases || 0
+                stats.resolvedCases = stats.resolvedCases || res.resolved_cases || 0
+              }
+            }).catch((err) => {
+              if (!this.isPermissionDenied(err)) {
+                console.warn('dashboard overview fallback failed', err)
+              }
+            })
+          )
+        }
+
+        await Promise.all(promises)
+      } else {
+        // 志愿者：个人维度统计
+        const [profileStats, taskStats] = await Promise.all([
+          userService.getStats().catch(() => null),
+          taskService.getStats().catch(() => null)
+        ])
+
+        stats.totalCases = profileStats?.totalCases || 0
+        stats.resolvedCases = profileStats?.completedCases || 0
+        stats.activeCases = profileStats?.activeCases || 0
+        stats.totalTasks = profileStats?.totalTasks || taskStats?.my_tasks || 0
+        stats.pendingTasks = profileStats?.pendingTasks || taskStats?.my_pending || 0
       }
 
-      // 尝试获取概览数据
-      if (stats.volunteers === 0 || stats.totalCases === 0) {
-        promises.push(
-          dashboardService.getOverview().then(res => {
-            if (res) {
-              stats.volunteers = stats.volunteers || res.total_users || 0
-              stats.totalCases = stats.totalCases || res.total_cases || 0
-              stats.resolvedCases = stats.resolvedCases || res.resolved_cases || 0
-            }
-          }).catch((err) => {
-            console.warn('dashboard overview fallback failed', err)
-          })
-        )
-      }
-
-      await Promise.all(promises)
-      this.setData({ stats })
+      this.setData({
+        stats,
+        statCards: this.buildStatCards(role, stats)
+      })
     } catch (error) {
       console.error('加载统计数据失败:', error)
       // 统计数据加载失败不影响其他功能
     }
+  },
+
+  isPermissionDenied(err) {
+    const message = (err && err.message ? err.message : '').toLowerCase()
+    return message.includes('permission denied') || message.includes('forbidden')
   },
 
   /**
@@ -480,7 +528,39 @@ Page({
       case 'dialects':
         this.goToDialects()
         break
+      case 'my_cases':
+        this.goToCases()
+        break
+      case 'active_cases':
+        wx.setStorageSync(CASES_STATUS_FILTER_KEY, 'searching')
+        wx.switchTab({ url: '/pages/cases/list' })
+        break
+      case 'my_tasks':
+        this.onMyTasks()
+        break
+      case 'pending_tasks':
+        wx.navigateTo({ url: '/pages/tasks/my?status=pending' })
+        break
     }
+  },
+
+  buildStatCards(role, stats) {
+    const isManagerRole = ['super_admin', 'admin', 'manager'].includes(role)
+    if (isManagerRole) {
+      return [
+        { type: 'cases', value: stats.totalCases || 0, label: '走失人员', icon: 'icon-people', bgClass: 'orange-bg' },
+        { type: 'resolved', value: stats.resolvedCases || 0, label: '已找到', icon: 'icon-success', bgClass: 'green-bg' },
+        { type: 'volunteers', value: stats.volunteers || 0, label: '志愿者', icon: 'icon-volunteer', bgClass: 'blue-bg' },
+        { type: 'dialects', value: stats.dialects || 0, label: '方言录音', icon: 'icon-audio', bgClass: 'purple-bg' }
+      ]
+    }
+
+    return [
+      { type: 'my_cases', value: stats.totalCases || 0, label: '我相关案件', icon: 'icon-people', bgClass: 'orange-bg' },
+      { type: 'active_cases', value: stats.activeCases || 0, label: '进行中案件', icon: 'icon-success', bgClass: 'green-bg' },
+      { type: 'my_tasks', value: stats.totalTasks || 0, label: '我的任务', icon: 'icon-task', bgClass: 'blue-bg' },
+      { type: 'pending_tasks', value: stats.pendingTasks || 0, label: '待处理任务', icon: 'icon-notification', bgClass: 'purple-bg' }
+    ]
   },
 
   filterVisibleDialects(list) {

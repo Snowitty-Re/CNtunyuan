@@ -309,6 +309,9 @@ func (s *UserAppService) UpdateProfile(ctx context.Context, id string, req *dto.
 	if req.Nickname != "" {
 		user.Nickname = req.Nickname
 	}
+	if req.Avatar != "" {
+		user.Avatar = req.Avatar
+	}
 	if req.Email != "" {
 		user.Email = req.Email
 	}

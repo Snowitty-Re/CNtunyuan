@@ -48,14 +48,20 @@ type LoginRequest struct {
 // BindPhoneRequest 绑定手机号请求
 // @Description 绑定手机号请求参数
 type BindPhoneRequest struct {
-	Phone string `json:"phone" binding:"required" example:"13800138000"` // 手机号
-	Code  string `json:"code" example:"123456"`                          // 验证码（测试阶段可选）
+	Phone      string `json:"phone" example:"13800138000"`            // 手机号（短信绑定模式必填）
+	Code       string `json:"code" example:"123456"`                  // 验证码（短信绑定模式）
+	WechatCode string `json:"wechat_code" example:"phone_code_12345"` // 微信 getPhoneNumber 返回的 code（一键绑定模式）
 }
 
 // SendCodeRequest 发送验证码请求
 // @Description 发送短信验证码请求参数
 type SendCodeRequest struct {
 	Phone string `json:"phone" binding:"required" example:"13800138000"` // 手机号
+}
+
+// BindWechatRequest 绑定微信请求
+type BindWechatRequest struct {
+	Code string `json:"code" binding:"required" example:"wx_login_code_123"` // 微信登录临时凭证
 }
 
 // WechatLoginResponse 微信登录响应（需要绑定手机号）
@@ -103,6 +109,7 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 		auth.POST("/logout", h.Logout)
 		auth.POST("/wechat-login", h.WechatLogin)
 		auth.POST("/bind-phone", h.authMiddleware.Required(), h.BindPhone)
+		auth.POST("/bind-wechat", h.authMiddleware.Required(), h.BindWechat)
 		auth.POST("/send-code", h.SendVerifyCode)
 		auth.POST("/reset-password", h.ResetPassword)
 
@@ -386,16 +393,30 @@ func (h *AuthHandler) BindPhone(c *gin.Context) {
 		return
 	}
 
-	// 验证手机号格式
-	if !validator.IsValidPhone(req.Phone) {
-		response.Error(c, errors.New(errors.CodeInvalidParam, "手机号格式不正确"))
-		return
-	}
-
 	// 获取当前用户ID（如果已登录）
 	userID := middleware.GetUserID(c)
 
-	result, err := h.authService.BindPhone(c.Request.Context(), userID, req.Phone, req.Code)
+	var (
+		result *valueobject.LoginResult
+		err    error
+	)
+
+	// 优先走微信一键手机号绑定
+	if strings.TrimSpace(req.WechatCode) != "" {
+		result, err = h.authService.BindPhoneByWechatCode(c.Request.Context(), userID, req.WechatCode)
+	} else {
+		// 短信验证码兜底绑定
+		if !validator.IsValidPhone(req.Phone) {
+			response.Error(c, errors.New(errors.CodeInvalidParam, "手机号格式不正确"))
+			return
+		}
+		if strings.TrimSpace(req.Code) == "" {
+			response.Error(c, errors.New(errors.CodeInvalidParam, "验证码不能为空"))
+			return
+		}
+		result, err = h.authService.BindPhone(c.Request.Context(), userID, req.Phone, req.Code)
+	}
+
 	if err != nil {
 		logger.Error("Bind phone failed", logger.Err(err))
 		response.Error(c, err)
@@ -403,6 +424,44 @@ func (h *AuthHandler) BindPhone(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+// BindWechat 绑定微信账号
+// @Summary      绑定微信账号
+// @Description  为已登录账号绑定微信 openid，绑定后可直接微信登录
+// @Tags         认证授权
+// @Accept       json
+// @Produce      json
+// @Param        Authorization  header    string            true  "Bearer 访问令牌"  default(Bearer <token>)
+// @Param        request        body      BindWechatRequest true  "绑定微信请求参数"
+// @Success      200            {object}  response.Response "绑定成功"
+// @Failure      400            {object}  response.Response "参数错误"
+// @Failure      401            {object}  response.Response "未授权"
+// @Failure      409            {object}  response.Response "微信已被其他账号绑定"
+// @Failure      500            {object}  response.Response "服务器内部错误"
+// @Router       /auth/bind-wechat [post]
+func (h *AuthHandler) BindWechat(c *gin.Context) {
+	var req BindWechatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, validator.ValidateStruct(&req))
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+	if strings.TrimSpace(userID) == "" {
+		response.Error(c, errors.ErrUnauthorized)
+		return
+	}
+
+	if err := h.authService.BindWechat(c.Request.Context(), userID, req.Code); err != nil {
+		logger.Error("Bind wechat failed", logger.Err(err))
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"message": "微信绑定成功",
+	})
 }
 
 // SendVerifyCode 发送短信验证码

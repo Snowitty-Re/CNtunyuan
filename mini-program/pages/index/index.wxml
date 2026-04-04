@@ -20,33 +20,19 @@
 
   <!-- 统计数据卡片 2x2 网格 -->
   <view class="stats-grid">
-    <view class="stat-card" bindtap="onStatCardTap" data-type="cases" hover-class="stat-card--hover">
-      <view class="stat-icon-circle orange-bg">
-        <text class="iconfont icon-people"></text>
+    <view
+      class="stat-card"
+      wx:for="{{statCards}}"
+      wx:key="type"
+      bindtap="onStatCardTap"
+      data-type="{{item.type}}"
+      hover-class="stat-card--hover"
+    >
+      <view class="stat-icon-circle {{item.bgClass}}">
+        <text class="iconfont {{item.icon}}"></text>
       </view>
-      <text class="stat-number">{{stats.totalCases || 0}}</text>
-      <text class="stat-label">走失人员</text>
-    </view>
-    <view class="stat-card" bindtap="onStatCardTap" data-type="resolved" hover-class="stat-card--hover">
-      <view class="stat-icon-circle green-bg">
-        <text class="iconfont icon-success"></text>
-      </view>
-      <text class="stat-number">{{stats.resolvedCases || 0}}</text>
-      <text class="stat-label">已找到</text>
-    </view>
-    <view class="stat-card" bindtap="onStatCardTap" data-type="volunteers" hover-class="stat-card--hover">
-      <view class="stat-icon-circle blue-bg">
-        <text class="iconfont icon-volunteer"></text>
-      </view>
-      <text class="stat-number">{{stats.volunteers || 0}}</text>
-      <text class="stat-label">志愿者</text>
-    </view>
-    <view class="stat-card" bindtap="onStatCardTap" data-type="dialects" hover-class="stat-card--hover">
-      <view class="stat-icon-circle purple-bg">
-        <text class="iconfont icon-audio"></text>
-      </view>
-      <text class="stat-number">{{stats.dialects || 0}}</text>
-      <text class="stat-label">方言录音</text>
+      <text class="stat-number">{{item.value || 0}}</text>
+      <text class="stat-label">{{item.label}}</text>
     </view>
   </view>
 

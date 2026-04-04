@@ -118,6 +118,23 @@
   font-weight: 500;
 }
 
+.wechat-avatar-btn {
+  margin-top: 14rpx;
+  min-width: 240rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  border-radius: 999rpx;
+  padding: 0 28rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 24rpx;
+}
+
+.wechat-avatar-btn::after {
+  border: none;
+}
+
 /* ========== 表单区块 ========== */
 .form-section {
   margin: 24rpx 32rpx 0;

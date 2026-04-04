@@ -15,7 +15,14 @@
           <text class="iconfont icon-camera"></text>
         </view>
       </view>
-      <text class="avatar-tip">点击更换头像</text>
+      <text class="avatar-tip">点击上传头像（相册/拍照）</text>
+      <button
+        class="wechat-avatar-btn"
+        open-type="chooseAvatar"
+        bindchooseavatar="chooseWechatAvatar"
+      >
+        使用微信头像
+      </button>
     </view>
   </view>
 

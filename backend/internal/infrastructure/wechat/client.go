@@ -156,7 +156,7 @@ func (c *Client) DecryptPhoneNumber(sessionKey, encryptedData, iv string) (*Decr
 
 // GetPhoneNumber 通过code获取手机号（新版API，推荐使用）
 // https://developers.weixin.qq.com/miniprogram/dev/OpenApiDoc/user-info/phone-number/getPhoneNumber.html
-func (c *Client) GetPhoneNumber(accessToken, code string) (*DecryptedPhoneInfo, error) {
+func (c *Client) GetPhoneNumber(accessToken, code string) (*service.WechatPhoneInfo, error) {
 	reqURL := fmt.Sprintf(
 		"https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=%s",
 		url.QueryEscape(accessToken),
@@ -187,7 +187,7 @@ func (c *Client) GetPhoneNumber(accessToken, code string) (*DecryptedPhoneInfo, 
 		return nil, fmt.Errorf("wechat getPhoneNumber error: code=%d, msg=%s", result.ErrCode, result.ErrMsg)
 	}
 
-	return &DecryptedPhoneInfo{
+	return &service.WechatPhoneInfo{
 		PhoneNumber:     result.PhoneInfo.PhoneNumber,
 		PurePhoneNumber: result.PhoneInfo.PurePhoneNumber,
 		CountryCode:     result.PhoneInfo.CountryCode,

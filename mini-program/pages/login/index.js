@@ -125,6 +125,37 @@ Page({
 
   // ==================== 手机号登录 ====================
 
+  // 微信一键绑定手机号（优先方案）
+  async handleWechatPhoneBind(e) {
+    if (!this.data.isBinding || this.data.loading) return
+
+    const code = e && e.detail ? e.detail.code : ''
+    if (!code || code === 'getPhoneNumber:fail user deny') {
+      showError('未授权手机号，已切换为短信验证码方式')
+      return
+    }
+
+    this.setData({ loading: true })
+    showLoading('绑定中...')
+
+    try {
+      const result = await services.auth.bindPhoneByWechatCode(code)
+      hideLoading()
+      this.setLoginData(result)
+      showSuccess('绑定成功')
+
+      setTimeout(() => {
+        wx.switchTab({ url: '/pages/index/index' })
+      }, 1200)
+    } catch (error) {
+      hideLoading()
+      console.error('微信手机号绑定失败:', error)
+      showError(error.message || '微信绑定失败，请使用短信验证码')
+    } finally {
+      this.setData({ loading: false })
+    }
+  },
+
   // 手机号输入
   onPhoneInput(e) {
     const phone = e.detail.value

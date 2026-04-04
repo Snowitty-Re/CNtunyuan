@@ -146,6 +146,8 @@ func (m *MockCache) Close() error {
 // MockWechatClient is a mock implementation of WechatClient for testing
 type MockWechatClient struct {
 	code2SessionFunc func(code string) (*WechatSession, error)
+	getAccessTokenFn func() (string, int, error)
+	getPhoneNumberFn func(accessToken, code string) (*WechatPhoneInfo, error)
 }
 
 func (m *MockWechatClient) Code2Session(code string) (*WechatSession, error) {
@@ -156,6 +158,24 @@ func (m *MockWechatClient) Code2Session(code string) (*WechatSession, error) {
 		OpenID:     "mock-openid",
 		SessionKey: "mock-session-key",
 		UnionID:    "mock-unionid",
+	}, nil
+}
+
+func (m *MockWechatClient) GetAccessToken() (string, int, error) {
+	if m.getAccessTokenFn != nil {
+		return m.getAccessTokenFn()
+	}
+	return "mock-access-token", 7200, nil
+}
+
+func (m *MockWechatClient) GetPhoneNumber(accessToken, code string) (*WechatPhoneInfo, error) {
+	if m.getPhoneNumberFn != nil {
+		return m.getPhoneNumberFn(accessToken, code)
+	}
+	return &WechatPhoneInfo{
+		PhoneNumber:     "13800138000",
+		PurePhoneNumber: "13800138000",
+		CountryCode:     "86",
 	}, nil
 }
 

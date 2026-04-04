@@ -45,9 +45,18 @@ type WechatSession struct {
 	UnionID    string
 }
 
+// WechatPhoneInfo 微信手机号信息
+type WechatPhoneInfo struct {
+	PhoneNumber     string
+	PurePhoneNumber string
+	CountryCode     string
+}
+
 // WechatClient 微信客户端接口
 type WechatClient interface {
 	Code2Session(code string) (*WechatSession, error)
+	GetAccessToken() (string, int, error)
+	GetPhoneNumber(accessToken, code string) (*WechatPhoneInfo, error)
 }
 
 // SMSProvider 短信服务接口
@@ -65,6 +74,8 @@ type AuthService struct {
 	smsService     SMSProvider
 	securityConfig *config.SecurityConfig
 }
+
+var mainlandPhoneRegex = regexp.MustCompile(`^1[3-9]\d{9}$`)
 
 // NewAuthService create auth service
 func NewAuthService(
@@ -268,15 +279,42 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 		return nil, tempUser, true, nil
 	}
 
+	// 已存在微信账号但手机号仍是临时占位符，要求继续完成手机号绑定
+	if !mainlandPhoneRegex.MatchString(strings.TrimSpace(user.Phone)) {
+		logger.Info("Wechat user needs phone bind",
+			logger.String("user_id", user.ID),
+			logger.String("openid", session.OpenID),
+			logger.String("phone", user.Phone),
+		)
+		return nil, user, true, nil
+	}
+
 	// Check user status
 	if !user.IsActive() {
 		return nil, nil, false, errors.ErrAccountDisabled
 	}
 
+	// 回写微信最新昵称/头像（仅在前端有授权信息时更新）
+	needUpdate := false
+	if userInfo != nil {
+		if strings.TrimSpace(userInfo.Nickname) != "" && user.Nickname != userInfo.Nickname {
+			user.Nickname = strings.TrimSpace(userInfo.Nickname)
+			needUpdate = true
+		}
+		if strings.TrimSpace(userInfo.Avatar) != "" && user.Avatar != userInfo.Avatar {
+			user.Avatar = strings.TrimSpace(userInfo.Avatar)
+			needUpdate = true
+		}
+	}
+
 	// Record login
 	user.RecordLogin(ip)
 	if err := s.userRepo.Update(ctx, user); err != nil {
-		logger.Error("Failed to record login", logger.Err(err))
+		if needUpdate {
+			logger.Error("Failed to update wechat profile/login info", logger.Err(err))
+		} else {
+			logger.Error("Failed to record login", logger.Err(err))
+		}
 	}
 
 	// Generate token
@@ -325,8 +363,7 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 	)
 
 	// 在 Service 层校验手机号格式（防御纵深，不依赖 Handler 层校验）
-	phoneRegex := regexp.MustCompile(`^1[3-9]\d{9}$`)
-	if !phoneRegex.MatchString(phone) {
+	if !mainlandPhoneRegex.MatchString(phone) {
 		return nil, errors.New(errors.CodeInvalidParam, "手机号格式不正确")
 	}
 
@@ -338,6 +375,100 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 	if !s.smsService.VerifyCode(ctx, phone, code) {
 		return nil, errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
 	}
+
+	return s.bindPhoneInternal(ctx, userID, phone)
+}
+
+// BindPhoneByWechatCode 通过微信手机号授权码绑定手机号
+func (s *AuthService) BindPhoneByWechatCode(ctx context.Context, userID, wechatCode string) (*valueobject.LoginResult, error) {
+	if s.wechatClient == nil {
+		return nil, errors.New(errors.CodeInternal, "wechat service not configured")
+	}
+	if strings.TrimSpace(wechatCode) == "" {
+		return nil, errors.New(errors.CodeInvalidParam, "微信手机号授权码不能为空")
+	}
+
+	accessToken, _, err := s.wechatClient.GetAccessToken()
+	if err != nil {
+		return nil, errors.Wrap(err, errors.CodeInternal, "get wechat access token failed")
+	}
+
+	phoneInfo, err := s.wechatClient.GetPhoneNumber(accessToken, wechatCode)
+	if err != nil {
+		return nil, errors.Wrap(err, errors.CodeInternal, "get wechat phone number failed")
+	}
+
+	phone := strings.TrimSpace(phoneInfo.PurePhoneNumber)
+	if phone == "" {
+		phone = strings.TrimSpace(phoneInfo.PhoneNumber)
+	}
+	phone = strings.TrimPrefix(phone, "+86")
+	phone = strings.TrimPrefix(phone, "86")
+
+	if !mainlandPhoneRegex.MatchString(phone) {
+		return nil, errors.New(errors.CodeInvalidParam, "微信手机号格式不正确")
+	}
+
+	return s.bindPhoneInternal(ctx, userID, phone)
+}
+
+// BindWechat 将当前账号绑定到微信 openid
+func (s *AuthService) BindWechat(ctx context.Context, userID, code string) error {
+	if s.wechatClient == nil {
+		return errors.New(errors.CodeInternal, "wechat service not configured")
+	}
+	if strings.TrimSpace(userID) == "" {
+		return errors.ErrUnauthorized
+	}
+	if strings.TrimSpace(code) == "" {
+		return errors.New(errors.CodeInvalidParam, "微信登录码不能为空")
+	}
+
+	currentUser, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return errors.ErrUserNotFound
+	}
+
+	session, err := s.wechatClient.Code2Session(code)
+	if err != nil {
+		return errors.Wrap(err, errors.CodeInternal, "wechat code2session failed")
+	}
+
+	existing, findErr := s.userRepo.FindByOpenID(ctx, session.OpenID)
+	if findErr == nil && existing != nil && existing.ID != currentUser.ID {
+		// 允许回收“仅用于占位的临时微信账号”绑定关系，再绑定到当前真实账号
+		if !mainlandPhoneRegex.MatchString(strings.TrimSpace(existing.Phone)) {
+			existing.WxOpenID = ""
+			existing.WxUnionID = ""
+			if err := s.userRepo.Update(ctx, existing); err != nil {
+				return errors.Wrap(err, errors.CodeInternal, "release temp wechat binding failed")
+			}
+		} else {
+			return errors.New(errors.CodeConflict, "该微信已绑定其他账号")
+		}
+	}
+
+	currentUser.WxOpenID = session.OpenID
+	if strings.TrimSpace(session.UnionID) != "" {
+		currentUser.WxUnionID = session.UnionID
+	}
+
+	if err := s.userRepo.Update(ctx, currentUser); err != nil {
+		return errors.Wrap(err, errors.CodeInternal, "bind wechat failed")
+	}
+
+	logger.Info("Bind wechat success",
+		logger.String("user_id", currentUser.ID),
+		logger.String("openid", session.OpenID),
+	)
+	return nil
+}
+
+func (s *AuthService) bindPhoneInternal(ctx context.Context, userID string, phone string) (*valueobject.LoginResult, error) {
+	logger.Info("Binding phone",
+		logger.String("user_id", userID),
+		logger.String("phone", phone),
+	)
 
 	// 检查手机号是否已被绑定
 	existingUser, err := s.userRepo.FindByPhone(ctx, phone)

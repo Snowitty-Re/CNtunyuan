@@ -1,5 +1,6 @@
 const userService = require('../../services/user')
 const organizationService = require('../../services/organization')
+const authService = require('../../services/auth')
 const { showConfirm, showSuccess, showToast } = require('../../utils/util')
 const { ROLE_MAP } = require('../../utils/constants')
 const app = getApp()
@@ -38,6 +39,7 @@ Page({
     // 功能菜单
     menuList: [
       { icon: 'edit', text: '编辑资料', url: '/pages/volunteer/edit-profile', type: 'navigate' },
+      { icon: 'user', text: '绑定微信', type: 'action', action: 'bindWechat' },
       { icon: 'task', text: '我的任务', url: '/pages/tasks/my', type: 'navigate' },
       { icon: 'notification', text: '消息通知', url: '/pages/notification/list', type: 'navigate', badge: 0 },
       { icon: 'certificate', text: '志愿者证书', url: '', type: 'toast' },
@@ -105,10 +107,21 @@ Page({
         realName: userInfo.real_name || profile.real_name || '',
         role: userInfo.role || profile.role || 'volunteer',
         // 兼容 org_name / organization_name / org.name，最后兜底按 org_id 回查
-        orgName: orgName || '未知组织'
+        orgName: orgName || '未知组织',
+        wxBound: !!(userInfo.wx_bound || profile.wx_bound)
       }
-      
-      this.setData({ userInfo: mergedUserInfo })
+
+      const menuList = (this.data.menuList || []).map((item) => {
+        if (item.action === 'bindWechat') {
+          return {
+            ...item,
+            text: mergedUserInfo.wxBound ? '已绑定微信' : '绑定微信'
+          }
+        }
+        return item
+      })
+
+      this.setData({ userInfo: mergedUserInfo, menuList })
       wx.setStorageSync('userInfo', mergedUserInfo)
     } catch (error) {
       console.error('加载用户信息失败:', error)
@@ -175,6 +188,38 @@ Page({
           wx.switchTab({ url: menu.url })
         }
         break
+      case 'action':
+        if (menu.action === 'bindWechat') {
+          this.bindWechat()
+        }
+        break
+    }
+  },
+
+  async bindWechat() {
+    try {
+      if (this.data.userInfo.wxBound) {
+        showToast('当前账号已绑定微信')
+        return
+      }
+      const loginRes = await wx.login()
+      if (!loginRes.code) {
+        showToast('获取微信授权失败')
+        return
+      }
+      await authService.bindWechat(loginRes.code)
+
+      const userInfo = {
+        ...(this.data.userInfo || {}),
+        wxBound: true,
+        wx_bound: true
+      }
+      this.setData({ userInfo })
+      wx.setStorageSync('userInfo', userInfo)
+      showSuccess('微信绑定成功')
+    } catch (error) {
+      console.error('绑定微信失败:', error)
+      showToast(error.message || '绑定失败')
     }
   },
 

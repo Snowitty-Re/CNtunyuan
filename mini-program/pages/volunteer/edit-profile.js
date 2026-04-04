@@ -99,6 +99,29 @@ Page({
     }
   },
 
+  // 使用微信头像
+  async chooseWechatAvatar(e) {
+    try {
+      const avatarUrl = e?.detail?.avatarUrl
+      if (!avatarUrl) {
+        showToast('获取微信头像失败')
+        return
+      }
+
+      this.setData({ uploadLoading: true })
+      const uploadRes = await uploadService.upload(avatarUrl, { type: 'avatar' })
+      this.setData({
+        'form.avatar': uploadRes.url || uploadRes.data?.url || avatarUrl,
+        uploadLoading: false
+      })
+      showSuccess('微信头像已应用')
+    } catch (error) {
+      console.error('使用微信头像失败:', error)
+      showToast('微信头像上传失败')
+      this.setData({ uploadLoading: false })
+    }
+  },
+
   // 输入框变化
   onInput(e) {
     const { field } = e.currentTarget.dataset
@@ -202,12 +225,6 @@ Page({
       return
     }
 
-    // 后端 /profile 暂不支持在此更新头像
-    if (form.avatar !== originalForm.avatar) {
-      showToast('当前版本暂不支持修改头像')
-      return
-    }
-    
     // 后端 /profile 暂不支持在此更新手机号
     if (form.phone !== originalForm.phone) {
       showToast('请在登录绑定流程中修改手机号')
@@ -219,6 +236,7 @@ Page({
     try {
       // 构建提交数据
       const submitData = {
+        avatar: form.avatar,
         nickname: form.nickname,
         real_name: form.realName,
         email: form.email

@@ -59,6 +59,22 @@ module.exports = {
   },
 
   /**
+   * 微信一键绑定手机号
+   * @param {String} wechatCode 微信 getPhoneNumber 返回的 code
+   */
+  bindPhoneByWechatCode(wechatCode) {
+    return post('/auth/bind-phone', { wechat_code: wechatCode })
+  },
+
+  /**
+   * 绑定微信账号（手机号登录用户）
+   * @param {String} code wx.login 返回的 code
+   */
+  bindWechat(code) {
+    return post('/auth/bind-wechat', { code })
+  },
+
+  /**
    * 发送验证码
    * @param {String} phone 手机号
    */

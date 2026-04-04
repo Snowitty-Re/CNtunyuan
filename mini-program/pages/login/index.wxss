@@ -217,6 +217,18 @@ page {
   color: #a54f1e;
 }
 
+.wechat-bind-fast {
+  margin-bottom: 16rpx;
+}
+
+.wechat-bind-tip {
+  display: block;
+  margin-top: 8rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: #8a8278;
+}
+
 .field {
   margin-bottom: 16rpx;
 }
