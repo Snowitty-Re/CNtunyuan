@@ -10,7 +10,23 @@
   </view>
 
   <view class="list">
+    <view class="batch-bar" wx:if="{{list.length > 0}}">
+      <view class="batch-left" bindtap="toggleSelectAll">
+        <view class="check {{selectAll ? 'checked' : ''}}">{{selectAll ? '✓' : ''}}</view>
+        <text>全选</text>
+      </view>
+      <button size="mini" class="btn batch-delete" bindtap="batchDelete" disabled="{{selectedIds.length === 0}}">
+        批量删除({{selectedIds.length}})
+      </button>
+    </view>
+
     <view class="card" wx:for="{{list}}" wx:key="id">
+      <view class="select-row" bindtap="toggleSelect" data-id="{{item.id}}">
+        <view class="check {{selectedIds.includes(item.id) ? 'checked' : ''}}">
+          {{selectedIds.includes(item.id) ? '✓' : ''}}
+        </view>
+        <text class="select-text">选择</text>
+      </view>
       <view class="row title-row" bindtap="goDetail" data-id="{{item.id}}">
         <text class="title">{{item.title || '未命名方言'}}</text>
         <text class="status status-{{item.status}}">{{item.status}}</text>
@@ -19,6 +35,7 @@
       <view class="meta">创建：{{item.createdAtText}}</view>
       <view class="actions">
         <button size="mini" class="btn ghost" bindtap="goDetail" data-id="{{item.id}}">详情</button>
+        <button size="mini" class="btn warn" bindtap="deleteDialect" data-id="{{item.id}}" data-title="{{item.title}}">删除</button>
         <button size="mini" class="btn danger" wx:if="{{item.status !== 'inactive'}}" bindtap="updateStatus" data-id="{{item.id}}" data-status="inactive">驳回</button>
         <button size="mini" class="btn primary" wx:if="{{item.status !== 'active'}}" bindtap="updateStatus" data-id="{{item.id}}" data-status="active">通过</button>
       </view>

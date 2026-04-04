@@ -1,6 +1,7 @@
 const dialectService = require('../../services/dialect')
 const { showToast, showLoading, hideLoading, formatTimeAgo } = require('../../utils/util')
 const app = getApp()
+const DIALECT_LIST_DIRTY_KEY = 'dialect_list_dirty'
 
 Page({
   data: {
@@ -14,7 +15,9 @@ Page({
     page: 1,
     pageSize: 20,
     loading: false,
-    noMore: false
+    noMore: false,
+    selectedIds: [],
+    selectAll: false
   },
 
   onLoad() {
@@ -58,6 +61,7 @@ Page({
         list: reset ? rows : this.data.list.concat(rows),
         noMore: rows.length < this.data.pageSize
       })
+      this.syncSelectionState()
     } catch (e) {
       showToast('加载审批列表失败')
     } finally {
@@ -68,7 +72,7 @@ Page({
   onTabTap(e) {
     const key = e.currentTarget.dataset.key
     if (!key || key === this.data.activeTab) return
-    this.setData({ activeTab: key, list: [], page: 1, noMore: false })
+    this.setData({ activeTab: key, list: [], page: 1, noMore: false, selectedIds: [], selectAll: false })
     this.loadList(true)
   },
 
@@ -92,5 +96,99 @@ Page({
       hideLoading()
       showToast(`${text}失败`)
     }
+  },
+
+  async deleteDialect(e) {
+    const { id, title } = e.currentTarget.dataset
+    if (!id) return
+
+    wx.showModal({
+      title: '确认删除',
+      content: `确定删除方言《${title || '未命名方言'}》吗？删除后不可恢复。`,
+      confirmColor: '#FF4D4F',
+      success: async (res) => {
+        if (!res.confirm) return
+        showLoading('删除中...')
+        try {
+          await dialectService.delete(id)
+          hideLoading()
+          showToast('删除成功')
+          this.setData({
+            list: this.data.list.filter(item => item.id !== id)
+          })
+          this.syncSelectionState()
+          wx.setStorageSync(DIALECT_LIST_DIRTY_KEY, true)
+          if (!this.data.list.length) {
+            this.loadList(true)
+          }
+        } catch (err) {
+          hideLoading()
+          showToast('删除失败')
+        }
+      }
+    })
+  },
+
+  toggleSelect(e) {
+    const id = e.currentTarget.dataset.id
+    if (!id) return
+    const selected = new Set(this.data.selectedIds)
+    if (selected.has(id)) {
+      selected.delete(id)
+    } else {
+      selected.add(id)
+    }
+    const selectedIds = Array.from(selected)
+    this.setData({
+      selectedIds,
+      selectAll: this.data.list.length > 0 && selectedIds.length === this.data.list.length
+    })
+  },
+
+  toggleSelectAll() {
+    if (!this.data.list.length) return
+    if (this.data.selectAll) {
+      this.setData({ selectAll: false, selectedIds: [] })
+      return
+    }
+    const selectedIds = this.data.list.map(item => item.id)
+    this.setData({ selectAll: true, selectedIds })
+  },
+
+  batchDelete() {
+    const ids = this.data.selectedIds || []
+    if (!ids.length) {
+      showToast('请先选择要删除的方言')
+      return
+    }
+    wx.showModal({
+      title: '确认批量删除',
+      content: `确定删除选中的 ${ids.length} 条方言吗？删除后不可恢复。`,
+      confirmColor: '#FF4D4F',
+      success: async (res) => {
+        if (!res.confirm) return
+        showLoading('批量删除中...')
+        const results = await Promise.allSettled(ids.map(id => dialectService.delete(id)))
+        hideLoading()
+        const successCount = results.filter(r => r.status === 'fulfilled').length
+        const failCount = ids.length - successCount
+        if (successCount > 0) {
+          showToast(failCount > 0 ? `已删${successCount}条，失败${failCount}条` : `已删除${successCount}条`)
+          wx.setStorageSync(DIALECT_LIST_DIRTY_KEY, true)
+          this.loadList(true)
+        } else {
+          showToast('批量删除失败')
+        }
+      }
+    })
+  },
+
+  syncSelectionState() {
+    const currentIds = new Set((this.data.list || []).map(item => item.id))
+    const selectedIds = (this.data.selectedIds || []).filter(id => currentIds.has(id))
+    this.setData({
+      selectedIds,
+      selectAll: this.data.list.length > 0 && selectedIds.length === this.data.list.length
+    })
   }
 })
