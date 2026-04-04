@@ -7,6 +7,7 @@ const { formatDate, formatTimeAgo, showError, showLoading, hideLoading, joinLoca
 const app = getApp()
 const CASES_STATUS_FILTER_KEY = 'cases_status_filter'
 const CASES_LIST_DIRTY_KEY = 'cases_list_dirty'
+const DIALECT_LIST_DIRTY_KEY = 'dialect_list_dirty'
 
 Page({
   data: {
@@ -65,9 +66,16 @@ Page({
     if (!app.ensureAuth || !app.ensureAuth()) return
     this.updateGreeting()
     const listDirty = wx.getStorageSync(CASES_LIST_DIRTY_KEY)
+    const dialectDirty = wx.getStorageSync(DIALECT_LIST_DIRTY_KEY)
     if (listDirty) {
       wx.removeStorageSync(CASES_LIST_DIRTY_KEY)
       this.loadRecentCases()
+    }
+    if (dialectDirty) {
+      wx.removeStorageSync(DIALECT_LIST_DIRTY_KEY)
+      this.loadRecentDialects()
+    }
+    if (listDirty || dialectDirty) {
       return
     }
     // Throttle: skip if loaded less than 30s ago
@@ -311,15 +319,19 @@ Page({
     this.setData({ dialectsLoading: true, dialectsError: false })
 
     try {
-      // 优先获取精选方言，如果没有则获取普通列表
-      let result
+      // 优先获取精选方言；若为空则回退普通列表
+      let result = null
       try {
         result = await dialectService.getFeatured({ page: 1, page_size: 5 })
       } catch (e) {
-        result = await dialectService.getList({ page: 1, page_size: 5 })
+        result = null
       }
 
-      const list = result.list || []
+      let list = this.getDialectList(result)
+      if (!list.length) {
+        const fallbackResult = await dialectService.getList({ page: 1, page_size: 5 })
+        list = this.getDialectList(fallbackResult)
+      }
       const safeList = this.filterVisibleDialects(list)
 
       const dialects = safeList.map(item => ({
@@ -568,5 +580,14 @@ Page({
     const isManager = ['super_admin', 'admin', 'manager'].includes(userInfo.role)
     if (isManager) return list
     return (list || []).filter(item => item.status !== 'pending' && item.status !== 'inactive')
+  },
+
+  getDialectList(result) {
+    if (!result) return []
+    if (Array.isArray(result)) return result
+    if (Array.isArray(result.list)) return result.list
+    if (Array.isArray(result.data)) return result.data
+    if (result.data && Array.isArray(result.data.list)) return result.data.list
+    return []
   }
 })

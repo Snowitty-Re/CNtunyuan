@@ -30,7 +30,8 @@
     "pages/settings/about",
     "pages/settings/agreement",
     "pages/settings/privacy",
-    "pages/map/index"
+    "pages/map/index",
+    "pages/common/location-picker/index"
   ],
   "window": {
     "backgroundTextStyle": "dark",

@@ -19,6 +19,12 @@ Page({
       title: '',
       description: '',
       region: '',
+      province: '',
+      city: '',
+      district: '',
+      collect_address: '',
+      collect_latitude: 0,
+      collect_longitude: 0,
       tags: [],
       missing_person_id: ''
     },
@@ -41,18 +47,6 @@ Page({
     playProgress: 0,
     playCurrentTime: 0,
     playCurrentTimeText: '0:00',
-    
-    // 地区选项
-    regionOptions: [
-      '北京市', '上海市', '天津市', '重庆市',
-      '广东省', '江苏省', '浙江省', '山东省', '河南省',
-      '四川省', '湖北省', '湖南省', '河北省', '福建省',
-      '安徽省', '辽宁省', '江西省', '陕西省', '黑龙江省',
-      '山西省', '广西壮族自治区', '吉林省', '贵州省', '云南省',
-      '甘肃省', '海南省', '内蒙古自治区', '新疆维吾尔自治区', '西藏自治区',
-      '青海省', '宁夏回族自治区'
-    ],
-    regionIndex: -1,
     
     // 标签
     tagInput: '',
@@ -311,10 +305,132 @@ Page({
 
   // 地区选择
   onRegionChange(e) {
-    const index = parseInt(e.detail.value)
+    const values = e.detail.value || []
+    const province = values[0] || ''
+    const city = values[1] || ''
+    const district = values[2] || ''
+    const region = [province, city, district].filter(Boolean).join(' ')
     this.setData({
-      regionIndex: index,
-      'form.region': this.data.regionOptions[index]
+      'form.province': province,
+      'form.city': city,
+      'form.district': district,
+      'form.region': region
+    })
+  },
+
+  chooseCollectLocation() {
+    this.ensureLocationPermission()
+      .then(() => this.openLocationPicker())
+      .catch(() => {})
+  },
+
+  ensureLocationPermission() {
+    return new Promise((resolve, reject) => {
+      wx.getSetting({
+        success: (res) => {
+          const setting = res.authSetting || {}
+          if (setting['scope.userLocation'] === true) {
+            resolve()
+            return
+          }
+          if (setting['scope.userLocation'] === false) {
+            wx.showModal({
+              title: '需要位置权限',
+              content: '请在设置中允许位置权限后再选择采集地址',
+              success: (modalRes) => {
+                if (!modalRes.confirm) {
+                  reject(new Error('permission denied'))
+                  return
+                }
+                wx.openSetting({
+                  success: (openRes) => {
+                    if (openRes.authSetting && openRes.authSetting['scope.userLocation']) {
+                      resolve()
+                    } else {
+                      showError('未开启位置权限')
+                      reject(new Error('permission denied'))
+                    }
+                  },
+                  fail: () => {
+                    showError('打开设置失败，请手动授权位置权限')
+                    reject(new Error('open setting failed'))
+                  }
+                })
+              }
+            })
+            return
+          }
+          wx.authorize({
+            scope: 'scope.userLocation',
+            success: resolve,
+            fail: () => {
+              showError('需要位置权限才能使用地图选点')
+              reject(new Error('authorize failed'))
+            }
+          })
+        },
+        fail: () => {
+          showError('读取系统权限失败')
+          reject(new Error('get setting failed'))
+        }
+      })
+    })
+  },
+
+  openLocationPicker() {
+    wx.chooseLocation({
+      success: (res) => {
+        const parts = this.extractRegionFromAddress(res.address || '')
+        const region = [parts.province, parts.city, parts.district].filter(Boolean).join(' ')
+        this.setData({
+          'form.collect_address': [res.address, res.name].filter(Boolean).join(' ').trim(),
+          'form.collect_latitude': Number(res.latitude) || 0,
+          'form.collect_longitude': Number(res.longitude) || 0,
+          'form.province': parts.province || this.data.form.province,
+          'form.city': parts.city || this.data.form.city,
+          'form.district': parts.district || this.data.form.district,
+          'form.region': region || this.data.form.region
+        })
+      },
+      fail: (err) => {
+        if (err && err.errMsg && err.errMsg.includes('cancel')) return
+        const msg = (err && err.errMsg) || ''
+        if (msg.includes('auth deny') || msg.includes('permission')) {
+          showError('位置权限不足，请到设置开启')
+          return
+        }
+        wx.showModal({
+          title: '地图选点失败',
+          content: '当前环境无法打开系统选点，将切换到内置地图选点模式',
+          showCancel: false,
+          success: () => {
+            this.openMapPickerFallback()
+          }
+        })
+      }
+    })
+  },
+
+  openMapPickerFallback() {
+    const form = this.data.form || {}
+    const url = `/pages/common/location-picker/index?lat=${form.collect_latitude || ''}&lng=${form.collect_longitude || ''}`
+    wx.navigateTo({
+      url,
+      success: (res) => {
+        const channel = res.eventChannel
+        channel.on('locationPicked', (payload) => {
+          if (!payload) return
+          const latitude = Number(payload.latitude) || 0
+          const longitude = Number(payload.longitude) || 0
+          if (!latitude || !longitude) return
+          const address = payload.address || `地图选点(${latitude.toFixed(6)}, ${longitude.toFixed(6)})`
+          this.setData({
+            'form.collect_address': address,
+            'form.collect_latitude': latitude,
+            'form.collect_longitude': longitude
+          })
+        })
+      }
     })
   },
 
@@ -424,8 +540,13 @@ Page({
       return false
     }
     
-    if (!this.data.form.region) {
-      showError('请选择地区')
+    if (!this.data.form.province || !this.data.form.city) {
+      showError('请选择采集地区')
+      return false
+    }
+
+    if (!this.data.form.collect_address) {
+      showError('请使用地图选择采集地址')
       return false
     }
     
@@ -455,8 +576,8 @@ Page({
       }
       
       // 2. 创建方言记录
-      // 解析地区为省份和城市
-      const regionParts = this.parseRegion(this.data.form.region)
+      const regionText = [this.data.form.province, this.data.form.city, this.data.form.district].filter(Boolean).join(' ')
+      const dialectType = this.getDialectType(this.data.form.province || this.data.form.city)
       
       const dialectData = {
         title: this.data.form.title.trim(),
@@ -464,13 +585,16 @@ Page({
         description: this.data.form.description.trim(),
         audio_url: audioUrl,
         duration: this.data.recordDuration,
-        region: this.data.form.region,
-        province: regionParts.province,  // 添加省份
-        city: regionParts.city,          // 添加城市
-        dialect_type: regionParts.dialectType,  // 方言类型
+        region: regionText,
+        province: this.data.form.province,
+        city: this.data.form.city,
+        dialect_type: dialectType,
         tags: this.data.form.tags.join(','),  // 将数组转换为逗号分隔的字符串
         file_size: 0,     // 可选字段
-        format: 'mp3'     // 可选字段
+        format: 'mp3',    // 可选字段
+        collect_address: this.data.form.collect_address,
+        collect_latitude: this.data.form.collect_latitude,
+        collect_longitude: this.data.form.collect_longitude
       }
       if (this.data.form.missing_person_id) {
         dialectData.missing_person_id = this.data.form.missing_person_id
@@ -504,36 +628,25 @@ Page({
     return this.formatTime(remaining)
   },
 
-  // 解析地区为省份、城市和方言类型
-  parseRegion(region) {
-    if (!region) {
-      return { province: '', city: '', dialectType: 'other' }
-    }
-    
-    // 直辖市
-    const municipalities = ['北京市', '上海市', '天津市', '重庆市']
-    if (municipalities.includes(region)) {
-      return {
-        province: region,
-        city: region,
-        dialectType: this.getDialectType(region)
+  extractRegionFromAddress(address) {
+    const text = (address || '').trim()
+    const result = { province: '', city: '', district: '' }
+    if (!text) return result
+
+    const provinceMatch = text.match(/^(.*?(省|自治区|行政区|特别行政区|市))/)
+    if (provinceMatch) {
+      result.province = provinceMatch[1]
+      const rest = text.slice(provinceMatch[1].length)
+      const cityMatch = rest.match(/^(.*?(市|自治州|地区|盟))/)
+      if (cityMatch) {
+        result.city = cityMatch[1]
+        const districtMatch = rest.slice(cityMatch[1].length).match(/^(.*?(区|县|旗))/)
+        if (districtMatch) {
+          result.district = districtMatch[1]
+        }
       }
     }
-    
-    // 自治区/省
-    if (region.includes('自治区')) {
-      return {
-        province: region,
-        city: region.replace('自治区', ''),
-        dialectType: this.getDialectType(region)
-      }
-    }
-    
-    return {
-      province: region,
-      city: region,
-      dialectType: this.getDialectType(region)
-    }
+    return result
   },
 
   // 根据地区获取方言类型

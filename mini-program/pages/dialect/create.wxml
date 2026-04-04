@@ -143,15 +143,39 @@
         <text class="field-label-text">地区</text>
         <text class="field-required">*</text>
       </view>
-      <picker mode="selector" range="{{regionOptions}}" value="{{regionIndex}}" bindchange="onRegionChange">
+      <picker mode="region" value="{{[form.province, form.city, form.district]}}" bindchange="onRegionChange">
         <view class="field-picker {{form.region ? 'has-value' : ''}}">
           <view class="picker-left">
             <view class="picker-pin"></view>
-            <text>{{form.region || '请选择地区'}}</text>
+            <text>{{form.region || '请选择省/市/区'}}</text>
           </view>
           <view class="picker-chevron"></view>
         </view>
       </picker>
+    </view>
+
+    <!-- Collect location -->
+    <view class="field">
+      <view class="field-label">
+        <text class="field-label-text">采集地址</text>
+        <text class="field-required">*</text>
+      </view>
+      <view class="location-select-btn" bindtap="chooseCollectLocation">
+        <text class="location-select-icon">📍</text>
+        <text class="location-select-text">地图选点</text>
+      </view>
+      <view class="field-textarea-wrap address-readonly {{form.collect_address ? 'has-value' : ''}}">
+        <textarea
+          class="field-textarea address-textarea"
+          value="{{form.collect_address}}"
+          placeholder="请点击上方“地图选点”获取地址"
+          placeholder-style="color: #C0A88E;"
+          disabled
+        />
+      </view>
+      <text class="address-coord" wx:if="{{form.collect_latitude && form.collect_longitude}}">
+        坐标：{{form.collect_latitude}}, {{form.collect_longitude}}
+      </text>
     </view>
 
     <!-- Tags -->

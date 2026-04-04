@@ -1,0 +1,18 @@
+<view class="page">
+  <map
+    class="map"
+    latitude="{{latitude}}"
+    longitude="{{longitude}}"
+    scale="{{scale}}"
+    markers="{{marker ? [marker] : []}}"
+    show-location
+    bindtap="onMapTap"
+  />
+  <view class="panel">
+    <view class="title">点击地图选择采集位置</view>
+    <view class="coord" wx:if="{{picked}}">
+      {{picked.latitude}}, {{picked.longitude}}
+    </view>
+    <button class="confirm-btn" type="primary" bindtap="confirmPick">确定位置</button>
+  </view>
+</view>
