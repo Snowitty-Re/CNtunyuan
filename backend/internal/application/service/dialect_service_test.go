@@ -15,7 +15,9 @@ import (
 func setupDialectTest(t *testing.T) (*DialectAppService, *testutil.TestDB) {
 	tdb := testutil.NewTestDB(t)
 	dialectRepo := repository.NewDialectRepository(tdb.DB)
-	service := NewDialectAppService(dialectRepo)
+	userRepo := repository.NewUserRepository(tdb.DB)
+	fileRepo := repository.NewFileRepository(tdb.DB)
+	service := NewDialectAppService(dialectRepo, userRepo, fileRepo, nil)
 	return service, tdb
 }
 

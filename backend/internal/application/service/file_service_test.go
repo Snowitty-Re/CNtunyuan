@@ -166,6 +166,14 @@ func (m *MockFileRepository) FindByEntity(ctx context.Context, entityType string
 	return args.Get(0).([]entity.File), args.Error(1)
 }
 
+func (m *MockFileRepository) FindByURLOrPath(ctx context.Context, fileURL string, filePath string) (*entity.File, error) {
+	args := m.Called(ctx, fileURL, filePath)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.File), args.Error(1)
+}
+
 func (m *MockFileRepository) FindByStorageType(ctx context.Context, storageType entity.StorageType, pagination repository.Pagination) (*repository.PageResult[entity.File], error) {
 	args := m.Called(ctx, storageType, pagination)
 	if args.Get(0) == nil {
@@ -1239,6 +1247,23 @@ func (r *GormFileRepository) FindByEntity(ctx context.Context, entityType string
 	var files []entity.File
 	err := r.db.WithContext(ctx).Where("entity_type = ? AND entity_id = ?", entityType, entityID).Find(&files).Error
 	return files, err
+}
+
+func (r *GormFileRepository) FindByURLOrPath(ctx context.Context, fileURL string, filePath string) (*entity.File, error) {
+	var file entity.File
+	db := r.db.WithContext(ctx).Model(&entity.File{})
+	switch {
+	case fileURL != "" && filePath != "":
+		db = db.Where("url = ? OR path = ?", fileURL, filePath)
+	case fileURL != "":
+		db = db.Where("url = ?", fileURL)
+	default:
+		db = db.Where("path = ?", filePath)
+	}
+	if err := db.First(&file).Error; err != nil {
+		return nil, err
+	}
+	return &file, nil
 }
 
 func (r *GormFileRepository) FindByStorageType(ctx context.Context, storageType entity.StorageType, pagination repository.Pagination) (*repository.PageResult[entity.File], error) {

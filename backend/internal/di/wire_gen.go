@@ -136,7 +136,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	userService := service.NewUserAppService(userRepo, taskRepo, mpRepo)
 	orgService := service.NewOrganizationAppService(orgRepo)
 	mpService := service.NewMissingPersonAppService(mpRepo)
-	dialectService := service.NewDialectAppService(dialectRepo)
+	dialectService := service.NewDialectAppService(dialectRepo, userRepo, fileRepo, storageService)
 	taskService := service.NewTaskAppService(taskRepo)
 	fileService := service.NewFileAppService(
 		fileRepo,

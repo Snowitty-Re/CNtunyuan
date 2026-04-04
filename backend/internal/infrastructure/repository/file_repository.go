@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -79,6 +80,35 @@ func (r *FileRepositoryImpl) FindByEntity(ctx context.Context, entityType string
 		Order("created_at DESC").
 		Find(&files).Error
 	return files, err
+}
+
+// FindByURLOrPath 根据URL或存储路径查找
+func (r *FileRepositoryImpl) FindByURLOrPath(ctx context.Context, fileURL string, filePath string) (*entity.File, error) {
+	fileURL = strings.TrimSpace(fileURL)
+	filePath = strings.TrimSpace(filePath)
+	if fileURL == "" && filePath == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	var file entity.File
+	db := r.db.WithContext(ctx).Model(&entity.File{})
+	switch {
+	case fileURL != "" && filePath != "":
+		db = db.Where("url = ? OR path = ?", fileURL, filePath)
+	case fileURL != "":
+		db = db.Where("url = ?", fileURL)
+	default:
+		db = db.Where("path = ?", filePath)
+	}
+
+	err := db.First(&file).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+		return nil, err
+	}
+	return &file, nil
 }
 
 // FindByStorageType 根据存储类型查找

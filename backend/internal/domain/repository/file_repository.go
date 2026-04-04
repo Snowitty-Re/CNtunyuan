@@ -19,6 +19,9 @@ type FileRepository interface {
 	// FindByEntity 根据关联实体查找
 	FindByEntity(ctx context.Context, entityType string, entityID string) ([]entity.File, error)
 
+	// FindByURLOrPath 根据URL或存储路径查找
+	FindByURLOrPath(ctx context.Context, fileURL string, filePath string) (*entity.File, error)
+
 	// FindByStorageType 根据存储类型查找
 	FindByStorageType(ctx context.Context, storageType entity.StorageType, pagination Pagination) (*PageResult[entity.File], error)
 
