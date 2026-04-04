@@ -464,11 +464,16 @@ CREATE TABLE IF NOT EXISTS ty_dialects (
     comment_count INTEGER NOT NULL DEFAULT 0,
     tags JSONB,
     description TEXT,
+    collect_address VARCHAR(255),
+    collect_latitude DECIMAL(10,7),
+    collect_longitude DECIMAL(10,7),
+    missing_person_id UUID,
     uploader_id UUID NOT NULL,
     org_id UUID NOT NULL,
     
     CONSTRAINT fk_dialect_uploader FOREIGN KEY (uploader_id) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_dialect_org FOREIGN KEY (org_id) REFERENCES ty_organizations(id) ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT fk_dialect_org FOREIGN KEY (org_id) REFERENCES ty_organizations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_dialect_missing_person FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 COMMENT ON TABLE ty_dialects IS '方言表';

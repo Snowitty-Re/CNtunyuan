@@ -50,9 +50,18 @@ func NewFileSecurityChecker(allowedTypes []string, maxFileSize int64) *FileSecur
 		"image/webp":         true,
 		"audio/mpeg":         true,
 		"audio/mp3":          true,
+		"audio/mp4":          true,
+		"audio/x-m4a":        true,
+		"audio/aac":          true,
 		"audio/wav":          true,
 		"audio/wave":         true,
 		"audio/x-wav":        true,
+		"audio/ogg":          true,
+		"application/ogg":    true,
+		"audio/flac":         true,
+		"audio/x-flac":       true,
+		"audio/webm":         true,
+		"video/webm":         true,
 		"video/mp4":          true,
 		"video/mpeg":         true,
 		"application/pdf":    true,
@@ -118,14 +127,14 @@ func (c *FileSecurityChecker) CheckFile(header *multipart.FileHeader) (*Security
 	}
 	result.MimeType = mimeType
 
-	if !c.allowedMimeTypes[mimeType] {
+	if !c.allowedMimeTypes[mimeType] && !c.isMimeFallbackAllowed(ext, mimeType) {
 		result.Passed = false
 		result.ErrorMessage = fmt.Sprintf("不支持的文件格式: %s", mimeType)
 		return result, nil
 	}
 
 	if c.checkFileHeader {
-		if err := c.checkFileHeaderValidity(file, ext); err != nil {
+		if err := c.checkFileHeaderValidity(file, ext, mimeType); err != nil {
 			result.Passed = false
 			result.ErrorMessage = err.Error()
 			return result, nil
@@ -151,7 +160,7 @@ func (c *FileSecurityChecker) detectMimeType(file multipart.File) (string, error
 	return http.DetectContentType(buffer[:n]), nil
 }
 
-func (c *FileSecurityChecker) checkFileHeaderValidity(file multipart.File, ext string) error {
+func (c *FileSecurityChecker) checkFileHeaderValidity(file multipart.File, ext string, mimeType string) error {
 	buffer := make([]byte, 8)
 	n, err := file.Read(buffer)
 	if err != nil && err != io.EOF {
@@ -161,6 +170,15 @@ func (c *FileSecurityChecker) checkFileHeaderValidity(file multipart.File, ext s
 		seeker.Seek(0, io.SeekStart)
 	}
 	header := buffer[:n]
+	mimeType = strings.ToLower(strings.TrimSpace(mimeType))
+
+	// 微信录音常出现 webm 容器（有时扩展名会被前端误写为 mp3）
+	if mimeType == "audio/webm" || mimeType == "video/webm" {
+		if !isWebMHeader(header) {
+			return fmt.Errorf("文件头不是有效的WebM格式")
+		}
+		return nil
+	}
 
 	switch ext {
 	case ".jpg", ".jpeg":
@@ -185,6 +203,29 @@ func (c *FileSecurityChecker) checkFileHeaderValidity(file multipart.File, ext s
 		}
 	}
 	return nil
+}
+
+func (c *FileSecurityChecker) isMimeFallbackAllowed(ext, mimeType string) bool {
+	ext = strings.ToLower(strings.TrimSpace(ext))
+	mimeType = strings.ToLower(strings.TrimSpace(mimeType))
+
+	// 某些终端会把音频识别为 application/octet-stream，结合扩展名兼容放行
+	if mimeType == "application/octet-stream" {
+		switch ext {
+		case ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".opus", ".flac", ".webm":
+			return true
+		}
+	}
+
+	// webm 容器常用于语音，兼容常见音频扩展名
+	if mimeType == "audio/webm" || mimeType == "video/webm" {
+		switch ext {
+		case ".webm", ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".opus":
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *FileSecurityChecker) checkFileName(filename string) error {
@@ -242,4 +283,12 @@ func isMP3Header(header []byte) bool {
 		return true
 	}
 	return header[0] == 0xFF && (header[1]&0xE0) == 0xE0
+}
+
+func isWebMHeader(header []byte) bool {
+	if len(header) < 4 {
+		return false
+	}
+	// EBML Header: 1A 45 DF A3
+	return header[0] == 0x1A && header[1] == 0x45 && header[2] == 0xDF && header[3] == 0xA3
 }

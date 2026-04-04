@@ -80,13 +80,8 @@ func (h *UploadHandler) Upload(c *gin.Context) {
 
 	resp, err := h.fileService.UploadFile(c.Request.Context(), file, header, userID)
 	if err != nil {
-		switch err {
-		case service.ErrFileTooLarge:
-			response.BadRequest(c, "file too large")
-		default:
-			logger.Error("Failed to upload file", logger.Err(err))
-			response.InternalServerError(c, "failed to upload file")
-		}
+		logger.Error("Failed to upload file", logger.Err(err))
+		response.Error(c, err)
 		return
 	}
 
@@ -146,7 +141,7 @@ func (h *UploadHandler) UploadBatch(c *gin.Context) {
 	responses, err := h.fileService.UploadFiles(c.Request.Context(), fileReaders, fileHeaders, userID)
 	if err != nil {
 		logger.Error("Failed to upload files", logger.Err(err))
-		response.InternalServerError(c, "failed to upload files")
+		response.Error(c, err)
 		return
 	}
 

@@ -30,23 +30,26 @@ const (
 // Dialect 方言语音领域实体
 type Dialect struct {
 	BaseEntity
-	Title        string        `gorm:"size:100;not null" json:"title"`
-	Content      string        `gorm:"type:text" json:"content,omitempty"`
-	Region       string        `gorm:"size:100" json:"region"`
-	Province     string        `gorm:"size:50" json:"province,omitempty"`
-	City         string        `gorm:"size:50" json:"city,omitempty"`
-	DialectType  DialectType   `gorm:"size:20;default:'phrase'" json:"dialect_type"`
-	AudioUrl     string        `gorm:"size:255;not null" json:"audio_url"`
-	Duration     int           `json:"duration"`                        // 秒
-	FileSize     int           `json:"file_size"`                       // 字节
-	Format       string        `gorm:"size:10" json:"format,omitempty"` // mp3, wav, etc.
-	Status       DialectStatus `gorm:"size:20;default:'active'" json:"status"`
-	IsFeatured   bool          `gorm:"default:false" json:"is_featured"`
-	PlayCount    int           `gorm:"default:0" json:"play_count"`
-	LikeCount    int           `gorm:"default:0" json:"like_count"`
-	CommentCount int           `gorm:"default:0" json:"comment_count"`
-	Tags         string        `gorm:"type:json" json:"tags,omitempty"`
-	Description  string        `gorm:"type:text" json:"description,omitempty"`
+	Title            string        `gorm:"size:100;not null" json:"title"`
+	Content          string        `gorm:"type:text" json:"content,omitempty"`
+	Region           string        `gorm:"size:100" json:"region"`
+	Province         string        `gorm:"size:50" json:"province,omitempty"`
+	City             string        `gorm:"size:50" json:"city,omitempty"`
+	DialectType      DialectType   `gorm:"size:20;default:'phrase'" json:"dialect_type"`
+	AudioUrl         string        `gorm:"size:255;not null" json:"audio_url"`
+	Duration         int           `json:"duration"`                        // 秒
+	FileSize         int           `json:"file_size"`                       // 字节
+	Format           string        `gorm:"size:10" json:"format,omitempty"` // mp3, wav, etc.
+	Status           DialectStatus `gorm:"size:20;default:'active'" json:"status"`
+	IsFeatured       bool          `gorm:"default:false" json:"is_featured"`
+	PlayCount        int           `gorm:"default:0" json:"play_count"`
+	LikeCount        int           `gorm:"default:0" json:"like_count"`
+	CommentCount     int           `gorm:"default:0" json:"comment_count"`
+	Tags             string        `gorm:"type:json" json:"tags,omitempty"`
+	Description      string        `gorm:"type:text" json:"description,omitempty"`
+	CollectAddress   string        `gorm:"size:255" json:"collect_address,omitempty"`
+	CollectLatitude  float64       `gorm:"type:decimal(10,7)" json:"collect_latitude,omitempty"`
+	CollectLongitude float64       `gorm:"type:decimal(10,7)" json:"collect_longitude,omitempty"`
 
 	// 关联
 	UploaderID      string  `gorm:"type:uuid;not null;index" json:"uploader_id"`

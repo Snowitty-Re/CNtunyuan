@@ -76,7 +76,7 @@ func (h *DialectHandler) Create(c *gin.Context) {
 	dialect, err := h.dialectService.Create(c.Request.Context(), &req, userID, orgID)
 	if err != nil {
 		logger.Error("Failed to create dialect", logger.Err(err))
-		response.InternalServerError(c, "failed to create dialect")
+		response.Error(c, err)
 		return
 	}
 
@@ -202,7 +202,7 @@ func (h *DialectHandler) Update(c *gin.Context) {
 			response.Forbidden(c, "no permission to modify this dialect")
 		default:
 			logger.Error("Failed to update dialect", logger.Err(err))
-			response.InternalServerError(c, "failed to update")
+			response.Error(c, err)
 		}
 		return
 	}

@@ -107,9 +107,11 @@ mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
 ```bash
 # PostgreSQL
 psql -U postgres -d cntuanyuan -f migrations/postgres/06_schema_consistency_and_performance.sql
+psql -U postgres -d cntuanyuan -f migrations/postgres/07_dialect_schema_alignment.sql
 
 # MySQL
 mysql -u root -p cntuanyuan < migrations/mysql/06_schema_consistency_and_performance.sql
+mysql -u root -p cntuanyuan < migrations/mysql/07_dialect_schema_alignment.sql
 ```
 
 ### 4. 启动服务

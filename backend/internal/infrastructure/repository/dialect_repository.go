@@ -31,8 +31,13 @@ func (r *DialectRepositoryImpl) Create(ctx context.Context, dialect *entity.Dial
 	if strings.TrimSpace(dialect.Tags) == "" {
 		db = db.Omit("Tags")
 	}
-
-	return db.Create(dialect).Error
+	if err := db.Create(dialect).Error; err != nil {
+		if shouldRetryDialectWithoutLegacyColumns(err) {
+			return db.Omit("MissingPersonID", "CollectAddress", "CollectLatitude", "CollectLongitude").Create(dialect).Error
+		}
+		return err
+	}
+	return nil
 }
 
 // Update 更新方言（兼容 PostgreSQL JSON/UUID 字段）
@@ -43,14 +48,30 @@ func (r *DialectRepositoryImpl) Update(ctx context.Context, dialect *entity.Dial
 	if strings.TrimSpace(dialect.Tags) == "" {
 		db = db.Omit("Tags")
 	}
-
-	return db.Save(dialect).Error
+	if err := db.Save(dialect).Error; err != nil {
+		if shouldRetryDialectWithoutLegacyColumns(err) {
+			return db.Omit("MissingPersonID", "CollectAddress", "CollectLatitude", "CollectLongitude").Save(dialect).Error
+		}
+		return err
+	}
+	return nil
 }
 
 func sanitizeDialectOptionalFields(dialect *entity.Dialect) {
 	if dialect.MissingPersonID != nil && strings.TrimSpace(*dialect.MissingPersonID) == "" {
 		dialect.MissingPersonID = nil
 	}
+}
+
+func shouldRetryDialectWithoutLegacyColumns(err error) bool {
+	errMsg := strings.ToLower(err.Error())
+	if !strings.Contains(errMsg, "does not exist") && !strings.Contains(errMsg, "unknown column") {
+		return false
+	}
+	return strings.Contains(errMsg, "missing_person_id") ||
+		strings.Contains(errMsg, "collect_address") ||
+		strings.Contains(errMsg, "collect_latitude") ||
+		strings.Contains(errMsg, "collect_longitude")
 }
 
 // List 分页查询

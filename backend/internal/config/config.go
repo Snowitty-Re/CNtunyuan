@@ -318,7 +318,7 @@ func setDefaults() {
 	viper.SetDefault("storage.local_path", "./uploads")
 	viper.SetDefault("storage.base_url", "http://localhost:8080/uploads")
 	viper.SetDefault("storage.max_file_size", 52428800) // 50MB
-	viper.SetDefault("storage.allowed_types", "jpg,jpeg,png,gif,webp,mp4,mp3,wav")
+	viper.SetDefault("storage.allowed_types", "jpg,jpeg,png,gif,webp,mp4,webm,mp3,wav,m4a,aac,ogg,opus,flac")
 
 	// SMS defaults
 	viper.SetDefault("sms.provider", "aliyun")

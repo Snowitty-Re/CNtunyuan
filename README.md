@@ -51,8 +51,10 @@ mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
 # 历史库升级（仅旧环境）
 # PostgreSQL:
 # psql -U postgres -d cntuanyuan -f migrations/postgres/06_schema_consistency_and_performance.sql
+# psql -U postgres -d cntuanyuan -f migrations/postgres/07_dialect_schema_alignment.sql
 # MySQL:
 # mysql -u root -p cntuanyuan < migrations/mysql/06_schema_consistency_and_performance.sql
+# mysql -u root -p cntuanyuan < migrations/mysql/07_dialect_schema_alignment.sql
 
 # 启动服务
 go run cmd/app/main.go

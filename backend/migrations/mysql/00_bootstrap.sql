@@ -456,11 +456,16 @@ CREATE TABLE IF NOT EXISTS ty_dialects (
     comment_count INT NOT NULL DEFAULT 0 COMMENT '评论数',
     tags JSON COMMENT '标签JSON',
     description TEXT COMMENT '描述',
+    collect_address VARCHAR(255) COMMENT '采集地址',
+    collect_latitude DECIMAL(10,7) COMMENT '采集纬度',
+    collect_longitude DECIMAL(10,7) COMMENT '采集经度',
+    missing_person_id CHAR(36) COMMENT '关联走失人员ID',
     uploader_id CHAR(36) NOT NULL COMMENT '上传人ID',
     org_id CHAR(36) NOT NULL COMMENT '组织ID',
     
     CONSTRAINT fk_dialect_uploader FOREIGN KEY (uploader_id) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_dialect_org FOREIGN KEY (org_id) REFERENCES ty_organizations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_dialect_missing_person FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT chk_dialect_type CHECK (dialect_type IN ('phrase', 'story', 'song', 'daily', 'other')),
     CONSTRAINT chk_dialect_status CHECK (status IN ('active', 'inactive', 'pending'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='方言表';

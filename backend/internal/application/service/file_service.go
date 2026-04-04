@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	domainService "github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
+	apperrors "github.com/Snowitty-Re/CNtunyuan/pkg/errors"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/filesecurity"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 )
@@ -70,7 +72,7 @@ func (s *FileAppService) UploadFile(ctx context.Context, file multipart.File, he
 	securityResult, err := filesecurity.PerformSecurityCheck(header, s.securityChecker, s.virusScanner)
 	if err != nil {
 		logger.Error("Security check failed", logger.Err(err), logger.String("filename", header.Filename))
-		return nil, fmt.Errorf("安全检查失败: %w", err)
+		return nil, apperrors.New(apperrors.CodeInvalidFileType, "文件安全检查失败")
 	}
 
 	if !securityResult.Passed {
@@ -78,7 +80,10 @@ func (s *FileAppService) UploadFile(ctx context.Context, file multipart.File, he
 			logger.String("filename", header.Filename),
 			logger.String("error", securityResult.ErrorMessage),
 		)
-		return nil, fmt.Errorf("%s", securityResult.ErrorMessage)
+		if strings.Contains(securityResult.ErrorMessage, "文件大小超过限制") {
+			return nil, apperrors.New(apperrors.CodeFileTooLarge, securityResult.ErrorMessage)
+		}
+		return nil, apperrors.New(apperrors.CodeInvalidFileType, securityResult.ErrorMessage)
 	}
 
 	logger.Info("Security check passed",

@@ -8,19 +8,22 @@ import (
 
 // CreateDialectRequest 创建方言请求
 type CreateDialectRequest struct {
-	Title           string `json:"title" binding:"required"`
-	Content         string `json:"content"`
-	Region          string `json:"region" binding:"required"`
-	Province        string `json:"province"`
-	City            string `json:"city"`
-	DialectType     string `json:"dialect_type"`
-	AudioUrl        string `json:"audio_url" binding:"required"`
-	Duration        int    `json:"duration"`
-	FileSize        int    `json:"file_size"`
-	Format          string `json:"format"`
-	Tags            string `json:"tags"`
-	Description     string `json:"description"`
-	MissingPersonID string `json:"missing_person_id"`
+	Title            string  `json:"title" binding:"required"`
+	Content          string  `json:"content"`
+	Region           string  `json:"region" binding:"required"`
+	Province         string  `json:"province"`
+	City             string  `json:"city"`
+	DialectType      string  `json:"dialect_type"`
+	AudioUrl         string  `json:"audio_url" binding:"required"`
+	Duration         int     `json:"duration"`
+	FileSize         int     `json:"file_size"`
+	Format           string  `json:"format"`
+	Tags             string  `json:"tags"`
+	Description      string  `json:"description"`
+	MissingPersonID  string  `json:"missing_person_id"`
+	CollectAddress   string  `json:"collect_address"`
+	CollectLatitude  float64 `json:"collect_latitude"`
+	CollectLongitude float64 `json:"collect_longitude"`
 }
 
 // UpdateDialectRequest 更新方言请求
@@ -37,30 +40,33 @@ type UpdateDialectRequest struct {
 
 // DialectResponse 方言响应
 type DialectResponse struct {
-	ID           string        `json:"id"`
-	Title        string        `json:"title"`
-	Content      string        `json:"content"`
-	Region       string        `json:"region"`
-	Province     string        `json:"province"`
-	City         string        `json:"city"`
-	DialectType  string        `json:"dialect_type"`
-	AudioUrl     string        `json:"audio_url"`
-	Duration     int           `json:"duration"`
-	FileSize     int           `json:"file_size"`
-	Format       string        `json:"format"`
-	Status       string        `json:"status"`
-	IsFeatured   bool          `json:"is_featured"`
-	PlayCount    int           `json:"play_count"`
-	LikeCount    int           `json:"like_count"`
-	CommentCount int           `json:"comment_count"`
-	Tags         string        `json:"tags"`
-	Description  string        `json:"description"`
-	UploaderID      string        `json:"uploader_id"`
-	OrgID           string        `json:"org_id"`
-	MissingPersonID *string       `json:"missing_person_id,omitempty"`
-	IsLiked         bool          `json:"is_liked"`
-	Uploader     *UserResponse `json:"uploader,omitempty"`
-	CreatedAt    time.Time     `json:"created_at"`
+	ID               string        `json:"id"`
+	Title            string        `json:"title"`
+	Content          string        `json:"content"`
+	Region           string        `json:"region"`
+	Province         string        `json:"province"`
+	City             string        `json:"city"`
+	DialectType      string        `json:"dialect_type"`
+	AudioUrl         string        `json:"audio_url"`
+	Duration         int           `json:"duration"`
+	FileSize         int           `json:"file_size"`
+	Format           string        `json:"format"`
+	Status           string        `json:"status"`
+	IsFeatured       bool          `json:"is_featured"`
+	PlayCount        int           `json:"play_count"`
+	LikeCount        int           `json:"like_count"`
+	CommentCount     int           `json:"comment_count"`
+	Tags             string        `json:"tags"`
+	Description      string        `json:"description"`
+	CollectAddress   string        `json:"collect_address"`
+	CollectLatitude  float64       `json:"collect_latitude"`
+	CollectLongitude float64       `json:"collect_longitude"`
+	UploaderID       string        `json:"uploader_id"`
+	OrgID            string        `json:"org_id"`
+	MissingPersonID  *string       `json:"missing_person_id,omitempty"`
+	IsLiked          bool          `json:"is_liked"`
+	Uploader         *UserResponse `json:"uploader,omitempty"`
+	CreatedAt        time.Time     `json:"created_at"`
 }
 
 // DialectListRequest 方言列表请求
@@ -120,29 +126,32 @@ type DialectStatsResponse struct {
 // ToDialectResponse 转换为方言响应
 func ToDialectResponse(d *entity.Dialect, isLiked bool) DialectResponse {
 	resp := DialectResponse{
-		ID:           d.ID,
-		Title:        d.Title,
-		Content:      d.Content,
-		Region:       d.Region,
-		Province:     d.Province,
-		City:         d.City,
-		DialectType:  string(d.DialectType),
-		AudioUrl:     d.AudioUrl,
-		Duration:     d.Duration,
-		FileSize:     d.FileSize,
-		Format:       d.Format,
-		Status:       string(d.Status),
-		IsFeatured:   d.IsFeatured,
-		PlayCount:    d.PlayCount,
-		LikeCount:    d.LikeCount,
-		CommentCount: d.CommentCount,
-		Tags:         d.Tags,
-		Description:  d.Description,
-		UploaderID:      d.UploaderID,
-		OrgID:           d.OrgID,
-		MissingPersonID: d.MissingPersonID,
-		IsLiked:         isLiked,
-		CreatedAt:       d.CreatedAt,
+		ID:               d.ID,
+		Title:            d.Title,
+		Content:          d.Content,
+		Region:           d.Region,
+		Province:         d.Province,
+		City:             d.City,
+		DialectType:      string(d.DialectType),
+		AudioUrl:         d.AudioUrl,
+		Duration:         d.Duration,
+		FileSize:         d.FileSize,
+		Format:           d.Format,
+		Status:           string(d.Status),
+		IsFeatured:       d.IsFeatured,
+		PlayCount:        d.PlayCount,
+		LikeCount:        d.LikeCount,
+		CommentCount:     d.CommentCount,
+		Tags:             d.Tags,
+		Description:      d.Description,
+		CollectAddress:   d.CollectAddress,
+		CollectLatitude:  d.CollectLatitude,
+		CollectLongitude: d.CollectLongitude,
+		UploaderID:       d.UploaderID,
+		OrgID:            d.OrgID,
+		MissingPersonID:  d.MissingPersonID,
+		IsLiked:          isLiked,
+		CreatedAt:        d.CreatedAt,
 	}
 
 	if d.Uploader != nil {
