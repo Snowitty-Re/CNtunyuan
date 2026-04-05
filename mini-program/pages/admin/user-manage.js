@@ -12,7 +12,7 @@ Page({
     tabs: [
       { key: '', label: '全部' },
       { key: 'active', label: '正常' },
-      { key: 'inactive', label: '禁用' },
+      { key: 'inactive', label: '待审批' },
       { key: 'banned', label: '封禁' }
     ],
     roleOptions: [
@@ -174,7 +174,11 @@ Page({
 
     const options = []
     if (this.data.isAdmin) options.push({ key: 'edit', label: '编辑用户' })
-    if (item.status !== 'active') options.push({ key: 'active', label: '设为正常' })
+    if (item.status === 'inactive') {
+      options.push({ key: 'active', label: '审批通过（设为正常）' })
+    } else if (item.status !== 'active') {
+      options.push({ key: 'active', label: '设为正常' })
+    }
     if (item.status !== 'inactive') options.push({ key: 'inactive', label: '设为禁用' })
     if (item.status !== 'banned') options.push({ key: 'banned', label: '设为封禁' })
     if (this.data.isAdmin) options.push({ key: 'role', label: '调整角色' })

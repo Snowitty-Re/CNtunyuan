@@ -1,5 +1,6 @@
 <view class="page">
   <view class="toolbar">
+    <button size="mini" class="pending-btn" bindtap="onTabTap" data-key="inactive">待审批</button>
     <button size="mini" class="create-btn" bindtap="onCreateUser">+ 新建用户</button>
   </view>
 
@@ -28,7 +29,9 @@
           <text class="name">{{item.nickname || '未命名'}}</text>
           <text class="phone">{{item.phone || '--'}}</text>
         </view>
-        <text class="status status-{{item.status}}">{{item.status}}</text>
+        <text class="status status-{{item.status}}">
+          {{item.status === 'active' ? '正常' : (item.status === 'inactive' ? '待审批' : (item.status === 'banned' ? '封禁' : item.status))}}
+        </text>
       </view>
       <view class="meta">角色：{{item.role}} · 组织：{{item.orgNameText}}</view>
       <view class="meta">邮箱：{{item.email || '--'}}</view>

@@ -50,6 +50,32 @@ export const authService = {
   me() {
     return http<User>('/auth/me')
   },
+  updateProfile(data: {
+    avatar?: string
+    nickname?: string
+    email?: string
+    real_name?: string
+    id_card?: string
+    gender?: string
+    address?: string
+    emergency?: string
+    emergency_tel?: string
+    introduction?: string
+  }) {
+    return http<User>('/profile', {
+      method: 'PUT',
+      body: data,
+    })
+  },
+  changePassword(oldPassword: string, newPassword: string) {
+    return http<null>('/profile/password', {
+      method: 'PUT',
+      body: {
+        old_password: oldPassword,
+        new_password: newPassword,
+      },
+    })
+  },
   logout() {
     return http<null>('/auth/logout', { method: 'POST' })
   },

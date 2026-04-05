@@ -63,6 +63,28 @@ export default function UsersPage() {
   const allSelected = items.length > 0 && selectedIds.length === items.length
   const [notice, setNotice] = useState<Notice | null>(null)
 
+  function normalizeUser(row: User): User {
+    const anyRow = row as any
+    const orgId = row.org_id || anyRow.orgId || row.organization?.id || ''
+    const orgName = row.org_name || anyRow.orgName || row.organization?.name || ''
+    const organization = row.organization || (orgId ? { id: orgId, name: orgName } : null)
+    return {
+      ...row,
+      org_id: orgId,
+      org_name: orgName,
+      organization,
+    }
+  }
+
+  function resolveOrgIdForEdit(row: User): string {
+    const orgId = row.org_id || row.organization?.id || ''
+    if (orgId) return orgId
+    const orgName = row.org_name || row.organization?.name || ''
+    if (!orgName) return ''
+    const found = orgs.find((o) => o.name === orgName)
+    return found?.id || ''
+  }
+
   async function load(
     nextPage = page,
     filters?: {
@@ -85,7 +107,7 @@ export default function UsersPage() {
         role: qRole || undefined,
       })
       const normalized = listFrom<User>(data)
-      setItems(normalized.list)
+      setItems(normalized.list.map(normalizeUser))
       setTotal(normalized.total)
       setPage(nextPage)
       setSelectedIds([])
@@ -98,8 +120,20 @@ export default function UsersPage() {
 
   async function loadOrgs() {
     try {
-      const data = await organizationService.list({ page: 1, page_size: 200 })
-      setOrgs(listFrom<Organization>(data).list)
+      const pageSize = 100
+      let current = 1
+      let keepGoing = true
+      const merged: Organization[] = []
+
+      while (keepGoing && current <= 20) {
+        const data = await organizationService.list({ page: current, page_size: pageSize })
+        const chunk = listFrom<Organization>(data).list
+        merged.push(...chunk)
+        keepGoing = chunk.length === pageSize
+        current += 1
+      }
+
+      setOrgs(merged)
     } catch {
       setOrgs([])
     }
@@ -170,7 +204,7 @@ export default function UsersPage() {
     setEditEmail(user.email || '')
     setEditRole(user.role || 'volunteer')
     setEditStatus(user.status || 'active')
-    setEditOrgId(user.org_id || '')
+    setEditOrgId(resolveOrgIdForEdit(user))
     setDetailOpen(true)
   }
 
@@ -277,6 +311,13 @@ export default function UsersPage() {
     localStorage.setItem(USER_COL_KEY, JSON.stringify(columnVisible))
   }, [ready, booted, columnVisible])
 
+  useEffect(() => {
+    if (!detailOpen || !editingUser || editOrgId || orgs.length === 0) return
+    const resolved = resolveOrgIdForEdit(editingUser)
+    if (resolved) setEditOrgId(resolved)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailOpen, editingUser, editOrgId, orgs])
+
   if (!ready) return null
   if (!hasMinRole(user, 'admin')) {
     return (
@@ -308,12 +349,15 @@ export default function UsersPage() {
         </select>
         <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">全部状态</option>
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
-          <option value="pending">pending</option>
+          <option value="active">正常 (active)</option>
+          <option value="inactive">待审批/禁用 (inactive)</option>
+          <option value="banned">封禁 (banned)</option>
         </select>
         <button className="btn" type="submit">
           筛选
+        </button>
+        <button className="btn" type="button" onClick={() => { setStatusFilter('inactive'); load(1, { status: 'inactive' }) }}>
+          待审批
         </button>
         <button className="btn ghost" type="button" onClick={resetFilters}>
           重置
@@ -452,11 +496,11 @@ export default function UsersPage() {
                       <StatusTag status={row.status || '-'} />
                     </td> : null}
                     {columnVisible.wxBound ? <td>{row.wx_bound ? '已绑定' : '未绑定'}</td> : null}
-                    {columnVisible.organization ? <td>{row.organization?.name || '-'}</td> : null}
+                    {columnVisible.organization ? <td>{row.organization?.name || row.org_name || '-'}</td> : null}
                     {columnVisible.actions ? <td>
                       <div className="row wrap">
                         <button className="btn" type="button" onClick={() => userService.updateStatus(row.id, 'active').then(() => load(page))}>
-                          激活
+                          {row.status === 'inactive' ? '审批通过' : '激活'}
                         </button>
                         <button className="btn danger" type="button" onClick={() => userService.updateStatus(row.id, 'inactive').then(() => load(page))}>
                           禁用
@@ -520,9 +564,9 @@ export default function UsersPage() {
             <label>
               <div>状态</div>
               <select className="select" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                <option value="active">active</option>
-                <option value="inactive">inactive</option>
-                <option value="pending">pending</option>
+                <option value="active">正常 (active)</option>
+                <option value="inactive">待审批/禁用 (inactive)</option>
+                <option value="banned">封禁 (banned)</option>
               </select>
             </label>
             <label>
