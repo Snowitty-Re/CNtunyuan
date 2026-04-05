@@ -28,6 +28,17 @@ module.exports = {
   },
 
   /**
+   * 注册账号（待审批）
+   * @param {String} phone 手机号
+   * @param {String} password 密码
+   * @param {String} code 验证码
+   * @param {String} nickname 昵称（可选）
+   */
+  register(phone, password, code, nickname = '') {
+    return post('/auth/register', { phone, password, code, nickname })
+  },
+
+  /**
    * 获取当前用户信息
    */
   getCurrentUser() {
@@ -72,6 +83,13 @@ module.exports = {
    */
   bindWechat(code) {
     return post('/auth/bind-wechat', { code })
+  },
+
+  /**
+   * 解绑微信账号
+   */
+  unbindWechat() {
+    return post('/auth/unbind-wechat')
   },
 
   /**

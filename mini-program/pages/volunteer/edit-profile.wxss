@@ -409,7 +409,10 @@
   font-size: 30rpx;
   color: #2c2c2c;
   background: #FDF8F3;
-  padding: 22rpx 24rpx;
+  height: 88rpx;
+  min-height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 24rpx;
   border-radius: 16rpx;
   box-sizing: border-box;
   border: 2rpx solid #f0ebe5;

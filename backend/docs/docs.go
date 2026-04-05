@@ -1006,6 +1006,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/register": {
+            "post": {
+                "description": "手机号验证码注册，创建后状态为待审批，管理员启用后可登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证授权"
+                ],
+                "summary": "注册账号",
+                "parameters": [
+                    {
+                        "description": "注册请求参数",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "注册成功（待审批）",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "手机号已存在",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/reset-password": {
             "post": {
                 "description": "通过手机验证码重置密码，用于忘记密码场景",
@@ -1115,6 +1167,51 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "服务器内部错误或短信服务异常",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/unbind-wechat": {
+            "post": {
+                "description": "解绑当前登录账号的微信 openid/unionid",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证授权"
+                ],
+                "summary": "解绑微信账号",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer \u003ctoken\u003e",
+                        "description": "Bearer 访问令牌",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "解绑成功",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
                         "schema": {
                             "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
                         }
@@ -9532,6 +9629,33 @@ const docTemplate = `{
                 },
                 "username": {
                     "description": "用户名/手机号",
+                    "type": "string",
+                    "example": "13800138000"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "password",
+                "phone"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "123456"
+                },
+                "nickname": {
+                    "type": "string",
+                    "example": "新志愿者"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "password123"
+                },
+                "phone": {
                     "type": "string",
                     "example": "13800138000"
                 }

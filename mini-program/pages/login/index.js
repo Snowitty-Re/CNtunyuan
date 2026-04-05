@@ -5,6 +5,7 @@ Page({
   data: {
     loading: false,
     loginType: 'wechat', // wechat, phone
+    isRegister: false,
     phone: '',
     password: '',
     smsCode: '',
@@ -37,6 +38,7 @@ Page({
     const type = e.currentTarget.dataset.type
     this.setData({ 
       loginType: type,
+      isRegister: false,
       isBinding: false // 切换登录方式时退出绑定模式
     })
   },
@@ -105,6 +107,13 @@ Page({
         return
       }
 
+      if (result.need_approval) {
+        wx.removeStorageSync('token')
+        wx.removeStorageSync('refresh_token')
+        showError(result.message || '账号待管理员审批，请稍后再试')
+        return
+      }
+
       // 保存登录信息
       this.setLoginData(result)
       showSuccess('登录成功')
@@ -141,6 +150,12 @@ Page({
     try {
       const result = await services.auth.bindPhoneByWechatCode(code)
       hideLoading()
+      if (result && result.need_approval) {
+        wx.removeStorageSync('token')
+        wx.removeStorageSync('refresh_token')
+        showError(result.message || '账号待管理员审批，请等待审核')
+        return
+      }
       this.setLoginData(result)
       showSuccess('绑定成功')
 
@@ -237,7 +252,7 @@ Page({
 
   // 手机号登录
   async handlePhoneLogin() {
-    const { phone, password, isBinding, smsCode } = this.data
+    const { phone, password, isBinding, smsCode, isRegister } = this.data
     
     if (!validatePhone(phone)) {
       showError('请输入正确的手机号')
@@ -250,9 +265,14 @@ Page({
       return
     }
 
-    // 普通登录需要密码
+    // 普通登录/注册需要密码
     if (!isBinding && !password) {
       showError('请输入密码')
+      return
+    }
+
+    if (isRegister && !smsCode) {
+      showError('请输入验证码')
       return
     }
 
@@ -265,14 +285,29 @@ Page({
       if (isBinding) {
         // 绑定手机号
         result = await services.auth.bindPhone(phone, smsCode)
+      } else if (isRegister) {
+        // 注册账号
+        result = await services.auth.register(phone, password, smsCode)
       } else {
         // 手机号密码登录
         result = await services.auth.login(phone, password)
       }
 
       hideLoading()
+
+      if (result && result.need_approval) {
+        showSuccess(result.message || '注册成功，待管理员审批')
+        this.setData({
+          isRegister: false,
+          loginType: 'phone',
+          password: '',
+          smsCode: ''
+        })
+        return
+      }
+
       this.setLoginData(result)
-      showSuccess(isBinding ? '绑定成功' : '登录成功')
+      showSuccess(isBinding ? '绑定成功' : (isRegister ? '注册成功' : '登录成功'))
 
       setTimeout(() => {
         wx.switchTab({ url: '/pages/index/index' })
@@ -309,9 +344,14 @@ Page({
     }
   },
 
-  // 注册（暂未开放）
+  // 注册入口
   goToRegister() {
-    wx.showToast({ title: '注册功能敬请期待', icon: 'none' })
+    this.setData({
+      loginType: 'phone',
+      isBinding: false,
+      isRegister: true,
+      smsCode: ''
+    })
   },
 
   // 忘记密码（暂未开放）

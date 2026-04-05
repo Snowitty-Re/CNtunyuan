@@ -54,8 +54,8 @@
 
     <view class="block phone-block" wx:if="{{loginType === 'phone' || isBinding}}">
       <view class="block-head">
-        <text class="block-title">{{isBinding ? '绑定手机号' : '手机号登录'}}</text>
-        <text class="block-tip">{{isBinding ? '完成验证码校验后即可继续使用' : '请输入手机号与密码'}}</text>
+        <text class="block-title">{{isBinding ? '绑定手机号' : (isRegister ? '注册账号' : '手机号登录')}}</text>
+        <text class="block-tip">{{isBinding ? '完成验证码校验后即可继续使用' : (isRegister ? '注册后需管理员审批启用' : '请输入手机号与密码')}}</text>
       </view>
 
       <view class="bind-banner" wx:if="{{isBinding}}">
@@ -91,7 +91,7 @@
         </view>
       </view>
 
-      <view class="field" wx:if="{{isBinding}}">
+      <view class="field" wx:if="{{isBinding || isRegister}}">
         <text class="field-label">验证码</text>
         <view class="field-box code-box">
           <input
@@ -133,11 +133,11 @@
         loading="{{loading}}"
         disabled="{{loading}}"
       >
-        <text>{{isBinding ? '绑定并继续' : '登录'}}</text>
+        <text>{{isBinding ? '绑定并继续' : (isRegister ? '注册' : '登录')}}</text>
       </button>
 
       <view class="actions" wx:if="{{!isBinding}}">
-        <text class="action-link" bindtap="goToRegister">注册账号</text>
+        <text class="action-link" bindtap="goToRegister">{{isRegister ? '已在注册模式' : '注册账号'}}</text>
         <text class="action-divider">|</text>
         <text class="action-link" bindtap="goToForgot">忘记密码</text>
       </view>

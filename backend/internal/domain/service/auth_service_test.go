@@ -877,18 +877,20 @@ func TestAuthService_BindPhone(t *testing.T) {
 	MustCreate(t, tdb.DB, existingPhoneUser)
 
 	tests := []struct {
-		name    string
-		userID  string
-		phone   string
-		code    string
-		wantErr bool
+		name         string
+		userID       string
+		phone        string
+		code         string
+		wantErr      bool
+		wantApproval bool
 	}{
 		{
-			name:    "bind phone to existing user with valid code",
-			userID:  tempUser.ID,
-			phone:   "13800138003",
-			code:    "", // Will be set after sending verify code
-			wantErr: false,
+			name:         "bind phone to existing user with valid code",
+			userID:       tempUser.ID,
+			phone:        "13800138003",
+			code:         "", // Will be set after sending verify code
+			wantErr:      true,
+			wantApproval: true,
 		},
 		{
 			name:    "bind existing phone to new user",
@@ -918,6 +920,9 @@ func TestAuthService_BindPhone(t *testing.T) {
 			result, err := service.BindPhone(Context(), tt.userID, tt.phone, tt.code)
 
 			if tt.wantErr {
+				if tt.wantApproval {
+					assert.Error(t, err)
+				}
 				assert.Error(t, err)
 				return
 			}

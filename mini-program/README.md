@@ -122,12 +122,18 @@ mini-program/
 
 ### 认证相关
 - `POST /auth/wechat-login` - 微信登录
+- `POST /auth/wechat-web-login` - 微信网页扫码登录（Web 端）
 - `POST /auth/login` - 账号密码登录
+- `POST /auth/register` - 手机号验证码注册（待审批）
 - `POST /auth/refresh` - 刷新 Token
 - `POST /auth/logout` - 退出登录
 - `GET /auth/me` - 获取当前用户
 - `POST /auth/bind-phone` - 绑定手机号
+- `POST /auth/bind-wechat` - 绑定微信账号
+- `POST /auth/unbind-wechat` - 解绑微信账号
 - `POST /auth/send-code` - 发送验证码
+
+> 安全说明：新注册账号和微信新用户默认进入待审批状态，管理员启用后方可登录。
 
 ### 用户相关
 - `GET /users` - 用户列表

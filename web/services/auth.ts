@@ -35,6 +35,11 @@ export const authService = {
       body: { code },
     })
   },
+  unbindWechat() {
+    return http<{ message?: string }>('/auth/unbind-wechat', {
+      method: 'POST',
+    })
+  },
   wechatWebLogin(code: string) {
     return http<AuthLoginResponse>('/auth/wechat-web-login', {
       method: 'POST',

@@ -50,11 +50,12 @@ Page({
       const profile = await userService.getProfile().catch(() => ({}))
       
       const form = {
-        avatar: userInfo.avatar || profile.avatar || '/assets/images/avatar-default.png',
-        nickname: userInfo.nickname || profile.nickname || '',
-        realName: userInfo.real_name || profile.real_name || '',
-        phone: userInfo.phone || profile.phone || '',
-        email: userInfo.email || profile.email || ''
+        avatar: profile.avatar || userInfo.avatar || '/assets/images/avatar-default.png',
+        nickname: profile.nickname || userInfo.nickname || '',
+        realName: profile.real_name || userInfo.real_name || '',
+        // 手机号以服务端 profile 为准，避免本地缓存覆盖最新绑定结果
+        phone: profile.phone || userInfo.phone || '',
+        email: profile.email || userInfo.email || ''
       }
       
       this.setData({

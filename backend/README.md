@@ -132,12 +132,18 @@ go run cmd/app/main.go
 - `POST /api/v1/auth/login` - 手机号密码登录
 - `POST /api/v1/auth/admin-login` - 管理员登录
 - `POST /api/v1/auth/wechat-login` - 微信小程序登录
+- `POST /api/v1/auth/wechat-web-login` - 微信网页扫码登录
+- `POST /api/v1/auth/register` - 手机号验证码注册（创建后待管理员审批）
 - `POST /api/v1/auth/refresh` - 刷新令牌
 - `POST /api/v1/auth/logout` - 登出
 - `POST /api/v1/auth/bind-phone` - 绑定手机号
+- `POST /api/v1/auth/bind-wechat` - 绑定微信账号
+- `POST /api/v1/auth/unbind-wechat` - 解绑微信账号
 - `POST /api/v1/auth/send-code` - 发送验证码（60 秒内每号码限 1 次）
 - `POST /api/v1/auth/reset-password` - 重置密码
 - `GET  /api/v1/auth/me` - 获取当前用户
+
+> 安全策略：新注册用户、微信新用户（首次绑定手机号）默认状态为 `inactive`，需管理员审核启用后才可登录。
 
 ### 用户 `/users`
 - `GET    /api/v1/users` - 用户列表

@@ -59,6 +59,18 @@ export default function SettingsPage() {
     }
   }
 
+  async function onUnbindWechat() {
+    setError('')
+    setOk('')
+    try {
+      await authService.unbindWechat()
+      setWxBound(false)
+      setOk('微信解绑成功')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '微信解绑失败')
+    }
+  }
+
   useEffect(() => {
     if (ready) load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,6 +124,11 @@ export default function SettingsPage() {
           placeholder="输入微信登录 code"
         />
         <button className="btn primary" type="submit">绑定微信</button>
+        {wxBound ? (
+          <button className="btn danger" type="button" onClick={onUnbindWechat}>
+            解绑微信
+          </button>
+        ) : null}
       </form>
       {error ? <div className="alert">{error}</div> : null}
       {ok ? <div style={{ color: '#166534', marginTop: 10 }}>{ok}</div> : null}

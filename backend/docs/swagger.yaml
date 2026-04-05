@@ -1601,6 +1601,26 @@ definitions:
     - password
     - username
     type: object
+  internal_interfaces_http_handler.RegisterRequest:
+    properties:
+      code:
+        example: "123456"
+        type: string
+      nickname:
+        example: 新志愿者
+        type: string
+      password:
+        example: password123
+        minLength: 8
+        type: string
+      phone:
+        example: "13800138000"
+        type: string
+    required:
+    - code
+    - password
+    - phone
+    type: object
   internal_interfaces_http_handler.ResetPasswordRequest:
     description: 重置密码请求参数
     properties:
@@ -2351,6 +2371,40 @@ paths:
       summary: 刷新访问令牌
       tags:
       - 认证授权
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 手机号验证码注册，创建后状态为待审批，管理员启用后可登录
+      parameters:
+      - description: 注册请求参数
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功（待审批）
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "409":
+          description: 手机号已存在
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      summary: 注册账号
+      tags:
+      - 认证授权
   /auth/reset-password:
     post:
       consumes:
@@ -2422,6 +2476,36 @@ paths:
           schema:
             $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
       summary: 发送短信验证码
+      tags:
+      - 认证授权
+  /auth/unbind-wechat:
+    post:
+      consumes:
+      - application/json
+      description: 解绑当前登录账号的微信 openid/unionid
+      parameters:
+      - default: Bearer <token>
+        description: Bearer 访问令牌
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 解绑成功
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: 未授权
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: 服务器内部错误
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      summary: 解绑微信账号
       tags:
       - 认证授权
   /auth/wechat-login:

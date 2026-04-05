@@ -241,8 +241,14 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 		}
 	}
 
-	// Find user by openid
-	user, err := s.userRepo.FindByOpenID(ctx, session.OpenID)
+	// 优先按 unionid 查找，避免同一微信主体在不同 openid 场景下产生多账号绑定
+	var user *entity.User
+	if strings.TrimSpace(session.UnionID) != "" {
+		user, err = s.userRepo.FindByUnionID(ctx, session.UnionID)
+	}
+	if user == nil || err != nil {
+		user, err = s.userRepo.FindByOpenID(ctx, session.OpenID)
+	}
 	if err != nil {
 		// User not found, create a temporary user with openid
 		// This allows binding phone later while preserving the openid
@@ -261,11 +267,12 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 			Nickname: nickname,
 			Avatar:   avatar,
 			// 使用唯一占位符避免 phone 唯一约束冲突，绑定手机号后会被真实号码覆盖
-			Phone:    "wx" + strings.ReplaceAll(uuid.New().String(), "-", "")[:10],
-			Role:     entity.RoleVolunteer,
-			Status:   entity.UserStatusActive,
-			OrgID:    orgID,
-			WxOpenID: session.OpenID,
+			Phone:     "wx" + strings.ReplaceAll(uuid.New().String(), "-", "")[:10],
+			Role:      entity.RoleVolunteer,
+			Status:    entity.UserStatusInactive,
+			OrgID:     orgID,
+			WxOpenID:  session.OpenID,
+			WxUnionID: session.UnionID,
 		}
 		// Set a random password (user will login via wechat)
 		if pwdErr := tempUser.SetPassword(uuid.New().String()[:12]); pwdErr != nil {
@@ -299,7 +306,15 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 
 	// Check user status
 	if !user.IsActive() {
-		return nil, nil, false, errors.ErrAccountDisabled
+		return nil, nil, false, errors.New(errors.CodeAccountDisabled, "账号待管理员审批")
+	}
+
+	// 统一回写最新微信标识，保证后续绑定判重可用
+	if strings.TrimSpace(session.OpenID) != "" && user.WxOpenID != strings.TrimSpace(session.OpenID) {
+		user.WxOpenID = strings.TrimSpace(session.OpenID)
+	}
+	if strings.TrimSpace(session.UnionID) != "" && user.WxUnionID != strings.TrimSpace(session.UnionID) {
+		user.WxUnionID = strings.TrimSpace(session.UnionID)
 	}
 
 	// 回写微信最新昵称/头像（仅在前端有授权信息时更新）
@@ -343,6 +358,68 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 		ExpiresIn:    tokens.ExpiresIn,
 		TokenType:    "Bearer",
 	}, user, false, nil
+}
+
+// Register 注册账号（默认待审批）
+func (s *AuthService) Register(ctx context.Context, nickname, phone, password, code string) (*entity.User, error) {
+	nickname = strings.TrimSpace(nickname)
+	phone = strings.TrimSpace(phone)
+	password = strings.TrimSpace(password)
+	code = strings.TrimSpace(code)
+
+	if !mainlandPhoneRegex.MatchString(phone) {
+		return nil, errors.New(errors.CodeInvalidParam, "手机号格式不正确")
+	}
+	if len(password) < 8 {
+		return nil, errors.New(errors.CodeInvalidParam, "密码至少需要8位")
+	}
+	if code == "" {
+		return nil, errors.New(errors.CodeInvalidParam, "验证码不能为空")
+	}
+	if nickname == "" {
+		nickname = "志愿者" + phone[len(phone)-4:]
+	}
+
+	if err := s.ensureSMSService(); err != nil {
+		return nil, err
+	}
+	if !s.smsService.VerifyCode(ctx, phone, code) {
+		return nil, errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
+	}
+
+	existing, err := s.userRepo.FindByPhone(ctx, phone)
+	if err == nil && existing != nil {
+		return nil, errors.ErrUserExists
+	}
+
+	orgID, orgErr := s.getDefaultOrgID(ctx)
+	if orgErr != nil {
+		return nil, errors.Wrap(orgErr, errors.CodeInternal, "get default org failed")
+	}
+
+	user := &entity.User{
+		BaseEntity: entity.BaseEntity{
+			ID: uuid.New().String(),
+		},
+		Nickname: nickname,
+		Phone:    phone,
+		Role:     entity.RoleVolunteer,
+		Status:   entity.UserStatusInactive,
+		OrgID:    orgID,
+	}
+	if err := user.SetPassword(password); err != nil {
+		return nil, errors.Wrap(err, errors.CodeInvalidParam, "密码格式不正确")
+	}
+
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return nil, errors.Wrap(err, errors.CodeInternal, "create user failed")
+	}
+
+	logger.Info("User registered and waiting approval",
+		logger.String("user_id", user.ID),
+		logger.String("phone", user.Phone),
+	)
+	return user, nil
 }
 
 // ValidateToken 验证token
@@ -520,6 +597,22 @@ func (s *AuthService) BindWechat(ctx context.Context, userID, code string) error
 		return errors.Wrap(err, errors.CodeInternal, "wechat code2session failed")
 	}
 
+	// 先按 unionid 判重（微信主体唯一），再按 openid 判重
+	if strings.TrimSpace(session.UnionID) != "" {
+		unionUser, unionErr := s.userRepo.FindByUnionID(ctx, strings.TrimSpace(session.UnionID))
+		if unionErr == nil && unionUser != nil && unionUser.ID != currentUser.ID {
+			if !mainlandPhoneRegex.MatchString(strings.TrimSpace(unionUser.Phone)) {
+				unionUser.WxOpenID = ""
+				unionUser.WxUnionID = ""
+				if err := s.userRepo.Update(ctx, unionUser); err != nil {
+					return errors.Wrap(err, errors.CodeInternal, "release temp wechat union binding failed")
+				}
+			} else {
+				return errors.New(errors.CodeConflict, "该微信已绑定其他账号")
+			}
+		}
+	}
+
 	existing, findErr := s.userRepo.FindByOpenID(ctx, session.OpenID)
 	if findErr == nil && existing != nil && existing.ID != currentUser.ID {
 		// 允许回收“仅用于占位的临时微信账号”绑定关系，再绑定到当前真实账号
@@ -528,6 +621,20 @@ func (s *AuthService) BindWechat(ctx context.Context, userID, code string) error
 			existing.WxUnionID = ""
 			if err := s.userRepo.Update(ctx, existing); err != nil {
 				return errors.Wrap(err, errors.CodeInternal, "release temp wechat binding failed")
+			}
+		} else if isLikelyWechatTempUser(existing) {
+			// 临时微信账号已绑定真实手机号时，将手机号迁移到当前账号（按用户需求覆盖）
+			targetPhone := strings.TrimSpace(existing.Phone)
+			if targetPhone != "" && currentUser.Phone != targetPhone {
+				currentUser.Phone = targetPhone
+			}
+
+			existing.WxOpenID = ""
+			existing.WxUnionID = ""
+			// 释放唯一手机号给当前账号，避免 phone 唯一约束冲突
+			existing.Phone = "wx" + strings.ReplaceAll(uuid.New().String(), "-", "")[:10]
+			if err := s.userRepo.Update(ctx, existing); err != nil {
+				return errors.Wrap(err, errors.CodeInternal, "migrate temp wechat account failed")
 			}
 		} else {
 			return errors.New(errors.CodeConflict, "该微信已绑定其他账号")
@@ -548,6 +655,42 @@ func (s *AuthService) BindWechat(ctx context.Context, userID, code string) error
 		logger.String("openid", session.OpenID),
 	)
 	return nil
+}
+
+// UnbindWechat 解绑当前账号的微信绑定
+func (s *AuthService) UnbindWechat(ctx context.Context, userID string) error {
+	if strings.TrimSpace(userID) == "" {
+		return errors.ErrUnauthorized
+	}
+
+	currentUser, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return errors.ErrUserNotFound
+	}
+
+	if strings.TrimSpace(currentUser.WxOpenID) == "" && strings.TrimSpace(currentUser.WxUnionID) == "" {
+		return nil
+	}
+
+	currentUser.WxOpenID = ""
+	currentUser.WxUnionID = ""
+
+	if err := s.userRepo.Update(ctx, currentUser); err != nil {
+		return errors.Wrap(err, errors.CodeInternal, "unbind wechat failed")
+	}
+
+	logger.Info("Unbind wechat success",
+		logger.String("user_id", currentUser.ID),
+	)
+	return nil
+}
+
+func isLikelyWechatTempUser(user *entity.User) bool {
+	if user == nil {
+		return false
+	}
+	nickname := strings.TrimSpace(user.Nickname)
+	return user.Role == entity.RoleVolunteer && (nickname == "微信用户" || strings.HasPrefix(nickname, "志愿者"))
 }
 
 func (s *AuthService) bindPhoneInternal(ctx context.Context, userID string, phone string) (*valueobject.LoginResult, error) {
@@ -588,7 +731,12 @@ func (s *AuthService) bindPhoneInternal(ctx context.Context, userID string, phon
 			logger.Error("Find user by ID failed", logger.String("user_id", userID), logger.Err(err))
 			return nil, errors.ErrUserNotFound
 		}
+		wasTempPhone := !mainlandPhoneRegex.MatchString(strings.TrimSpace(user.Phone))
 		user.Phone = phone
+		// 仅微信新用户（临时手机号）在首次绑定后进入待审批
+		if wasTempPhone {
+			user.Status = entity.UserStatusInactive
+		}
 		if err := s.userRepo.Update(ctx, user); err != nil {
 			logger.Error("Update user failed", logger.String("user_id", userID), logger.Err(err))
 			return nil, errors.Wrap(err, errors.CodeInternal, "update user failed")
@@ -606,7 +754,7 @@ func (s *AuthService) bindPhoneInternal(ctx context.Context, userID string, phon
 			Nickname: "志愿者" + suffix,
 			Phone:    phone,
 			Role:     entity.RoleVolunteer,
-			Status:   entity.UserStatusActive,
+			Status:   entity.UserStatusInactive,
 			OrgID:    "00000000-0000-0000-0000-000000000000", // 默认组织
 		}
 		// 设置随机密码（用户通过微信或短信验证码登录，不需要记住密码）
@@ -623,6 +771,10 @@ func (s *AuthService) bindPhoneInternal(ctx context.Context, userID string, phon
 	}
 
 	// 生成 token
+	if !user.IsActive() {
+		return nil, errors.New(errors.CodeAccountDisabled, "账号待管理员审批")
+	}
+
 	tokens, err := s.tokenService.GenerateTokenPair(ctx, user)
 	if err != nil {
 		logger.Error("Generate token pair failed", logger.Err(err))

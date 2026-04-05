@@ -115,7 +115,7 @@ Page({
         if (item.action === 'bindWechat') {
           return {
             ...item,
-            text: mergedUserInfo.wxBound ? '已绑定微信' : '绑定微信'
+            text: mergedUserInfo.wxBound ? '解绑微信' : '绑定微信'
           }
         }
         return item
@@ -199,7 +199,21 @@ Page({
   async bindWechat() {
     try {
       if (this.data.userInfo.wxBound) {
-        showToast('当前账号已绑定微信')
+        const confirm = await showConfirm('确认解绑', '解绑后可重新绑定其他微信账号')
+        if (!confirm) return
+
+        await authService.unbindWechat()
+        const userInfo = {
+          ...(this.data.userInfo || {}),
+          wxBound: false,
+          wx_bound: false
+        }
+        const menuList = (this.data.menuList || []).map((item) =>
+          item.action === 'bindWechat' ? { ...item, text: '绑定微信' } : item
+        )
+        this.setData({ userInfo, menuList })
+        wx.setStorageSync('userInfo', userInfo)
+        showSuccess('微信解绑成功')
         return
       }
       const loginRes = await wx.login()
@@ -214,7 +228,10 @@ Page({
         wxBound: true,
         wx_bound: true
       }
-      this.setData({ userInfo })
+      const menuList = (this.data.menuList || []).map((item) =>
+        item.action === 'bindWechat' ? { ...item, text: '解绑微信' } : item
+      )
+      this.setData({ userInfo, menuList })
       wx.setStorageSync('userInfo', userInfo)
       showSuccess('微信绑定成功')
     } catch (error) {

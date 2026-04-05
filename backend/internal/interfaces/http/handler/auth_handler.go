@@ -45,6 +45,14 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required" example:"admin123"`    // 密码
 }
 
+// RegisterRequest 注册请求
+type RegisterRequest struct {
+	Nickname string `json:"nickname" example:"新志愿者"`
+	Phone    string `json:"phone" binding:"required" example:"13800138000"`
+	Password string `json:"password" binding:"required,min=8" example:"password123"`
+	Code     string `json:"code" binding:"required" example:"123456"`
+}
+
 // BindPhoneRequest 绑定手机号请求
 // @Description 绑定手机号请求参数
 type BindPhoneRequest struct {
@@ -114,8 +122,10 @@ func (h *AuthHandler) RegisterRoutes(router *gin.RouterGroup) {
 		auth.POST("/logout", h.Logout)
 		auth.POST("/wechat-login", h.WechatLogin)
 		auth.POST("/wechat-web-login", h.WechatWebLogin)
+		auth.POST("/register", h.Register)
 		auth.POST("/bind-phone", h.authMiddleware.Required(), h.BindPhone)
 		auth.POST("/bind-wechat", h.authMiddleware.Required(), h.BindWechat)
+		auth.POST("/unbind-wechat", h.authMiddleware.Required(), h.UnbindWechat)
 		auth.POST("/send-code", h.SendVerifyCode)
 		auth.POST("/reset-password", h.ResetPassword)
 
@@ -336,6 +346,13 @@ func (h *AuthHandler) WechatLogin(c *gin.Context) {
 
 	result, user, needBind, err := h.authService.WechatLogin(c.Request.Context(), req.Code, c.ClientIP(), userInfo)
 	if err != nil {
+		if errors.IsCode(err, errors.CodeAccountDisabled) {
+			response.Success(c, gin.H{
+				"need_approval": true,
+				"message":       "账号待管理员审批，请等待审核通过后登录",
+			})
+			return
+		}
 		logger.Error("Wechat login failed", logger.Err(err))
 		response.Error(c, err)
 		return
@@ -457,12 +474,68 @@ func (h *AuthHandler) BindPhone(c *gin.Context) {
 	}
 
 	if err != nil {
+		if errors.IsCode(err, errors.CodeAccountDisabled) {
+			response.Success(c, gin.H{
+				"need_approval": true,
+				"message":       "账号待管理员审批，请等待审核通过后登录",
+			})
+			return
+		}
 		logger.Error("Bind phone failed", logger.Err(err))
 		response.Error(c, err)
 		return
 	}
 
 	response.Success(c, result)
+}
+
+// Register 注册账号（需管理员审批）
+// @Summary      注册账号
+// @Description  手机号验证码注册，创建后状态为待审批，管理员启用后可登录
+// @Tags         认证授权
+// @Accept       json
+// @Produce      json
+// @Param        request  body      RegisterRequest  true  "注册请求参数"
+// @Success      200      {object}  response.Response "注册成功（待审批）"
+// @Failure      400      {object}  response.Response "参数错误"
+// @Failure      409      {object}  response.Response "手机号已存在"
+// @Failure      500      {object}  response.Response "服务器内部错误"
+// @Router       /auth/register [post]
+func (h *AuthHandler) Register(c *gin.Context) {
+	cfg := config.GetConfig()
+	if cfg != nil && !cfg.System.EnableRegister {
+		response.Error(c, errors.New(errors.CodeForbidden, "注册功能未启用"))
+		return
+	}
+
+	var req RegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, validator.ValidateStruct(&req))
+		return
+	}
+
+	user, err := h.authService.Register(
+		c.Request.Context(),
+		req.Nickname,
+		req.Phone,
+		req.Password,
+		req.Code,
+	)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"need_approval": true,
+		"message":       "注册成功，账号待管理员审批",
+		"user": gin.H{
+			"id":       user.ID,
+			"nickname": user.Nickname,
+			"phone":    user.Phone,
+			"status":   user.Status,
+		},
+	})
 }
 
 // BindWechat 绑定微信账号
@@ -500,6 +573,35 @@ func (h *AuthHandler) BindWechat(c *gin.Context) {
 
 	response.Success(c, gin.H{
 		"message": "微信绑定成功",
+	})
+}
+
+// UnbindWechat 解绑微信账号
+// @Summary      解绑微信账号
+// @Description  解绑当前登录账号的微信 openid/unionid
+// @Tags         认证授权
+// @Accept       json
+// @Produce      json
+// @Param        Authorization  header    string            true  "Bearer 访问令牌"  default(Bearer <token>)
+// @Success      200            {object}  response.Response "解绑成功"
+// @Failure      401            {object}  response.Response "未授权"
+// @Failure      500            {object}  response.Response "服务器内部错误"
+// @Router       /auth/unbind-wechat [post]
+func (h *AuthHandler) UnbindWechat(c *gin.Context) {
+	userID := middleware.GetUserID(c)
+	if strings.TrimSpace(userID) == "" {
+		response.Error(c, errors.ErrUnauthorized)
+		return
+	}
+
+	if err := h.authService.UnbindWechat(c.Request.Context(), userID); err != nil {
+		logger.Error("Unbind wechat failed", logger.Err(err))
+		response.Error(c, err)
+		return
+	}
+
+	response.Success(c, gin.H{
+		"message": "微信解绑成功",
 	})
 }
 
