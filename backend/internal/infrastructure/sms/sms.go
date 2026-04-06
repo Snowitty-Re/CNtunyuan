@@ -17,6 +17,8 @@ import (
 type Service interface {
 	// SendVerifyCode 发送验证码
 	SendVerifyCode(ctx context.Context, phone string) (string, error)
+	// SendVerifyCodeWithScene 按场景发送验证码
+	SendVerifyCodeWithScene(ctx context.Context, phone, scene string) (string, error)
 	// VerifyCode 验证验证码
 	VerifyCode(ctx context.Context, phone, code string) bool
 	// SendSMS 发送普通短信
@@ -35,6 +37,12 @@ type smsService struct {
 type Provider interface {
 	SendSMS(ctx context.Context, phone, signName, templateCode string, params map[string]string) error
 }
+
+const (
+	SceneVerifyCode   = "verify"
+	SceneResetPwdCode = "reset_password"
+	SceneChangePhone  = "change_phone"
+)
 
 // NewService 创建短信服务
 func NewService(cfg *config.SMSConfig, cache cache.Cache) Service {
@@ -60,6 +68,11 @@ func NewService(cfg *config.SMSConfig, cache cache.Cache) Service {
 
 // SendVerifyCode 发送验证码
 func (s *smsService) SendVerifyCode(ctx context.Context, phone string) (string, error) {
+	return s.SendVerifyCodeWithScene(ctx, phone, SceneVerifyCode)
+}
+
+// SendVerifyCodeWithScene 发送验证码（按业务场景套用模板）
+func (s *smsService) SendVerifyCodeWithScene(ctx context.Context, phone, scene string) (string, error) {
 	// 每手机号限流：同一号码60秒内只能发送一次，防止 SMS Bombing
 	if s.cache != nil {
 		throttleKey := fmt.Sprintf("sms_throttle:%s", phone)
@@ -102,17 +115,56 @@ func (s *smsService) SendVerifyCode(ctx context.Context, phone string) (string, 
 		return "", fmt.Errorf("SMS provider not configured and dev mode is disabled")
 	}
 
+	normalizedScene := normalizeSMSScene(scene)
+	templateCode := s.resolveTemplateCode(normalizedScene)
+	if templateCode == "" {
+		return "", fmt.Errorf("SMS template not configured for scene: %s", normalizedScene)
+	}
+
 	// 生产模式：调用短信服务发送
 	params := map[string]string{
 		"code": code,
 	}
-	if err := s.provider.SendSMS(ctx, phone, s.config.SignName, "verify_code", params); err != nil {
+	if err := s.provider.SendSMS(ctx, phone, s.config.SignName, templateCode, params); err != nil {
 		logger.Error("Failed to send SMS", logger.Err(err), logger.String("phone", phone))
 		return "", err
 	}
 
 	logger.Info("Verify code sent", logger.String("phone", phone))
 	return code, nil
+}
+
+func normalizeSMSScene(scene string) string {
+	switch scene {
+	case "", SceneVerifyCode:
+		return SceneVerifyCode
+	case SceneResetPwdCode:
+		return SceneResetPwdCode
+	case SceneChangePhone:
+		return SceneChangePhone
+	default:
+		return SceneVerifyCode
+	}
+}
+
+func (s *smsService) resolveTemplateCode(scene string) string {
+	switch scene {
+	case SceneResetPwdCode:
+		if s.config.TemplateResetPwd != "" {
+			return s.config.TemplateResetPwd
+		}
+		return s.config.TemplateVerifyCode
+	case SceneChangePhone:
+		if s.config.TemplateChangePh != "" {
+			return s.config.TemplateChangePh
+		}
+		return s.config.TemplateVerifyCode
+	default:
+		if s.config.TemplateVerifyCode != "" {
+			return s.config.TemplateVerifyCode
+		}
+		return "verify_code"
+	}
 }
 
 // VerifyCode 验证验证码

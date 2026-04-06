@@ -70,6 +70,7 @@ type WechatClient interface {
 // SMSProvider 短信服务接口
 type SMSProvider interface {
 	SendVerifyCode(ctx context.Context, phone string) (string, error)
+	SendVerifyCodeWithScene(ctx context.Context, phone, scene string) (string, error)
 	VerifyCode(ctx context.Context, phone, code string) bool
 }
 
@@ -796,11 +797,16 @@ func (s *AuthService) bindPhoneInternal(ctx context.Context, userID string, phon
 
 // SendVerifyCode 发送验证码
 func (s *AuthService) SendVerifyCode(ctx context.Context, phone string) error {
+	return s.SendVerifyCodeWithScene(ctx, phone, "")
+}
+
+// SendVerifyCodeWithScene 按场景发送验证码
+func (s *AuthService) SendVerifyCodeWithScene(ctx context.Context, phone, scene string) error {
 	if err := s.ensureSMSService(); err != nil {
 		return err
 	}
 
-	_, err := s.smsService.SendVerifyCode(ctx, phone)
+	_, err := s.smsService.SendVerifyCodeWithScene(ctx, phone, scene)
 	return err
 }
 

@@ -156,6 +156,9 @@ type SMSConfig struct {
 	SignName           string `mapstructure:"sign_name"`
 	DevMode            bool   `mapstructure:"dev_mode"`
 	CodeExpiry         int    `mapstructure:"code_expiry"` // 验证码有效期（秒）
+	TemplateVerifyCode string `mapstructure:"template_verify_code"`
+	TemplateResetPwd   string `mapstructure:"template_reset_password"`
+	TemplateChangePh   string `mapstructure:"template_change_phone"`
 	AliyunAccessKeyID  string `mapstructure:"aliyun_access_key_id"`
 	AliyunAccessSecret string `mapstructure:"aliyun_access_key_secret"`
 	TencentSecretID    string `mapstructure:"tencent_secret_id"`
@@ -325,6 +328,9 @@ func setDefaults() {
 	viper.SetDefault("sms.sign_name", "助力团圆")
 	viper.SetDefault("sms.dev_mode", false)
 	viper.SetDefault("sms.code_expiry", 300)
+	viper.SetDefault("sms.template_verify_code", "verify_code") // 注册验证码模板（参数：{1}=code）
+	viper.SetDefault("sms.template_reset_password", "")
+	viper.SetDefault("sms.template_change_phone", "")
 
 	// Email defaults
 	viper.SetDefault("email.enabled", false)

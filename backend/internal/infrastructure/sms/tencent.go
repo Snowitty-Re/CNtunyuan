@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -87,8 +88,13 @@ func (p *TencentProvider) SendSMS(ctx context.Context, phone, signName, template
 
 	// 构建模板参数（按key排序以保证顺序一致）
 	templateParams := make([]string, 0, len(params))
-	for _, v := range params {
-		templateParams = append(templateParams, v)
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		templateParams = append(templateParams, params[k])
 	}
 
 	// 构建请求体

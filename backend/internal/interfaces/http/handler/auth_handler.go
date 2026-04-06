@@ -65,6 +65,7 @@ type BindPhoneRequest struct {
 // @Description 发送短信验证码请求参数
 type SendCodeRequest struct {
 	Phone string `json:"phone" binding:"required" example:"13800138000"` // 手机号
+	Scene string `json:"scene" example:"verify"`                         // 场景：verify/reset_password/change_phone
 }
 
 // BindWechatRequest 绑定微信请求
@@ -630,7 +631,7 @@ func (h *AuthHandler) SendVerifyCode(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.SendVerifyCode(c.Request.Context(), req.Phone); err != nil {
+	if err := h.authService.SendVerifyCodeWithScene(c.Request.Context(), req.Phone, strings.TrimSpace(req.Scene)); err != nil {
 		logger.Error("Send verify code failed", logger.Err(err))
 		response.Error(c, err)
 		return
