@@ -47,10 +47,11 @@ type LoginRequest struct {
 
 // RegisterRequest 注册请求
 type RegisterRequest struct {
-	Nickname string `json:"nickname" example:"新志愿者"`
-	Phone    string `json:"phone" binding:"required" example:"13800138000"`
-	Password string `json:"password" binding:"required,min=8" example:"password123"`
-	Code     string `json:"code" binding:"required" example:"123456"`
+	Nickname   string `json:"nickname" example:"新志愿者"`
+	Phone      string `json:"phone" example:"13800138000"`
+	Password   string `json:"password" binding:"required,min=8" example:"password123"`
+	Code       string `json:"code" example:"123456"`
+	WechatCode string `json:"wechat_code" example:"phone_code_12345"` // 微信 getPhoneNumber 返回的 code
 }
 
 // BindPhoneRequest 绑定手机号请求
@@ -108,8 +109,9 @@ type SendCodeResponse struct {
 // ResetPasswordRequest 重置密码请求
 // @Description 重置密码请求参数
 type ResetPasswordRequest struct {
-	Phone       string `json:"phone" binding:"required" example:"13800138000"`             // 手机号
-	Code        string `json:"code" binding:"required" example:"123456"`                   // 验证码
+	Phone       string `json:"phone" example:"13800138000"`                                // 手机号（可选，微信模式会自动解析）
+	Code        string `json:"code" example:"123456"`                                      // 验证码（短信模式）
+	WechatCode  string `json:"wechat_code" example:"phone_code_12345"`                     // 微信 getPhoneNumber 返回的 code（推荐）
 	NewPassword string `json:"new_password" binding:"required,min=8" example:"newpass123"` // 新密码
 }
 
@@ -462,6 +464,11 @@ func (h *AuthHandler) BindPhone(c *gin.Context) {
 	if strings.TrimSpace(req.WechatCode) != "" {
 		result, err = h.authService.BindPhoneByWechatCode(c.Request.Context(), userID, req.WechatCode)
 	} else {
+		cfg := config.GetConfig()
+		if cfg == nil || !cfg.System.EnableSMSLogin {
+			response.Error(c, errors.New(errors.CodeForbidden, "当前未启用短信验证，请使用微信一键绑定手机号"))
+			return
+		}
 		// 短信验证码兜底绑定
 		if !validator.IsValidPhone(req.Phone) {
 			response.Error(c, errors.New(errors.CodeInvalidParam, "手机号格式不正确"))
@@ -521,6 +528,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		req.Phone,
 		req.Password,
 		req.Code,
+		req.WechatCode,
 	)
 	if err != nil {
 		response.Error(c, err)
@@ -619,6 +627,12 @@ func (h *AuthHandler) UnbindWechat(c *gin.Context) {
 // @Failure      500      {object}  response.Response  "服务器内部错误或短信服务异常"
 // @Router       /auth/send-code [post]
 func (h *AuthHandler) SendVerifyCode(c *gin.Context) {
+	cfg := config.GetConfig()
+	if cfg == nil || !cfg.System.EnableSMSLogin {
+		response.Error(c, errors.New(errors.CodeForbidden, "当前未启用短信验证码"))
+		return
+	}
+
 	var req SendCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, validator.ValidateStruct(&req))
@@ -638,7 +652,6 @@ func (h *AuthHandler) SendVerifyCode(c *gin.Context) {
 	}
 
 	codeExpiry := 300
-	cfg := config.GetConfig()
 	if cfg != nil && cfg.SMS.CodeExpiry > 0 {
 		codeExpiry = cfg.SMS.CodeExpiry
 	}
@@ -668,13 +681,13 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// 验证手机号格式
-	if !validator.IsValidPhone(req.Phone) {
+	// 校验：微信模式可不传手机号，短信模式必须传合法手机号
+	if strings.TrimSpace(req.WechatCode) == "" && !validator.IsValidPhone(req.Phone) {
 		response.Error(c, errors.New(errors.CodeInvalidParam, "手机号格式不正确"))
 		return
 	}
 
-	if err := h.authService.ResetPassword(c.Request.Context(), req.Phone, req.Code, req.NewPassword); err != nil {
+	if err := h.authService.ResetPassword(c.Request.Context(), req.Phone, req.Code, req.NewPassword, req.WechatCode); err != nil {
 		logger.Error("Reset password failed", logger.Err(err))
 		response.Error(c, err)
 		return

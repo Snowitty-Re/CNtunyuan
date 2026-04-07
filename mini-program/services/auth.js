@@ -34,8 +34,8 @@ module.exports = {
    * @param {String} code 验证码
    * @param {String} nickname 昵称（可选）
    */
-  register(phone, password, code, nickname = '') {
-    return post('/auth/register', { phone, password, code, nickname })
+  register(phone, password, code, nickname = '', wechatCode = '') {
+    return post('/auth/register', { phone, password, code, nickname, wechat_code: wechatCode })
   },
 
   /**
@@ -95,8 +95,19 @@ module.exports = {
   /**
    * 发送验证码
    * @param {String} phone 手机号
+   * @param {String} scene 场景：verify/reset_password/change_phone
    */
-  sendVerifyCode(phone) {
-    return post('/auth/send-code', { phone })
+  sendVerifyCode(phone, scene = 'verify') {
+    return post('/auth/send-code', { phone, scene })
+  },
+
+  /**
+   * 重置密码
+   * @param {String} phone 手机号
+   * @param {String} code 验证码
+   * @param {String} newPassword 新密码
+   */
+  resetPassword(phone, code, newPassword, wechatCode = '') {
+    return post('/auth/reset-password', { phone, code, new_password: newPassword, wechat_code: wechatCode })
   }
 }

@@ -13,6 +13,7 @@ Page({
     countDown: 60,
     canSendCode: false,
     isBinding: false, // 是否处于绑定手机号流程
+    isResetPassword: false, // 是否处于重置密码流程
     tempUserInfo: null // 临时用户信息（微信登录后未绑定手机号）
   },
 
@@ -39,6 +40,7 @@ Page({
     this.setData({ 
       loginType: type,
       isRegister: false,
+      isResetPassword: false,
       isBinding: false // 切换登录方式时退出绑定模式
     })
   },
@@ -48,6 +50,7 @@ Page({
     this.setData({
       loginType: 'wechat',
       isBinding: false,
+      isResetPassword: false,
       phone: '',
       smsCode: ''
     })
@@ -140,7 +143,7 @@ Page({
 
     const code = e && e.detail ? e.detail.code : ''
     if (!code || code === 'getPhoneNumber:fail user deny') {
-      showError('未授权手机号，已切换为短信验证码方式')
+      showError('未授权手机号')
       return
     }
 
@@ -165,7 +168,69 @@ Page({
     } catch (error) {
       hideLoading()
       console.error('微信手机号绑定失败:', error)
-      showError(error.message || '微信绑定失败，请使用短信验证码')
+      showError(error.message || '微信绑定失败')
+    } finally {
+      this.setData({ loading: false })
+    }
+  },
+
+  // 注册/重置密码：微信手机号授权
+  async handleWechatPhoneForAuth(e) {
+    const { isRegister, isResetPassword, password, loading } = this.data
+    if (loading || (!isRegister && !isResetPassword)) return
+
+    if (!password) {
+      showError(isResetPassword ? '请输入新密码' : '请输入密码')
+      return
+    }
+    if (password.length < 8) {
+      showError('密码至少8位')
+      return
+    }
+
+    const code = e && e.detail ? e.detail.code : ''
+    if (!code || code === 'getPhoneNumber:fail user deny') {
+      showError('未授权手机号')
+      return
+    }
+
+    this.setData({ loading: true })
+    showLoading(isResetPassword ? '重置中...' : '注册中...')
+
+    try {
+      if (isResetPassword) {
+        await services.auth.resetPassword('', '', password, code)
+        hideLoading()
+        showSuccess('密码重置成功，请使用新密码登录')
+        this.setData({
+          isResetPassword: false,
+          isRegister: false,
+          loginType: 'phone',
+          password: '',
+          smsCode: '',
+          phone: ''
+        })
+        return
+      }
+
+      const result = await services.auth.register('', password, '', '', code)
+      hideLoading()
+      if (result && result.need_approval) {
+        showSuccess(result.message || '注册成功，待管理员审批')
+      } else {
+        showSuccess('注册成功')
+      }
+      this.setData({
+        isRegister: false,
+        loginType: 'phone',
+        password: '',
+        smsCode: '',
+        phone: ''
+      })
+    } catch (error) {
+      hideLoading()
+      console.error('微信手机号验证失败:', error)
+      showError(error.message || '操作失败')
     } finally {
       this.setData({ loading: false })
     }
@@ -192,7 +257,7 @@ Page({
 
   // 发送验证码
   async sendVerifyCode() {
-    const { phone, counting } = this.data
+    const { phone, counting, isBinding, isResetPassword } = this.data
     
     if (counting) return
     if (!validatePhone(phone)) {
@@ -204,7 +269,8 @@ Page({
     showLoading('发送中...')
 
     try {
-      await services.auth.sendVerifyCode(phone)
+      const scene = isBinding ? 'change_phone' : (isResetPassword ? 'reset_password' : 'verify')
+      await services.auth.sendVerifyCode(phone, scene)
       hideLoading()
       showSuccess('验证码已发送')
       
@@ -252,27 +318,20 @@ Page({
 
   // 手机号登录
   async handlePhoneLogin() {
-    const { phone, password, isBinding, smsCode, isRegister } = this.data
-    
+    const { phone, password, isBinding, isRegister, isResetPassword } = this.data
+    if (isBinding || isRegister || isResetPassword) {
+      showError('请使用微信手机号授权按钮完成验证')
+      return
+    }
+
     if (!validatePhone(phone)) {
       showError('请输入正确的手机号')
       return
     }
 
-    // 绑定手机号需要验证码
-    if (isBinding && !smsCode) {
-      showError('请输入验证码')
-      return
-    }
-
-    // 普通登录/注册需要密码
+    // 普通登录/注册/重置需要密码
     if (!isBinding && !password) {
       showError('请输入密码')
-      return
-    }
-
-    if (isRegister && !smsCode) {
-      showError('请输入验证码')
       return
     }
 
@@ -282,16 +341,7 @@ Page({
     try {
       let result
 
-      if (isBinding) {
-        // 绑定手机号
-        result = await services.auth.bindPhone(phone, smsCode)
-      } else if (isRegister) {
-        // 注册账号
-        result = await services.auth.register(phone, password, smsCode)
-      } else {
-        // 手机号密码登录
-        result = await services.auth.login(phone, password)
-      }
+      result = await services.auth.login(phone, password)
 
       hideLoading()
 
@@ -349,14 +399,22 @@ Page({
     this.setData({
       loginType: 'phone',
       isBinding: false,
+      isResetPassword: false,
       isRegister: true,
       smsCode: ''
     })
   },
 
-  // 忘记密码（暂未开放）
+  // 忘记密码
   goToForgot() {
-    wx.showToast({ title: '请联系管理员重置密码', icon: 'none' })
+    this.setData({
+      loginType: 'phone',
+      isBinding: false,
+      isRegister: false,
+      isResetPassword: true,
+      smsCode: '',
+      password: ''
+    })
   },
 
   // 用户协议

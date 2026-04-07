@@ -1616,16 +1616,18 @@ definitions:
       phone:
         example: "13800138000"
         type: string
+      wechat_code:
+        description: 微信 getPhoneNumber 返回的 code
+        example: phone_code_12345
+        type: string
     required:
-    - code
     - password
-    - phone
     type: object
   internal_interfaces_http_handler.ResetPasswordRequest:
     description: 重置密码请求参数
     properties:
       code:
-        description: 验证码
+        description: 验证码（短信模式）
         example: "123456"
         type: string
       new_password:
@@ -1634,13 +1636,15 @@ definitions:
         minLength: 8
         type: string
       phone:
-        description: 手机号
+        description: 手机号（可选，微信模式会自动解析）
         example: "13800138000"
         type: string
+      wechat_code:
+        description: 微信 getPhoneNumber 返回的 code（推荐）
+        example: phone_code_12345
+        type: string
     required:
-    - code
     - new_password
-    - phone
     type: object
   internal_interfaces_http_handler.SendCodeRequest:
     description: 发送短信验证码请求参数
@@ -1648,6 +1652,10 @@ definitions:
       phone:
         description: 手机号
         example: "13800138000"
+        type: string
+      scene:
+        description: 场景：verify/reset_password/change_phone
+        example: verify
         type: string
     required:
     - phone

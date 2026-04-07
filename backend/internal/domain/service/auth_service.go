@@ -362,30 +362,53 @@ func (s *AuthService) WechatLogin(ctx context.Context, code string, ip string, u
 }
 
 // Register 注册账号（默认待审批）
-func (s *AuthService) Register(ctx context.Context, nickname, phone, password, code string) (*entity.User, error) {
+func (s *AuthService) Register(ctx context.Context, nickname, phone, password, code, wechatCode string) (*entity.User, error) {
 	nickname = strings.TrimSpace(nickname)
 	phone = strings.TrimSpace(phone)
 	password = strings.TrimSpace(password)
 	code = strings.TrimSpace(code)
+	wechatCode = strings.TrimSpace(wechatCode)
+
+	if len(password) < 8 {
+		return nil, errors.New(errors.CodeInvalidParam, "密码至少需要8位")
+	}
+
+	if wechatCode != "" {
+		wechatPhone, err := s.resolvePhoneByWechatCode(ctx, wechatCode)
+		if err != nil {
+			return nil, err
+		}
+		if phone != "" && phone != wechatPhone {
+			return nil, errors.New(errors.CodeInvalidParam, "填写手机号与微信授权手机号不一致")
+		}
+		phone = wechatPhone
+	} else {
+		if !s.isSMSLoginEnabled() {
+			return nil, errors.New(errors.CodeForbidden, "当前未启用短信验证，请使用微信手机号授权")
+		}
+		if !mainlandPhoneRegex.MatchString(phone) {
+			return nil, errors.New(errors.CodeInvalidParam, "手机号格式不正确")
+		}
+		if code == "" {
+			return nil, errors.New(errors.CodeInvalidParam, "验证码不能为空")
+		}
+		if err := s.ensureSMSService(); err != nil {
+			return nil, err
+		}
+		if !s.smsService.VerifyCode(ctx, phone, code) {
+			return nil, errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
+		}
+	}
 
 	if !mainlandPhoneRegex.MatchString(phone) {
 		return nil, errors.New(errors.CodeInvalidParam, "手机号格式不正确")
 	}
-	if len(password) < 8 {
-		return nil, errors.New(errors.CodeInvalidParam, "密码至少需要8位")
-	}
-	if code == "" {
-		return nil, errors.New(errors.CodeInvalidParam, "验证码不能为空")
-	}
 	if nickname == "" {
-		nickname = "志愿者" + phone[len(phone)-4:]
-	}
-
-	if err := s.ensureSMSService(); err != nil {
-		return nil, err
-	}
-	if !s.smsService.VerifyCode(ctx, phone, code) {
-		return nil, errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
+		suffix := phone
+		if len(phone) >= 4 {
+			suffix = phone[len(phone)-4:]
+		}
+		nickname = "志愿者" + suffix
 	}
 
 	existing, err := s.userRepo.FindByPhone(ctx, phone)
@@ -545,32 +568,9 @@ func (s *AuthService) BindPhone(ctx context.Context, userID string, phone string
 
 // BindPhoneByWechatCode 通过微信手机号授权码绑定手机号
 func (s *AuthService) BindPhoneByWechatCode(ctx context.Context, userID, wechatCode string) (*valueobject.LoginResult, error) {
-	if s.wechatClient == nil {
-		return nil, errors.New(errors.CodeInternal, "wechat service not configured")
-	}
-	if strings.TrimSpace(wechatCode) == "" {
-		return nil, errors.New(errors.CodeInvalidParam, "微信手机号授权码不能为空")
-	}
-
-	accessToken, _, err := s.wechatClient.GetAccessToken()
+	phone, err := s.resolvePhoneByWechatCode(ctx, wechatCode)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "get wechat access token failed")
-	}
-
-	phoneInfo, err := s.wechatClient.GetPhoneNumber(accessToken, wechatCode)
-	if err != nil {
-		return nil, errors.Wrap(err, errors.CodeInternal, "get wechat phone number failed")
-	}
-
-	phone := strings.TrimSpace(phoneInfo.PurePhoneNumber)
-	if phone == "" {
-		phone = strings.TrimSpace(phoneInfo.PhoneNumber)
-	}
-	phone = strings.TrimPrefix(phone, "+86")
-	phone = strings.TrimPrefix(phone, "86")
-
-	if !mainlandPhoneRegex.MatchString(phone) {
-		return nil, errors.New(errors.CodeInvalidParam, "微信手机号格式不正确")
+		return nil, err
 	}
 
 	return s.bindPhoneInternal(ctx, userID, phone)
@@ -811,14 +811,40 @@ func (s *AuthService) SendVerifyCodeWithScene(ctx context.Context, phone, scene 
 }
 
 // ResetPassword 重置密码（通过短信验证码）
-func (s *AuthService) ResetPassword(ctx context.Context, phone, code, newPassword string) error {
-	// 验证验证码
-	if err := s.ensureSMSService(); err != nil {
-		return err
+func (s *AuthService) ResetPassword(ctx context.Context, phone, code, newPassword, wechatCode string) error {
+	phone = strings.TrimSpace(phone)
+	code = strings.TrimSpace(code)
+	wechatCode = strings.TrimSpace(wechatCode)
+
+	if len(strings.TrimSpace(newPassword)) < 8 {
+		return errors.New(errors.CodeInvalidParam, "密码至少需要8位")
 	}
 
-	if !s.smsService.VerifyCode(ctx, phone, code) {
-		return errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
+	if wechatCode != "" {
+		wechatPhone, err := s.resolvePhoneByWechatCode(ctx, wechatCode)
+		if err != nil {
+			return err
+		}
+		if phone != "" && phone != wechatPhone {
+			return errors.New(errors.CodeInvalidParam, "填写手机号与微信授权手机号不一致")
+		}
+		phone = wechatPhone
+	} else {
+		if !s.isSMSLoginEnabled() {
+			return errors.New(errors.CodeForbidden, "当前未启用短信验证，请使用微信手机号授权")
+		}
+		if !mainlandPhoneRegex.MatchString(phone) {
+			return errors.New(errors.CodeInvalidParam, "手机号格式不正确")
+		}
+		if code == "" {
+			return errors.New(errors.CodeInvalidParam, "验证码不能为空")
+		}
+		if err := s.ensureSMSService(); err != nil {
+			return err
+		}
+		if !s.smsService.VerifyCode(ctx, phone, code) {
+			return errors.New(errors.CodeInvalidCaptcha, "验证码错误或已过期")
+		}
 	}
 
 	// 查找用户
@@ -839,6 +865,46 @@ func (s *AuthService) ResetPassword(ctx context.Context, phone, code, newPasswor
 
 	logger.Info("Password reset success", logger.String("user_id", user.ID))
 	return nil
+}
+
+func (s *AuthService) isSMSLoginEnabled() bool {
+	cfg := config.GetConfig()
+	if cfg == nil {
+		return true
+	}
+	return cfg.System.EnableSMSLogin
+}
+
+func (s *AuthService) resolvePhoneByWechatCode(ctx context.Context, wechatCode string) (string, error) {
+	if s.wechatClient == nil {
+		return "", errors.New(errors.CodeInternal, "wechat service not configured")
+	}
+	if strings.TrimSpace(wechatCode) == "" {
+		return "", errors.New(errors.CodeInvalidParam, "微信手机号授权码不能为空")
+	}
+
+	accessToken, _, err := s.wechatClient.GetAccessToken()
+	if err != nil {
+		return "", errors.Wrap(err, errors.CodeInternal, "get wechat access token failed")
+	}
+
+	phoneInfo, err := s.wechatClient.GetPhoneNumber(accessToken, wechatCode)
+	if err != nil {
+		return "", errors.Wrap(err, errors.CodeInternal, "get wechat phone number failed")
+	}
+
+	phone := strings.TrimSpace(phoneInfo.PurePhoneNumber)
+	if phone == "" {
+		phone = strings.TrimSpace(phoneInfo.PhoneNumber)
+	}
+	phone = strings.TrimPrefix(phone, "+86")
+	phone = strings.TrimPrefix(phone, "86")
+
+	if !mainlandPhoneRegex.MatchString(phone) {
+		return "", errors.New(errors.CodeInvalidParam, "微信手机号格式不正确")
+	}
+
+	return phone, nil
 }
 
 // isLoginLocked 检查登录是否被锁定

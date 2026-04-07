@@ -9637,9 +9637,7 @@ const docTemplate = `{
         "internal_interfaces_http_handler.RegisterRequest": {
             "type": "object",
             "required": [
-                "code",
-                "password",
-                "phone"
+                "password"
             ],
             "properties": {
                 "code": {
@@ -9658,6 +9656,11 @@ const docTemplate = `{
                 "phone": {
                     "type": "string",
                     "example": "13800138000"
+                },
+                "wechat_code": {
+                    "description": "微信 getPhoneNumber 返回的 code",
+                    "type": "string",
+                    "example": "phone_code_12345"
                 }
             }
         },
@@ -9665,13 +9668,11 @@ const docTemplate = `{
             "description": "重置密码请求参数",
             "type": "object",
             "required": [
-                "code",
-                "new_password",
-                "phone"
+                "new_password"
             ],
             "properties": {
                 "code": {
-                    "description": "验证码",
+                    "description": "验证码（短信模式）",
                     "type": "string",
                     "example": "123456"
                 },
@@ -9682,9 +9683,14 @@ const docTemplate = `{
                     "example": "newpass123"
                 },
                 "phone": {
-                    "description": "手机号",
+                    "description": "手机号（可选，微信模式会自动解析）",
                     "type": "string",
                     "example": "13800138000"
+                },
+                "wechat_code": {
+                    "description": "微信 getPhoneNumber 返回的 code（推荐）",
+                    "type": "string",
+                    "example": "phone_code_12345"
                 }
             }
         },
@@ -9699,6 +9705,11 @@ const docTemplate = `{
                     "description": "手机号",
                     "type": "string",
                     "example": "13800138000"
+                },
+                "scene": {
+                    "description": "场景：verify/reset_password/change_phone",
+                    "type": "string",
+                    "example": "verify"
                 }
             }
         },
