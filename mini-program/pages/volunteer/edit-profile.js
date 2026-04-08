@@ -164,7 +164,8 @@ Page({
     
     try {
       showLoading('发送中...')
-      await authService.sendVerifyCode(target)
+      const scene = type === 'phone' ? 'change_phone' : 'verify'
+      await authService.sendVerifyCode(target, scene)
       showSuccess('验证码已发送')
       
       this.setData({ 
