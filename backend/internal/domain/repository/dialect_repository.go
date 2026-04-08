@@ -57,6 +57,36 @@ type DialectRepository interface {
 
 	// GetStats 获取统计
 	GetStats(ctx context.Context) (*entity.DialectStats, error)
+
+	// ListCardGroups 获取卡片分组列表
+	ListCardGroups(ctx context.Context, includeInactive bool) ([]entity.DialectCardGroup, error)
+
+	// CreateCardGroup 创建卡片分组
+	CreateCardGroup(ctx context.Context, group *entity.DialectCardGroup) error
+
+	// UpdateCardGroup 更新卡片分组
+	UpdateCardGroup(ctx context.Context, group *entity.DialectCardGroup) error
+
+	// DeleteCardGroup 删除卡片分组
+	DeleteCardGroup(ctx context.Context, id string) error
+
+	// FindCardGroupByID 根据ID获取卡片分组
+	FindCardGroupByID(ctx context.Context, id string) (*entity.DialectCardGroup, error)
+
+	// ListCards 获取卡片列表
+	ListCards(ctx context.Context, query *DialectCardQuery) ([]entity.DialectCard, error)
+
+	// CreateCard 创建卡片
+	CreateCard(ctx context.Context, card *entity.DialectCard) error
+
+	// UpdateCard 更新卡片
+	UpdateCard(ctx context.Context, card *entity.DialectCard) error
+
+	// DeleteCard 删除卡片
+	DeleteCard(ctx context.Context, id string) error
+
+	// FindCardByID 根据ID获取卡片
+	FindCardByID(ctx context.Context, id string) (*entity.DialectCard, error)
 }
 
 // DialectQuery 方言查询参数
@@ -74,6 +104,13 @@ type DialectQuery struct {
 	IsFeatured *bool                `json:"is_featured,omitempty"`
 	SortBy     string               `json:"sort_by"` // play_count, like_count, created_at
 	SortOrder  string               `json:"sort_order"`
+}
+
+// DialectCardQuery 方言卡片查询参数
+type DialectCardQuery struct {
+	GroupID          string `json:"group_id"`
+	IncludeInactive  bool   `json:"include_inactive"`
+	IncludeGroupInfo bool   `json:"include_group_info"`
 }
 
 // NewDialectQuery 创建默认方言查询

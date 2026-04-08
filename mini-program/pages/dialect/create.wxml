@@ -1,307 +1,132 @@
 <view class="page">
-  <!-- Recording section -->
-  <view class="record-hero">
-    <view class="record-hero-bg">
-      <view class="rh-circle rh-circle-1"></view>
-      <view class="rh-circle rh-circle-2"></view>
+  <view class="template-card" wx:if="{{cards.length > 0}}">
+    <view class="template-head">
+      <text class="title">方言卡片录入</text>
+      <text class="progress">{{completedCount}} / {{cards.length}}</text>
+    </view>
+    <view class="progress-bar">
+      <view class="progress-inner" style="width: {{cards.length ? (completedCount / cards.length) * 100 : 0}}%"></view>
     </view>
 
-    <view class="record-content">
-      <!-- Wave animation during recording -->
-      <view class="wave-container" wx:if="{{isRecording}}">
-        <view class="wave-ring wave-ring-1"></view>
-        <view class="wave-ring wave-ring-2"></view>
-        <view class="wave-ring wave-ring-3"></view>
-        <view class="wave-ring wave-ring-4"></view>
+    <view class="card-main">
+      <view class="card-group">{{currentCard.group_name || '未分组'}}</view>
+      <text class="card-text">{{currentCard.content}}</text>
+      <image
+        wx:if="{{currentCard.image_url}}"
+        class="card-image"
+        src="{{currentCard.image_url}}"
+        mode="aspectFill"
+      />
+      <view class="card-index">卡片 {{currentCardIndex + 1}} / {{cards.length}}</view>
+    </view>
+
+    <scroll-view class="card-list" scroll-x enable-flex>
+      <view
+        wx:for="{{cards}}"
+        wx:key="id"
+        class="chip {{currentCardIndex === index ? 'active' : ''}} {{recordings[item.id] ? 'done' : ''}}"
+        data-index="{{index}}"
+        bindtap="switchCard"
+      >
+        <text>{{item.content}}</text>
       </view>
+    </scroll-view>
 
-      <!-- Sound wave bars -->
-      <view class="record-wave-bars" wx:if="{{isRecording}}">
-        <view class="rw-bar" wx:for="{{24}}" wx:key="barIdx" wx:for-index="barIdx" style="animation-delay: {{barIdx * 0.07}}s;"></view>
-      </view>
+    <view class="card-nav">
+      <button class="nav-btn" bindtap="goPrevCard" disabled="{{currentCardIndex <= 0}}">上一张</button>
+      <button class="nav-btn" bindtap="goNextCard" disabled="{{currentCardIndex >= cards.length - 1}}">下一张</button>
+    </view>
+  </view>
 
-      <!-- Status text -->
-      <view class="record-status">
-        <block wx:if="{{!hasRecorded && !isRecording}}">
-          <text class="status-main">点击下方按钮开始录音</text>
-          <text class="status-sub">录音时长 {{minDuration}}-{{maxDuration}} 秒</text>
-        </block>
-        <block wx:if="{{isRecording}}">
-          <text class="status-main recording-text">正在录音 {{recordTimeText}}</text>
-          <text class="status-sub">{{recordTime < minDuration ? '至少录制' + minDuration + '秒' : '点击停止按钮结束录音'}}</text>
-        </block>
-        <block wx:if="{{hasRecorded && !isRecording}}">
-          <text class="status-main">录音完成 {{recordDurationText}}</text>
-          <text class="status-sub">点击下方按钮试听或重新录制</text>
-        </block>
-      </view>
+  <view class="empty" wx:else>
+    暂无可录入卡片模板，请联系管理员配置
+  </view>
 
-      <!-- Audio preview player (after recording) -->
-      <view class="preview-player" wx:if="{{hasRecorded && !isRecording}}">
-        <view class="preview-wave-bars">
-          <view class="pvw-bar {{isPlaying ? 'animating' : ''}}" wx:for="{{30}}" wx:key="index" style="animation-delay: {{index * 0.05}}s; height: {{10 + (index % 4) * 12}}rpx;"></view>
-        </view>
-        <slider
-          class="preview-slider"
-          value="{{playProgress}}"
-          block-size="18"
-          block-color="#fff"
-          activeColor="rgba(255,255,255,0.9)"
-          backgroundColor="rgba(255,255,255,0.25)"
-          bindchange="onPlayProgressChange"
-        />
-        <view class="preview-time">
-          <text>{{playCurrentTimeText}}</text>
-          <text>{{recordDurationText}}</text>
-        </view>
-      </view>
+  <view class="record-card" wx:if="{{currentCard}}">
+    <view class="record-title">当前卡片录音</view>
+    <text class="record-tip" wx:if="{{!isRecording && !hasRecorded}}">点击开始录音，时长 {{minDuration}}-{{maxDuration}} 秒</text>
+    <text class="record-tip recording" wx:if="{{isRecording}}">录音中 {{recordTimeText}}（最少 {{minDuration}} 秒）</text>
+    <text class="record-tip" wx:if="{{!isRecording && hasRecorded}}">录音完成 {{recordDurationText}}</text>
 
-      <!-- Record controls -->
-      <view class="record-controls">
-        <!-- Re-record button -->
-        <view class="ctrl-btn ctrl-secondary {{!hasRecorded ? 'invisible' : ''}}" bindtap="resetRecord" wx:if="{{!isRecording}}">
-          <view class="ctrl-icon-wrap ctrl-icon-secondary">
-            <view class="icon-rerecord">
-              <view class="rerecord-arrow"></view>
-            </view>
-          </view>
-          <text class="ctrl-label">重录</text>
-        </view>
+    <view class="btn-row">
+      <button class="warn" bindtap="resetCurrentRecord" disabled="{{!hasRecorded || isRecording}}">重录</button>
+      <button class="primary" bindtap="{{isRecording ? 'stopRecord' : 'startRecord'}}">{{isRecording ? '停止录音' : '开始录音'}}</button>
+      <button class="ghost" bindtap="togglePlay" disabled="{{!hasRecorded}}">{{isPlaying ? '暂停试听' : '试听'}}</button>
+    </view>
 
-        <!-- Main button (record / stop / play) -->
-        <view class="ctrl-btn ctrl-primary" bindtap="{{isRecording ? 'stopRecord' : hasRecorded ? 'togglePlay' : 'startRecord'}}">
-          <view class="main-btn-outer {{isRecording ? 'recording' : ''}}">
-            <view class="main-btn-inner">
-              <!-- Record icon (mic dot) -->
-              <view wx:if="{{!isRecording && !hasRecorded}}" class="icon-mic-dot"></view>
-              <!-- Stop icon (square) -->
-              <view wx:if="{{isRecording}}" class="icon-stop-square"></view>
-              <!-- Play/pause icon -->
-              <block wx:if="{{!isRecording && hasRecorded}}">
-                <view wx:if="{{!isPlaying}}" class="icon-play-tri"></view>
-                <view wx:else class="icon-pause-duo">
-                  <view class="pd-bar"></view>
-                  <view class="pd-bar"></view>
-                </view>
-              </block>
-            </view>
-          </view>
-          <!-- Pulse animation when recording -->
-          <view class="rec-pulse rec-pulse-1" wx:if="{{isRecording}}"></view>
-          <view class="rec-pulse rec-pulse-2" wx:if="{{isRecording}}"></view>
-          <text class="ctrl-label-main">{{isRecording ? '停止' : hasRecorded ? (isPlaying ? '暂停' : '播放') : '录音'}}</text>
-        </view>
-
-        <!-- Spacer for symmetry -->
-        <view class="ctrl-btn ctrl-spacer" wx:if="{{!hasRecorded && !isRecording}}"></view>
+    <view class="playback" wx:if="{{hasRecorded}}">
+      <slider
+        value="{{playProgress}}"
+        activeColor="#FF8C42"
+        backgroundColor="#F3E6D9"
+        bindchange="onPlayProgressChange"
+      />
+      <view class="time-row">
+        <text>{{playCurrentTimeText}}</text>
+        <text>{{recordDurationText}}</text>
       </view>
     </view>
   </view>
 
-  <!-- Form section -->
   <view class="form-card">
-    <!-- Title -->
     <view class="field">
-      <view class="field-label">
-        <text class="field-label-text">标题</text>
-        <text class="field-required">*</text>
-      </view>
-      <view class="field-input-wrap">
-        <input
-          class="field-input"
-          placeholder="给这段方言起个标题"
-          placeholder-style="color: #C0A88E;"
-          value="{{form.title}}"
-          maxlength="50"
-          bindinput="onTitleInput"
-        />
-      </view>
-    </view>
-
-    <!-- Description -->
-    <view class="field">
-      <view class="field-label">
-        <text class="field-label-text">描述</text>
-        <text class="field-optional">选填</text>
-      </view>
-      <view class="field-textarea-wrap">
-        <textarea
-          class="field-textarea"
-          placeholder="补充说明这段方言的背景信息"
-          placeholder-style="color: #C0A88E;"
-          value="{{form.description}}"
-          maxlength="500"
-          bindinput="onDescInput"
-        />
-        <text class="textarea-counter">{{form.description.length}}/500</text>
-      </view>
-    </view>
-
-    <!-- Region -->
-    <view class="field">
-      <view class="field-label">
-        <text class="field-label-text">地区</text>
-        <text class="field-required">*</text>
-      </view>
+      <view class="label">采集地区 <text class="required">*</text></view>
       <picker mode="region" value="{{[form.province, form.city, form.district]}}" bindchange="onRegionChange">
-        <view class="field-picker {{form.region ? 'has-value' : ''}}">
-          <view class="picker-left">
-            <view class="picker-pin"></view>
-            <text>{{form.region || '请选择省/市/区'}}</text>
-          </view>
-          <view class="picker-chevron"></view>
-        </view>
+        <view class="picker {{form.region ? 'has-value' : ''}}">{{form.region || '请选择省/市/区'}}</view>
       </picker>
     </view>
 
-    <!-- Collect location -->
     <view class="field">
-      <view class="field-label">
-        <text class="field-label-text">采集地址</text>
-        <text class="field-required">*</text>
+      <view class="label">采集地址 <text class="required">*</text></view>
+      <button class="location-btn" bindtap="chooseCollectLocation">地图选点</button>
+      <view class="readonly {{form.collect_address ? 'has-value' : ''}}">
+        {{form.collect_address || '请点击上方“地图选点”获取地址'}}
       </view>
-      <view class="location-select-btn" bindtap="chooseCollectLocation">
-        <text class="location-select-icon">📍</text>
-        <text class="location-select-text">地图选点</text>
-      </view>
-      <view class="field-textarea-wrap address-readonly {{form.collect_address ? 'has-value' : ''}}">
-        <textarea
-          class="field-textarea address-textarea"
-          value="{{form.collect_address}}"
-          placeholder="请点击上方“地图选点”获取地址"
-          placeholder-style="color: #C0A88E;"
-          disabled
-        />
-      </view>
-      <text class="address-coord" wx:if="{{form.collect_latitude && form.collect_longitude}}">
+      <text class="coord" wx:if="{{form.collect_latitude && form.collect_longitude}}">
         坐标：{{form.collect_latitude}}, {{form.collect_longitude}}
       </text>
     </view>
 
-    <!-- Tags -->
     <view class="field">
-      <view class="field-label">
-        <text class="field-label-text">标签</text>
-        <text class="field-hint">最多5个</text>
+      <view class="label">关联走失人员（选填）</view>
+      <view wx:if="{{selectedMissingPerson}}" class="selected-person">
+        <text class="name">{{selectedMissingPerson.name || '未知'}}</text>
+        <text class="remove" bindtap="clearMissingPerson">清除</text>
       </view>
-      <view class="tag-input-row">
-        <view class="tag-input-wrap">
-          <input
-            class="tag-input"
-            placeholder="输入标签，回车添加"
-            placeholder-style="color: #C0A88E;"
-            value="{{tagInput}}"
-            maxlength="10"
-            bindinput="onTagInput"
-            bindconfirm="addTag"
-          />
-        </view>
-        <view class="tag-add-btn {{tagInput ? 'active' : ''}}" bindtap="addTag">
-          <text>添加</text>
-        </view>
-      </view>
-
-      <!-- Added tags -->
-      <view class="tags-display" wx:if="{{form.tags.length > 0}}">
-        <view class="tag-item" wx:for="{{form.tags}}" wx:key="index">
-          <text class="tag-text">#{{item}}</text>
-          <view class="tag-remove" bindtap="removeTag" data-index="{{index}}">
-            <view class="tag-x">
-              <view class="x-line x-line-1"></view>
-              <view class="x-line x-line-2"></view>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- Popular tags -->
-      <view class="popular-section" wx:if="{{form.tags.length < 5}}">
-        <text class="popular-label">热门标签</text>
-        <view class="popular-list">
-          <view
-            class="popular-chip {{form.tags.includes(item) ? 'used' : ''}}"
-            wx:for="{{popularTags}}"
-            wx:key="index"
-            bindtap="addPopularTag"
-            data-tag="{{item}}"
-          >
-            <text>{{item}}</text>
-          </view>
-        </view>
-      </view>
+      <button wx:else class="ghost" bindtap="showMissingPersonSelector">选择走失人员</button>
     </view>
 
-    <!-- Missing person link -->
     <view class="field">
-      <view class="field-label">
-        <text class="field-label-text">关联走失人员</text>
-        <text class="field-optional">选填</text>
-      </view>
-
-      <!-- Selected person -->
-      <view class="selected-person-card" wx:if="{{selectedMissingPerson}}">
-        <image class="sp-avatar" src="{{selectedMissingPerson.avatar || selectedMissingPerson.photo || '/images/default-avatar.png'}}" mode="aspectFill"/>
-        <view class="sp-info">
-          <text class="sp-name">{{selectedMissingPerson.name || '未知'}}</text>
-          <text class="sp-region" wx:if="{{selectedMissingPerson.missing_region}}">{{selectedMissingPerson.missing_region}}</text>
-        </view>
-        <view class="sp-remove" bindtap="clearMissingPerson">
-          <view class="sp-x">
-            <view class="spx-line spx-1"></view>
-            <view class="spx-line spx-2"></view>
-          </view>
-        </view>
-      </view>
-
-      <!-- Select button -->
-      <view class="select-person-btn" bindtap="showMissingPersonSelector" wx:if="{{!selectedMissingPerson}}">
-        <view class="spb-plus">
-          <view class="plus-h"></view>
-          <view class="plus-v"></view>
-        </view>
-        <text class="spb-text">选择走失人员</text>
-      </view>
+      <view class="label">补充说明（选填）</view>
+      <textarea
+        class="textarea"
+        maxlength="500"
+        value="{{form.description}}"
+        bindinput="onDescInput"
+        placeholder="可填写方言背景、口音说明等"
+      />
+      <view class="counter">{{form.description.length}}/500</view>
     </view>
   </view>
 
-  <!-- Submit section -->
-  <view class="submit-section">
-    <view class="submit-btn {{isUploading ? 'uploading' : ''}}" bindtap="submitForm">
-      <text wx:if="{{!isUploading}}">发布方言</text>
-      <view wx:else class="submit-spinner"></view>
-    </view>
-    <text class="submit-note">提交后管理员审核通过即可展示</text>
+  <view class="submit-wrap">
+    <button class="submit" loading="{{isUploading}}" bindtap="submitForm" disabled="{{isUploading || !cards.length}}">
+      {{isUploading ? ('上传中 ' + uploadProgress + '%') : '提交整套方言录入'}}
+    </button>
   </view>
-</view>
 
-<!-- Missing person picker modal -->
-<view class="modal-mask" wx:if="{{showMissingPersonPicker}}" bindtap="hideMissingPersonSelector"></view>
-<view class="modal-sheet {{showMissingPersonPicker ? 'show' : ''}}">
-  <view class="modal-handle-bar">
-    <view class="handle-line"></view>
+  <view class="picker-mask" wx:if="{{showMissingPersonPicker}}" bindtap="hideMissingPersonSelector"></view>
+  <view class="picker-panel" wx:if="{{showMissingPersonPicker}}">
+    <view class="picker-head">
+      <text>选择走失人员</text>
+      <text class="close" bindtap="hideMissingPersonSelector">关闭</text>
+    </view>
+    <scroll-view class="picker-list" scroll-y>
+      <view class="person-item" wx:for="{{missingPersonList}}" wx:key="id" data-index="{{index}}" bindtap="selectMissingPerson">
+        <text class="name">{{item.name || '未知'}}</text>
+        <text class="meta">{{item.missing_region || item.region || ''}}</text>
+      </view>
+      <view class="empty" wx:if="{{missingPersonList.length === 0}}">暂无走失人员数据</view>
+    </scroll-view>
   </view>
-  <view class="modal-header">
-    <text class="modal-title">选择走失人员</text>
-    <view class="modal-close" bindtap="hideMissingPersonSelector">
-      <view class="close-x">
-        <view class="cx-line cx-1"></view>
-        <view class="cx-line cx-2"></view>
-      </view>
-    </view>
-  </view>
-  <scroll-view class="modal-list" scroll-y>
-    <view class="modal-item" wx:for="{{missingPersonList}}" wx:key="id" bindtap="selectMissingPerson" data-index="{{index}}">
-      <image class="modal-item-avatar" src="{{item.avatar || item.photo || '/images/default-avatar.png'}}" mode="aspectFill"/>
-      <view class="modal-item-info">
-        <text class="modal-item-name">{{item.name || '未知'}}</text>
-        <text class="modal-item-region" wx:if="{{item.missing_region}}">{{item.missing_region}}</text>
-      </view>
-      <view class="modal-item-arrow">
-        <view class="mia-chevron"></view>
-      </view>
-    </view>
-    <view class="modal-empty" wx:if="{{missingPersonList.length === 0}}">
-      <text>暂无可关联的走失人员</text>
-    </view>
-  </scroll-view>
 </view>

@@ -8616,6 +8616,21 @@ const docTemplate = `{
                 "audio_url": {
                     "type": "string"
                 },
+                "batch_id": {
+                    "type": "string"
+                },
+                "card_content": {
+                    "type": "string"
+                },
+                "card_group_id": {
+                    "type": "string"
+                },
+                "card_id": {
+                    "type": "string"
+                },
+                "card_image_url": {
+                    "type": "string"
+                },
                 "city": {
                     "type": "string"
                 },

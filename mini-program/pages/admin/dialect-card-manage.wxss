@@ -1,0 +1,28 @@
+.page { min-height: 100vh; background: #FDF8F3; padding: 20rpx; box-sizing: border-box; }
+.ops { display: flex; gap: 12rpx; margin-bottom: 14rpx; }
+.ops button { flex: 1; border-radius: 10rpx; }
+.primary { background: #FF8C42; color: #fff; }
+.ghost { background: #F2F4F8; color: #445; }
+.section { background: #fff; border-radius: 14rpx; padding: 16rpx; margin-bottom: 14rpx; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05); }
+.section-title { font-size: 28rpx; color: #2D1F10; font-weight: 600; margin-bottom: 12rpx; }
+.group-list { white-space: nowrap; margin-bottom: 12rpx; }
+.group-chip { display: inline-flex; height: 56rpx; padding: 0 20rpx; align-items: center; justify-content: center; border-radius: 28rpx; margin-right: 10rpx; border: 1rpx solid #EED9C0; color: #8C7B6B; background: #fff; font-size: 24rpx; }
+.group-chip.active { color: #fff; background: #FF8C42; border-color: #FF8C42; }
+.group-chip.inactive { opacity: 0.7; }
+.group-header { display: flex; justify-content: space-between; align-items: center; }
+.group-name { font-size: 26rpx; color: #2D1F10; }
+.group-status { font-size: 22rpx; padding: 4rpx 10rpx; border-radius: 14rpx; }
+.group-status.active { background: #F6FFED; color: #389E0D; }
+.group-status.inactive { background: #FFF1F0; color: #CF1322; }
+.group-actions, .card-actions { display: flex; justify-content: flex-end; gap: 8rpx; margin-top: 10rpx; }
+.btn { background: #F2F4F8; color: #445; border-radius: 10rpx; }
+.btn.danger { background: #FFF1F0; color: #CF1322; }
+.card-item { padding: 14rpx 0; border-bottom: 1rpx solid #f2f2f2; }
+.card-item:last-child { border-bottom: none; }
+.card-main { display: flex; justify-content: space-between; align-items: center; }
+.card-text { font-size: 28rpx; color: #2D1F10; font-weight: 600; }
+.card-status { font-size: 22rpx; padding: 4rpx 10rpx; border-radius: 14rpx; }
+.card-status.active { background: #F6FFED; color: #389E0D; }
+.card-status.inactive { background: #FFF1F0; color: #CF1322; }
+.card-meta { margin-top: 8rpx; font-size: 22rpx; color: #8C7B6B; }
+.empty, .loading { text-align: center; color: #8C7B6B; font-size: 24rpx; padding: 20rpx 0; }

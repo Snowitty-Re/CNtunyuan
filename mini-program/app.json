@@ -17,6 +17,7 @@
     "pages/tasks/follow-up-detail",
     "pages/tasks/feedback",
     "pages/admin/dialect-review",
+    "pages/admin/dialect-card-manage",
     "pages/admin/user-manage",
     "pages/admin/user-edit",
     "pages/admin/org-manage",

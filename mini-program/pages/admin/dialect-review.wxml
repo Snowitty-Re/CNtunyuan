@@ -10,6 +10,10 @@
   </view>
 
   <view class="list">
+    <view class="batch-bar" wx:if="{{activeTab === 'pending' || activeTab === 'all'}}">
+      <button size="mini" class="btn primary" bindtap="goCardManage">卡片模板管理</button>
+    </view>
+
     <view class="batch-bar" wx:if="{{list.length > 0}}">
       <view class="batch-left" bindtap="toggleSelectAll">
         <view class="check {{selectAll ? 'checked' : ''}}">{{selectAll ? '✓' : ''}}</view>

@@ -50,6 +50,9 @@ type Dialect struct {
 	CollectAddress   string        `gorm:"size:255" json:"collect_address,omitempty"`
 	CollectLatitude  float64       `gorm:"type:decimal(10,7)" json:"collect_latitude,omitempty"`
 	CollectLongitude float64       `gorm:"type:decimal(10,7)" json:"collect_longitude,omitempty"`
+	BatchID          *string       `gorm:"type:uuid;index" json:"batch_id,omitempty"`
+	CardGroupID      *string       `gorm:"type:uuid;index" json:"card_group_id,omitempty"`
+	CardID           *string       `gorm:"type:uuid;index" json:"card_id,omitempty"`
 
 	// 关联
 	UploaderID      string  `gorm:"type:uuid;not null;index" json:"uploader_id"`
@@ -58,11 +61,63 @@ type Dialect struct {
 
 	Uploader *User         `gorm:"foreignKey:UploaderID" json:"uploader,omitempty"`
 	Org      *Organization `gorm:"foreignKey:OrgID" json:"org,omitempty"`
+	Card     *DialectCard  `gorm:"foreignKey:CardID" json:"card,omitempty"`
 }
 
 // TableName 表名
 func (Dialect) TableName() string {
 	return "ty_dialects"
+}
+
+// DialectCardGroupStatus 卡片分组状态
+type DialectCardGroupStatus string
+
+const (
+	DialectCardGroupStatusActive   DialectCardGroupStatus = "active"
+	DialectCardGroupStatusInactive DialectCardGroupStatus = "inactive"
+)
+
+// DialectCardStatus 卡片状态
+type DialectCardStatus string
+
+const (
+	DialectCardStatusActive   DialectCardStatus = "active"
+	DialectCardStatusInactive DialectCardStatus = "inactive"
+)
+
+// DialectCardGroup 方言卡片分组
+type DialectCardGroup struct {
+	BaseEntity
+	Name        string                 `gorm:"size:100;not null" json:"name"`
+	Description string                 `gorm:"size:255" json:"description,omitempty"`
+	SortOrder   int                    `gorm:"default:0" json:"sort_order"`
+	Status      DialectCardGroupStatus `gorm:"size:20;default:'active'" json:"status"`
+	CreatedBy   string                 `gorm:"type:uuid;not null" json:"created_by"`
+	Cards       []DialectCard          `gorm:"foreignKey:GroupID" json:"cards,omitempty"`
+}
+
+// TableName 表名
+func (DialectCardGroup) TableName() string {
+	return "ty_dialect_card_groups"
+}
+
+// DialectCard 方言录入卡片
+type DialectCard struct {
+	BaseEntity
+	GroupID   string            `gorm:"type:uuid;not null;index" json:"group_id"`
+	Content   string            `gorm:"size:200;not null" json:"content"`
+	ImageURL  string            `gorm:"size:255" json:"image_url,omitempty"`
+	SortOrder int               `gorm:"default:0" json:"sort_order"`
+	Required  bool              `gorm:"default:true" json:"required"`
+	Status    DialectCardStatus `gorm:"size:20;default:'active'" json:"status"`
+	CreatedBy string            `gorm:"type:uuid;not null" json:"created_by"`
+
+	Group *DialectCardGroup `gorm:"foreignKey:GroupID" json:"group,omitempty"`
+}
+
+// TableName 表名
+func (DialectCard) TableName() string {
+	return "ty_dialect_cards"
 }
 
 // IsValidDialectStatus 校验方言状态值是否合法

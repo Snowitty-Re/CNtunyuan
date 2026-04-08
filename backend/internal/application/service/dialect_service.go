@@ -24,6 +24,7 @@ var (
 	ErrNotLiked             = errors.New("not liked")
 	ErrDialectForbidden     = errors.New("no permission to modify this dialect")
 	ErrDialectInvalidStatus = errors.New("invalid dialect status")
+	ErrDialectCardNotFound  = errors.New("dialect card not found")
 )
 
 const defaultOrgID = "00000000-0000-0000-0000-000000000000"
@@ -707,4 +708,279 @@ func (s *DialectAppService) GetStats(ctx context.Context, isManager bool) (*dto.
 		TotalPlays: stats.TotalPlays,
 		TotalLikes: stats.TotalLikes,
 	}, nil
+}
+
+// CreateBatch 批量创建方言（按模板卡片分段）
+func (s *DialectAppService) CreateBatch(ctx context.Context, req *dto.CreateDialectBatchRequest, uploaderID, orgID string) (*dto.DialectBatchCreateResponse, error) {
+	normalizedOrgID := strings.TrimSpace(orgID)
+	fallbackOrgID, fallbackErr := s.resolveUploaderOrgID(ctx, uploaderID)
+	if normalizedOrgID == "" && fallbackOrgID != "" {
+		normalizedOrgID = fallbackOrgID
+	}
+	if normalizedOrgID == "" {
+		normalizedOrgID = defaultOrgID
+	}
+
+	if err := validateCollectLocation(req.CollectLatitude, req.CollectLongitude); err != nil {
+		return nil, apperrors.New(apperrors.CodeInvalidParam, err.Error())
+	}
+	normalizedTags, err := normalizeDialectTags(req.Tags)
+	if err != nil {
+		return nil, apperrors.New(apperrors.CodeInvalidParam, "标签格式不合法")
+	}
+
+	groups, err := s.dialectRepo.ListCardGroups(ctx, false)
+	if err != nil {
+		return nil, apperrors.Wrap(err, apperrors.CodeInternal, "load dialect cards failed")
+	}
+	requiredCards := make(map[string]entity.DialectCard)
+	for _, group := range groups {
+		for _, card := range group.Cards {
+			if card.Status != entity.DialectCardStatusActive {
+				continue
+			}
+			requiredCards[card.ID] = card
+		}
+	}
+	if len(requiredCards) == 0 {
+		return nil, apperrors.New(apperrors.CodeInvalidParam, "当前暂无可录入方言卡片，请联系管理员配置")
+	}
+
+	provided := make(map[string]dto.DialectCardRecordingItem, len(req.Recordings))
+	for _, item := range req.Recordings {
+		cardID := strings.TrimSpace(item.CardID)
+		if cardID == "" {
+			return nil, apperrors.New(apperrors.CodeInvalidParam, "存在空卡片ID")
+		}
+		if _, ok := provided[cardID]; ok {
+			return nil, apperrors.New(apperrors.CodeInvalidParam, "同一卡片重复录入")
+		}
+		if strings.TrimSpace(item.AudioURL) == "" || item.Duration <= 0 {
+			return nil, apperrors.New(apperrors.CodeInvalidParam, "存在未完成录音卡片")
+		}
+		provided[cardID] = item
+	}
+
+	if len(provided) != len(requiredCards) {
+		return nil, apperrors.New(apperrors.CodeInvalidParam, "请完成全部卡片录音后再提交")
+	}
+	for cardID := range requiredCards {
+		if _, ok := provided[cardID]; !ok {
+			return nil, apperrors.New(apperrors.CodeInvalidParam, "请完成全部卡片录音后再提交")
+		}
+	}
+
+	batchID := uuid.New().String()
+	items := make([]dto.DialectResponse, 0, len(requiredCards))
+	for cardID, item := range provided {
+		card := requiredCards[cardID]
+		cardIDCopy := card.ID
+		groupIDCopy := card.GroupID
+		batchIDCopy := batchID
+
+		d := &entity.Dialect{
+			Title:            strings.TrimSpace(card.Content),
+			Content:          strings.TrimSpace(req.Description),
+			Region:           strings.TrimSpace(req.Region),
+			Province:         strings.TrimSpace(req.Province),
+			City:             strings.TrimSpace(req.City),
+			DialectType:      entity.DialectTypeDaily,
+			AudioUrl:         strings.TrimSpace(item.AudioURL),
+			Duration:         item.Duration,
+			FileSize:         item.FileSize,
+			Format:           strings.ToLower(strings.TrimSpace(item.Format)),
+			Tags:             normalizedTags,
+			Description:      strings.TrimSpace(req.Description),
+			CollectAddress:   strings.TrimSpace(req.CollectAddress),
+			CollectLatitude:  req.CollectLatitude,
+			CollectLongitude: req.CollectLongitude,
+			UploaderID:       uploaderID,
+			OrgID:            normalizedOrgID,
+			Status:           entity.DialectStatusPending,
+			BatchID:          &batchIDCopy,
+			CardGroupID:      &groupIDCopy,
+			CardID:           &cardIDCopy,
+		}
+		if req.MissingPersonID != "" {
+			missingID := strings.TrimSpace(req.MissingPersonID)
+			d.MissingPersonID = &missingID
+		}
+		if err := d.Validate(); err != nil {
+			return nil, apperrors.New(apperrors.CodeInvalidParam, err.Error())
+		}
+
+		if err := s.dialectRepo.Create(ctx, d); err != nil {
+			if isDialectOrgForeignKeyError(err) && fallbackOrgID != "" && fallbackOrgID != d.OrgID {
+				d.OrgID = fallbackOrgID
+				if retryErr := s.dialectRepo.Create(ctx, d); retryErr != nil {
+					if mapped := mapDialectCreateError(retryErr, fallbackErr); mapped != nil {
+						return nil, mapped
+					}
+					return nil, apperrors.Wrap(retryErr, apperrors.CodeInternal, "create dialect batch item failed")
+				}
+			} else {
+				if mapped := mapDialectCreateError(err, fallbackErr); mapped != nil {
+					return nil, mapped
+				}
+				return nil, apperrors.Wrap(err, apperrors.CodeInternal, "create dialect batch item failed")
+			}
+		}
+
+		d.Card = &card
+		items = append(items, dto.ToDialectResponse(d, false))
+	}
+
+	return &dto.DialectBatchCreateResponse{
+		BatchID: batchID,
+		Total:   len(items),
+		Items:   items,
+	}, nil
+}
+
+func normalizeCardGroupStatus(status string) entity.DialectCardGroupStatus {
+	switch entity.DialectCardGroupStatus(strings.TrimSpace(status)) {
+	case entity.DialectCardGroupStatusInactive:
+		return entity.DialectCardGroupStatusInactive
+	default:
+		return entity.DialectCardGroupStatusActive
+	}
+}
+
+func normalizeCardStatus(status string) entity.DialectCardStatus {
+	switch entity.DialectCardStatus(strings.TrimSpace(status)) {
+	case entity.DialectCardStatusInactive:
+		return entity.DialectCardStatusInactive
+	default:
+		return entity.DialectCardStatusActive
+	}
+}
+
+// ListCardTemplate 获取卡片模板（分组+卡片）
+func (s *DialectAppService) ListCardTemplate(ctx context.Context, includeInactive bool) ([]dto.DialectCardGroupResponse, error) {
+	groups, err := s.dialectRepo.ListCardGroups(ctx, includeInactive)
+	if err != nil {
+		return nil, err
+	}
+	resp := make([]dto.DialectCardGroupResponse, 0, len(groups))
+	for idx := range groups {
+		resp = append(resp, dto.ToDialectCardGroupResponse(&groups[idx]))
+	}
+	return resp, nil
+}
+
+// CreateCardGroup 创建卡片分组
+func (s *DialectAppService) CreateCardGroup(ctx context.Context, req *dto.CreateDialectCardGroupRequest, operator *entity.User) (*dto.DialectCardGroupResponse, error) {
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return nil, apperrors.New(apperrors.CodeInvalidParam, "分组名称不能为空")
+	}
+	group := &entity.DialectCardGroup{
+		Name:        name,
+		Description: strings.TrimSpace(req.Description),
+		SortOrder:   req.SortOrder,
+		Status:      normalizeCardGroupStatus(req.Status),
+		CreatedBy:   operator.ID,
+	}
+	if err := s.dialectRepo.CreateCardGroup(ctx, group); err != nil {
+		return nil, err
+	}
+	resp := dto.ToDialectCardGroupResponse(group)
+	return &resp, nil
+}
+
+// UpdateCardGroup 更新卡片分组
+func (s *DialectAppService) UpdateCardGroup(ctx context.Context, id string, req *dto.UpdateDialectCardGroupRequest) (*dto.DialectCardGroupResponse, error) {
+	group, err := s.dialectRepo.FindCardGroupByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(req.Name) != "" {
+		group.Name = strings.TrimSpace(req.Name)
+	}
+	if req.Description != "" {
+		group.Description = strings.TrimSpace(req.Description)
+	}
+	if req.SortOrder != nil {
+		group.SortOrder = *req.SortOrder
+	}
+	if strings.TrimSpace(req.Status) != "" {
+		group.Status = normalizeCardGroupStatus(req.Status)
+	}
+	if err := s.dialectRepo.UpdateCardGroup(ctx, group); err != nil {
+		return nil, err
+	}
+	resp := dto.ToDialectCardGroupResponse(group)
+	return &resp, nil
+}
+
+// DeleteCardGroup 删除卡片分组
+func (s *DialectAppService) DeleteCardGroup(ctx context.Context, id string) error {
+	return s.dialectRepo.DeleteCardGroup(ctx, id)
+}
+
+// CreateCard 创建卡片
+func (s *DialectAppService) CreateCard(ctx context.Context, req *dto.CreateDialectCardRequest, operator *entity.User) (*dto.DialectCardResponse, error) {
+	if strings.TrimSpace(req.Content) == "" {
+		return nil, apperrors.New(apperrors.CodeInvalidParam, "卡片内容不能为空")
+	}
+	if _, err := s.dialectRepo.FindCardGroupByID(ctx, strings.TrimSpace(req.GroupID)); err != nil {
+		return nil, apperrors.New(apperrors.CodeInvalidParam, "卡片分组不存在")
+	}
+	required := true
+	if req.Required != nil {
+		required = *req.Required
+	}
+	card := &entity.DialectCard{
+		GroupID:   strings.TrimSpace(req.GroupID),
+		Content:   strings.TrimSpace(req.Content),
+		ImageURL:  strings.TrimSpace(req.ImageURL),
+		SortOrder: req.SortOrder,
+		Required:  required,
+		Status:    normalizeCardStatus(req.Status),
+		CreatedBy: operator.ID,
+	}
+	if err := s.dialectRepo.CreateCard(ctx, card); err != nil {
+		return nil, err
+	}
+	resp := dto.ToDialectCardResponse(card)
+	return &resp, nil
+}
+
+// UpdateCard 更新卡片
+func (s *DialectAppService) UpdateCard(ctx context.Context, id string, req *dto.UpdateDialectCardRequest) (*dto.DialectCardResponse, error) {
+	card, err := s.dialectRepo.FindCardByID(ctx, id)
+	if err != nil {
+		return nil, ErrDialectCardNotFound
+	}
+	if strings.TrimSpace(req.GroupID) != "" {
+		if _, err := s.dialectRepo.FindCardGroupByID(ctx, strings.TrimSpace(req.GroupID)); err != nil {
+			return nil, apperrors.New(apperrors.CodeInvalidParam, "卡片分组不存在")
+		}
+		card.GroupID = strings.TrimSpace(req.GroupID)
+	}
+	if strings.TrimSpace(req.Content) != "" {
+		card.Content = strings.TrimSpace(req.Content)
+	}
+	if req.ImageURL != "" {
+		card.ImageURL = strings.TrimSpace(req.ImageURL)
+	}
+	if req.SortOrder != nil {
+		card.SortOrder = *req.SortOrder
+	}
+	if req.Required != nil {
+		card.Required = *req.Required
+	}
+	if strings.TrimSpace(req.Status) != "" {
+		card.Status = normalizeCardStatus(req.Status)
+	}
+	if err := s.dialectRepo.UpdateCard(ctx, card); err != nil {
+		return nil, err
+	}
+	resp := dto.ToDialectCardResponse(card)
+	return &resp, nil
+}
+
+// DeleteCard 删除卡片
+func (s *DialectAppService) DeleteCard(ctx context.Context, id string) error {
+	return s.dialectRepo.DeleteCard(ctx, id)
 }

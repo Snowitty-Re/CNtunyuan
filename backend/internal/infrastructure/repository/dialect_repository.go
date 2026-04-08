@@ -61,6 +61,15 @@ func sanitizeDialectOptionalFields(dialect *entity.Dialect) {
 	if dialect.MissingPersonID != nil && strings.TrimSpace(*dialect.MissingPersonID) == "" {
 		dialect.MissingPersonID = nil
 	}
+	if dialect.BatchID != nil && strings.TrimSpace(*dialect.BatchID) == "" {
+		dialect.BatchID = nil
+	}
+	if dialect.CardGroupID != nil && strings.TrimSpace(*dialect.CardGroupID) == "" {
+		dialect.CardGroupID = nil
+	}
+	if dialect.CardID != nil && strings.TrimSpace(*dialect.CardID) == "" {
+		dialect.CardID = nil
+	}
 }
 
 func shouldRetryDialectWithoutLegacyColumns(err error) bool {
@@ -387,7 +396,11 @@ func (r *DialectRepositoryImpl) GetStats(ctx context.Context) (*entity.DialectSt
 // FindByID 根据ID查找
 func (r *DialectRepositoryImpl) FindByID(ctx context.Context, id string) (*entity.Dialect, error) {
 	var dialect entity.Dialect
-	err := r.db.WithContext(ctx).Preload("Uploader").First(&dialect, "id = ?", id).Error
+	err := r.db.WithContext(ctx).
+		Preload("Uploader").
+		Preload("Card").
+		Preload("Card.Group").
+		First(&dialect, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("dialect not found")
@@ -395,4 +408,91 @@ func (r *DialectRepositoryImpl) FindByID(ctx context.Context, id string) (*entit
 		return nil, err
 	}
 	return &dialect, nil
+}
+
+// ListCardGroups 获取卡片分组列表
+func (r *DialectRepositoryImpl) ListCardGroups(ctx context.Context, includeInactive bool) ([]entity.DialectCardGroup, error) {
+	var groups []entity.DialectCardGroup
+	db := r.db.WithContext(ctx).Model(&entity.DialectCardGroup{})
+	if !includeInactive {
+		db = db.Where("status = ?", entity.DialectCardGroupStatusActive)
+	}
+	err := db.Preload("Cards", func(tx *gorm.DB) *gorm.DB {
+		if includeInactive {
+			return tx.Order("sort_order ASC, created_at ASC")
+		}
+		return tx.Where("status = ?", entity.DialectCardStatusActive).Order("sort_order ASC, created_at ASC")
+	}).Order("sort_order ASC, created_at ASC").Find(&groups).Error
+	return groups, err
+}
+
+// CreateCardGroup 创建卡片分组
+func (r *DialectRepositoryImpl) CreateCardGroup(ctx context.Context, group *entity.DialectCardGroup) error {
+	return r.db.WithContext(ctx).Create(group).Error
+}
+
+// UpdateCardGroup 更新卡片分组
+func (r *DialectRepositoryImpl) UpdateCardGroup(ctx context.Context, group *entity.DialectCardGroup) error {
+	return r.db.WithContext(ctx).Save(group).Error
+}
+
+// DeleteCardGroup 删除卡片分组
+func (r *DialectRepositoryImpl) DeleteCardGroup(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).Delete(&entity.DialectCardGroup{}, "id = ?", id).Error
+}
+
+// FindCardGroupByID 根据ID获取卡片分组
+func (r *DialectRepositoryImpl) FindCardGroupByID(ctx context.Context, id string) (*entity.DialectCardGroup, error) {
+	var group entity.DialectCardGroup
+	err := r.db.WithContext(ctx).Preload("Cards", func(tx *gorm.DB) *gorm.DB {
+		return tx.Order("sort_order ASC, created_at ASC")
+	}).First(&group, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &group, nil
+}
+
+// ListCards 获取卡片列表
+func (r *DialectRepositoryImpl) ListCards(ctx context.Context, query *repository.DialectCardQuery) ([]entity.DialectCard, error) {
+	var cards []entity.DialectCard
+	db := r.db.WithContext(ctx).Model(&entity.DialectCard{})
+	if query != nil {
+		if strings.TrimSpace(query.GroupID) != "" {
+			db = db.Where("group_id = ?", strings.TrimSpace(query.GroupID))
+		}
+		if !query.IncludeInactive {
+			db = db.Where("status = ?", entity.DialectCardStatusActive)
+		}
+		if query.IncludeGroupInfo {
+			db = db.Preload("Group")
+		}
+	}
+	err := db.Order("sort_order ASC, created_at ASC").Find(&cards).Error
+	return cards, err
+}
+
+// CreateCard 创建卡片
+func (r *DialectRepositoryImpl) CreateCard(ctx context.Context, card *entity.DialectCard) error {
+	return r.db.WithContext(ctx).Create(card).Error
+}
+
+// UpdateCard 更新卡片
+func (r *DialectRepositoryImpl) UpdateCard(ctx context.Context, card *entity.DialectCard) error {
+	return r.db.WithContext(ctx).Save(card).Error
+}
+
+// DeleteCard 删除卡片
+func (r *DialectRepositoryImpl) DeleteCard(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).Delete(&entity.DialectCard{}, "id = ?", id).Error
+}
+
+// FindCardByID 根据ID获取卡片
+func (r *DialectRepositoryImpl) FindCardByID(ctx context.Context, id string) (*entity.DialectCard, error) {
+	var card entity.DialectCard
+	err := r.db.WithContext(ctx).Preload("Group").First(&card, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &card, nil
 }

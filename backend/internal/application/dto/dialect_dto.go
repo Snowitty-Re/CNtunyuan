@@ -26,6 +26,30 @@ type CreateDialectRequest struct {
 	CollectLongitude float64 `json:"collect_longitude"`
 }
 
+// CreateDialectBatchRequest 批量创建方言（按卡片分段）
+type CreateDialectBatchRequest struct {
+	Region           string                     `json:"region" binding:"required"`
+	Province         string                     `json:"province"`
+	City             string                     `json:"city"`
+	District         string                     `json:"district"`
+	Description      string                     `json:"description"`
+	Tags             string                     `json:"tags"`
+	MissingPersonID  string                     `json:"missing_person_id"`
+	CollectAddress   string                     `json:"collect_address" binding:"required"`
+	CollectLatitude  float64                    `json:"collect_latitude"`
+	CollectLongitude float64                    `json:"collect_longitude"`
+	Recordings       []DialectCardRecordingItem `json:"recordings" binding:"required,min=1,dive"`
+}
+
+// DialectCardRecordingItem 单个卡片录音项
+type DialectCardRecordingItem struct {
+	CardID   string `json:"card_id" binding:"required"`
+	AudioURL string `json:"audio_url" binding:"required"`
+	Duration int    `json:"duration" binding:"required,min=1"`
+	FileSize int    `json:"file_size"`
+	Format   string `json:"format"`
+}
+
 // UpdateDialectRequest 更新方言请求
 type UpdateDialectRequest struct {
 	Title       string `json:"title"`
@@ -61,12 +85,81 @@ type DialectResponse struct {
 	CollectAddress   string        `json:"collect_address"`
 	CollectLatitude  float64       `json:"collect_latitude"`
 	CollectLongitude float64       `json:"collect_longitude"`
+	BatchID          *string       `json:"batch_id,omitempty"`
+	CardGroupID      *string       `json:"card_group_id,omitempty"`
+	CardID           *string       `json:"card_id,omitempty"`
+	CardContent      string        `json:"card_content,omitempty"`
+	CardImageURL     string        `json:"card_image_url,omitempty"`
 	UploaderID       string        `json:"uploader_id"`
 	OrgID            string        `json:"org_id"`
 	MissingPersonID  *string       `json:"missing_person_id,omitempty"`
 	IsLiked          bool          `json:"is_liked"`
 	Uploader         *UserResponse `json:"uploader,omitempty"`
 	CreatedAt        time.Time     `json:"created_at"`
+}
+
+// DialectCardGroupResponse 方言卡片分组响应
+type DialectCardGroupResponse struct {
+	ID          string                `json:"id"`
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	SortOrder   int                   `json:"sort_order"`
+	Status      string                `json:"status"`
+	Cards       []DialectCardResponse `json:"cards,omitempty"`
+}
+
+// DialectCardResponse 方言卡片响应
+type DialectCardResponse struct {
+	ID        string `json:"id"`
+	GroupID   string `json:"group_id"`
+	Content   string `json:"content"`
+	ImageURL  string `json:"image_url"`
+	SortOrder int    `json:"sort_order"`
+	Required  bool   `json:"required"`
+	Status    string `json:"status"`
+}
+
+// CreateDialectCardGroupRequest 创建卡片分组
+type CreateDialectCardGroupRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+	SortOrder   int    `json:"sort_order"`
+	Status      string `json:"status"`
+}
+
+// UpdateDialectCardGroupRequest 更新卡片分组
+type UpdateDialectCardGroupRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	SortOrder   *int   `json:"sort_order"`
+	Status      string `json:"status"`
+}
+
+// CreateDialectCardRequest 创建卡片
+type CreateDialectCardRequest struct {
+	GroupID   string `json:"group_id" binding:"required"`
+	Content   string `json:"content" binding:"required"`
+	ImageURL  string `json:"image_url"`
+	SortOrder int    `json:"sort_order"`
+	Required  *bool  `json:"required"`
+	Status    string `json:"status"`
+}
+
+// UpdateDialectCardRequest 更新卡片
+type UpdateDialectCardRequest struct {
+	GroupID   string `json:"group_id"`
+	Content   string `json:"content"`
+	ImageURL  string `json:"image_url"`
+	SortOrder *int   `json:"sort_order"`
+	Required  *bool  `json:"required"`
+	Status    string `json:"status"`
+}
+
+// DialectBatchCreateResponse 批量录入响应
+type DialectBatchCreateResponse struct {
+	BatchID string            `json:"batch_id"`
+	Total   int               `json:"total"`
+	Items   []DialectResponse `json:"items"`
 }
 
 // DialectListRequest 方言列表请求
@@ -147,11 +240,19 @@ func ToDialectResponse(d *entity.Dialect, isLiked bool) DialectResponse {
 		CollectAddress:   d.CollectAddress,
 		CollectLatitude:  d.CollectLatitude,
 		CollectLongitude: d.CollectLongitude,
+		BatchID:          d.BatchID,
+		CardGroupID:      d.CardGroupID,
+		CardID:           d.CardID,
 		UploaderID:       d.UploaderID,
 		OrgID:            d.OrgID,
 		MissingPersonID:  d.MissingPersonID,
 		IsLiked:          isLiked,
 		CreatedAt:        d.CreatedAt,
+	}
+
+	if d.Card != nil {
+		resp.CardContent = d.Card.Content
+		resp.CardImageURL = d.Card.ImageURL
 	}
 
 	if d.Uploader != nil {
@@ -160,6 +261,35 @@ func ToDialectResponse(d *entity.Dialect, isLiked bool) DialectResponse {
 	}
 
 	return resp
+}
+
+func ToDialectCardGroupResponse(group *entity.DialectCardGroup) DialectCardGroupResponse {
+	resp := DialectCardGroupResponse{
+		ID:          group.ID,
+		Name:        group.Name,
+		Description: group.Description,
+		SortOrder:   group.SortOrder,
+		Status:      string(group.Status),
+	}
+	if len(group.Cards) > 0 {
+		resp.Cards = make([]DialectCardResponse, 0, len(group.Cards))
+		for idx := range group.Cards {
+			resp.Cards = append(resp.Cards, ToDialectCardResponse(&group.Cards[idx]))
+		}
+	}
+	return resp
+}
+
+func ToDialectCardResponse(card *entity.DialectCard) DialectCardResponse {
+	return DialectCardResponse{
+		ID:        card.ID,
+		GroupID:   card.GroupID,
+		Content:   card.Content,
+		ImageURL:  card.ImageURL,
+		SortOrder: card.SortOrder,
+		Required:  card.Required,
+		Status:    string(card.Status),
+	}
 }
 
 // ToDialectCommentResponse 转换为评论响应

@@ -1,0 +1,52 @@
+<view class="page">
+  <view class="ops">
+    <button class="primary" bindtap="addGroup">+ 新建分组</button>
+    <button class="ghost" bindtap="addCard">+ 新建卡片</button>
+  </view>
+
+  <view class="section">
+    <view class="section-title">卡片分组</view>
+    <scroll-view class="group-list" scroll-x enable-flex>
+      <view
+        wx:for="{{groups}}"
+        wx:key="id"
+        class="group-chip {{item.id === activeGroupId ? 'active' : ''}} {{item.status !== 'active' ? 'inactive' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onSwitchGroup"
+      >
+        {{item.name}} ({{item.cardCount}})
+      </view>
+    </scroll-view>
+
+    <view class="group-cards" wx:for="{{groups}}" wx:key="id" wx:if="{{item.id === activeGroupId}}">
+      <view class="group-header">
+        <text class="group-name">{{item.name}}</text>
+        <text class="group-status {{item.status}}">{{item.status === 'active' ? '启用' : '停用'}}</text>
+      </view>
+      <view class="group-actions">
+        <button size="mini" class="btn" bindtap="editGroup" data-index="{{index}}">编辑</button>
+        <button size="mini" class="btn" bindtap="toggleGroupStatus" data-index="{{index}}">{{item.status === 'active' ? '停用' : '启用'}}</button>
+        <button size="mini" class="btn danger" bindtap="deleteGroup" data-index="{{index}}">删除</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="section-title">卡片列表</view>
+    <view class="card-item" wx:for="{{cards}}" wx:key="id">
+      <view class="card-main">
+        <text class="card-text">{{item.content}}</text>
+        <text class="card-status {{item.status}}">{{item.status === 'active' ? '启用' : '停用'}}</text>
+      </view>
+      <view class="card-meta">排序：{{item.sort_order || 0}} · 必录：{{item.required ? '是' : '否'}}</view>
+      <view class="card-actions">
+        <button size="mini" class="btn" bindtap="editCard" data-index="{{index}}">编辑</button>
+        <button size="mini" class="btn" bindtap="toggleCardStatus" data-index="{{index}}">{{item.status === 'active' ? '停用' : '启用'}}</button>
+        <button size="mini" class="btn danger" bindtap="deleteCard" data-index="{{index}}">删除</button>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!loading && cards.length === 0}}">当前分组暂无卡片</view>
+    <view class="loading" wx:if="{{loading}}">加载中...</view>
+  </view>
+</view>

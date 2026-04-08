@@ -29,6 +29,14 @@ module.exports = {
   },
 
   /**
+   * 批量创建方言（按卡片模板一次性提交）
+   * @param {Object} data 批量录入数据
+   */
+  createBatch(data) {
+    return post('/dialects/batch', data)
+  },
+
+  /**
    * 更新方言
    * @param {String} id 方言ID
    * @param {Object} data 方言数据
@@ -125,5 +133,69 @@ module.exports = {
    */
   getStats() {
     return get('/dialects/stats')
+  },
+
+  /**
+   * 获取方言卡片模板（分组+卡片）
+   * @param {Object} params {include_inactive}
+   */
+  getCardTemplate(params = {}) {
+    return get('/dialect-cards/template', params)
+  },
+
+  /**
+   * 获取卡片分组（管理）
+   */
+  getCardGroups() {
+    return get('/dialect-cards/groups')
+  },
+
+  /**
+   * 创建卡片分组
+   */
+  createCardGroup(data) {
+    return post('/dialect-cards/groups', data)
+  },
+
+  /**
+   * 更新卡片分组
+   */
+  updateCardGroup(id, data) {
+    return put(`/dialect-cards/groups/${id}`, data)
+  },
+
+  /**
+   * 删除卡片分组
+   */
+  deleteCardGroup(id) {
+    return del(`/dialect-cards/groups/${id}`)
+  },
+
+  /**
+   * 获取卡片列表（管理）
+   */
+  getCards(params = {}) {
+    return get('/dialect-cards', params)
+  },
+
+  /**
+   * 创建卡片
+   */
+  createCard(data) {
+    return post('/dialect-cards', data)
+  },
+
+  /**
+   * 更新卡片
+   */
+  updateCard(id, data) {
+    return put(`/dialect-cards/${id}`, data)
+  },
+
+  /**
+   * 删除卡片
+   */
+  deleteCard(id) {
+    return del(`/dialect-cards/${id}`)
   }
 }

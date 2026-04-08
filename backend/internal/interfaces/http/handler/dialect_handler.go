@@ -40,6 +40,7 @@ func (h *DialectHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware 
 
 		// 需要上传权限
 		dialects.POST("", authMiddleware.Required(), h.Create)
+		dialects.POST("/batch", authMiddleware.Required(), h.CreateBatch)
 		dialects.PUT("/:id", authMiddleware.Required(), h.Update)
 		dialects.DELETE("/:id", authMiddleware.Required(), h.Delete)
 
@@ -47,6 +48,21 @@ func (h *DialectHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware 
 		dialects.PUT("/:id/status", authMiddleware.Required(), middleware.RequireManager(), h.UpdateStatus)
 		dialects.POST("/:id/feature", authMiddleware.Required(), middleware.RequireAdmin(), h.Feature)
 		dialects.DELETE("/:id/feature", authMiddleware.Required(), middleware.RequireAdmin(), h.Unfeature)
+	}
+
+	dialectCards := router.Group("/dialect-cards")
+	{
+		dialectCards.GET("/template", authMiddleware.Required(), h.ListCardTemplate)
+
+		dialectCards.GET("/groups", authMiddleware.Required(), middleware.RequireManager(), h.ListCardGroups)
+		dialectCards.POST("/groups", authMiddleware.Required(), middleware.RequireManager(), h.CreateCardGroup)
+		dialectCards.PUT("/groups/:id", authMiddleware.Required(), middleware.RequireManager(), h.UpdateCardGroup)
+		dialectCards.DELETE("/groups/:id", authMiddleware.Required(), middleware.RequireManager(), h.DeleteCardGroup)
+
+		dialectCards.GET("", authMiddleware.Required(), middleware.RequireManager(), h.ListCards)
+		dialectCards.POST("", authMiddleware.Required(), middleware.RequireManager(), h.CreateCard)
+		dialectCards.PUT("/:id", authMiddleware.Required(), middleware.RequireManager(), h.UpdateCard)
+		dialectCards.DELETE("/:id", authMiddleware.Required(), middleware.RequireManager(), h.DeleteCard)
 	}
 }
 
@@ -81,6 +97,25 @@ func (h *DialectHandler) Create(c *gin.Context) {
 	}
 
 	response.Created(c, dialect)
+}
+
+// CreateBatch 批量创建方言（按模板卡片分段）
+func (h *DialectHandler) CreateBatch(c *gin.Context) {
+	var req dto.CreateDialectBatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	userID := middleware.GetUserID(c)
+	orgID := middleware.GetOrgID(c)
+
+	result, err := h.dialectService.CreateBatch(c.Request.Context(), &req, userID, orgID)
+	if err != nil {
+		logger.Error("Failed to create dialect batch", logger.Err(err))
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, result)
 }
 
 // GetByID 获取方言详情
@@ -637,4 +672,159 @@ func (h *DialectHandler) GetStats(c *gin.Context) {
 	}
 
 	response.Success(c, stats)
+}
+
+// ListCardTemplate 获取方言卡片模板（分组 + 卡片）
+func (h *DialectHandler) ListCardTemplate(c *gin.Context) {
+	includeInactive := c.Query("include_inactive") == "1" || c.Query("include_inactive") == "true"
+	role := middleware.GetUserRole(c)
+	if entity.GetRoleLevel(role) < entity.RoleLevelManager {
+		includeInactive = false
+	}
+	groups, err := h.dialectService.ListCardTemplate(c.Request.Context(), includeInactive)
+	if err != nil {
+		response.InternalServerError(c, "failed to get card template")
+		return
+	}
+	response.Success(c, gin.H{"groups": groups})
+}
+
+// ListCardGroups 获取卡片分组列表（管理）
+func (h *DialectHandler) ListCardGroups(c *gin.Context) {
+	groups, err := h.dialectService.ListCardTemplate(c.Request.Context(), true)
+	if err != nil {
+		response.InternalServerError(c, "failed to get card groups")
+		return
+	}
+	response.Success(c, gin.H{"groups": groups})
+}
+
+// CreateCardGroup 创建卡片分组
+func (h *DialectHandler) CreateCardGroup(c *gin.Context) {
+	var req dto.CreateDialectCardGroupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+	group, err := h.dialectService.CreateCardGroup(c.Request.Context(), &req, operator)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, group)
+}
+
+// UpdateCardGroup 更新卡片分组
+func (h *DialectHandler) UpdateCardGroup(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.BadRequest(c, "group id is required")
+		return
+	}
+	var req dto.UpdateDialectCardGroupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	group, err := h.dialectService.UpdateCardGroup(c.Request.Context(), id, &req)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, group)
+}
+
+// DeleteCardGroup 删除卡片分组
+func (h *DialectHandler) DeleteCardGroup(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.BadRequest(c, "group id is required")
+		return
+	}
+	if err := h.dialectService.DeleteCardGroup(c.Request.Context(), id); err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.NoContent(c)
+}
+
+// ListCards 获取卡片列表（管理）
+func (h *DialectHandler) ListCards(c *gin.Context) {
+	groupID := c.Query("group_id")
+	groups, err := h.dialectService.ListCardTemplate(c.Request.Context(), true)
+	if err != nil {
+		response.InternalServerError(c, "failed to get cards")
+		return
+	}
+	if groupID == "" {
+		response.Success(c, gin.H{"groups": groups})
+		return
+	}
+	filtered := make([]dto.DialectCardGroupResponse, 0, len(groups))
+	for _, group := range groups {
+		if group.ID == groupID {
+			filtered = append(filtered, group)
+			break
+		}
+	}
+	response.Success(c, gin.H{"groups": filtered})
+}
+
+// CreateCard 创建卡片
+func (h *DialectHandler) CreateCard(c *gin.Context) {
+	var req dto.CreateDialectCardRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+	card, err := h.dialectService.CreateCard(c.Request.Context(), &req, operator)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, card)
+}
+
+// UpdateCard 更新卡片
+func (h *DialectHandler) UpdateCard(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.BadRequest(c, "card id is required")
+		return
+	}
+	var req dto.UpdateDialectCardRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	card, err := h.dialectService.UpdateCard(c.Request.Context(), id, &req)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Success(c, card)
+}
+
+// DeleteCard 删除卡片
+func (h *DialectHandler) DeleteCard(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		response.BadRequest(c, "card id is required")
+		return
+	}
+	if err := h.dialectService.DeleteCard(c.Request.Context(), id); err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.NoContent(c)
 }
