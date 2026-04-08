@@ -27,6 +27,8 @@ type InitStatus = {
     default_org_code?: string
     enable_register?: boolean
     enable_wechat_login?: boolean
+    enable_wechat_login_web?: boolean
+    enable_wechat_login_mini_program?: boolean
     enable_sms_login?: boolean
   }
 }
@@ -56,7 +58,9 @@ export default function BootstrapInitPage() {
     default_org_name: '默认组织',
     default_org_code: 'DEFAULT',
     enable_register: true,
-    enable_wechat_login: true,
+    enable_wechat_login: false,
+    enable_wechat_login_web: false,
+    enable_wechat_login_mini_program: true,
     enable_sms_login: false,
   })
   const [admin, setAdmin] = useState({
@@ -97,6 +101,14 @@ export default function BootstrapInitPage() {
           default_org_code: data.site.default_org_code || prev.default_org_code,
           enable_register: Boolean(data.site.enable_register),
           enable_wechat_login: Boolean(data.site.enable_wechat_login),
+          enable_wechat_login_web:
+            data.site.enable_wechat_login_web !== undefined
+              ? Boolean(data.site.enable_wechat_login_web)
+              : Boolean(data.site.enable_wechat_login),
+          enable_wechat_login_mini_program:
+            data.site.enable_wechat_login_mini_program !== undefined
+              ? Boolean(data.site.enable_wechat_login_mini_program)
+              : Boolean(data.site.enable_wechat_login),
           enable_sms_login: Boolean(data.site.enable_sms_login),
         }))
       }
@@ -236,7 +248,23 @@ export default function BootstrapInitPage() {
             </label>
             <label className="row">
               <input type="checkbox" checked={site.enable_wechat_login} onChange={(e) => setSite((p) => ({ ...p, enable_wechat_login: e.target.checked }))} />
-              允许微信登录
+              微信登录兼容总开关
+            </label>
+            <label className="row">
+              <input
+                type="checkbox"
+                checked={site.enable_wechat_login_web}
+                onChange={(e) => setSite((p) => ({ ...p, enable_wechat_login_web: e.target.checked }))}
+              />
+              允许微信登录(Web)
+            </label>
+            <label className="row">
+              <input
+                type="checkbox"
+                checked={site.enable_wechat_login_mini_program}
+                onChange={(e) => setSite((p) => ({ ...p, enable_wechat_login_mini_program: e.target.checked }))}
+              />
+              允许微信登录(小程序)
             </label>
             <label className="row">
               <input type="checkbox" checked={site.enable_sms_login} onChange={(e) => setSite((p) => ({ ...p, enable_sms_login: e.target.checked }))} />
@@ -282,4 +310,3 @@ export default function BootstrapInitPage() {
     </div>
   )
 }
-

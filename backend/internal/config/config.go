@@ -214,6 +214,8 @@ type SystemConfig struct {
 	DefaultOrgCode                    string `mapstructure:"default_org_code"`
 	EnableRegister                    bool   `mapstructure:"enable_register"`
 	EnableWechatLogin                 bool   `mapstructure:"enable_wechat_login"`
+	EnableWechatLoginWeb              bool   `mapstructure:"enable_wechat_login_web"`
+	EnableWechatLoginMiniProgram      bool   `mapstructure:"enable_wechat_login_mini_program"`
 	EnableSMSLogin                    bool   `mapstructure:"enable_sms_login"`
 	AuthzPolicyChangeRequiresApproval bool   `mapstructure:"authz_policy_change_requires_approval"`
 	AuthzPolicyChangeApprovalCode     string `mapstructure:"authz_policy_change_approval_code"`

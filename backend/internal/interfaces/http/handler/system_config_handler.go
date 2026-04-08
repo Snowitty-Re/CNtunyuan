@@ -1251,6 +1251,8 @@ func flattenConfig(cfg *config.Config) map[string]interface{} {
 		"system.default_org_code":                      cfg.System.DefaultOrgCode,
 		"system.enable_register":                       cfg.System.EnableRegister,
 		"system.enable_wechat_login":                   cfg.System.EnableWechatLogin,
+		"system.enable_wechat_login_web":               resolveWebWechatLoginEnabled(cfg),
+		"system.enable_wechat_login_mini_program":      resolveMiniProgramWechatLoginEnabled(cfg),
 		"system.enable_sms_login":                      cfg.System.EnableSMSLogin,
 		"system.authz_policy_change_requires_approval": cfg.System.AuthzPolicyChangeRequiresApproval,
 		"system.authz_policy_change_approval_code":     cfg.System.AuthzPolicyChangeApprovalCode,
@@ -1265,6 +1267,26 @@ func flattenConfig(cfg *config.Config) map[string]interface{} {
 		"backup.backup_dir": cfg.Backup.BackupDir,
 		"backup.retention":  cfg.Backup.Retention,
 	}
+}
+
+func resolveWebWechatLoginEnabled(cfg *config.Config) bool {
+	if cfg == nil {
+		return false
+	}
+	if viper.IsSet("system.enable_wechat_login_web") {
+		return cfg.System.EnableWechatLoginWeb
+	}
+	return cfg.System.EnableWechatLogin
+}
+
+func resolveMiniProgramWechatLoginEnabled(cfg *config.Config) bool {
+	if cfg == nil {
+		return false
+	}
+	if viper.IsSet("system.enable_wechat_login_mini_program") {
+		return cfg.System.EnableWechatLoginMiniProgram
+	}
+	return cfg.System.EnableWechatLogin
 }
 
 func unflattenConfig(flat map[string]interface{}) map[string]interface{} {

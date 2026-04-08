@@ -14,6 +14,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/validator"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 // AuthHandler auth handler
@@ -335,6 +336,11 @@ func (h *AuthHandler) GetCurrentUser(c *gin.Context) {
 // @Failure      500      {object}  response.Response  "服务器内部错误或微信服务异常"
 // @Router       /auth/wechat-login [post]
 func (h *AuthHandler) WechatLogin(c *gin.Context) {
+	if !isMiniProgramWechatLoginEnabled() {
+		response.Error(c, errors.New(errors.CodeForbidden, "微信登录未启用"))
+		return
+	}
+
 	var req WechatLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, validator.ValidateStruct(&req))
@@ -411,6 +417,11 @@ func (h *AuthHandler) WechatLogin(c *gin.Context) {
 // @Failure      500      {object}  response.Response  "服务器内部错误"
 // @Router       /auth/wechat-web-login [post]
 func (h *AuthHandler) WechatWebLogin(c *gin.Context) {
+	if !isWebWechatLoginEnabled() {
+		response.Error(c, errors.New(errors.CodeForbidden, "微信登录未启用"))
+		return
+	}
+
 	var req WechatWebLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, validator.ValidateStruct(&req))
@@ -429,6 +440,34 @@ func (h *AuthHandler) WechatWebLogin(c *gin.Context) {
 		TokenType:    result.TokenType,
 		User:         dto.ToUserResponse(user),
 	})
+}
+
+func isMiniProgramWechatLoginEnabled() bool {
+	cfg := config.GetConfig()
+	if cfg == nil {
+		return false
+	}
+	if !cfg.WeChat.EnableLogin {
+		return false
+	}
+	if viper.IsSet("system.enable_wechat_login_mini_program") {
+		return cfg.System.EnableWechatLoginMiniProgram
+	}
+	return cfg.System.EnableWechatLogin
+}
+
+func isWebWechatLoginEnabled() bool {
+	cfg := config.GetConfig()
+	if cfg == nil {
+		return false
+	}
+	if !cfg.WeChat.EnableLogin {
+		return false
+	}
+	if viper.IsSet("system.enable_wechat_login_web") {
+		return cfg.System.EnableWechatLoginWeb
+	}
+	return cfg.System.EnableWechatLogin
 }
 
 // BindPhone 绑定手机号

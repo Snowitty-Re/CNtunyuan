@@ -39,7 +39,7 @@ function appendScript(src: string): Promise<void> {
 
 export default function LoginPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'password' | 'wechat-scan'>('wechat-scan')
+  const [mode, setMode] = useState<'password' | 'wechat-scan'>('password')
   const [username, setUsername] = useState('13800138000')
   const [password, setPassword] = useState('admin123')
   const [loading, setLoading] = useState(false)
@@ -47,6 +47,7 @@ export default function LoginPage() {
   const [tips, setTips] = useState('')
   const [oauthCode, setOauthCode] = useState('')
   const [oauthState, setOauthState] = useState('')
+  const [allowWechatLogin, setAllowWechatLogin] = useState(true)
 
   const wechatAppID = process.env.NEXT_PUBLIC_WECHAT_WEB_APP_ID || ''
   const redirectURI = useMemo(() => {
@@ -79,6 +80,17 @@ export default function LoginPage() {
         const bootstrap = await systemService.bootstrapStatus()
         if (bootstrap && bootstrap.initialized === false) {
           router.replace('/init')
+          return
+        }
+        const site = bootstrap?.site || {}
+        const enabled = site.enable_wechat_login_web !== undefined
+          ? Boolean(site.enable_wechat_login_web)
+          : Boolean(site.enable_wechat_login)
+        setAllowWechatLogin(enabled)
+        if (enabled) {
+          setMode('wechat-scan')
+        } else {
+          setMode('password')
         }
       } catch {
         // ignore bootstrap status errors on login page
@@ -112,6 +124,7 @@ export default function LoginPage() {
   }, [oauthCode, router])
 
   useEffect(() => {
+    if (!allowWechatLogin) return
     if (mode !== 'wechat-scan') return
     if (oauthCode) return
     if (!wechatAppID) {
@@ -138,23 +151,29 @@ export default function LoginPage() {
         setError(err instanceof Error ? err.message : '微信扫码初始化失败')
       }
     })()
-  }, [mode, wechatAppID, redirectURI, oauthCode, oauthState, loginState])
+  }, [allowWechatLogin, mode, wechatAppID, redirectURI, oauthCode, oauthState, loginState])
 
   return (
     <div className="login-page">
       <form className="login-card" onSubmit={onPasswordSubmit}>
         <h1 className="login-title">助力团圆 Web</h1>
         <p className="login-subtitle">让每一条线索都更快抵达家人</p>
-        <div className="row wrap" style={{ marginBottom: 8 }}>
-          <button className={`btn ${mode === 'wechat-scan' ? 'primary' : ''}`} type="button" onClick={() => setMode('wechat-scan')}>
-            微信扫码登录
-          </button>
-          <button className={`btn ${mode === 'password' ? 'primary' : ''}`} type="button" onClick={() => setMode('password')}>
-            账号密码登录
-          </button>
-        </div>
+        {allowWechatLogin ? (
+          <div className="row wrap" style={{ marginBottom: 8 }}>
+            <button className={`btn ${mode === 'wechat-scan' ? 'primary' : ''}`} type="button" onClick={() => setMode('wechat-scan')}>
+              微信扫码登录
+            </button>
+            <button className={`btn ${mode === 'password' ? 'primary' : ''}`} type="button" onClick={() => setMode('password')}>
+              账号密码登录
+            </button>
+          </div>
+        ) : (
+          <div className="hint" style={{ marginBottom: 8 }}>
+            当前系统已关闭微信登录，仅支持账号密码登录
+          </div>
+        )}
 
-        {mode === 'wechat-scan' ? (
+        {allowWechatLogin && mode === 'wechat-scan' ? (
           <div className="section-card">
             <div style={{ textAlign: 'center' }}>
               <div id="wechat-scan-container" />

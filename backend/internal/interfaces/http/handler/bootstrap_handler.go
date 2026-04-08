@@ -51,6 +51,8 @@ type BootstrapInitializeSiteRequest struct {
 	DefaultOrgCode    string `json:"default_org_code"`
 	EnableRegister    *bool  `json:"enable_register"`
 	EnableWechatLogin *bool  `json:"enable_wechat_login"`
+	EnableWechatWeb   *bool  `json:"enable_wechat_login_web"`
+	EnableWechatMini  *bool  `json:"enable_wechat_login_mini_program"`
 	EnableSMSLogin    *bool  `json:"enable_sms_login"`
 }
 
@@ -129,13 +131,15 @@ func (h *BootstrapHandler) GetStatus(c *gin.Context) {
 			"timezone": cfg.Database.Timezone,
 		},
 		"site": gin.H{
-			"domain":              cfg.Server.Domain,
-			"cors_origins":        cfg.Server.CORSOrigins,
-			"default_org_name":    cfg.System.DefaultOrgName,
-			"default_org_code":    cfg.System.DefaultOrgCode,
-			"enable_register":     cfg.System.EnableRegister,
-			"enable_wechat_login": cfg.System.EnableWechatLogin,
-			"enable_sms_login":    cfg.System.EnableSMSLogin,
+			"domain":                           cfg.Server.Domain,
+			"cors_origins":                     cfg.Server.CORSOrigins,
+			"default_org_name":                 cfg.System.DefaultOrgName,
+			"default_org_code":                 cfg.System.DefaultOrgCode,
+			"enable_register":                  cfg.System.EnableRegister,
+			"enable_wechat_login":              cfg.System.EnableWechatLogin,
+			"enable_wechat_login_web":          cfg.System.EnableWechatLoginWeb,
+			"enable_wechat_login_mini_program": cfg.System.EnableWechatLoginMiniProgram,
+			"enable_sms_login":                 cfg.System.EnableSMSLogin,
 		},
 		"config_path": configPath,
 		"server_time": time.Now().Format(time.RFC3339),
@@ -351,6 +355,12 @@ func applySiteConfig(cfg *config.Config, site *BootstrapInitializeSiteRequest) {
 	}
 	if site.EnableWechatLogin != nil {
 		cfg.System.EnableWechatLogin = *site.EnableWechatLogin
+	}
+	if site.EnableWechatWeb != nil {
+		cfg.System.EnableWechatLoginWeb = *site.EnableWechatWeb
+	}
+	if site.EnableWechatMini != nil {
+		cfg.System.EnableWechatLoginMiniProgram = *site.EnableWechatMini
 	}
 	if site.EnableSMSLogin != nil {
 		cfg.System.EnableSMSLogin = *site.EnableSMSLogin
