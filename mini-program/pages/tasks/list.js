@@ -1,6 +1,7 @@
 const taskService = require('../../services/task')
 const { formatDate, showSuccess, showToast, showConfirm } = require('../../utils/util')
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_PRIORITY_COLOR } = require('../../utils/constants')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 const TASK_LIST_DIRTY_KEY = 'tasks_list_dirty'
 
@@ -66,7 +67,7 @@ Page({
   checkPermission() {
     const userInfo = wx.getStorageSync('userInfo') || {}
     this.setData({
-      canCreate: app.isManager(),
+      canCreate: app.hasPermission(ACTIONS.TASK_MANAGE, userInfo),
       userRole: userInfo.role || ''
     })
   },
@@ -201,6 +202,7 @@ Page({
 
   // 跳转到创建页
   goToCreate() {
+    if (!app.requirePermission(ACTIONS.TASK_MANAGE)) return
     wx.navigateTo({ url: '/pages/tasks/create' })
   },
 

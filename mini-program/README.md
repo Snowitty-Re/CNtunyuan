@@ -28,7 +28,7 @@
 - 任务列表（统计卡片、状态筛选、优先级色带标记）
 - 我的任务（标签页分组、进度条、快速操作）
 - 任务详情（状态流程条、信息卡片、操作日志时间线）
-- 任务创建（管理者权限、案件关联、指派志愿者）
+- 任务创建（基于 `task:manage` 权限、案件关联、指派志愿者）
 - 任务反馈（文字反馈、图片上传）
 
 ### 5. 工作台
@@ -97,7 +97,8 @@ mini-program/
 │   └── organization.js # 组织服务
 ├── utils/              # 工具函数
 │   ├── request.js      # 请求封装（Token刷新、错误处理）
-│   └── util.js         # 通用工具（格式化、验证）
+│   ├── util.js         # 通用工具（格式化、验证）
+│   └── permission.js   # 权限动作映射与统一校验（ACTIONS/hasPermission）
 ├── pages/              # 页面文件（23个页面）
 │   ├── index/          # 首页
 │   ├── login/          # 登录（微信登录 + 手机号登录）
@@ -246,6 +247,12 @@ mini-program/
 - 清除缓存时保留登录信息
 - 退出登录清除所有本地数据
 
+### 权限落地（小程序）
+- 统一入口：`app.js` 提供 `hasPermission()`、`canAnyPermission()`、`requirePermission()`
+- 权限动作：`utils/permission.js` 维护 `ACTIONS`（如 `task:manage`、`missing:manage`、`dialect:manage`、`user:view`）
+- UI 显示：工作台快捷入口、首页创建任务入口、任务/案件管理按钮按权限动态展示
+- 页面守卫：管理页（用户/组织/方言审批）与任务创建/分配/审核等操作统一走权限判断
+
 ### 后端字段对照
 - 走失位置坐标：`missing_latitude` / `missing_longitude`（可选，用于 `wx.openLocation` 导航）
 - 位置文本：拼接 `province` + `city` + `district` + `address`（使用 `utils/util.js` 的 `joinLocation()`）
@@ -256,6 +263,14 @@ mini-program/
 - 统计字段：`TaskStatsResponse` 含 `my_tasks` / `my_pending` / `my_processing` / `my_completed`
 
 ## 更新日志
+
+### v1.7.0 (2026-04)
+- 新增 `utils/permission.js`，统一小程序权限动作与默认角色权限映射
+- `app.js` 增加统一权限 API：`hasPermission` / `canAnyPermission` / `requirePermission`
+- 任务模块改造为动作权限判定：创建、分配、执行、审核、取消、删除
+- 案件详情改造为动作权限判定：案件管理、线索新增、关联任务创建
+- 工作台/首页改为权限驱动的入口与统计视角，不再散落硬编码角色判断
+- 管理页统一权限守卫：用户管理、组织管理、方言审批、编辑页权限一致
 
 ### v1.6.0 (2026-03)
 **第五轮修复 — 模板渲染、登录交互、数据语义、上传容错**

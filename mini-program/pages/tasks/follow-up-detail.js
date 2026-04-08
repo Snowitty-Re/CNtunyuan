@@ -1,5 +1,6 @@
 const taskService = require('../../services/task')
 const { formatDate, formatTimeAgo, showSuccess, showToast } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 
 Page({
@@ -11,7 +12,7 @@ Page({
     commentInput: '',
     loading: false,
     submitting: false,
-    isManager: false
+    canReview: false
   },
 
   onLoad(options = {}) {
@@ -25,7 +26,7 @@ Page({
     this.setData({
       taskId,
       followUpId,
-      isManager: app.isManager()
+      canReview: app.hasPermission(ACTIONS.TASK_MANAGE)
     })
     this.loadData()
   },
@@ -68,8 +69,8 @@ Page({
       const list = (result.list || []).map(item => ({
         ...item,
         createdAtText: formatTimeAgo(item.created_at),
-        isReviewComment: ['super_admin', 'admin', 'manager'].includes((item.user && item.user.role) || ''),
-        commentTagText: ['super_admin', 'admin', 'manager'].includes((item.user && item.user.role) || '') ? '审核意见' : '执行备注'
+        isReviewComment: app.hasPermission(ACTIONS.TASK_MANAGE, item.user || {}),
+        commentTagText: app.hasPermission(ACTIONS.TASK_MANAGE, item.user || {}) ? '审核意见' : '执行备注'
       }))
       this.setData({ comments: list })
     } catch (error) {
@@ -115,7 +116,7 @@ Page({
   },
 
   reviewFollowUp(e) {
-    if (!this.data.isManager) {
+    if (!this.data.canReview) {
       showToast('仅管理员可审核')
       return
     }

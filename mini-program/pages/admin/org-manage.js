@@ -1,5 +1,6 @@
 const organizationService = require('../../services/organization')
 const { showToast, showLoading, hideLoading } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 
 Page({
@@ -13,7 +14,7 @@ Page({
 
   onLoad() {
     if (!app.ensureAuth || !app.ensureAuth()) return
-    if (!app.isManager()) {
+    if (!app.hasPermission(ACTIONS.ORG_MANAGE)) {
       showToast('无权限访问')
       wx.navigateBack()
       return
@@ -23,7 +24,7 @@ Page({
 
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
-    if (!app.isManager()) return
+    if (!app.hasPermission(ACTIONS.ORG_MANAGE)) return
     if (this.data.list.length > 0 && !this.data.loading) {
       this.loadList(true)
     }
@@ -57,7 +58,7 @@ Page({
   },
 
   onCreateOrg() {
-    if (!app.isAdmin()) {
+    if (!app.hasPermission(ACTIONS.ORG_MANAGE)) {
       showToast('仅管理员可创建组织')
       return
     }
@@ -73,7 +74,7 @@ Page({
       { key: 'rename', label: '修改名称' },
       { key: 'toggle', label: item.status === 'active' ? '设为停用' : '设为启用' }
     ]
-    if (app.isAdmin()) options.push({ key: 'delete', label: '删除组织' })
+    if (app.hasPermission(ACTIONS.ORG_MANAGE)) options.push({ key: 'delete', label: '删除组织' })
 
     wx.showActionSheet({
       itemList: options.map(o => o.label),

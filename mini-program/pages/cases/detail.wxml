@@ -165,7 +165,7 @@
     <view class="card-header">
       <view class="card-title-bar"></view>
       <text class="card-title">轨迹记录</text>
-      <text class="card-action" bindtap="addTrack">+ 添加</text>
+      <text class="card-action" wx:if="{{canModifyCase}}" bindtap="addTrack">+ 添加</text>
     </view>
 
     <view class="timeline" wx:if="{{tracks.length > 0}}">
@@ -222,33 +222,33 @@
   </view>
 
   <!-- Manager Operations -->
-  <view class="card manager-card" wx:if="{{isManager}}">
+  <view class="card manager-card" wx:if="{{canManageCase || canManageTask}}">
     <view class="card-header">
       <view class="card-title-bar"></view>
       <text class="card-title">管理操作</text>
     </view>
     <view class="manager-grid">
-      <view class="manager-btn" bindtap="updateStatus">
+      <view class="manager-btn" wx:if="{{canManageCase}}" bindtap="updateStatus">
         <view class="mgr-icon mgr-status"></view>
         <text class="mgr-label">更新状态</text>
       </view>
-      <view class="manager-btn" bindtap="markFound" wx:if="{{caseData.status !== 'found' && caseData.status !== 'reunited'}}">
+      <view class="manager-btn" bindtap="markFound" wx:if="{{canManageCase && caseData.status !== 'found' && caseData.status !== 'reunited'}}">
         <view class="mgr-icon mgr-found"></view>
         <text class="mgr-label">标记找到</text>
       </view>
-      <view class="manager-btn" bindtap="markReunited" wx:if="{{caseData.status !== 'reunited'}}">
+      <view class="manager-btn" bindtap="markReunited" wx:if="{{canManageCase && caseData.status !== 'reunited'}}">
         <view class="mgr-icon mgr-reunited"></view>
         <text class="mgr-label">标记团圆</text>
       </view>
-      <view class="manager-btn" bindtap="createTask">
+      <view class="manager-btn" wx:if="{{canManageTask}}" bindtap="createTask">
         <view class="mgr-icon mgr-task"></view>
         <text class="mgr-label">创建任务</text>
       </view>
-      <view class="manager-btn" bindtap="editCase">
+      <view class="manager-btn" wx:if="{{canManageCase}}" bindtap="editCase">
         <view class="mgr-icon mgr-edit"></view>
         <text class="mgr-label">编辑案件</text>
       </view>
-      <view class="manager-btn" bindtap="deleteCase">
+      <view class="manager-btn" wx:if="{{canManageCase}}" bindtap="deleteCase">
         <view class="mgr-icon mgr-edit"></view>
         <text class="mgr-label">删除案件</text>
       </view>
@@ -268,7 +268,7 @@
       <view class="bar-icon phone-icon"></view>
       <text class="bar-label">联系家属</text>
     </button>
-    <button class="bar-btn bar-primary" bindtap="addTrack">
+    <button class="bar-btn bar-primary" wx:if="{{canModifyCase}}" bindtap="addTrack">
       <view class="bar-icon track-icon"></view>
       <text class="bar-label">添加线索</text>
     </button>

@@ -2,6 +2,7 @@ const taskService = require('../../services/task')
 const missingPersonService = require('../../services/missingPerson')
 const userService = require('../../services/user')
 const { formatDate, showSuccess, showToast } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 
 Page({
@@ -43,9 +44,7 @@ Page({
 
   onLoad(options = {}) {
     if (!app.ensureAuth || !app.ensureAuth()) return
-    // 检查权限
-    const userInfo = wx.getStorageSync('userInfo') || {}
-    if (!['super_admin', 'admin', 'manager'].includes(userInfo.role)) {
+    if (!app.hasPermission(ACTIONS.TASK_MANAGE)) {
       showToast('无权限创建任务')
       wx.navigateBack()
       return

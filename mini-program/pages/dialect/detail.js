@@ -1,5 +1,6 @@
 const dialectService = require('../../services/dialect')
 const { showLoading, hideLoading, showSuccess, showError, showToast, formatTimeAgo, formatDate } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 
 // 音频上下文
@@ -129,8 +130,7 @@ Page({
     try {
       const dialect = await dialectService.getById(this.data.id)
       const userInfo = wx.getStorageSync('userInfo') || {}
-      const isManager = ['super_admin', 'admin', 'manager'].includes(userInfo.role)
-      if (!isManager && (dialect.status === 'pending' || dialect.status === 'inactive')) {
+      if (!app.hasPermission(ACTIONS.DIALECT_MANAGE, userInfo) && (dialect.status === 'pending' || dialect.status === 'inactive')) {
         showToast('当前方言不可见', 'none')
         setTimeout(() => wx.navigateBack(), 300)
         return

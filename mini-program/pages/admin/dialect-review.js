@@ -1,5 +1,6 @@
 const dialectService = require('../../services/dialect')
 const { showToast, showLoading, hideLoading, formatTimeAgo } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 const DIALECT_LIST_DIRTY_KEY = 'dialect_list_dirty'
 
@@ -22,7 +23,7 @@ Page({
 
   onLoad() {
     if (!app.ensureAuth || !app.ensureAuth()) return
-    if (!app.isManager()) {
+    if (!app.hasPermission(ACTIONS.DIALECT_MANAGE)) {
       showToast('无权限访问')
       wx.navigateBack()
       return

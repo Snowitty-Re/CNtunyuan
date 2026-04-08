@@ -50,7 +50,7 @@
           <text>审批意见：{{followUp.review_remark}}</text>
         </view>
       </view>
-      <view class="review-actions" wx:if="{{isManager && followUp.status === 'pending'}}">
+      <view class="review-actions" wx:if="{{canReview && followUp.status === 'pending'}}">
         <button class="review-btn pass" bindtap="reviewFollowUp" data-approve="{{true}}">通过</button>
         <button class="review-btn reject" bindtap="reviewFollowUp" data-approve="{{false}}">驳回</button>
       </view>

@@ -62,7 +62,7 @@
       </view>
       <text class="action-label">我的任务</text>
     </view>
-    <view class="action-item" bindtap="onCreateTask" hover-class="action-item--hover">
+    <view class="action-item" wx:if="{{canCreateTask}}" bindtap="onCreateTask" hover-class="action-item--hover">
       <view class="action-circle action-circle--amber">
         <text class="iconfont icon-add"></text>
       </view>

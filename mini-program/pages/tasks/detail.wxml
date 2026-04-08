@@ -181,7 +181,7 @@
             <text class="section-icon-char">F</text>
           </view>
           <text class="section-heading">跟进记录</text>
-          <button class="mini-action-btn" wx:if="{{isAssignee || isManager}}" bindtap="addFollowUp">新增跟进</button>
+          <button class="mini-action-btn" wx:if="{{canOperateAsAssignee || canManageTask}}" bindtap="addFollowUp">新增跟进</button>
         </view>
 
         <view class="followup-list" wx:if="{{followUps.length > 0}}">
@@ -250,7 +250,7 @@
       </view>
 
       <!-- 任务管理（管理员） -->
-      <view class="info-card" wx:if="{{isManager}}">
+      <view class="info-card" wx:if="{{canManageTask}}">
         <view class="card-section-header">
           <view class="section-icon-box icon-gray">
             <text class="section-icon-char">M</text>
@@ -278,7 +278,7 @@
     <view class="bottom-action-bar" wx:if="{{task.status !== 'completed' && task.status !== 'cancelled'}}">
       <view class="action-bar-inner">
         <!-- 执行人操作 -->
-        <block wx:if="{{isAssignee}}">
+        <block wx:if="{{canOperateAsAssignee}}">
           <block wx:if="{{task.status === 'assigned'}}">
             <button class="bar-btn btn-primary full-width" bindtap="startTask" loading="{{actionLoading}}">开始任务</button>
           </block>
@@ -292,7 +292,7 @@
         </block>
 
         <!-- 非执行人提示 -->
-        <block wx:if="{{!isAssignee && !isManager && task.status === 'pending'}}">
+        <block wx:if="{{!canOperateAsAssignee && !canManageTask && task.status === 'pending'}}">
           <button class="bar-btn btn-disabled full-width" disabled>等待分配</button>
         </block>
       </view>

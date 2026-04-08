@@ -1,6 +1,7 @@
 const taskService = require('../../services/task')
 const { formatTimeAgo, showSuccess, showToast } = require('../../utils/util')
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_TYPE_MAP, ROLE_MAP } = require('../../utils/constants')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 
 Page({
@@ -19,13 +20,13 @@ Page({
     // 快捷入口
     quickActions: [
       { key: 'myTasks', icon: 'task', label: '我的任务', color: '#FF8C42' },
-      { key: 'createTask', icon: 'add', label: '创建任务', color: '#E67E22', managerOnly: true },
-      { key: 'createCase', icon: 'case', label: '发布案件', color: '#3498DB' },
-      { key: 'recordDialect', icon: 'mic', label: '录制方言', color: '#27AE60' },
-      { key: 'pendingAssign', icon: 'assign', label: '待分配', color: '#9B59B6', managerOnly: true },
-      { key: 'dialectReview', icon: 'task', label: '方言审批', color: '#E67E22', managerOnly: true },
-      { key: 'userManage', icon: 'notification', label: '人员管理', color: '#16A085', managerOnly: true },
-      { key: 'orgManage', icon: 'settings', label: '组织管理', color: '#2C7BE5', managerOnly: true }
+      { key: 'createTask', icon: 'add', label: '创建任务', color: '#E67E22', requiredPermission: ACTIONS.TASK_MANAGE },
+      { key: 'createCase', icon: 'case', label: '发布案件', color: '#3498DB', requiredPermission: ACTIONS.MISSING_MODIFY },
+      { key: 'recordDialect', icon: 'mic', label: '录制方言', color: '#27AE60', requiredPermission: ACTIONS.DIALECT_MODIFY },
+      { key: 'pendingAssign', icon: 'assign', label: '待分配', color: '#9B59B6', requiredPermission: ACTIONS.TASK_MANAGE },
+      { key: 'dialectReview', icon: 'task', label: '方言审批', color: '#E67E22', requiredPermission: ACTIONS.DIALECT_MANAGE },
+      { key: 'userManage', icon: 'notification', label: '人员管理', color: '#16A085', requiredPermission: ACTIONS.USER_VIEW },
+      { key: 'orgManage', icon: 'settings', label: '组织管理', color: '#2C7BE5', requiredPermission: ACTIONS.ORG_MANAGE }
     ],
     
     // 最近任务列表
@@ -91,9 +92,18 @@ Page({
           role: userInfo.role || 'volunteer'
         }
       })
+      this.syncQuickActionsPermission(userInfo)
     } catch (error) {
       console.error('加载用户信息失败:', error)
     }
+  },
+
+  syncQuickActionsPermission(userInfo = {}) {
+    const quickActions = (this.data.quickActions || []).map(item => {
+      if (!item.requiredPermission) return { ...item, visible: true }
+      return { ...item, visible: app.hasPermission(item.requiredPermission, userInfo) }
+    })
+    this.setData({ quickActions })
   },
 
   // 加载今日统计
@@ -140,6 +150,11 @@ Page({
   // 快捷入口点击
   onQuickActionTap(e) {
     const { key } = e.currentTarget.dataset
+    const actionItem = (this.data.quickActions || []).find(item => item.key === key)
+    if (actionItem && actionItem.visible === false) {
+      showToast('无权限操作')
+      return
+    }
     switch (key) {
       case 'myTasks':
         wx.navigateTo({ url: '/pages/tasks/my' })
@@ -198,12 +213,6 @@ Page({
   // 跳转到任务列表
   goToTaskList() {
     wx.navigateTo({ url: '/pages/tasks/list' })
-  },
-
-  // 判断是否显示管理者专属入口
-  isManager() {
-    const { role } = this.data.userInfo
-    return ['super_admin', 'admin', 'manager'].includes(role)
   },
 
   retryRecentTasks() {

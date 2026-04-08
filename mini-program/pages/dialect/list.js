@@ -1,5 +1,6 @@
 const dialectService = require('../../services/dialect')
 const { showLoading, hideLoading, formatTimeAgo, showToast } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 
 // 创建 InnerAudioContext 实例
@@ -220,8 +221,7 @@ Page({
 
   filterVisibleDialects(list) {
     const userInfo = wx.getStorageSync('userInfo') || {}
-    const isManager = ['super_admin', 'admin', 'manager'].includes(userInfo.role)
-    if (isManager) return list
+    if (app.hasPermission(ACTIONS.DIALECT_MANAGE, userInfo)) return list
     return (list || []).filter(item => item.status !== 'pending' && item.status !== 'inactive')
   }
 })

@@ -4,6 +4,7 @@ const dialectService = require('../../services/dialect')
 const userService = require('../../services/user')
 const taskService = require('../../services/task')
 const { formatDate, formatTimeAgo, showError, showLoading, hideLoading, joinLocation, normalizeMediaUrl, normalizeAge } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 const CASES_STATUS_FILTER_KEY = 'cases_status_filter'
 const CASES_LIST_DIRTY_KEY = 'cases_list_dirty'
@@ -53,7 +54,8 @@ Page({
     },
 
     // 问候语
-    greeting: ''
+    greeting: '',
+    canCreateTask: false
   },
 
   onLoad() {
@@ -140,8 +142,13 @@ Page({
   async loadStats() {
     try {
       const userInfo = app.globalData.userInfo || wx.getStorageSync('userInfo') || {}
-      const role = userInfo.role || ''
-      const isManagerRole = ['super_admin', 'admin', 'manager'].includes(role)
+      const isManagerRole = app.canAnyPermission([
+        ACTIONS.TASK_MANAGE,
+        ACTIONS.MISSING_MANAGE,
+        ACTIONS.DIALECT_MANAGE,
+        ACTIONS.USER_VIEW
+      ], userInfo)
+      const canCreateTask = app.hasPermission(ACTIONS.TASK_MANAGE, userInfo)
 
       // 初始化统计数据
       let stats = {
@@ -261,7 +268,8 @@ Page({
 
       this.setData({
         stats,
-        statCards: this.buildStatCards(role, stats)
+        canCreateTask,
+        statCards: this.buildStatCards(userInfo, stats)
       })
     } catch (error) {
       console.error('加载统计数据失败:', error)
@@ -481,7 +489,7 @@ Page({
   },
 
   onCreateTask() {
-    if (!(app.isManager && app.isManager())) {
+    if (!app.hasPermission(ACTIONS.TASK_MANAGE)) {
       wx.showToast({
         title: '仅管理员可创建任务',
         icon: 'none'
@@ -528,7 +536,7 @@ Page({
         wx.switchTab({ url: '/pages/cases/list' })
         break
       case 'volunteers':
-        if (app.isManager && app.isManager()) {
+        if (app.hasPermission(ACTIONS.USER_VIEW)) {
           wx.navigateTo({ url: '/pages/admin/user-manage?role=volunteer' })
         } else {
           wx.showToast({
@@ -556,8 +564,13 @@ Page({
     }
   },
 
-  buildStatCards(role, stats) {
-    const isManagerRole = ['super_admin', 'admin', 'manager'].includes(role)
+  buildStatCards(userInfo, stats) {
+    const isManagerRole = app.canAnyPermission([
+      ACTIONS.TASK_MANAGE,
+      ACTIONS.MISSING_MANAGE,
+      ACTIONS.DIALECT_MANAGE,
+      ACTIONS.USER_VIEW
+    ], userInfo)
     if (isManagerRole) {
       return [
         { type: 'cases', value: stats.totalCases || 0, label: '走失人员', icon: 'icon-people', bgClass: 'orange-bg' },
@@ -577,8 +590,7 @@ Page({
 
   filterVisibleDialects(list) {
     const userInfo = wx.getStorageSync('userInfo') || {}
-    const isManager = ['super_admin', 'admin', 'manager'].includes(userInfo.role)
-    if (isManager) return list
+    if (app.hasPermission(ACTIONS.DIALECT_MANAGE, userInfo)) return list
     return (list || []).filter(item => item.status !== 'pending' && item.status !== 'inactive')
   },
 

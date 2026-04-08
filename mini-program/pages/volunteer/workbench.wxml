@@ -56,7 +56,7 @@
       <view class="quick-action-item"
             wx:for="{{quickActions}}"
             wx:key="key"
-            wx:if="{{!item.managerOnly || userInfo.role === 'manager' || userInfo.role === 'admin' || userInfo.role === 'super_admin'}}"
+            wx:if="{{item.visible !== false}}"
             bindtap="onQuickActionTap"
             data-key="{{item.key}}"
             hover-class="action-hover">

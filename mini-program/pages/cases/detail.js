@@ -1,6 +1,7 @@
 const missingPersonService = require('../../services/missingPerson')
 const taskService = require('../../services/task')
 const { formatDate, showConfirm, showSuccess, showLoading, hideLoading, joinLocation, normalizeMediaUrl, normalizeAge } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 const CASES_LIST_DIRTY_KEY = 'cases_list_dirty'
 
@@ -37,7 +38,9 @@ Page({
     tracks: [],
     relatedTasks: [],
     loading: false,
-    isManager: false, // 是否为管理者
+    canManageCase: false,
+    canModifyCase: false,
+    canManageTask: false,
     
     // 映射常量
     statusMap: STATUS_MAP,
@@ -66,6 +69,7 @@ Page({
 
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
+    this.checkUserRole()
     // 返回时刷新数据
     if (this.data.id) {
       Promise.all([this.loadCaseDetail(), this.loadTracks(), this.loadRelatedTasks()]).catch(err => console.error('刷新详情失败:', err))
@@ -76,7 +80,12 @@ Page({
    * 检查用户角色
    */
   checkUserRole() {
-    this.setData({ isManager: app.isManager() })
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    this.setData({
+      canManageCase: app.hasPermission(ACTIONS.MISSING_MANAGE, userInfo),
+      canModifyCase: app.hasPermission(ACTIONS.MISSING_MODIFY, userInfo),
+      canManageTask: app.hasPermission(ACTIONS.TASK_MANAGE, userInfo)
+    })
   },
 
   /**
@@ -222,6 +231,10 @@ Page({
    * 添加轨迹
    */
   addTrack() {
+    if (!this.data.canModifyCase) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
     const { id } = this.data
     if (!id) {
       wx.showToast({ title: '案件ID无效', icon: 'none' })
@@ -236,6 +249,10 @@ Page({
    * 更新状态
    */
   async updateStatus() {
+    if (!this.data.canManageCase) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
     const { caseData } = this.data
     const statusOptions = [
       { value: 'missing', label: '失踪中' },
@@ -271,6 +288,10 @@ Page({
    * 标记已找到
    */
   async markFound() {
+    if (!this.data.canManageCase) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
     const confirmed = await showConfirm('确认标记', '确认将该案件标记为已找到？')
     if (!confirmed) return
 
@@ -296,6 +317,10 @@ Page({
    * 标记已团圆
    */
   async markReunited() {
+    if (!this.data.canManageCase) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
     const confirmed = await showConfirm('确认标记', '确认将该案件标记为已团圆？')
     if (!confirmed) return
 
@@ -316,6 +341,10 @@ Page({
    * 删除案件
    */
   async deleteCase() {
+    if (!this.data.canManageCase) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
     const confirmed = await showConfirm('确认删除', '删除后无法恢复，确认删除该案件吗？')
     if (!confirmed) return
 
@@ -338,6 +367,10 @@ Page({
    * 创建任务
    */
   createTask() {
+    if (!this.data.canManageTask) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
     const { id } = this.data
     wx.navigateTo({
       url: `/pages/tasks/create?caseId=${id}`
@@ -359,6 +392,10 @@ Page({
    * 编辑案件
    */
   editCase() {
+    if (!this.data.canManageCase) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+      return
+    }
     const { id } = this.data
     wx.navigateTo({
       url: `/pages/cases/create?id=${id}`

@@ -1,6 +1,7 @@
 const taskService = require('../../services/task')
 const { formatDate, formatTimeAgo, showSuccess, showToast, showConfirm, showLoading, hideLoading } = require('../../utils/util')
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_PRIORITY_COLOR } = require('../../utils/constants')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 const TASK_LIST_DIRTY_KEY = 'tasks_list_dirty'
 
@@ -15,8 +16,11 @@ Page({
     showProgressModal: false,
     progressInput: 50,
     currentUser: null,
-    isManager: false,
+    canManageTask: false,
+    canEditTask: false,
+    canExecuteTask: false,
     isAssignee: false,
+    canOperateAsAssignee: false,
     statusMap:        TASK_STATUS_MAP,
     priorityMap:      TASK_PRIORITY_MAP,
     priorityColorMap: TASK_PRIORITY_COLOR
@@ -28,7 +32,9 @@ Page({
     this.setData({ 
       taskId: options.id,
       currentUser: userInfo,
-      isManager: app.isManager()
+      canManageTask: app.hasPermission(ACTIONS.TASK_MANAGE, userInfo),
+      canEditTask: app.hasPermission(ACTIONS.TASK_EDIT, userInfo),
+      canExecuteTask: app.hasPermission(ACTIONS.TASK_EXECUTE, userInfo)
     })
     
     if (options.id) {
@@ -57,6 +63,7 @@ Page({
       
       // 检查当前用户是否是执行人
       const isAssignee = task.assignee_id && String(task.assignee_id) === String(this.data.currentUser.id)
+      const canOperateAsAssignee = isAssignee && this.data.canExecuteTask
       
       // 更新页面标题
       wx.setNavigationBarTitle({ title: task.title || '任务详情' })
@@ -64,6 +71,7 @@ Page({
       this.setData({ 
         task, 
         isAssignee,
+        canOperateAsAssignee,
         loading: false 
       })
     } catch (error) {
@@ -106,7 +114,7 @@ Page({
 
   // 分配任务（管理者）- 使用页面内选择而非跳转
   async assignTask() {
-    if (!this.data.isManager) {
+    if (!this.data.canManageTask) {
       showToast('无权限操作')
       return
     }
@@ -134,7 +142,7 @@ Page({
 
   // 开始任务（执行人）
   async startTask() {
-    if (!this.data.isAssignee) {
+    if (!this.data.canOperateAsAssignee) {
       showToast('只有执行人可以开始任务')
       return
     }
@@ -156,7 +164,7 @@ Page({
 
   // 显示进度更新弹窗
   showProgressModal() {
-    if (!this.data.isAssignee) {
+    if (!this.data.isAssignee || !this.data.canEditTask) {
       showToast('只有执行人可以更新进度')
       return
     }
@@ -201,7 +209,7 @@ Page({
 
   // 完成任务（执行人）
   async completeTask() {
-    if (!this.data.isAssignee) {
+    if (!this.data.canOperateAsAssignee) {
       showToast('只有执行人可以完成任务')
       return
     }
@@ -229,7 +237,7 @@ Page({
 
   // 跳转到反馈页（反馈+附件后完成任务）
   submitFeedback() {
-    if (!this.data.isAssignee) {
+    if (!this.data.canOperateAsAssignee) {
       showToast('只有执行人可以提交反馈')
       return
     }
@@ -238,7 +246,7 @@ Page({
 
   // 新增任务跟进
   addFollowUp() {
-    if (!this.data.isAssignee && !this.data.isManager) {
+    if (!this.data.canOperateAsAssignee && !this.data.canManageTask) {
       showToast('无权限操作')
       return
     }
@@ -255,7 +263,7 @@ Page({
 
   // 取消任务（管理者）
   async cancelTask() {
-    if (!this.data.isManager) {
+    if (!this.data.canManageTask) {
       showToast('无权限操作')
       return
     }
@@ -280,7 +288,7 @@ Page({
 
   // 删除任务（管理者）
   async deleteTask() {
-    if (!this.data.isManager) {
+    if (!this.data.canManageTask) {
       showToast('无权限操作')
       return
     }

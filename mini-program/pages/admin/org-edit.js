@@ -1,5 +1,6 @@
 const organizationService = require('../../services/organization')
 const { showToast, showLoading, hideLoading } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 
 const ORG_TYPES = [
@@ -43,8 +44,8 @@ Page({
 
   async onLoad(options) {
     if (!app.ensureAuth || !app.ensureAuth()) return
-    if (!app.isAdmin()) {
-      showToast('仅管理员可操作')
+    if (!app.hasPermission(ACTIONS.ORG_MANAGE)) {
+      showToast('无权限操作')
       wx.navigateBack()
       return
     }

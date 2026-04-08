@@ -12,6 +12,7 @@
 
 const { request, uploadFile } = require('./utils/request')
 const config = require('./config/index')
+const permission = require('./utils/permission')
 
 App({
   globalData: {
@@ -305,7 +306,7 @@ App({
 
   // 检查角色权限
   checkRole(roles) {
-    const userInfo = this.globalData.userInfo
+    const userInfo = this.getUserInfoSafe()
     if (!userInfo) return false
     
     if (Array.isArray(roles)) {
@@ -321,6 +322,53 @@ App({
 
   // 是否为管理者及以上
   isManager() {
-    return this.checkRole(['super_admin', 'admin', 'manager'])
+    return permission.isManagerRole(this.getUserInfoSafe())
+  },
+
+  // 获取当前用户信息（兜底存储）
+  getUserInfoSafe() {
+    return this.globalData.userInfo || wx.getStorageSync('userInfo') || null
+  },
+
+  // 获取当前角色
+  getUserRole() {
+    const userInfo = this.getUserInfoSafe() || {}
+    return permission.getUserRole(userInfo)
+  },
+
+  // 检查权限动作
+  hasPermission(action, userInfo) {
+    const target = userInfo || this.getUserInfoSafe() || {}
+    return permission.hasPermission(target, action)
+  },
+
+  // 任一权限通过
+  canAnyPermission(actions, userInfo) {
+    const target = userInfo || this.getUserInfoSafe() || {}
+    return permission.canAny(target, actions)
+  },
+
+  // 所有权限通过
+  canAllPermissions(actions, userInfo) {
+    const target = userInfo || this.getUserInfoSafe() || {}
+    return permission.canAll(target, actions)
+  },
+
+  // 统一权限守卫
+  requirePermission(action, options = {}) {
+    const { toast = true, fallback = '' } = options
+    const allowed = this.hasPermission(action)
+    if (allowed) return true
+
+    if (toast) {
+      wx.showToast({ title: '无权限操作', icon: 'none' })
+    }
+
+    if (fallback === 'navigateBack') {
+      wx.navigateBack()
+    } else if (fallback === 'login') {
+      wx.reLaunch({ url: '/pages/login/index' })
+    }
+    return false
   }
 })

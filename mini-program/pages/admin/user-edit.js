@@ -1,6 +1,7 @@
 const userService = require('../../services/user')
 const organizationService = require('../../services/organization')
 const { showToast, showLoading, hideLoading } = require('../../utils/util')
+const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
 
 const ROLE_OPTIONS = [
@@ -40,13 +41,14 @@ Page({
 
   async onLoad(options) {
     if (!app.ensureAuth || !app.ensureAuth()) return
-    if (!app.isAdmin()) {
-      showToast('仅管理员可操作')
+    const id = options && options.id ? options.id : ''
+    const canModify = app.hasPermission(ACTIONS.USER_MODIFY)
+    const canCreate = app.hasPermission(ACTIONS.USER_CREATE)
+    if ((id && !canModify) || (!id && !canCreate)) {
+      showToast('无权限操作')
       wx.navigateBack()
       return
     }
-
-    const id = options && options.id ? options.id : ''
     this.setData({ id, isEdit: !!id })
     wx.setNavigationBarTitle({ title: id ? '编辑用户' : '新建用户' })
 
