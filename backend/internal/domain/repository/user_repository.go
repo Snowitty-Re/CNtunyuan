@@ -66,6 +66,7 @@ type UserQuery struct {
 	Role      entity.Role       `json:"role"`       // 角色筛选
 	Status    entity.UserStatus `json:"status"`     // 状态筛选
 	OrgID     string            `json:"org_id"`     // 组织筛选
+	OrgIDs    []string          `json:"org_ids"`    // 组织范围筛选
 	StartTime string            `json:"start_time"` // 开始时间
 	EndTime   string            `json:"end_time"`   // 结束时间
 	SortField string            `json:"sort_field"` // 排序字段

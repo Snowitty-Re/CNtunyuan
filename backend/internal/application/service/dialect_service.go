@@ -32,22 +32,34 @@ const defaultOrgID = "00000000-0000-0000-0000-000000000000"
 type DialectAppService struct {
 	dialectRepo repository.DialectRepository
 	userRepo    repository.UserRepository
+	orgRepo     repository.OrganizationRepository
 	fileRepo    repository.FileRepository
 	storage     domainService.StorageService
+	authz       *AuthorizationService
 }
 
 // NewDialectAppService 创建方言应用服务
 func NewDialectAppService(
 	dialectRepo repository.DialectRepository,
 	userRepo repository.UserRepository,
+	orgRepo repository.OrganizationRepository,
 	fileRepo repository.FileRepository,
 	storage domainService.StorageService,
+	authz ...*AuthorizationService,
 ) *DialectAppService {
+	var authzSvc *AuthorizationService
+	if len(authz) > 0 && authz[0] != nil {
+		authzSvc = authz[0]
+	} else {
+		authzSvc = NewAuthorizationService(orgRepo)
+	}
 	return &DialectAppService{
 		dialectRepo: dialectRepo,
 		userRepo:    userRepo,
+		orgRepo:     orgRepo,
 		fileRepo:    fileRepo,
 		storage:     storage,
+		authz:       authzSvc,
 	}
 }
 
@@ -225,7 +237,7 @@ func (s *DialectAppService) GetByID(ctx context.Context, id string, userID strin
 }
 
 // List 列表查询
-func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListRequest, isManager bool) (*dto.DialectListResponse, error) {
+func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListRequest, operator *entity.User) (*dto.DialectListResponse, error) {
 	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
 
 	query := repository.NewDialectQuery()
@@ -236,8 +248,16 @@ func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListReques
 	query.Province = req.Province
 	query.City = req.City
 	query.Type = entity.DialectType(req.Type)
+	isManager := operator != nil && entity.GetRoleLevel(operator.Role) >= entity.RoleLevelManager
 	if isManager {
 		query.Status = entity.DialectStatus(req.Status)
+		if !operator.IsSuperAdmin() {
+			orgIDs, err := collectManageableOrgIDs(ctx, s.orgRepo, operator)
+			if err != nil {
+				return nil, err
+			}
+			query.OrgIDs = orgIDs
+		}
 	} else {
 		query.Status = entity.DialectStatusActive
 	}
@@ -259,15 +279,32 @@ func (s *DialectAppService) List(ctx context.Context, req *dto.DialectListReques
 }
 
 // Update 更新
-func (s *DialectAppService) Update(ctx context.Context, id string, req *dto.UpdateDialectRequest, userID string, isManager bool) (*dto.DialectResponse, error) {
+func (s *DialectAppService) Update(ctx context.Context, id string, req *dto.UpdateDialectRequest, operator *entity.User) (*dto.DialectResponse, error) {
 	d, err := s.dialectRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrDialectNotFound
 	}
+	userID := operator.ID
+	isManager := entity.GetRoleLevel(operator.Role) >= entity.RoleLevelManager
 
 	// 只有上传者或管理员可以修改
 	if d.UploaderID != userID && !isManager {
-		return nil, ErrDialectForbidden
+		decision, scopeErr := s.authz.CanModifyDialect(ctx, operator, d)
+		if scopeErr != nil {
+			return nil, scopeErr
+		}
+		if !decision.Allowed {
+			return nil, ErrDialectForbidden
+		}
+	}
+	if d.UploaderID != userID && isManager && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanModifyDialect(ctx, operator, d)
+		if scopeErr != nil {
+			return nil, scopeErr
+		}
+		if !decision.Allowed {
+			return nil, ErrDialectForbidden
+		}
 	}
 
 	if req.Title != "" {
@@ -361,15 +398,32 @@ func normalizeDialectTags(raw string) (string, error) {
 }
 
 // Delete 删除
-func (s *DialectAppService) Delete(ctx context.Context, id string, userID string, isManager bool) error {
+func (s *DialectAppService) Delete(ctx context.Context, id string, operator *entity.User) error {
 	d, err := s.dialectRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrDialectNotFound
 	}
+	userID := operator.ID
+	isManager := entity.GetRoleLevel(operator.Role) >= entity.RoleLevelManager
 
 	// 只有上传者或管理员可以删除
 	if d.UploaderID != userID && !isManager {
-		return ErrDialectForbidden
+		decision, scopeErr := s.authz.CanModifyDialect(ctx, operator, d)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrDialectForbidden
+		}
+	}
+	if d.UploaderID != userID && isManager && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanModifyDialect(ctx, operator, d)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrDialectForbidden
+		}
 	}
 
 	if err := s.dialectRepo.SoftDelete(ctx, id); err != nil {
@@ -425,7 +479,7 @@ func deriveStoragePathFromAudioURL(audioURL string) string {
 }
 
 // UpdateStatus 更新状态
-func (s *DialectAppService) UpdateStatus(ctx context.Context, id string, status string) error {
+func (s *DialectAppService) UpdateStatus(ctx context.Context, id string, status string, operator *entity.User) error {
 	newStatus := entity.DialectStatus(status)
 	if !entity.IsValidDialectStatus(newStatus) {
 		return fmt.Errorf("%w: %s，合法值为 active/inactive/pending", ErrDialectInvalidStatus, status)
@@ -434,6 +488,15 @@ func (s *DialectAppService) UpdateStatus(ctx context.Context, id string, status 
 	d, err := s.dialectRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrDialectNotFound
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanManageDialectStatus(ctx, operator, d)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrDialectForbidden
+		}
 	}
 
 	d.Status = newStatus
@@ -446,10 +509,19 @@ func (s *DialectAppService) UpdateStatus(ctx context.Context, id string, status 
 }
 
 // Feature 设为精选
-func (s *DialectAppService) Feature(ctx context.Context, id string) error {
+func (s *DialectAppService) Feature(ctx context.Context, id string, operator *entity.User) error {
 	d, err := s.dialectRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrDialectNotFound
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanManageDialectStatus(ctx, operator, d)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrDialectForbidden
+		}
 	}
 
 	d.Feature()
@@ -457,10 +529,19 @@ func (s *DialectAppService) Feature(ctx context.Context, id string) error {
 }
 
 // Unfeature 取消精选
-func (s *DialectAppService) Unfeature(ctx context.Context, id string) error {
+func (s *DialectAppService) Unfeature(ctx context.Context, id string, operator *entity.User) error {
 	d, err := s.dialectRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrDialectNotFound
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanManageDialectStatus(ctx, operator, d)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrDialectForbidden
+		}
 	}
 
 	d.Unfeature()

@@ -149,10 +149,13 @@ func (h *DialectHandler) List(c *gin.Context) {
 		return
 	}
 
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
 
-	dialects, err := h.dialectService.List(c.Request.Context(), &req, isManager)
+	dialects, err := h.dialectService.List(c.Request.Context(), &req, operator)
 	if err != nil {
 		response.InternalServerError(c, "failed to get list")
 		return
@@ -189,11 +192,13 @@ func (h *DialectHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
 
-	dialect, err := h.dialectService.Update(c.Request.Context(), id, &req, userID, isManager)
+	dialect, err := h.dialectService.Update(c.Request.Context(), id, &req, operator)
 	if err != nil {
 		switch err {
 		case service.ErrDialectNotFound:
@@ -230,11 +235,13 @@ func (h *DialectHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
 
-	if err := h.dialectService.Delete(c.Request.Context(), id, userID, isManager); err != nil {
+	if err := h.dialectService.Delete(c.Request.Context(), id, operator); err != nil {
 		switch err {
 		case service.ErrDialectNotFound:
 			response.NotFound(c, "dialect not found")
@@ -279,7 +286,13 @@ func (h *DialectHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	if err := h.dialectService.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+
+	if err := h.dialectService.UpdateStatus(c.Request.Context(), id, req.Status, operator); err != nil {
 		switch {
 		case err == service.ErrDialectNotFound:
 			response.NotFound(c, "dialect not found")
@@ -316,7 +329,13 @@ func (h *DialectHandler) Feature(c *gin.Context) {
 		return
 	}
 
-	if err := h.dialectService.Feature(c.Request.Context(), id); err != nil {
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+
+	if err := h.dialectService.Feature(c.Request.Context(), id, operator); err != nil {
 		switch err {
 		case service.ErrDialectNotFound:
 			response.NotFound(c, "dialect not found")
@@ -351,7 +370,13 @@ func (h *DialectHandler) Unfeature(c *gin.Context) {
 		return
 	}
 
-	if err := h.dialectService.Unfeature(c.Request.Context(), id); err != nil {
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+
+	if err := h.dialectService.Unfeature(c.Request.Context(), id, operator); err != nil {
 		switch err {
 		case service.ErrDialectNotFound:
 			response.NotFound(c, "dialect not found")

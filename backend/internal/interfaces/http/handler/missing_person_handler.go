@@ -27,13 +27,16 @@ func NewMissingPersonHandler(mpService *service.MissingPersonAppService) *Missin
 // RegisterRoutes 注册路由
 func (h *MissingPersonHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *middleware.AuthMiddleware) {
 	mps := router.Group("/missing-persons")
-	mps.Use(authMiddleware.Required())
 	{
+		// 公开查询
 		mps.GET("", h.List)
 		mps.GET("/search", h.Search)
 		mps.GET("/stats", h.GetStats)
 		mps.GET("/:id", h.GetByID)
 		mps.GET("/:id/tracks", h.GetTracks)
+
+		// 需要登录
+		mps.Use(authMiddleware.Required())
 		mps.POST("", h.Create)
 		mps.PUT("/:id", h.Update)
 		mps.DELETE("/:id", middleware.RequireManager(), h.Delete)
@@ -179,11 +182,13 @@ func (h *MissingPersonHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
 
-	mp, err := h.mpService.Update(c.Request.Context(), id, &req, userID, isManager)
+	mp, err := h.mpService.Update(c.Request.Context(), id, &req, operator)
 	if err != nil {
 		switch err {
 		case service.ErrMissingPersonNotFound:
@@ -221,8 +226,18 @@ func (h *MissingPersonHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.mpService.Delete(c.Request.Context(), id); err != nil {
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+
+	if err := h.mpService.Delete(c.Request.Context(), id, operator); err != nil {
 		logger.Error("Failed to delete missing person", logger.Err(err))
+		if errors.Is(err, service.ErrMissingPersonForbidden) {
+			response.Forbidden(c, "no permission to modify this case")
+			return
+		}
 		response.InternalServerError(c, "failed to delete")
 		return
 	}
@@ -259,10 +274,18 @@ func (h *MissingPersonHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	if err := h.mpService.UpdateStatus(c.Request.Context(), id, req.Status); err != nil {
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+
+	if err := h.mpService.UpdateStatus(c.Request.Context(), id, req.Status, operator); err != nil {
 		switch err {
 		case service.ErrMissingPersonNotFound:
 			response.NotFound(c, "missing person not found")
+		case service.ErrMissingPersonForbidden:
+			response.Forbidden(c, "no permission to modify this case")
 		default:
 			response.BadRequest(c, err.Error())
 		}
@@ -301,10 +324,18 @@ func (h *MissingPersonHandler) MarkFound(c *gin.Context) {
 		return
 	}
 
-	if err := h.mpService.MarkFound(c.Request.Context(), id, &req); err != nil {
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+
+	if err := h.mpService.MarkFound(c.Request.Context(), id, &req, operator); err != nil {
 		switch err {
 		case service.ErrMissingPersonNotFound:
 			response.NotFound(c, "missing person not found")
+		case service.ErrMissingPersonForbidden:
+			response.Forbidden(c, "no permission to modify this case")
 		default:
 			response.BadRequest(c, err.Error())
 		}
@@ -336,10 +367,18 @@ func (h *MissingPersonHandler) MarkReunited(c *gin.Context) {
 		return
 	}
 
-	if err := h.mpService.MarkReunited(c.Request.Context(), id); err != nil {
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+
+	if err := h.mpService.MarkReunited(c.Request.Context(), id, operator); err != nil {
 		switch err {
 		case service.ErrMissingPersonNotFound:
 			response.NotFound(c, "missing person not found")
+		case service.ErrMissingPersonForbidden:
+			response.Forbidden(c, "no permission to modify this case")
 		default:
 			response.BadRequest(c, err.Error())
 		}

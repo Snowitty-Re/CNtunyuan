@@ -16,7 +16,7 @@ import (
 func setupTaskTest(t *testing.T) (*TaskAppService, *testutil.TestDB) {
 	tdb := testutil.NewTestDB(t)
 	taskRepo := repository.NewTaskRepository(tdb.DB)
-	service := NewTaskAppService(taskRepo)
+	service := NewTaskAppService(taskRepo, nil, nil)
 	return service, tdb
 }
 

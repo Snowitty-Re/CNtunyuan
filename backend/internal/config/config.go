@@ -210,13 +210,16 @@ type NotificationConfig struct {
 
 // SystemConfig 系统配置
 type SystemConfig struct {
-	DefaultOrgName    string `mapstructure:"default_org_name"`
-	DefaultOrgCode    string `mapstructure:"default_org_code"`
-	EnableRegister    bool   `mapstructure:"enable_register"`
-	EnableWechatLogin bool   `mapstructure:"enable_wechat_login"`
-	EnableSMSLogin    bool   `mapstructure:"enable_sms_login"`
-	AdminIPs          string `mapstructure:"admin_ips"`
-	RateLimit         int    `mapstructure:"rate_limit"`
+	DefaultOrgName                    string `mapstructure:"default_org_name"`
+	DefaultOrgCode                    string `mapstructure:"default_org_code"`
+	EnableRegister                    bool   `mapstructure:"enable_register"`
+	EnableWechatLogin                 bool   `mapstructure:"enable_wechat_login"`
+	EnableSMSLogin                    bool   `mapstructure:"enable_sms_login"`
+	AuthzPolicyChangeRequiresApproval bool   `mapstructure:"authz_policy_change_requires_approval"`
+	AuthzPolicyChangeApprovalCode     string `mapstructure:"authz_policy_change_approval_code"`
+	AuthzPolicyRequestExpireHours     int    `mapstructure:"authz_policy_request_expire_hours"`
+	AdminIPs                          string `mapstructure:"admin_ips"`
+	RateLimit                         int    `mapstructure:"rate_limit"`
 }
 
 // BackupConfig 备份配置
@@ -360,6 +363,9 @@ func setDefaults() {
 	viper.SetDefault("system.enable_register", true)
 	viper.SetDefault("system.enable_wechat_login", true)
 	viper.SetDefault("system.enable_sms_login", false)
+	viper.SetDefault("system.authz_policy_change_requires_approval", false)
+	viper.SetDefault("system.authz_policy_change_approval_code", "")
+	viper.SetDefault("system.authz_policy_request_expire_hours", 72)
 	viper.SetDefault("system.rate_limit", 100)
 
 	// Security defaults

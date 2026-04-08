@@ -33,12 +33,28 @@ func generateCaseNo() string {
 
 // MissingPersonAppService 走失人员应用服务
 type MissingPersonAppService struct {
-	mpRepo repository.MissingPersonRepository
+	mpRepo  repository.MissingPersonRepository
+	orgRepo repository.OrganizationRepository
+	authz   *AuthorizationService
 }
 
 // NewMissingPersonAppService 创建走失人员应用服务
-func NewMissingPersonAppService(mpRepo repository.MissingPersonRepository) *MissingPersonAppService {
-	return &MissingPersonAppService{mpRepo: mpRepo}
+func NewMissingPersonAppService(
+	mpRepo repository.MissingPersonRepository,
+	orgRepo repository.OrganizationRepository,
+	authz ...*AuthorizationService,
+) *MissingPersonAppService {
+	var authzSvc *AuthorizationService
+	if len(authz) > 0 && authz[0] != nil {
+		authzSvc = authz[0]
+	} else {
+		authzSvc = NewAuthorizationService(orgRepo)
+	}
+	return &MissingPersonAppService{
+		mpRepo:  mpRepo,
+		orgRepo: orgRepo,
+		authz:   authzSvc,
+	}
 }
 
 // createWithRetry 创建走失人员记录，遇到案件编号冲突时重试
@@ -172,15 +188,22 @@ func (s *MissingPersonAppService) List(ctx context.Context, req *dto.MissingPers
 }
 
 // Update 更新
-func (s *MissingPersonAppService) Update(ctx context.Context, id string, req *dto.UpdateMissingPersonRequest, userID string, isManager bool) (*dto.MissingPersonResponse, error) {
+func (s *MissingPersonAppService) Update(ctx context.Context, id string, req *dto.UpdateMissingPersonRequest, operator *entity.User) (*dto.MissingPersonResponse, error) {
 	mp, err := s.mpRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrMissingPersonNotFound
 	}
+	userID := operator.ID
 
 	// 只有上报者或管理员可以修改案件
-	if mp.ReporterID != userID && !isManager {
-		return nil, ErrMissingPersonForbidden
+	if mp.ReporterID != userID {
+		decision, scopeErr := s.authz.CanModifyMissingPerson(ctx, operator, mp)
+		if scopeErr != nil {
+			return nil, scopeErr
+		}
+		if !decision.Allowed {
+			return nil, ErrMissingPersonForbidden
+		}
 	}
 
 	// 检查是否可以更新
@@ -272,7 +295,20 @@ func (s *MissingPersonAppService) Update(ctx context.Context, id string, req *dt
 }
 
 // Delete 删除
-func (s *MissingPersonAppService) Delete(ctx context.Context, id string) error {
+func (s *MissingPersonAppService) Delete(ctx context.Context, id string, operator *entity.User) error {
+	mp, err := s.mpRepo.FindByID(ctx, id)
+	if err != nil {
+		return ErrMissingPersonNotFound
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanManageMissingPerson(ctx, operator, mp)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrMissingPersonForbidden
+		}
+	}
 	if err := s.mpRepo.SoftDelete(ctx, id); err != nil {
 		logger.Error("Failed to delete missing person", logger.Err(err))
 		return err
@@ -281,7 +317,7 @@ func (s *MissingPersonAppService) Delete(ctx context.Context, id string) error {
 }
 
 // UpdateStatus 更新状态
-func (s *MissingPersonAppService) UpdateStatus(ctx context.Context, id string, status string) error {
+func (s *MissingPersonAppService) UpdateStatus(ctx context.Context, id string, status string, operator *entity.User) error {
 	newStatus := entity.MissingStatus(status)
 	if !entity.IsValidMissingStatus(newStatus) {
 		return fmt.Errorf("无效的状态值: %s，合法值为 missing/searching/found/reunited/closed", status)
@@ -290,6 +326,15 @@ func (s *MissingPersonAppService) UpdateStatus(ctx context.Context, id string, s
 	mp, err := s.mpRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrMissingPersonNotFound
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanManageMissingPerson(ctx, operator, mp)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrMissingPersonForbidden
+		}
 	}
 
 	if !mp.CanUpdate() {
@@ -310,10 +355,19 @@ func (s *MissingPersonAppService) UpdateStatus(ctx context.Context, id string, s
 }
 
 // MarkFound 标记找到
-func (s *MissingPersonAppService) MarkFound(ctx context.Context, id string, req *dto.MarkFoundRequest) error {
+func (s *MissingPersonAppService) MarkFound(ctx context.Context, id string, req *dto.MarkFoundRequest, operator *entity.User) error {
 	mp, err := s.mpRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrMissingPersonNotFound
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanManageMissingPerson(ctx, operator, mp)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrMissingPersonForbidden
+		}
 	}
 
 	if err := mp.MarkFound(req.Location, req.Note); err != nil {
@@ -329,10 +383,19 @@ func (s *MissingPersonAppService) MarkFound(ctx context.Context, id string, req 
 }
 
 // MarkReunited 标记团聚
-func (s *MissingPersonAppService) MarkReunited(ctx context.Context, id string) error {
+func (s *MissingPersonAppService) MarkReunited(ctx context.Context, id string, operator *entity.User) error {
 	mp, err := s.mpRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrMissingPersonNotFound
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanManageMissingPerson(ctx, operator, mp)
+		if scopeErr != nil {
+			return scopeErr
+		}
+		if !decision.Allowed {
+			return ErrMissingPersonForbidden
+		}
 	}
 
 	if err := mp.MarkReunited(); err != nil {

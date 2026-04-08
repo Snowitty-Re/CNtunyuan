@@ -69,6 +69,8 @@ type DialectQuery struct {
 	Type       entity.DialectType   `json:"type"`
 	Status     entity.DialectStatus `json:"status"`
 	UploaderID string               `json:"uploader_id"`
+	OrgID      string               `json:"org_id"`
+	OrgIDs     []string             `json:"org_ids"`
 	IsFeatured *bool                `json:"is_featured,omitempty"`
 	SortBy     string               `json:"sort_by"` // play_count, like_count, created_at
 	SortOrder  string               `json:"sort_order"`

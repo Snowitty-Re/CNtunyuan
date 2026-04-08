@@ -17,7 +17,7 @@ func setupUserTest(t *testing.T) (*UserAppService, *testutil.TestDB) {
 	userRepo := repository.NewUserRepository(tdb.DB)
 	taskRepo := repository.NewTaskRepository(tdb.DB)
 	mpRepo := repository.NewMissingPersonRepository(tdb.DB)
-	service := NewUserAppService(userRepo, taskRepo, mpRepo)
+	service := NewUserAppService(userRepo, taskRepo, mpRepo, nil)
 	return service, tdb
 }
 
@@ -341,7 +341,8 @@ func TestUserAppService_canModify(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := service.canModify(tt.operator, tt.target)
+			got, err := service.canModify(testutil.Context(), tt.operator, tt.target)
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}

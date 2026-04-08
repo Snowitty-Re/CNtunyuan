@@ -102,6 +102,7 @@ type TaskQuery struct {
 	CreatorID       string              `json:"creator_id"`
 	AssigneeID      string              `json:"assignee_id"`
 	OrgID           string              `json:"org_id"`
+	OrgIDs          []string            `json:"org_ids"`
 	MissingPersonID string              `json:"missing_person_id"`
 	Province        string              `json:"province"`
 	City            string              `json:"city"`

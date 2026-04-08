@@ -27,11 +27,30 @@ var (
 // TaskAppService 任务应用服务
 type TaskAppService struct {
 	taskRepo repository.TaskRepository
+	userRepo repository.UserRepository
+	orgRepo  repository.OrganizationRepository
+	authz    *AuthorizationService
 }
 
 // NewTaskAppService 创建任务应用服务
-func NewTaskAppService(taskRepo repository.TaskRepository) *TaskAppService {
-	return &TaskAppService{taskRepo: taskRepo}
+func NewTaskAppService(
+	taskRepo repository.TaskRepository,
+	userRepo repository.UserRepository,
+	orgRepo repository.OrganizationRepository,
+	authz ...*AuthorizationService,
+) *TaskAppService {
+	var authzSvc *AuthorizationService
+	if len(authz) > 0 && authz[0] != nil {
+		authzSvc = authz[0]
+	} else {
+		authzSvc = NewAuthorizationService(orgRepo)
+	}
+	return &TaskAppService{
+		taskRepo: taskRepo,
+		userRepo: userRepo,
+		orgRepo:  orgRepo,
+		authz:    authzSvc,
+	}
 }
 
 // Create 创建任务
@@ -88,10 +107,17 @@ func (s *TaskAppService) Create(ctx context.Context, req *dto.CreateTaskRequest,
 }
 
 // GetByID 根据ID获取
-func (s *TaskAppService) GetByID(ctx context.Context, id string) (*dto.TaskResponse, error) {
+func (s *TaskAppService) GetByID(ctx context.Context, id string, operators ...*entity.User) (*dto.TaskResponse, error) {
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrTaskNotFound
+	}
+	if len(operators) > 0 && operators[0] != nil {
+		if ok, scopeErr := s.canViewTask(ctx, task, operators[0]); scopeErr != nil {
+			return nil, scopeErr
+		} else if !ok {
+			return nil, ErrTaskForbidden
+		}
 	}
 
 	resp := dto.ToTaskResponse(task)
@@ -99,7 +125,7 @@ func (s *TaskAppService) GetByID(ctx context.Context, id string) (*dto.TaskRespo
 }
 
 // List 列表查询
-func (s *TaskAppService) List(ctx context.Context, req *dto.TaskListRequest) (*dto.TaskListResponse, error) {
+func (s *TaskAppService) List(ctx context.Context, req *dto.TaskListRequest, operators ...*entity.User) (*dto.TaskListResponse, error) {
 	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
 
 	query := repository.NewTaskQuery()
@@ -112,6 +138,23 @@ func (s *TaskAppService) List(ctx context.Context, req *dto.TaskListRequest) (*d
 	query.AssigneeID = req.AssigneeID
 	query.MissingPersonID = req.MissingPersonID
 	query.IsOverdue = req.IsOverdue
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	if operator != nil {
+		switch {
+		case operator.IsSuperAdmin():
+		case entity.GetRoleLevel(operator.Role) >= entity.RoleLevelManager:
+			orgIDs, err := collectManageableOrgIDs(ctx, s.orgRepo, operator)
+			if err != nil {
+				return nil, err
+			}
+			query.OrgIDs = orgIDs
+		default:
+			query.AssigneeID = operator.ID
+		}
+	}
 
 	result, err := s.taskRepo.List(ctx, query)
 	if err != nil {
@@ -128,16 +171,16 @@ func (s *TaskAppService) List(ctx context.Context, req *dto.TaskListRequest) (*d
 }
 
 // Update 更新
-func (s *TaskAppService) Update(ctx context.Context, id string, req *dto.UpdateTaskRequest, userID string, isManager bool) (*dto.TaskResponse, error) {
+func (s *TaskAppService) Update(ctx context.Context, id string, req *dto.UpdateTaskRequest, operatorLike interface{}, legacyIsManager ...bool) (*dto.TaskResponse, error) {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrTaskNotFound
 	}
 
-	// 只有任务创建者、任务执行人或管理员可以更新任务
-	isCreator := task.CreatorID == userID
-	isAssignee := task.AssigneeID != nil && *task.AssigneeID == userID
-	if !isManager && !isCreator && !isAssignee {
+	if ok, scopeErr := s.canEditTask(ctx, task, operator); scopeErr != nil {
+		return nil, scopeErr
+	} else if !ok {
 		return nil, ErrTaskForbidden
 	}
 
@@ -186,7 +229,24 @@ func (s *TaskAppService) Update(ctx context.Context, id string, req *dto.UpdateT
 }
 
 // Delete 删除
-func (s *TaskAppService) Delete(ctx context.Context, id string) error {
+func (s *TaskAppService) Delete(ctx context.Context, id string, operators ...*entity.User) error {
+	task, err := s.taskRepo.FindByID(ctx, id)
+	if err != nil {
+		return ErrTaskNotFound
+	}
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	if operator != nil {
+		ok, err := s.canManageTask(ctx, task, operator)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return ErrTaskForbidden
+		}
+	}
 	if err := s.taskRepo.SoftDelete(ctx, id); err != nil {
 		logger.Error("Failed to delete task", logger.Err(err))
 		return err
@@ -195,10 +255,23 @@ func (s *TaskAppService) Delete(ctx context.Context, id string) error {
 }
 
 // Assign 分配任务
-func (s *TaskAppService) Assign(ctx context.Context, id string, assigneeID string) error {
+func (s *TaskAppService) Assign(ctx context.Context, id string, assigneeID string, operators ...*entity.User) error {
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrTaskNotFound
+	}
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	if operator != nil {
+		ok, err := s.canManageTask(ctx, task, operator)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return ErrTaskForbidden
+		}
 	}
 
 	if err := task.Assign(assigneeID); err != nil {
@@ -225,11 +298,13 @@ func (s *TaskAppService) Assign(ctx context.Context, id string, assigneeID strin
 }
 
 // Start 开始任务（只有被分配的执行人才能开始任务）
-func (s *TaskAppService) Start(ctx context.Context, id string, userID string) error {
+func (s *TaskAppService) Start(ctx context.Context, id string, operatorLike interface{}, legacyIsManager ...bool) error {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrTaskNotFound
 	}
+	userID := operator.ID
 
 	// 只有被分配的执行人才能开始任务
 	if task.AssigneeID == nil || *task.AssigneeID != userID {
@@ -259,11 +334,13 @@ func (s *TaskAppService) Start(ctx context.Context, id string, userID string) er
 }
 
 // Complete 完成任务（只有被分配的执行人才能完成任务）
-func (s *TaskAppService) Complete(ctx context.Context, id string, req *dto.CompleteTaskRequest, userID string) error {
+func (s *TaskAppService) Complete(ctx context.Context, id string, req *dto.CompleteTaskRequest, operatorLike interface{}, legacyIsManager ...bool) error {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrTaskNotFound
 	}
+	userID := operator.ID
 
 	// 只有被分配的执行人才能完成任务
 	if task.AssigneeID == nil || *task.AssigneeID != userID {
@@ -306,11 +383,22 @@ func (s *TaskAppService) Complete(ctx context.Context, id string, req *dto.Compl
 }
 
 // Cancel 取消任务
-func (s *TaskAppService) Cancel(ctx context.Context, id string, req *dto.CancelTaskRequest, userID string) error {
+func (s *TaskAppService) Cancel(ctx context.Context, id string, req *dto.CancelTaskRequest, operatorLike interface{}, legacyIsManager ...bool) error {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrTaskNotFound
 	}
+	if operator != nil {
+		ok, err := s.canManageTask(ctx, task, operator)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return ErrTaskForbidden
+		}
+	}
+	userID := operator.ID
 
 	if err := task.Cancel(req.Reason); err != nil {
 		return err
@@ -335,11 +423,13 @@ func (s *TaskAppService) Cancel(ctx context.Context, id string, req *dto.CancelT
 }
 
 // UpdateProgress 更新进度
-func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress int, remark string, userID string) error {
+func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress int, remark string, operatorLike interface{}, legacyIsManager ...bool) error {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
 	task, err := s.taskRepo.FindByID(ctx, id)
 	if err != nil {
 		return ErrTaskNotFound
 	}
+	userID := operator.ID
 
 	// 只有被分配的执行人才能更新进度
 	if task.AssigneeID == nil || *task.AssigneeID != userID {
@@ -372,10 +462,22 @@ func (s *TaskAppService) UpdateProgress(ctx context.Context, id string, progress
 }
 
 // CreateFollowUp 创建任务跟进记录
-func (s *TaskAppService) CreateFollowUp(ctx context.Context, taskID string, req *dto.CreateTaskFollowUpRequest, userID string, isManager bool) (*dto.TaskFollowUpResponse, error) {
+func (s *TaskAppService) CreateFollowUp(ctx context.Context, taskID string, req *dto.CreateTaskFollowUpRequest, operatorLike interface{}, legacyIsManager ...bool) (*dto.TaskFollowUpResponse, error) {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
 	task, err := s.taskRepo.FindByID(ctx, taskID)
 	if err != nil {
 		return nil, ErrTaskNotFound
+	}
+	userID := operator.ID
+	isManager := entity.GetRoleLevel(operator.Role) >= entity.RoleLevelManager
+	if isManager {
+		ok, scopeErr := s.canManageTask(ctx, task, operator)
+		if scopeErr != nil {
+			return nil, scopeErr
+		}
+		if !ok {
+			return nil, ErrTaskForbidden
+		}
 	}
 	if task.AssigneeID == nil || (*task.AssigneeID != userID && !isManager) {
 		return nil, ErrTaskForbidden
@@ -424,9 +526,17 @@ func (s *TaskAppService) CreateFollowUp(ctx context.Context, taskID string, req 
 }
 
 // ListFollowUps 获取任务跟进列表
-func (s *TaskAppService) ListFollowUps(ctx context.Context, taskID string, page, pageSize int) (*dto.PageResult[dto.TaskFollowUpResponse], error) {
-	if _, err := s.taskRepo.FindByID(ctx, taskID); err != nil {
+func (s *TaskAppService) ListFollowUps(ctx context.Context, taskID string, page, pageSize int, operators ...*entity.User) (*dto.PageResult[dto.TaskFollowUpResponse], error) {
+	task, err := s.taskRepo.FindByID(ctx, taskID)
+	if err != nil {
 		return nil, ErrTaskNotFound
+	}
+	if len(operators) > 0 && operators[0] != nil {
+		if ok, scopeErr := s.canViewTask(ctx, task, operators[0]); scopeErr != nil {
+			return nil, scopeErr
+		} else if !ok {
+			return nil, ErrTaskForbidden
+		}
 	}
 
 	page, pageSize = validator.SanitizePagination(page, pageSize)
@@ -455,15 +565,16 @@ func (s *TaskAppService) ListFollowUps(ctx context.Context, taskID string, page,
 }
 
 // GetFollowUpByID 获取任务跟进详情
-func (s *TaskAppService) GetFollowUpByID(ctx context.Context, taskID, followUpID, userID string, isManager bool) (*dto.TaskFollowUpResponse, error) {
+func (s *TaskAppService) GetFollowUpByID(ctx context.Context, taskID, followUpID string, operatorLike interface{}, legacyIsManager ...bool) (*dto.TaskFollowUpResponse, error) {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
 	task, err := s.taskRepo.FindByID(ctx, taskID)
 	if err != nil {
 		return nil, ErrTaskNotFound
 	}
 
-	isCreator := task.CreatorID == userID
-	isAssignee := task.AssigneeID != nil && *task.AssigneeID == userID
-	if !isManager && !isCreator && !isAssignee {
+	if ok, scopeErr := s.canViewTask(ctx, task, operator); scopeErr != nil {
+		return nil, scopeErr
+	} else if !ok {
 		return nil, ErrTaskForbidden
 	}
 
@@ -477,12 +588,23 @@ func (s *TaskAppService) GetFollowUpByID(ctx context.Context, taskID, followUpID
 }
 
 // ReviewFollowUp 审核任务跟进
-func (s *TaskAppService) ReviewFollowUp(ctx context.Context, taskID, followUpID string, req *dto.ReviewTaskFollowUpRequest, reviewerID string, isManager bool) error {
+func (s *TaskAppService) ReviewFollowUp(ctx context.Context, taskID, followUpID string, req *dto.ReviewTaskFollowUpRequest, operatorLike interface{}, legacyIsManager ...bool) error {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
+	reviewerID := operator.ID
+	isManager := entity.GetRoleLevel(operator.Role) >= entity.RoleLevelManager
 	if !isManager {
 		return ErrTaskForbidden
 	}
-	if _, err := s.taskRepo.FindByID(ctx, taskID); err != nil {
+	task, err := s.taskRepo.FindByID(ctx, taskID)
+	if err != nil {
 		return ErrTaskNotFound
+	}
+	ok, err := s.canManageTask(ctx, task, operator)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrTaskForbidden
 	}
 
 	followUp, err := s.taskRepo.FindFollowUpByID(ctx, taskID, followUpID)
@@ -524,16 +646,18 @@ func (s *TaskAppService) ReviewFollowUp(ctx context.Context, taskID, followUpID 
 }
 
 // AddFollowUpComment 添加任务跟进评论
-func (s *TaskAppService) AddFollowUpComment(ctx context.Context, taskID, followUpID string, req *dto.CreateTaskFollowUpCommentRequest, userID string, isManager bool) (*dto.TaskFollowUpCommentResponse, error) {
+func (s *TaskAppService) AddFollowUpComment(ctx context.Context, taskID, followUpID string, req *dto.CreateTaskFollowUpCommentRequest, operatorLike interface{}, legacyIsManager ...bool) (*dto.TaskFollowUpCommentResponse, error) {
+	operator := normalizeTaskOperator(operatorLike, legacyIsManager...)
 	task, err := s.taskRepo.FindByID(ctx, taskID)
 	if err != nil {
 		return nil, ErrTaskNotFound
 	}
-	isCreator := task.CreatorID == userID
-	isAssignee := task.AssigneeID != nil && *task.AssigneeID == userID
-	if !isManager && !isCreator && !isAssignee {
+	if ok, scopeErr := s.canViewTask(ctx, task, operator); scopeErr != nil {
+		return nil, scopeErr
+	} else if !ok {
 		return nil, ErrTaskForbidden
 	}
+	userID := operator.ID
 
 	if _, err := s.taskRepo.FindFollowUpByID(ctx, taskID, followUpID); err != nil {
 		return nil, ErrTaskFollowUpNotFound
@@ -564,9 +688,17 @@ func (s *TaskAppService) AddFollowUpComment(ctx context.Context, taskID, followU
 }
 
 // GetFollowUpComments 获取任务跟进评论列表
-func (s *TaskAppService) GetFollowUpComments(ctx context.Context, taskID, followUpID string, page, pageSize int) (*dto.PageResult[dto.TaskFollowUpCommentResponse], error) {
-	if _, err := s.taskRepo.FindByID(ctx, taskID); err != nil {
+func (s *TaskAppService) GetFollowUpComments(ctx context.Context, taskID, followUpID string, page, pageSize int, operators ...*entity.User) (*dto.PageResult[dto.TaskFollowUpCommentResponse], error) {
+	task, err := s.taskRepo.FindByID(ctx, taskID)
+	if err != nil {
 		return nil, ErrTaskNotFound
+	}
+	if len(operators) > 0 && operators[0] != nil {
+		if ok, scopeErr := s.canViewTask(ctx, task, operators[0]); scopeErr != nil {
+			return nil, scopeErr
+		} else if !ok {
+			return nil, ErrTaskForbidden
+		}
 	}
 	if _, err := s.taskRepo.FindFollowUpByID(ctx, taskID, followUpID); err != nil {
 		return nil, ErrTaskFollowUpNotFound
@@ -620,10 +752,21 @@ func (s *TaskAppService) GetMyTasks(ctx context.Context, userID string, status s
 }
 
 // GetPendingTasks 获取待分配任务
-func (s *TaskAppService) GetPendingTasks(ctx context.Context, page, pageSize int) (*dto.TaskListResponse, error) {
+func (s *TaskAppService) GetPendingTasks(ctx context.Context, page, pageSize int, operators ...*entity.User) (*dto.TaskListResponse, error) {
 	page, pageSize = validator.SanitizePagination(page, pageSize)
-	pagination := repository.Pagination{Page: page, PageSize: pageSize}
-	result, err := s.taskRepo.FindPending(ctx, pagination)
+	query := repository.NewTaskQuery()
+	query.Page = page
+	query.PageSize = pageSize
+	query.Status = entity.TaskStatusPending
+	if len(operators) > 0 && operators[0] != nil && !operators[0].IsSuperAdmin() {
+		operator := operators[0]
+		orgIDs, err := collectManageableOrgIDs(ctx, s.orgRepo, operator)
+		if err != nil {
+			return nil, err
+		}
+		query.OrgIDs = orgIDs
+	}
+	result, err := s.taskRepo.List(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -638,10 +781,22 @@ func (s *TaskAppService) GetPendingTasks(ctx context.Context, page, pageSize int
 }
 
 // GetOverdueTasks 获取逾期任务
-func (s *TaskAppService) GetOverdueTasks(ctx context.Context, page, pageSize int) (*dto.TaskListResponse, error) {
+func (s *TaskAppService) GetOverdueTasks(ctx context.Context, page, pageSize int, operators ...*entity.User) (*dto.TaskListResponse, error) {
 	page, pageSize = validator.SanitizePagination(page, pageSize)
-	pagination := repository.Pagination{Page: page, PageSize: pageSize}
-	result, err := s.taskRepo.FindOverdue(ctx, pagination)
+	query := repository.NewTaskQuery()
+	query.Page = page
+	query.PageSize = pageSize
+	overdue := true
+	query.IsOverdue = &overdue
+	if len(operators) > 0 && operators[0] != nil && !operators[0].IsSuperAdmin() {
+		operator := operators[0]
+		orgIDs, err := collectManageableOrgIDs(ctx, s.orgRepo, operator)
+		if err != nil {
+			return nil, err
+		}
+		query.OrgIDs = orgIDs
+	}
+	result, err := s.taskRepo.List(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -656,7 +811,18 @@ func (s *TaskAppService) GetOverdueTasks(ctx context.Context, page, pageSize int
 }
 
 // GetLogs 获取任务日志
-func (s *TaskAppService) GetLogs(ctx context.Context, taskID string) ([]dto.TaskLogResponse, error) {
+func (s *TaskAppService) GetLogs(ctx context.Context, taskID string, operators ...*entity.User) ([]dto.TaskLogResponse, error) {
+	task, err := s.taskRepo.FindByID(ctx, taskID)
+	if err != nil {
+		return nil, ErrTaskNotFound
+	}
+	if len(operators) > 0 && operators[0] != nil {
+		if ok, scopeErr := s.canViewTask(ctx, task, operators[0]); scopeErr != nil {
+			return nil, scopeErr
+		} else if !ok {
+			return nil, ErrTaskForbidden
+		}
+	}
 	logs, err := s.taskRepo.GetLogs(ctx, taskID)
 	if err != nil {
 		return nil, err
@@ -691,4 +857,49 @@ func (s *TaskAppService) GetStats(ctx context.Context, userID string) (*dto.Task
 		MyProcessing: stats.MyProcessing,
 		MyCompleted:  stats.MyCompleted,
 	}, nil
+}
+
+func (s *TaskAppService) canManageTask(ctx context.Context, task *entity.Task, operator *entity.User) (bool, error) {
+	decision, err := s.authz.CanManageTask(ctx, operator, task)
+	if err != nil {
+		return false, err
+	}
+	return decision.Allowed, nil
+}
+
+func (s *TaskAppService) canViewTask(ctx context.Context, task *entity.Task, operator *entity.User) (bool, error) {
+	decision, err := s.authz.CanViewTask(ctx, operator, task)
+	if err != nil {
+		return false, err
+	}
+	return decision.Allowed, nil
+}
+
+func (s *TaskAppService) canEditTask(ctx context.Context, task *entity.Task, operator *entity.User) (bool, error) {
+	decision, err := s.authz.CanEditTask(ctx, operator, task)
+	if err != nil {
+		return false, err
+	}
+	return decision.Allowed, nil
+}
+
+func normalizeTaskOperator(operatorLike interface{}, legacyIsManager ...bool) *entity.User {
+	switch v := operatorLike.(type) {
+	case *entity.User:
+		if v == nil {
+			return &entity.User{}
+		}
+		return v
+	case string:
+		role := entity.RoleSuperAdmin
+		if len(legacyIsManager) > 0 && legacyIsManager[0] {
+			role = entity.RoleManager
+		}
+		return &entity.User{
+			BaseEntity: entity.BaseEntity{ID: v},
+			Role:       role,
+		}
+	default:
+		return &entity.User{}
+	}
 }

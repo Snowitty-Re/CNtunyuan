@@ -206,6 +206,9 @@ func (r *UserRepositoryImpl) List(ctx context.Context, query *repository.UserQue
 	if query.OrgID != "" {
 		db = db.Where("org_id = ?", query.OrgID)
 	}
+	if len(query.OrgIDs) > 0 {
+		db = db.Where("org_id IN ?", query.OrgIDs)
+	}
 
 	// 时间范围
 	if query.StartTime != "" {

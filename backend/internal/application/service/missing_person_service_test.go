@@ -16,7 +16,7 @@ import (
 func setupMissingPersonTest(t *testing.T) (*MissingPersonAppService, *testutil.TestDB) {
 	tdb := testutil.NewTestDB(t)
 	mpRepo := repository.NewMissingPersonRepository(tdb.DB)
-	service := NewMissingPersonAppService(mpRepo)
+	service := NewMissingPersonAppService(mpRepo, nil)
 	return service, tdb
 }
 
@@ -391,9 +391,9 @@ func TestMissingPersonAppService_List(t *testing.T) {
 		{
 			name: "filter by keyword",
 			req: &dto.MissingPersonListRequest{
-				Page:    1,
+				Page:     1,
 				PageSize: 10,
-				Keyword: "张三",
+				Keyword:  "张三",
 			},
 			expectedLen:  1,
 			expectedName: "张三",
@@ -544,7 +544,7 @@ func TestMissingPersonAppService_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.Update(testutil.Context(), tt.id, tt.req, reporter.ID, false)
+			resp, err := service.Update(testutil.Context(), tt.id, tt.req, reporter)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.ErrorIs(t, err, ErrMissingPersonNotFound)
@@ -643,7 +643,10 @@ func TestMissingPersonAppService_UpdateStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.UpdateStatus(testutil.Context(), tt.id, tt.status)
+			err := service.UpdateStatus(testutil.Context(), tt.id, tt.status, &entity.User{
+				Role:  entity.RoleManager,
+				OrgID: org.ID,
+			})
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -703,7 +706,10 @@ func TestMissingPersonAppService_Delete(t *testing.T) {
 	assert.Equal(t, int64(1), count)
 
 	// 执行删除
-	err := service.Delete(testutil.Context(), mp.ID)
+	err := service.Delete(testutil.Context(), mp.ID, &entity.User{
+		Role:  entity.RoleManager,
+		OrgID: org.ID,
+	})
 	require.NoError(t, err)
 
 	// 验证记录已被软删除（deleted_at 不为空）
@@ -782,7 +788,10 @@ func TestMissingPersonAppService_MarkFound(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.MarkFound(testutil.Context(), tt.id, tt.req)
+			err := service.MarkFound(testutil.Context(), tt.id, tt.req, &entity.User{
+				Role:  entity.RoleManager,
+				OrgID: org.ID,
+			})
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -863,7 +872,10 @@ func TestMissingPersonAppService_MarkReunited(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.MarkReunited(testutil.Context(), tt.id)
+			err := service.MarkReunited(testutil.Context(), tt.id, &entity.User{
+				Role:  entity.RoleManager,
+				OrgID: org.ID,
+			})
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

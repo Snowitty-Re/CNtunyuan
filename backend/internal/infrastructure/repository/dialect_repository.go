@@ -112,6 +112,12 @@ func (r *DialectRepositoryImpl) List(ctx context.Context, query *repository.Dial
 	if query.UploaderID != "" {
 		db = db.Where("uploader_id = ?", query.UploaderID)
 	}
+	if query.OrgID != "" {
+		db = db.Where("org_id = ?", query.OrgID)
+	}
+	if len(query.OrgIDs) > 0 {
+		db = db.Where("org_id IN ?", query.OrgIDs)
+	}
 
 	// 精选筛选
 	if query.IsFeatured != nil {

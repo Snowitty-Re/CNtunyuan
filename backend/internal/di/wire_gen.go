@@ -123,6 +123,10 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	taskRepo := infraRepo.NewTaskRepository(db)
 	fileRepo := infraRepo.NewFileRepository(db)
 	auditRepo := infraRepo.NewAuditLogRepository(db)
+	authzPolicyRepo := infraRepo.NewAuthzPolicyRepository(db)
+	notificationRepo := infraRepo.NewSystemNotificationRepository(db)
+	authzService := service.NewAuthorizationService(orgRepo, authzPolicyRepo)
+	authzService.SetNotificationRepository(notificationRepo)
 
 	// 创建领域服务
 	authService := domainService.NewAuthService(userRepo, tokenService, redisCache, wechatClient)
@@ -133,11 +137,11 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	authService.SetSecurityConfig(&cfg.Security)
 
 	// 创建应用服务
-	userService := service.NewUserAppService(userRepo, taskRepo, mpRepo)
+	userService := service.NewUserAppService(userRepo, taskRepo, mpRepo, orgRepo, authzService)
 	orgService := service.NewOrganizationAppService(orgRepo)
-	mpService := service.NewMissingPersonAppService(mpRepo)
-	dialectService := service.NewDialectAppService(dialectRepo, userRepo, fileRepo, storageService)
-	taskService := service.NewTaskAppService(taskRepo)
+	mpService := service.NewMissingPersonAppService(mpRepo, orgRepo, authzService)
+	dialectService := service.NewDialectAppService(dialectRepo, userRepo, orgRepo, fileRepo, storageService, authzService)
+	taskService := service.NewTaskAppService(taskRepo, userRepo, orgRepo, authzService)
 	fileService := service.NewFileAppService(
 		fileRepo,
 		storageService,
@@ -172,7 +176,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	taskHandler := handler.NewTaskHandler(taskService)
 	uploadHandler := handler.NewUploadHandler(fileService)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
-	systemConfigHandler := handler.NewSystemConfigHandler()
+	systemConfigHandler := handler.NewSystemConfigHandlerWithAuthz(authzService)
 
 	// 创建路由
 	r := router.NewRouter(
@@ -194,8 +198,9 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	r.Setup()
 
 	// 启动定时任务调度器
-	scheduler := task.NewScheduler(taskRepo, mpRepo, userRepo, auditRepo)
+	scheduler := task.NewScheduler(taskRepo, mpRepo, userRepo, auditRepo, authzService)
 	scheduler.SetDatabaseConfig(&cfg.Database, &cfg.Backup)
+	scheduler.SetSystemConfig(&cfg.System)
 	if err := scheduler.Start(); err != nil {
 		logger.Error("Failed to start task scheduler", logger.Err(err))
 	}

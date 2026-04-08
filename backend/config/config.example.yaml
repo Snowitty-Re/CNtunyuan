@@ -62,14 +62,14 @@ storage:
   cos_region: ""
 
 sms:
-  provider: "aliyun"    # aliyun/tencent
-  sign_name: "助力团圆"
-  dev_mode: false       # 开发模式（true时不实际发送短信）
+  provider: "tencent"   # aliyun/tencent
+  sign_name: ""         # 短信签名（控制台已审核）
+  dev_mode: false       # true=不实际发送，仅开发调试
   code_expiry: 300      # 验证码有效期（秒）
-  # 短信模板ID/Code（腾讯云建议填数字模板ID；阿里云填模板Code）
-  template_verify_code: "verify_code"      # 注册验证码（参数：{1}=code）
-  template_reset_password: ""              # 重置密码验证码（参数：{1}=code）
-  template_change_phone: ""                # 修改手机号验证码（参数：{1}=code）
+  # 模板ID/Code：腾讯云填数字模板ID；阿里云填模板Code
+  template_verify_code: ""      # 注册验证码（参数：{1}=code）
+  template_reset_password: ""   # 重置密码验证码（参数：{1}=code）
+  template_change_phone: ""     # 修改手机号验证码（参数：{1}=code）
   aliyun_access_key_id: ""
   aliyun_access_secret: ""
   tencent_secret_id: ""
@@ -116,6 +116,9 @@ system:
   enable_register: true
   enable_wechat_login: true
   enable_sms_login: false
+  authz_policy_change_requires_approval: false
+  authz_policy_change_approval_code: ""
+  authz_policy_request_expire_hours: 72  # 审批申请超时自动拒绝（小时）
   admin_ips: ""
   rate_limit: 100
 

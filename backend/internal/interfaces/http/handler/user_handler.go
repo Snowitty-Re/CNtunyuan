@@ -23,6 +23,14 @@ func NewUserHandler(userService *service.UserAppService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
 
+func userOperator(c *gin.Context) *entity.User {
+	return &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+}
+
 // RegisterRoutes register routes
 func (h *UserHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *middleware.AuthMiddleware) {
 	users := router.Group("/users")
@@ -69,7 +77,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.Create(c.Request.Context(), &req)
+	user, err := h.userService.Create(c.Request.Context(), &req, userOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrPhoneExists:
@@ -113,10 +121,14 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.GetByID(c.Request.Context(), id)
+	user, err := h.userService.GetByID(c.Request.Context(), id, userOperator(c))
 	if err != nil {
 		if err == service.ErrUserNotFound {
 			response.NotFound(c, "user not found")
+			return
+		}
+		if err == service.ErrCannotModify {
+			response.Forbidden(c, "permission denied")
 			return
 		}
 		response.InternalServerError(c, "get user failed")
@@ -150,7 +162,7 @@ func (h *UserHandler) List(c *gin.Context) {
 		return
 	}
 
-	users, err := h.userService.List(c.Request.Context(), &req)
+	users, err := h.userService.List(c.Request.Context(), &req, userOperator(c))
 	if err != nil {
 		response.InternalServerError(c, "get user list failed")
 		return
@@ -188,17 +200,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 		return
 	}
 
-	operatorID := middleware.GetUserID(c)
-	operator, err := h.userService.GetByID(c.Request.Context(), operatorID)
-	if err != nil {
-		response.Unauthorized(c, "invalid user")
-		return
-	}
-
-	user, err := h.userService.Update(c.Request.Context(), id, &req, &entity.User{
-		BaseEntity: entity.BaseEntity{ID: operator.ID},
-		Role:       entity.Role(operator.Role),
-	})
+	user, err := h.userService.Update(c.Request.Context(), id, &req, userOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrUserNotFound:
@@ -247,17 +249,7 @@ func (h *UserHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	operatorID := middleware.GetUserID(c)
-	operator, err := h.userService.GetByID(c.Request.Context(), operatorID)
-	if err != nil {
-		response.Unauthorized(c, "invalid user")
-		return
-	}
-
-	if err := h.userService.Delete(c.Request.Context(), id, &entity.User{
-		BaseEntity: entity.BaseEntity{ID: operator.ID},
-		Role:       entity.Role(operator.Role),
-	}); err != nil {
+	if err := h.userService.Delete(c.Request.Context(), id, userOperator(c)); err != nil {
 		switch err {
 		case service.ErrUserNotFound:
 			response.NotFound(c, "user not found")
@@ -304,17 +296,7 @@ func (h *UserHandler) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	operatorID := middleware.GetUserID(c)
-	operator, err := h.userService.GetByID(c.Request.Context(), operatorID)
-	if err != nil {
-		response.Unauthorized(c, "invalid user")
-		return
-	}
-
-	if err := h.userService.UpdateStatus(c.Request.Context(), id, req.Status, &entity.User{
-		BaseEntity: entity.BaseEntity{ID: operator.ID},
-		Role:       entity.Role(operator.Role),
-	}); err != nil {
+	if err := h.userService.UpdateStatus(c.Request.Context(), id, req.Status, userOperator(c)); err != nil {
 		switch err {
 		case service.ErrUserNotFound:
 			response.NotFound(c, "user not found")
@@ -360,17 +342,7 @@ func (h *UserHandler) UpdateRole(c *gin.Context) {
 		return
 	}
 
-	operatorID := middleware.GetUserID(c)
-	operator, err := h.userService.GetByID(c.Request.Context(), operatorID)
-	if err != nil {
-		response.Unauthorized(c, "invalid user")
-		return
-	}
-
-	if err := h.userService.UpdateRole(c.Request.Context(), id, req.Role, &entity.User{
-		BaseEntity: entity.BaseEntity{ID: operator.ID},
-		Role:       entity.Role(operator.Role),
-	}); err != nil {
+	if err := h.userService.UpdateRole(c.Request.Context(), id, req.Role, userOperator(c)); err != nil {
 		switch err {
 		case service.ErrUserNotFound:
 			response.NotFound(c, "user not found")

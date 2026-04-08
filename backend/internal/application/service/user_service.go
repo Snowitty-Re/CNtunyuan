@@ -28,6 +28,8 @@ type UserAppService struct {
 	userRepo repository.UserRepository
 	taskRepo repository.TaskRepository
 	mpRepo   repository.MissingPersonRepository
+	orgRepo  repository.OrganizationRepository
+	authz    *AuthorizationService
 }
 
 // NewUserAppService create user application service
@@ -35,21 +37,44 @@ func NewUserAppService(
 	userRepo repository.UserRepository,
 	taskRepo repository.TaskRepository,
 	mpRepo repository.MissingPersonRepository,
+	orgRepo repository.OrganizationRepository,
+	authz ...*AuthorizationService,
 ) *UserAppService {
+	var authzSvc *AuthorizationService
+	if len(authz) > 0 && authz[0] != nil {
+		authzSvc = authz[0]
+	} else {
+		authzSvc = NewAuthorizationService(orgRepo)
+	}
 	return &UserAppService{
 		userRepo: userRepo,
 		taskRepo: taskRepo,
 		mpRepo:   mpRepo,
+		orgRepo:  orgRepo,
+		authz:    authzSvc,
 	}
 }
 
 // Create create user
-func (s *UserAppService) Create(ctx context.Context, req *dto.CreateUserRequest) (*dto.UserResponse, error) {
+func (s *UserAppService) Create(ctx context.Context, req *dto.CreateUserRequest, operators ...*entity.User) (*dto.UserResponse, error) {
 	req.Email = strings.TrimSpace(req.Email)
 	req.OrgID = strings.TrimSpace(req.OrgID)
 
 	if req.OrgID == "" {
 		return nil, ErrInvalidOrgID
+	}
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, err := s.authz.CanCreateUserInOrg(ctx, operator, req.OrgID)
+		if err != nil {
+			return nil, err
+		}
+		if !decision.Allowed {
+			return nil, ErrCannotModify
+		}
 	}
 
 	exists, err := s.userRepo.ExistsPhone(ctx, req.Phone)
@@ -119,7 +144,11 @@ func (s *UserAppService) Update(ctx context.Context, id string, req *dto.UpdateU
 		return nil, ErrUserNotFound
 	}
 
-	if !s.canModify(operator, user) {
+	allowed, err := s.canModify(ctx, operator, user)
+	if err != nil {
+		return nil, err
+	}
+	if !allowed {
 		return nil, ErrCannotModify
 	}
 
@@ -182,7 +211,11 @@ func (s *UserAppService) Delete(ctx context.Context, id string, operator *entity
 		return ErrUserNotFound
 	}
 
-	if !s.canModify(operator, user) {
+	allowed, err := s.canModify(ctx, operator, user)
+	if err != nil {
+		return err
+	}
+	if !allowed {
 		return ErrCannotModify
 	}
 
@@ -196,10 +229,23 @@ func (s *UserAppService) Delete(ctx context.Context, id string, operator *entity
 }
 
 // GetByID get user by ID
-func (s *UserAppService) GetByID(ctx context.Context, id string) (*dto.UserResponse, error) {
+func (s *UserAppService) GetByID(ctx context.Context, id string, operators ...*entity.User) (*dto.UserResponse, error) {
 	user, err := s.userRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrUserNotFound
+	}
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	if operator != nil && !operator.IsSuperAdmin() {
+		decision, scopeErr := s.authz.CanViewUser(ctx, operator, user)
+		if scopeErr != nil {
+			return nil, scopeErr
+		}
+		if !decision.Allowed {
+			return nil, ErrCannotModify
+		}
 	}
 
 	resp := dto.ToUserResponse(user)
@@ -218,7 +264,7 @@ func (s *UserAppService) GetByPhone(ctx context.Context, phone string) (*dto.Use
 }
 
 // List user list
-func (s *UserAppService) List(ctx context.Context, req *dto.UserListRequest) (*dto.UserListResponse, error) {
+func (s *UserAppService) List(ctx context.Context, req *dto.UserListRequest, operator *entity.User) (*dto.UserListResponse, error) {
 	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
 
 	query := repository.NewUserQuery()
@@ -228,6 +274,23 @@ func (s *UserAppService) List(ctx context.Context, req *dto.UserListRequest) (*d
 	query.Role = entity.Role(req.Role)
 	query.Status = entity.UserStatus(req.Status)
 	query.OrgID = req.OrgID
+	if operator != nil && !operator.IsSuperAdmin() {
+		orgIDs, err := collectManageableOrgIDs(ctx, s.orgRepo, operator)
+		if err != nil {
+			return nil, err
+		}
+		query.OrgIDs = orgIDs
+		if query.OrgID != "" {
+			decision, err := s.authz.CanManageOrg(ctx, operator, query.OrgID)
+			if err != nil {
+				return nil, err
+			}
+			if !decision.Allowed {
+				empty := dto.NewUserListResponse([]dto.UserResponse{}, 0, req.Page, req.PageSize)
+				return &empty, nil
+			}
+		}
+	}
 
 	result, err := s.userRepo.List(ctx, query)
 	if err != nil {
@@ -254,7 +317,11 @@ func (s *UserAppService) UpdateStatus(ctx context.Context, id string, status ent
 		return ErrUserNotFound
 	}
 
-	if !s.canModify(operator, user) {
+	allowed, err := s.canModify(ctx, operator, user)
+	if err != nil {
+		return err
+	}
+	if !allowed {
 		return ErrCannotModify
 	}
 
@@ -280,7 +347,11 @@ func (s *UserAppService) UpdateRole(ctx context.Context, id string, role entity.
 		return ErrUserNotFound
 	}
 
-	if !s.canModify(operator, user) {
+	allowed, err := s.canModify(ctx, operator, user)
+	if err != nil {
+		return err
+	}
+	if !allowed {
 		return ErrCannotModify
 	}
 
@@ -418,20 +489,12 @@ func (s *UserAppService) GetStats(ctx context.Context, id string) (*dto.UserStat
 }
 
 // canModify check if can modify user
-func (s *UserAppService) canModify(operator, target *entity.User) bool {
-	if operator.IsSuperAdmin() {
-		return true
+func (s *UserAppService) canModify(ctx context.Context, operator, target *entity.User) (bool, error) {
+	decision, err := s.authz.CanModifyUser(ctx, operator, target)
+	if err != nil {
+		return false, err
 	}
-	if target.IsSuperAdmin() {
-		return false
-	}
-	if operator.IsAdmin() {
-		return true
-	}
-	if operator.Role == entity.RoleManager {
-		return target.Role == entity.RoleVolunteer
-	}
-	return operator.ID == target.ID
+	return decision.Allowed, nil
 }
 
 // isValidRole check if role is valid

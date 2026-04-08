@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	appservice "github.com/Snowitty-Re/CNtunyuan/internal/application/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
@@ -22,16 +23,18 @@ import (
 
 // Scheduler 定时任务调度器
 type Scheduler struct {
-	taskRepo   repository.TaskRepository
-	mpRepo     repository.MissingPersonRepository
-	userRepo   repository.UserRepository
-	auditRepo  repository.AuditLogRepository
-	dbConfig   *config.DatabaseConfig
-	backupCfg  *config.BackupConfig
-	ticker     *time.Ticker
-	stopChan   chan struct{}
-	isRunning  atomic.Bool
-	stopOnce   sync.Once
+	taskRepo  repository.TaskRepository
+	mpRepo    repository.MissingPersonRepository
+	userRepo  repository.UserRepository
+	auditRepo repository.AuditLogRepository
+	authzSvc  *appservice.AuthorizationService
+	dbConfig  *config.DatabaseConfig
+	backupCfg *config.BackupConfig
+	systemCfg *config.SystemConfig
+	ticker    *time.Ticker
+	stopChan  chan struct{}
+	isRunning atomic.Bool
+	stopOnce  sync.Once
 }
 
 // NewScheduler 创建定时任务调度器
@@ -40,12 +43,14 @@ func NewScheduler(
 	mpRepo repository.MissingPersonRepository,
 	userRepo repository.UserRepository,
 	auditRepo repository.AuditLogRepository,
+	authzSvc *appservice.AuthorizationService,
 ) *Scheduler {
 	return &Scheduler{
 		taskRepo:  taskRepo,
 		mpRepo:    mpRepo,
 		userRepo:  userRepo,
 		auditRepo: auditRepo,
+		authzSvc:  authzSvc,
 		stopChan:  make(chan struct{}),
 	}
 }
@@ -54,6 +59,11 @@ func NewScheduler(
 func (s *Scheduler) SetDatabaseConfig(dbCfg *config.DatabaseConfig, backupCfg *config.BackupConfig) {
 	s.dbConfig = dbCfg
 	s.backupCfg = backupCfg
+}
+
+// SetSystemConfig 设置系统配置（用于审批申请超时处理）
+func (s *Scheduler) SetSystemConfig(systemCfg *config.SystemConfig) {
+	s.systemCfg = systemCfg
 }
 
 // Start 启动定时任务
@@ -106,9 +116,37 @@ func (s *Scheduler) run() {
 				s.updateStatistics()
 			}
 
+			// 每10分钟检查一次权限策略审批申请超时
+			if time.Now().Minute()%10 == 0 {
+				s.rejectExpiredAuthzPolicyRequests()
+			}
+
 		case <-s.stopChan:
 			return
 		}
+	}
+}
+
+func (s *Scheduler) rejectExpiredAuthzPolicyRequests() {
+	if s.authzSvc == nil || s.systemCfg == nil {
+		return
+	}
+	if !s.systemCfg.AuthzPolicyChangeRequiresApproval {
+		return
+	}
+	expireHours := s.systemCfg.AuthzPolicyRequestExpireHours
+	if expireHours <= 0 {
+		return
+	}
+
+	ctx := context.Background()
+	updated, err := s.authzSvc.AutoRejectExpiredPolicyChangeRequests(ctx, expireHours, "system:auto-timeout")
+	if err != nil {
+		logger.Error("Failed to auto reject expired authz policy requests", logger.Err(err))
+		return
+	}
+	if updated > 0 {
+		logger.Info("Auto rejected expired authz policy requests", logger.Int64("count", updated))
 	}
 }
 

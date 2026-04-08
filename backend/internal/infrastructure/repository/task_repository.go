@@ -99,6 +99,9 @@ func (r *TaskRepositoryImpl) List(ctx context.Context, query *repository.TaskQue
 	if query.OrgID != "" {
 		db = db.Where("org_id = ?", query.OrgID)
 	}
+	if len(query.OrgIDs) > 0 {
+		db = db.Where("org_id IN ?", query.OrgIDs)
+	}
 
 	// 走失人员关联
 	if query.MissingPersonID != "" {

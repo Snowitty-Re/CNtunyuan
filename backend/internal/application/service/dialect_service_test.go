@@ -17,7 +17,7 @@ func setupDialectTest(t *testing.T) (*DialectAppService, *testutil.TestDB) {
 	dialectRepo := repository.NewDialectRepository(tdb.DB)
 	userRepo := repository.NewUserRepository(tdb.DB)
 	fileRepo := repository.NewFileRepository(tdb.DB)
-	service := NewDialectAppService(dialectRepo, userRepo, fileRepo, nil)
+	service := NewDialectAppService(dialectRepo, userRepo, nil, fileRepo, nil)
 	return service, tdb
 }
 
@@ -311,7 +311,10 @@ func TestDialectAppService_List(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.List(testutil.Context(), tt.req, true)
+			resp, err := service.List(testutil.Context(), tt.req, &entity.User{
+				Role:  entity.RoleManager,
+				OrgID: "test-org-id",
+			})
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedCount, len(resp.List))
 			if tt.expectedTitles != nil {
@@ -406,7 +409,7 @@ func TestDialectAppService_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.Update(testutil.Context(), tt.dialID, tt.req, user.ID, false)
+			resp, err := service.Update(testutil.Context(), tt.dialID, tt.req, user)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Equal(t, ErrDialectNotFound, err)
@@ -479,7 +482,10 @@ func TestDialectAppService_UpdateStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.UpdateStatus(testutil.Context(), tt.dialID, tt.status)
+			err := service.UpdateStatus(testutil.Context(), tt.dialID, tt.status, &entity.User{
+				Role:  entity.RoleManager,
+				OrgID: "test-org-id",
+			})
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.expectedError != nil {
@@ -724,7 +730,10 @@ func TestDialectAppService_FeatureAndUnfeature(t *testing.T) {
 	testutil.MustCreate(t, tdb.DB, dialect)
 
 	t.Run("feature dialect", func(t *testing.T) {
-		err := service.Feature(testutil.Context(), dialect.ID)
+		err := service.Feature(testutil.Context(), dialect.ID, &entity.User{
+			Role:  entity.RoleAdmin,
+			OrgID: user.OrgID,
+		})
 		require.NoError(t, err)
 
 		// 验证状态已更新
@@ -734,7 +743,10 @@ func TestDialectAppService_FeatureAndUnfeature(t *testing.T) {
 	})
 
 	t.Run("unfeature dialect", func(t *testing.T) {
-		err := service.Unfeature(testutil.Context(), dialect.ID)
+		err := service.Unfeature(testutil.Context(), dialect.ID, &entity.User{
+			Role:  entity.RoleAdmin,
+			OrgID: user.OrgID,
+		})
 		require.NoError(t, err)
 
 		// 验证状态已更新
@@ -744,7 +756,10 @@ func TestDialectAppService_FeatureAndUnfeature(t *testing.T) {
 	})
 
 	t.Run("feature non-existing dialect", func(t *testing.T) {
-		err := service.Feature(testutil.Context(), "non-existing-id")
+		err := service.Feature(testutil.Context(), "non-existing-id", &entity.User{
+			Role:  entity.RoleAdmin,
+			OrgID: user.OrgID,
+		})
 		assert.Error(t, err)
 		assert.Equal(t, ErrDialectNotFound, err)
 	})
@@ -1144,7 +1159,7 @@ func TestDialectAppService_Delete(t *testing.T) {
 	testutil.MustCreate(t, tdb.DB, dialect)
 
 	t.Run("delete dialect", func(t *testing.T) {
-		err := service.Delete(testutil.Context(), dialect.ID, user.ID, false)
+		err := service.Delete(testutil.Context(), dialect.ID, user)
 		require.NoError(t, err)
 
 		// 验证已软删除

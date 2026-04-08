@@ -22,6 +22,14 @@ func NewTaskHandler(taskService *service.TaskAppService) *TaskHandler {
 	return &TaskHandler{taskService: taskService}
 }
 
+func currentOperator(c *gin.Context) *entity.User {
+	return &entity.User{
+		BaseEntity: entity.BaseEntity{ID: middleware.GetUserID(c)},
+		Role:       middleware.GetUserRole(c),
+		OrgID:      middleware.GetOrgID(c),
+	}
+}
+
 // RegisterRoutes 注册路由
 func (h *TaskHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *middleware.AuthMiddleware) {
 	tasks := router.Group("/tasks")
@@ -105,7 +113,7 @@ func (h *TaskHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	task, err := h.taskService.GetByID(c.Request.Context(), id)
+	task, err := h.taskService.GetByID(c.Request.Context(), id, currentOperator(c))
 	if err != nil {
 		if err == service.ErrTaskNotFound {
 			response.NotFound(c, "task not found")
@@ -146,7 +154,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 		return
 	}
 
-	tasks, err := h.taskService.List(c.Request.Context(), &req)
+	tasks, err := h.taskService.List(c.Request.Context(), &req, currentOperator(c))
 	if err != nil {
 		response.InternalServerError(c, "failed to get list")
 		return
@@ -183,11 +191,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
-
-	task, err := h.taskService.Update(c.Request.Context(), id, &req, userID, isManager)
+	task, err := h.taskService.Update(c.Request.Context(), id, &req, currentOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
@@ -225,7 +229,7 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.taskService.Delete(c.Request.Context(), id); err != nil {
+	if err := h.taskService.Delete(c.Request.Context(), id, currentOperator(c)); err != nil {
 		logger.Error("Failed to delete task", logger.Err(err))
 		response.InternalServerError(c, "failed to delete")
 		return
@@ -262,7 +266,7 @@ func (h *TaskHandler) Assign(c *gin.Context) {
 		return
 	}
 
-	if err := h.taskService.Assign(c.Request.Context(), id, req.AssigneeID); err != nil {
+	if err := h.taskService.Assign(c.Request.Context(), id, req.AssigneeID, currentOperator(c)); err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
@@ -297,9 +301,7 @@ func (h *TaskHandler) Start(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-
-	if err := h.taskService.Start(c.Request.Context(), id, userID); err != nil {
+	if err := h.taskService.Start(c.Request.Context(), id, currentOperator(c)); err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
@@ -341,9 +343,7 @@ func (h *TaskHandler) Complete(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-
-	if err := h.taskService.Complete(c.Request.Context(), id, &req, userID); err != nil {
+	if err := h.taskService.Complete(c.Request.Context(), id, &req, currentOperator(c)); err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
@@ -386,9 +386,7 @@ func (h *TaskHandler) Cancel(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-
-	if err := h.taskService.Cancel(c.Request.Context(), id, &req, userID); err != nil {
+	if err := h.taskService.Cancel(c.Request.Context(), id, &req, currentOperator(c)); err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
@@ -428,9 +426,7 @@ func (h *TaskHandler) UpdateProgress(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-
-	if err := h.taskService.UpdateProgress(c.Request.Context(), id, req.Progress, req.Remark, userID); err != nil {
+	if err := h.taskService.UpdateProgress(c.Request.Context(), id, req.Progress, req.Remark, currentOperator(c)); err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
@@ -472,11 +468,7 @@ func (h *TaskHandler) CreateFollowUp(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
-
-	followUp, err := h.taskService.CreateFollowUp(c.Request.Context(), taskID, &req, userID, isManager)
+	followUp, err := h.taskService.CreateFollowUp(c.Request.Context(), taskID, &req, currentOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
@@ -518,7 +510,7 @@ func (h *TaskHandler) GetFollowUps(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	result, err := h.taskService.ListFollowUps(c.Request.Context(), taskID, page, pageSize)
+	result, err := h.taskService.ListFollowUps(c.Request.Context(), taskID, page, pageSize, currentOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
@@ -555,11 +547,7 @@ func (h *TaskHandler) GetFollowUpByID(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
-
-	followUp, err := h.taskService.GetFollowUpByID(c.Request.Context(), taskID, followUpID, userID, isManager)
+	followUp, err := h.taskService.GetFollowUpByID(c.Request.Context(), taskID, followUpID, currentOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
@@ -607,11 +595,7 @@ func (h *TaskHandler) ReviewFollowUp(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
-
-	if err := h.taskService.ReviewFollowUp(c.Request.Context(), taskID, followUpID, &req, userID, isManager); err != nil {
+	if err := h.taskService.ReviewFollowUp(c.Request.Context(), taskID, followUpID, &req, currentOperator(c)); err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
 			response.NotFound(c, "task not found")
@@ -659,11 +643,7 @@ func (h *TaskHandler) AddFollowUpComment(c *gin.Context) {
 		return
 	}
 
-	userID := middleware.GetUserID(c)
-	role := middleware.GetUserRole(c)
-	isManager := entity.GetRoleLevel(role) >= entity.RoleLevelManager
-
-	comment, err := h.taskService.AddFollowUpComment(c.Request.Context(), taskID, followUpID, &req, userID, isManager)
+	comment, err := h.taskService.AddFollowUpComment(c.Request.Context(), taskID, followUpID, &req, currentOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
@@ -708,7 +688,7 @@ func (h *TaskHandler) GetFollowUpComments(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	comments, err := h.taskService.GetFollowUpComments(c.Request.Context(), taskID, followUpID, page, pageSize)
+	comments, err := h.taskService.GetFollowUpComments(c.Request.Context(), taskID, followUpID, page, pageSize, currentOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrTaskNotFound:
@@ -768,7 +748,7 @@ func (h *TaskHandler) GetPendingTasks(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	tasks, err := h.taskService.GetPendingTasks(c.Request.Context(), page, pageSize)
+	tasks, err := h.taskService.GetPendingTasks(c.Request.Context(), page, pageSize, currentOperator(c))
 	if err != nil {
 		response.InternalServerError(c, "failed to get pending tasks")
 		return
@@ -795,7 +775,7 @@ func (h *TaskHandler) GetOverdueTasks(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	tasks, err := h.taskService.GetOverdueTasks(c.Request.Context(), page, pageSize)
+	tasks, err := h.taskService.GetOverdueTasks(c.Request.Context(), page, pageSize, currentOperator(c))
 	if err != nil {
 		response.InternalServerError(c, "failed to get overdue tasks")
 		return
@@ -824,7 +804,7 @@ func (h *TaskHandler) GetLogs(c *gin.Context) {
 		return
 	}
 
-	logs, err := h.taskService.GetLogs(c.Request.Context(), id)
+	logs, err := h.taskService.GetLogs(c.Request.Context(), id, currentOperator(c))
 	if err != nil {
 		response.InternalServerError(c, "failed to get logs")
 		return
