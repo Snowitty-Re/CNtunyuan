@@ -25,6 +25,7 @@ Page({
       { key: 'recordDialect', icon: 'mic', label: '录制方言', color: '#27AE60', requiredPermission: ACTIONS.DIALECT_MODIFY },
       { key: 'pendingAssign', icon: 'assign', label: '待分配', color: '#9B59B6', requiredPermission: ACTIONS.TASK_MANAGE },
       { key: 'dialectReview', icon: 'task', label: '方言审批', color: '#E67E22', requiredPermission: ACTIONS.DIALECT_MANAGE },
+      { key: 'dialectCardManage', icon: 'settings', label: '方言卡片', color: '#6C63FF', requiredPermission: ACTIONS.DIALECT_MANAGE },
       { key: 'userManage', icon: 'notification', label: '人员管理', color: '#16A085', requiredPermission: ACTIONS.USER_VIEW },
       { key: 'orgManage', icon: 'settings', label: '组织管理', color: '#2C7BE5', requiredPermission: ACTIONS.ORG_MANAGE }
     ],
@@ -173,6 +174,9 @@ Page({
         break
       case 'dialectReview':
         wx.navigateTo({ url: '/pages/admin/dialect-review' })
+        break
+      case 'dialectCardManage':
+        wx.navigateTo({ url: '/pages/admin/dialect-card-manage' })
         break
       case 'userManage':
         wx.navigateTo({ url: '/pages/admin/user-manage' })

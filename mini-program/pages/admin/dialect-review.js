@@ -83,10 +83,6 @@ Page({
     wx.navigateTo({ url: `/pages/dialect/detail?id=${id}` })
   },
 
-  goCardManage() {
-    wx.navigateTo({ url: '/pages/admin/dialect-card-manage' })
-  },
-
   async updateStatus(e) {
     const { id, status } = e.currentTarget.dataset
     if (!id || !status) return
