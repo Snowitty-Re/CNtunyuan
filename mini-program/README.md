@@ -153,10 +153,26 @@ mini-program/
 ### 方言录音
 - `GET /dialects` - 列表
 - `POST /dialects` - 创建
+- `POST /dialects/batch` - 按卡片模板批次提交
 - `GET /dialects/:id` - 详情
 - `POST /dialects/:id/play` - 播放记录
 - `POST /dialects/:id/like` - 点赞
 - `POST /dialects/:id/comments` - 评论
+- `GET /dialect-cards/template` - 获取卡片模板（分组+卡片）
+- `GET /dialect-cards/groups` - 卡片分组管理列表
+- `POST /dialect-cards/groups` - 创建卡片分组
+- `PUT /dialect-cards/groups/:id` - 更新卡片分组
+- `DELETE /dialect-cards/groups/:id` - 删除卡片分组
+- `GET /dialect-cards` - 卡片管理列表
+- `POST /dialect-cards` - 创建卡片（名称+图片）
+- `PUT /dialect-cards/:id` - 更新卡片
+- `DELETE /dialect-cards/:id` - 删除卡片
+
+### 方言录入新流程（卡片化）
+- 录入流程改为**先录完全部卡片**，再进入采集信息填写与提交。
+- 单词/短词卡片录音时长调整为 **2-8 秒**（原先 15-20 秒不再适用）。
+- 卡片管理支持独立入口（工作台）与分组管理。
+- 卡片创建改为**卡片名称 + 卡片图片**，图片必填。
 
 ### 任务系统
 - `GET /tasks` - 任务列表

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/dto"
@@ -920,11 +921,16 @@ func (s *DialectAppService) DeleteCardGroup(ctx context.Context, id string) erro
 
 // CreateCard 创建卡片
 func (s *DialectAppService) CreateCard(ctx context.Context, req *dto.CreateDialectCardRequest, operator *entity.User) (*dto.DialectCardResponse, error) {
-	if strings.TrimSpace(req.Content) == "" {
-		return nil, apperrors.New(apperrors.CodeInvalidParam, "卡片内容不能为空")
+	imageURL := strings.TrimSpace(req.ImageURL)
+	if imageURL == "" {
+		return nil, apperrors.New(apperrors.CodeInvalidParam, "卡片图片不能为空")
 	}
 	if _, err := s.dialectRepo.FindCardGroupByID(ctx, strings.TrimSpace(req.GroupID)); err != nil {
 		return nil, apperrors.New(apperrors.CodeInvalidParam, "卡片分组不存在")
+	}
+	content := strings.TrimSpace(req.Content)
+	if content == "" {
+		content = deriveCardContentByImageURL(imageURL)
 	}
 	required := true
 	if req.Required != nil {
@@ -932,8 +938,8 @@ func (s *DialectAppService) CreateCard(ctx context.Context, req *dto.CreateDiale
 	}
 	card := &entity.DialectCard{
 		GroupID:   strings.TrimSpace(req.GroupID),
-		Content:   strings.TrimSpace(req.Content),
-		ImageURL:  strings.TrimSpace(req.ImageURL),
+		Content:   content,
+		ImageURL:  imageURL,
 		SortOrder: req.SortOrder,
 		Required:  required,
 		Status:    normalizeCardStatus(req.Status),
@@ -944,6 +950,30 @@ func (s *DialectAppService) CreateCard(ctx context.Context, req *dto.CreateDiale
 	}
 	resp := dto.ToDialectCardResponse(card)
 	return &resp, nil
+}
+
+func deriveCardContentByImageURL(imageURL string) string {
+	raw := strings.TrimSpace(imageURL)
+	if raw == "" {
+		return "图片卡片"
+	}
+	parsed, err := url.Parse(raw)
+	if err == nil && parsed.Path != "" {
+		raw = parsed.Path
+	}
+	base := strings.TrimSpace(path.Base(raw))
+	base = strings.TrimSuffix(base, path.Ext(base))
+	base = strings.ReplaceAll(base, "_", " ")
+	base = strings.ReplaceAll(base, "-", " ")
+	base = strings.TrimSpace(base)
+	if base == "" {
+		return "图片卡片"
+	}
+	runes := []rune(base)
+	if len(runes) > 32 {
+		return string(runes[:32])
+	}
+	return base
 }
 
 // UpdateCard 更新卡片

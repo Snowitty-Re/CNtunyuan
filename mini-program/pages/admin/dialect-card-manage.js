@@ -1,4 +1,5 @@
 const dialectService = require('../../services/dialect')
+const uploadService = require('../../services/upload')
 const { showToast, showLoading, hideLoading } = require('../../utils/util')
 const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
@@ -156,13 +157,31 @@ Page({
       showToast('请先创建分组')
       return
     }
-    const content = await this.promptText('新建卡片', '请输入卡片文字，如：鸡')
-    if (!content) return
-    showLoading('创建中...')
+    const name = await this.promptText('新建卡片', '请输入卡片名称（如：鸡）')
+    if (!name) {
+      showToast('请先填写卡片名称')
+      return
+    }
+    const tempPath = await this.chooseImage()
+    if (!tempPath) {
+      showToast('请上传卡片图片')
+      return
+    }
+    showLoading('上传中...')
     try {
+      const uploadRes = await uploadService.upload(tempPath, {
+        type: 'image',
+        entity_type: 'dialect_card'
+      })
+      const imageURL = uploadRes.url || (uploadRes.data && uploadRes.data.url) || ''
+      if (!imageURL) {
+        throw new Error('上传失败')
+      }
+
       await dialectService.createCard({
         group_id: this.data.activeGroupId,
-        content,
+        content: name,
+        image_url: imageURL,
         status: 'active',
         required: true
       })
@@ -179,18 +198,78 @@ Page({
     const index = Number(e.currentTarget.dataset.index)
     const card = this.data.cards[index]
     if (!card || !card.id) return
-    const content = await this.promptText('编辑卡片', '请输入卡片文字', card.content || '')
-    if (!content) return
-    showLoading('保存中...')
+    wx.showActionSheet({
+      itemList: ['替换图片', '修改名称'],
+      success: async ({ tapIndex }) => {
+        if (tapIndex === 0) {
+          await this.replaceCardImage(card)
+          return
+        }
+        const content = await this.promptText('编辑卡片名称', '请输入卡片名称', card.content || '')
+        if (!content) return
+        showLoading('保存中...')
+        try {
+          await dialectService.updateCard(card.id, { content })
+          hideLoading()
+          showToast('卡片已更新')
+          this.loadData()
+        } catch (err) {
+          hideLoading()
+          showToast('更新失败')
+        }
+      }
+    })
+  },
+
+  async replaceCardImage(card) {
+    const tempPath = await this.chooseImage()
+    if (!tempPath) return
+    showLoading('上传中...')
     try {
-      await dialectService.updateCard(card.id, { content })
+      const uploadRes = await uploadService.upload(tempPath, {
+        type: 'image',
+        entity_type: 'dialect_card'
+      })
+      const imageURL = uploadRes.url || (uploadRes.data && uploadRes.data.url) || ''
+      if (!imageURL) {
+        throw new Error('上传失败')
+      }
+      const payload = { image_url: imageURL }
+      if (!card.content) {
+        payload.content = this.generateCardContentByURL(imageURL)
+      }
+      await dialectService.updateCard(card.id, payload)
       hideLoading()
-      showToast('卡片已更新')
+      showToast('图片已更新')
       this.loadData()
     } catch (err) {
       hideLoading()
-      showToast('更新失败')
+      showToast('上传失败')
     }
+  },
+
+  chooseImage() {
+    return new Promise((resolve) => {
+      wx.chooseMedia({
+        count: 1,
+        mediaType: ['image'],
+        sourceType: ['album', 'camera'],
+        sizeType: ['compressed'],
+        success: (res) => {
+          const item = (res.tempFiles || [])[0]
+          resolve(item ? item.tempFilePath : '')
+        },
+        fail: () => resolve('')
+      })
+    })
+  },
+
+  generateCardContentByURL(imageURL) {
+    const raw = String(imageURL || '').split('?')[0]
+    const fileName = raw.split('/').pop() || ''
+    const pure = fileName.replace(/\.[^.]+$/, '').trim()
+    if (pure) return pure.slice(0, 32)
+    return `图片卡片_${Date.now().toString().slice(-6)}`
   },
 
   toggleCardStatus(e) {

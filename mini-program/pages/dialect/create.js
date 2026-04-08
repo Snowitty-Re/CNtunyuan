@@ -4,8 +4,8 @@ const missingPersonService = require('../../services/missingPerson')
 const { showLoading, hideLoading, showSuccess, showError, showToast } = require('../../utils/util')
 const app = getApp()
 
-const MIN_DURATION = 15
-const MAX_DURATION = 20
+const MIN_DURATION = 2
+const MAX_DURATION = 8
 
 let recorderManager = null
 let innerAudioContext = null
@@ -34,6 +34,7 @@ Page({
 
     recordings: {},
     completedCount: 0,
+    allCardsRecorded: false,
 
     isRecording: false,
     hasRecorded: false,
@@ -101,6 +102,7 @@ Page({
         currentCardIndex: 0,
         currentCard: cards[0] || null
       })
+      this.refreshCompletedCount(this.data.recordings || {})
       this.syncCurrentRecordingState()
     } catch (error) {
       console.error('加载方言卡片模板失败:', error)
@@ -157,7 +159,10 @@ Page({
     cards.forEach((card) => {
       if (nextRecordings[card.id]) completed += 1
     })
-    this.setData({ completedCount: completed })
+    this.setData({
+      completedCount: completed,
+      allCardsRecorded: cards.length > 0 && completed === cards.length
+    })
   },
 
   initRecorder() {

@@ -35,12 +35,20 @@
     <view class="section-title">卡片列表</view>
     <view class="card-item" wx:for="{{cards}}" wx:key="id">
       <view class="card-main">
-        <text class="card-text">{{item.content}}</text>
-        <text class="card-status {{item.status}}">{{item.status === 'active' ? '启用' : '停用'}}</text>
+        <view class="thumb-wrap">
+          <image wx:if="{{item.image_url}}" class="thumb" src="{{item.image_url}}" mode="aspectFill" />
+          <view wx:else class="thumb thumb-empty">无图</view>
+        </view>
+        <view class="card-main-right">
+          <view class="title-row">
+            <text class="card-text">{{item.content || '图片卡片'}}</text>
+            <text class="card-status {{item.status}}">{{item.status === 'active' ? '启用' : '停用'}}</text>
+          </view>
+          <view class="card-meta">排序：{{item.sort_order || 0}} · 必录：{{item.required ? '是' : '否'}}</view>
+        </view>
       </view>
-      <view class="card-meta">排序：{{item.sort_order || 0}} · 必录：{{item.required ? '是' : '否'}}</view>
       <view class="card-actions">
-        <button size="mini" class="btn" bindtap="editCard" data-index="{{index}}">编辑</button>
+        <button size="mini" class="btn" bindtap="editCard" data-index="{{index}}">编辑/换图</button>
         <button size="mini" class="btn" bindtap="toggleCardStatus" data-index="{{index}}">{{item.status === 'active' ? '停用' : '启用'}}</button>
         <button size="mini" class="btn danger" bindtap="deleteCard" data-index="{{index}}">删除</button>
       </view>

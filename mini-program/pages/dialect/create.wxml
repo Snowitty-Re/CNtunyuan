@@ -9,14 +9,16 @@
     </view>
 
     <view class="card-main">
-      <view class="card-group">{{currentCard.group_name || '未分组'}}</view>
-      <text class="card-text">{{currentCard.content}}</text>
       <image
         wx:if="{{currentCard.image_url}}"
         class="card-image"
         src="{{currentCard.image_url}}"
         mode="aspectFill"
       />
+      <view wx:else class="card-image card-image-empty">当前卡片未配置图片</view>
+      <view class="card-group">{{currentCard.group_name || '未分组'}}</view>
+      <text class="card-text" wx:if="{{currentCard.content}}">{{currentCard.content}}</text>
+      <text class="card-text card-text-placeholder" wx:else>请根据上方图片内容进行录音</text>
       <view class="card-index">卡片 {{currentCardIndex + 1}} / {{cards.length}}</view>
     </view>
 
@@ -28,7 +30,7 @@
         data-index="{{index}}"
         bindtap="switchCard"
       >
-        <text>{{item.content}}</text>
+        <text>{{item.content || ('卡片' + (index + 1))}}</text>
       </view>
     </scroll-view>
 
@@ -68,7 +70,11 @@
     </view>
   </view>
 
-  <view class="form-card">
+  <view class="step-tip" wx:if="{{!allCardsRecorded}}">
+    请先完成全部卡片录音，再填写采集信息
+  </view>
+
+  <view class="form-card" wx:if="{{allCardsRecorded}}">
     <view class="field">
       <view class="label">采集地区 <text class="required">*</text></view>
       <picker mode="region" value="{{[form.province, form.city, form.district]}}" bindchange="onRegionChange">
@@ -109,7 +115,7 @@
     </view>
   </view>
 
-  <view class="submit-wrap">
+  <view class="submit-wrap" wx:if="{{allCardsRecorded}}">
     <button class="submit" loading="{{isUploading}}" bindtap="submitForm" disabled="{{isUploading || !cards.length}}">
       {{isUploading ? ('上传中 ' + uploadProgress + '%') : '提交整套方言录入'}}
     </button>

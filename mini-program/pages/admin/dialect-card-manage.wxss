@@ -19,10 +19,15 @@
 .btn.danger { background: #FFF1F0; color: #CF1322; }
 .card-item { padding: 14rpx 0; border-bottom: 1rpx solid #f2f2f2; }
 .card-item:last-child { border-bottom: none; }
-.card-main { display: flex; justify-content: space-between; align-items: center; }
+.card-main { display: flex; align-items: center; gap: 14rpx; }
+.thumb-wrap { width: 120rpx; height: 120rpx; border-radius: 12rpx; overflow: hidden; flex-shrink: 0; }
+.thumb { width: 100%; height: 100%; background: #F3F5F8; color: #8C7B6B; display: flex; align-items: center; justify-content: center; font-size: 22rpx; }
+.thumb-empty { background: #F5F5F5; }
+.card-main-right { flex: 1; min-width: 0; }
+.title-row { display: flex; justify-content: space-between; align-items: center; gap: 8rpx; }
 .card-text { font-size: 28rpx; color: #2D1F10; font-weight: 600; }
 .card-status { font-size: 22rpx; padding: 4rpx 10rpx; border-radius: 14rpx; }
 .card-status.active { background: #F6FFED; color: #389E0D; }
 .card-status.inactive { background: #FFF1F0; color: #CF1322; }
-.card-meta { margin-top: 8rpx; font-size: 22rpx; color: #8C7B6B; }
+.card-meta { margin-top: 8rpx; font-size: 22rpx; color: #8C7B6B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .empty, .loading { text-align: center; color: #8C7B6B; font-size: 24rpx; padding: 20rpx 0; }
