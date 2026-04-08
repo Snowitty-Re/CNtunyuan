@@ -50,6 +50,7 @@ type Container struct {
 	UploadHandler        *handler.UploadHandler
 	DashboardHandler     *handler.DashboardHandler
 	AuditHandler         *handler.AuditHandler
+	BootstrapHandler     *handler.BootstrapHandler
 	SystemConfigHandler  *handler.SystemConfigHandler
 	AuthMiddleware       *middleware.AuthMiddleware
 	AuditMiddleware      *middleware.AuditMiddleware
@@ -176,6 +177,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	taskHandler := handler.NewTaskHandler(taskService)
 	uploadHandler := handler.NewUploadHandler(fileService)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
+	bootstrapHandler := handler.NewBootstrapHandler(userRepo, healthService)
 	systemConfigHandler := handler.NewSystemConfigHandlerWithAuthz(authzService)
 
 	// 创建路由
@@ -189,6 +191,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		uploadHandler,
 		dashboardHandler,
 		auditHandler,
+		bootstrapHandler,
 		systemConfigHandler,
 		authMiddleware,
 		auditMiddleware,
@@ -227,6 +230,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		UploadHandler:        uploadHandler,
 		DashboardHandler:     dashboardHandler,
 		AuditHandler:         auditHandler,
+		BootstrapHandler:     bootstrapHandler,
 		SystemConfigHandler:  systemConfigHandler,
 		AuthMiddleware:       authMiddleware,
 		AuditMiddleware:      auditMiddleware,

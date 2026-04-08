@@ -31,6 +31,7 @@ type Router struct {
 	uploadHandler        *handler.UploadHandler
 	dashboardHandler     *handler.DashboardHandler
 	auditHandler         *handler.AuditHandler
+	bootstrapHandler     *handler.BootstrapHandler
 	systemConfigHandler  *handler.SystemConfigHandler
 	authMiddleware       *middleware.AuthMiddleware
 	healthService        *service.HealthService
@@ -48,6 +49,7 @@ func NewRouter(
 	uploadHandler *handler.UploadHandler,
 	dashboardHandler *handler.DashboardHandler,
 	auditHandler *handler.AuditHandler,
+	bootstrapHandler *handler.BootstrapHandler,
 	systemConfigHandler *handler.SystemConfigHandler,
 	authMiddleware *middleware.AuthMiddleware,
 	auditMiddleware *middleware.AuditMiddleware,
@@ -110,6 +112,7 @@ func NewRouter(
 		uploadHandler:        uploadHandler,
 		dashboardHandler:     dashboardHandler,
 		auditHandler:         auditHandler,
+		bootstrapHandler:     bootstrapHandler,
 		systemConfigHandler:  systemConfigHandler,
 		authMiddleware:       authMiddleware,
 		healthService:        healthService,
@@ -148,6 +151,9 @@ func (r *Router) Setup() {
 
 	// 注册各个模块路由
 	r.authHandler.RegisterRoutes(api)
+	if r.bootstrapHandler != nil {
+		r.bootstrapHandler.RegisterRoutes(api)
+	}
 	r.userHandler.RegisterRoutes(api, r.authMiddleware)
 	r.organizationHandler.RegisterRoutes(api, r.authMiddleware)
 	r.missingPersonHandler.RegisterRoutes(api, r.authMiddleware)

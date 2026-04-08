@@ -2,6 +2,23 @@ import { API_BASE, http } from '@/lib/request'
 import { getAccessToken } from '@/lib/auth'
 
 export const systemService = {
+  bootstrapStatus() {
+    return http<any>('/bootstrap/status', { auth: false })
+  },
+  validateBootstrapDatabase(payload: Record<string, unknown>) {
+    return http<any>('/bootstrap/validate-db', {
+      method: 'POST',
+      body: payload,
+      auth: false,
+    })
+  },
+  bootstrapInitialize(payload: Record<string, unknown>) {
+    return http<any>('/bootstrap/initialize', {
+      method: 'POST',
+      body: payload,
+      auth: false,
+    })
+  },
   health() {
     return http<any>('/health', { auth: false })
   },

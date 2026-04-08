@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { authService } from '@/services/auth'
+import { systemService } from '@/services/system'
 import { saveAuth } from '@/lib/auth'
 
 declare global {
@@ -71,6 +72,19 @@ export default function LoginPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const bootstrap = await systemService.bootstrapStatus()
+        if (bootstrap && bootstrap.initialized === false) {
+          router.replace('/init')
+        }
+      } catch {
+        // ignore bootstrap status errors on login page
+      }
+    })()
+  }, [router])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

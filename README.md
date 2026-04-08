@@ -75,6 +75,20 @@ npm run dev
 
 访问：http://localhost:3000
 
+### 3.1 首次初始化向导（推荐）
+
+首次部署且数据库为空时，访问 `http://localhost:3000/login` 会自动跳转到 `http://localhost:3000/init`，按向导完成：
+
+- 数据库连接检测
+- 站点参数初始化（domain/cors/default org 等）
+- 创建超级管理员账号
+
+初始化状态接口：
+
+- `GET /api/v1/bootstrap/status`
+- `POST /api/v1/bootstrap/validate-db`
+- `POST /api/v1/bootstrap/initialize`
+
 ### 4. 微信小程序
 
 使用微信开发者工具打开 `mini-program` 目录。
@@ -107,6 +121,7 @@ CNtunyuan/
 | 文件管理 | `/upload/*` | 文件上传下载、实体绑定 |
 | 仪表盘 | `/dashboard/*` | 数据统计、趋势分析 |
 | 审计日志 | `/audit/*` | 操作日志、统计、清理 |
+| 系统初始化 | `/bootstrap/*` | 首次初始化状态、数据库检测、初始化执行 |
 
 所有接口详情请访问 Swagger UI：http://localhost:8080/swagger/index.html
 

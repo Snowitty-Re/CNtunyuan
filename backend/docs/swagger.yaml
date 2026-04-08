@@ -1580,6 +1580,66 @@ definitions:
     required:
     - code
     type: object
+  internal_interfaces_http_handler.BootstrapInitializeAdminRequest:
+    properties:
+      email:
+        type: string
+      nickname:
+        type: string
+      password:
+        minLength: 8
+        type: string
+      phone:
+        type: string
+    required:
+    - password
+    - phone
+    type: object
+  internal_interfaces_http_handler.BootstrapInitializeRequest:
+    properties:
+      database:
+        $ref: '#/definitions/internal_interfaces_http_handler.BootstrapValidateDatabaseRequest'
+      site:
+        $ref: '#/definitions/internal_interfaces_http_handler.BootstrapInitializeSiteRequest'
+      super_admin:
+        $ref: '#/definitions/internal_interfaces_http_handler.BootstrapInitializeAdminRequest'
+    type: object
+  internal_interfaces_http_handler.BootstrapInitializeSiteRequest:
+    properties:
+      cors_origins:
+        type: string
+      default_org_code:
+        type: string
+      default_org_name:
+        type: string
+      domain:
+        type: string
+      enable_register:
+        type: boolean
+      enable_sms_login:
+        type: boolean
+      enable_wechat_login:
+        type: boolean
+    type: object
+  internal_interfaces_http_handler.BootstrapValidateDatabaseRequest:
+    properties:
+      database:
+        type: string
+      host:
+        type: string
+      password:
+        type: string
+      port:
+        type: integer
+      ssl_mode:
+        type: string
+      timezone:
+        type: string
+      type:
+        type: string
+      user:
+        type: string
+    type: object
   internal_interfaces_http_handler.CleanupRequest:
     properties:
       days:
@@ -2631,6 +2691,87 @@ paths:
       summary: 微信网页扫码登录
       tags:
       - 认证授权
+  /bootstrap/initialize:
+    post:
+      consumes:
+      - application/json
+      description: 首次启动时写入配置并创建超级管理员；若已有 super_admin 则拒绝重复初始化
+      parameters:
+      - description: 初始化请求（数据库、站点、超级管理员）
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.BootstrapInitializeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      summary: 执行首次初始化
+      tags:
+      - 系统初始化
+  /bootstrap/status:
+    get:
+      description: 检查系统是否已初始化，并返回数据库连通、配置可写等检测结果
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      summary: 获取初始化状态
+      tags:
+      - 系统初始化
+  /bootstrap/validate-db:
+    post:
+      consumes:
+      - application/json
+      description: 用提交的数据库配置进行连通性测试（不会落盘）
+      parameters:
+      - description: 数据库连接配置
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.BootstrapValidateDatabaseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      summary: 校验数据库连接
+      tags:
+      - 系统初始化
   /dashboard/overview:
     get:
       consumes:

@@ -127,6 +127,25 @@ go run cmd/app/main.go
 - 健康检查: http://localhost:8080/api/v1/health
 - 权限重构 curl 验收: `docs/authz-curl-acceptance.md`
 
+### 4.1 首次 Web 初始化（新环境）
+
+当系统尚未存在超级管理员账号时，可通过 Web 初始化向导完成首次落地：
+
+1. 启动后端与 Web
+2. 打开 `http://localhost:3000/login`（会自动跳转 `/init`）
+3. 依次完成：
+   - 数据库连接检测
+   - 站点配置初始化
+   - 超级管理员创建
+
+对应后端接口：
+
+- `GET /api/v1/bootstrap/status`
+- `POST /api/v1/bootstrap/validate-db`
+- `POST /api/v1/bootstrap/initialize`
+
+> 初始化成功后建议重启后端，以确保配置完全生效。
+
 ## 权限重构验收
 
 本项目已提供完整的权限重构 curl 验收脚本方案，覆盖：
@@ -258,6 +277,9 @@ go run cmd/app/main.go
 
 ### 系统
 - `GET /api/v1/health` - 健康检查
+- `GET /api/v1/bootstrap/status` - 初始化状态
+- `POST /api/v1/bootstrap/validate-db` - 初始化数据库连接检测
+- `POST /api/v1/bootstrap/initialize` - 执行首次初始化
 - `GET /api/v1/health/detailed` - 详细健康检查
 - `GET /api/v1/metrics` - Prometheus 指标（**需要管理员权限**）
 

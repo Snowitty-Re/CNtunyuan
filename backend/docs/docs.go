@@ -1341,6 +1341,130 @@ const docTemplate = `{
                 }
             }
         },
+        "/bootstrap/initialize": {
+            "post": {
+                "description": "首次启动时写入配置并创建超级管理员；若已有 super_admin 则拒绝重复初始化",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统初始化"
+                ],
+                "summary": "执行首次初始化",
+                "parameters": [
+                    {
+                        "description": "初始化请求（数据库、站点、超级管理员）",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.BootstrapInitializeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/bootstrap/status": {
+            "get": {
+                "description": "检查系统是否已初始化，并返回数据库连通、配置可写等检测结果",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统初始化"
+                ],
+                "summary": "获取初始化状态",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/bootstrap/validate-db": {
+            "post": {
+                "description": "用提交的数据库配置进行连通性测试（不会落盘）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统初始化"
+                ],
+                "summary": "校验数据库连接",
+                "parameters": [
+                    {
+                        "description": "数据库连接配置",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.BootstrapValidateDatabaseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/dashboard/overview": {
             "get": {
                 "security": [
@@ -10483,6 +10607,97 @@ const docTemplate = `{
                     "description": "微信登录临时凭证",
                     "type": "string",
                     "example": "wx_login_code_123"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.BootstrapInitializeAdminRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "phone"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.BootstrapInitializeRequest": {
+            "type": "object",
+            "properties": {
+                "database": {
+                    "$ref": "#/definitions/internal_interfaces_http_handler.BootstrapValidateDatabaseRequest"
+                },
+                "site": {
+                    "$ref": "#/definitions/internal_interfaces_http_handler.BootstrapInitializeSiteRequest"
+                },
+                "super_admin": {
+                    "$ref": "#/definitions/internal_interfaces_http_handler.BootstrapInitializeAdminRequest"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.BootstrapInitializeSiteRequest": {
+            "type": "object",
+            "properties": {
+                "cors_origins": {
+                    "type": "string"
+                },
+                "default_org_code": {
+                    "type": "string"
+                },
+                "default_org_name": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "enable_register": {
+                    "type": "boolean"
+                },
+                "enable_sms_login": {
+                    "type": "boolean"
+                },
+                "enable_wechat_login": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.BootstrapValidateDatabaseRequest": {
+            "type": "object",
+            "properties": {
+                "database": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "ssl_mode": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "user": {
+                    "type": "string"
                 }
             }
         },
