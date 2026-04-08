@@ -36,7 +36,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/gin-gonic/gin"
-	_ "gorm.io/gorm"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -133,6 +133,8 @@ func checkDatabase(cfg *config.Config) error {
 		"ty_task_follow_ups",
 		"ty_task_follow_up_comments",
 		"ty_dialects",
+		"ty_dialect_card_groups",
+		"ty_dialect_cards",
 		"ty_files",
 		"ty_audit_logs",
 	}
@@ -155,12 +157,53 @@ func checkDatabase(cfg *config.Config) error {
 	}
 
 	if allExist {
-		logger.Info("Database check passed: all tables exist")
+		logger.Info("Database table check passed: all required tables exist")
 	} else {
 		return fmt.Errorf("some tables are missing, please run SQL migration files first")
 	}
 
+	requiredDialectColumns := []string{
+		"batch_id",
+		"card_group_id",
+		"card_id",
+	}
+
+	logger.Info("Checking dialect schema columns...")
+	for _, col := range requiredDialectColumns {
+		exists, colErr := columnExists(db, "ty_dialects", col)
+		if colErr != nil {
+			logger.Error("Failed to check column", logger.String("table", "ty_dialects"), logger.String("column", col), logger.Err(colErr))
+			allExist = false
+			continue
+		}
+		if exists {
+			logger.Info("✓ Column exists", logger.String("table", "ty_dialects"), logger.String("column", col))
+		} else {
+			logger.Error("✗ Column missing", logger.String("table", "ty_dialects"), logger.String("column", col))
+			allExist = false
+		}
+	}
+
+	if !allExist {
+		return fmt.Errorf("database schema is not aligned, please run latest migration files first")
+	}
+
+	logger.Info("Database check passed: tables and key schema columns are aligned")
+
 	return nil
+}
+
+func columnExists(db *gorm.DB, tableName, columnName string) (bool, error) {
+	var count int64
+	err := db.Raw(
+		"SELECT COUNT(*) FROM information_schema.columns WHERE table_name = ? AND column_name = ?",
+		tableName,
+		columnName,
+	).Scan(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // startServer 启动服务器
