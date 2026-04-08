@@ -6,7 +6,7 @@ import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-import { hasMinRole } from '@/lib/rbac'
+import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { systemService } from '@/services/system'
 
 type FieldType = 'text' | 'number' | 'password' | 'bool'
@@ -301,7 +301,7 @@ export default function SiteSettingsPage() {
   }
 
   useEffect(() => {
-    if (!ready || !hasMinRole(user, 'admin')) return
+    if (!ready || !hasPermission(user, ACTIONS.USER_MODIFY)) return
     loadConfig()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user?.id])
@@ -383,11 +383,11 @@ export default function SiteSettingsPage() {
   }
 
   if (!ready) return null
-  if (!hasMinRole(user, 'admin')) {
+  if (!hasPermission(user, ACTIONS.USER_MODIFY)) {
     return (
       <AppShell>
         <ModuleHeader title="网站设置" desc="对齐 config.yaml 的系统配置中心" />
-        <PageState error="当前账号无权限访问该页面（需要 admin 及以上）" />
+        <PageState error="当前账号无权限访问该页面（需要 user:modify 权限）" />
       </AppShell>
     )
   }

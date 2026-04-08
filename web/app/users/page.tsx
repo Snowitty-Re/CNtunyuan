@@ -11,7 +11,7 @@ import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-import { hasMinRole } from '@/lib/rbac'
+import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { fmtTime, listFrom } from '@/lib/data'
 import { organizationService } from '@/services/organizations'
 import { userService } from '@/services/users'
@@ -319,11 +319,11 @@ export default function UsersPage() {
   }, [detailOpen, editingUser, editOrgId, orgs])
 
   if (!ready) return null
-  if (!hasMinRole(user, 'admin')) {
+  if (!hasPermission(user, ACTIONS.USER_VIEW)) {
     return (
       <AppShell>
         <ModuleHeader title="人员管理" desc="用户账号、角色、组织归属与状态管理" />
-        <PageState error="当前账号无权限访问该页面（需要 admin 及以上）" />
+        <PageState error="当前账号无权限访问该页面（需要 user:view 权限）" />
       </AppShell>
     )
   }

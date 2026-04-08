@@ -9,11 +9,12 @@ import { PageState } from '@/components/shared/PageState'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { fmtTime, listFrom } from '@/lib/data'
+import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { dialectService } from '@/services/dialects'
 import type { Dialect } from '@/types/api'
 
 export default function DialectDetailPage() {
-  const { ready } = useAuthGuard()
+  const { ready, user } = useAuthGuard()
   const params = useParams<{ id: string }>()
   const id = params.id
   const [loading, setLoading] = useState(true)
@@ -22,6 +23,8 @@ export default function DialectDetailPage() {
   const [comments, setComments] = useState<any[]>([])
   const [comment, setComment] = useState('')
   const [notice, setNotice] = useState<Notice | null>(null)
+
+  const canManage = hasPermission(user, ACTIONS.DIALECT_MANAGE)
 
   async function load() {
     setLoading(true)
@@ -50,42 +53,70 @@ export default function DialectDetailPage() {
     try {
       await dialectService.addComment(id, comment.trim())
       setComment('')
-      load()
+      await load()
       setNotice({ type: 'success', text: '评论发布成功' })
     } catch (err) {
       setNotice({ type: 'error', text: err instanceof Error ? err.message : '评论失败' })
     }
   }
 
+  async function runManageAction(action: () => Promise<unknown>, successText: string) {
+    try {
+      await action()
+      await load()
+      setNotice({ type: 'success', text: successText })
+    } catch (err) {
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '操作失败' })
+    }
+  }
+
   return (
     <AppShell>
-      <ModuleHeader title="方言详情" desc="查看录音信息、状态与使用情况" />
+      <ModuleHeader title="方言详情" desc="查看卡片录音、采集信息、审核状态和评论" />
       <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <PageState loading={loading} error={error} onRetry={load} />
       {!loading && !error && item ? (
         <div className="section-card">
           <div className="grid cols-2">
-            <div>标题：{item.title}</div>
+            <div>标题：{item.title || '-'}</div>
             <div>
               状态：<StatusTag status={item.status || '-'} />
             </div>
-            <div>区域：{item.region || '-'}</div>
+            <div>卡片词汇：{item.card_content || '-'}</div>
+            <div>批次ID：{item.batch_id || '-'}</div>
+            <div>采集地区：{item.region || [item.province, item.city, item.district].filter(Boolean).join(' ') || '-'}</div>
+            <div>采集地址：{item.collect_address || '-'}</div>
+            <div>录音时长：{item.duration || 0}s</div>
+            <div>格式：{item.format || '-'}</div>
             <div>创建时间：{fmtTime(item.created_at)}</div>
-            <div>播放数：{item.play_count || 0}</div>
-            <div>点赞数：{item.like_count || 0}</div>
+            <div>播放/点赞：{item.play_count || 0}/{item.like_count || 0}</div>
           </div>
-          <div style={{ marginTop: 10, color: '#6b7280' }}>{item.content || '暂无内容'}</div>
-          <div className="row wrap" style={{ marginTop: 10 }}>
-            <button className="btn" type="button" onClick={() => dialectService.updateStatus(id, 'active').then(load)}>
-              审核通过
-            </button>
-            <button className="btn" type="button" onClick={() => dialectService.updateStatus(id, 'inactive').then(load)}>
-              设为不可见
-            </button>
-            <button className="btn" type="button" onClick={() => dialectService.feature(id).then(load)}>
-              设为精选
-            </button>
-          </div>
+
+          {item.card_image_url ? (
+            <div style={{ marginTop: 12 }}>
+              <b>卡片图片</b>
+              <img
+                src={item.card_image_url}
+                alt={item.card_content || 'dialect-card'}
+                style={{ width: '100%', maxHeight: 320, objectFit: 'contain', marginTop: 8, borderRadius: 10, border: '1px solid var(--border)' }}
+              />
+            </div>
+          ) : null}
+
+          <div style={{ marginTop: 10, color: '#6b7280' }}>{item.description || item.content || '暂无内容'}</div>
+          {canManage ? (
+            <div className="row wrap" style={{ marginTop: 10 }}>
+              <button className="btn" type="button" onClick={() => runManageAction(() => dialectService.updateStatus(id, 'active'), '审核通过')}>
+                审核通过
+              </button>
+              <button className="btn" type="button" onClick={() => runManageAction(() => dialectService.updateStatus(id, 'inactive'), '已设为不可见')}>
+                设为不可见
+              </button>
+              <button className="btn" type="button" onClick={() => runManageAction(() => dialectService.feature(id), '已设为精选')}>
+                设为精选
+              </button>
+            </div>
+          ) : null}
           {item.audio_url ? (
             <div style={{ marginTop: 12 }}>
               <audio controls src={item.audio_url} style={{ width: '100%' }} />
@@ -118,11 +149,11 @@ export default function DialectDetailPage() {
                     <td colSpan={3}>暂无评论</td>
                   </tr>
                 ) : (
-                  comments.map((c) => (
-                    <tr key={c.id || `${c.created_at}-${c.content}`}>
-                      <td>{fmtTime(c.created_at)}</td>
-                      <td>{c.user?.nickname || c.user_name || c.user_id || '-'}</td>
-                      <td>{c.content || '-'}</td>
+                  comments.map((entry) => (
+                    <tr key={entry.id || `${entry.created_at}-${entry.content}`}>
+                      <td>{fmtTime(entry.created_at)}</td>
+                      <td>{entry.user?.nickname || entry.user_name || entry.user_id || '-'}</td>
+                      <td>{entry.content || '-'}</td>
                     </tr>
                   ))
                 )}

@@ -4,21 +4,22 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { PropsWithChildren, useEffect, useState } from 'react'
 import { clearAuth, getCurrentUser } from '@/lib/auth'
-import { hasMinRole } from '@/lib/rbac'
+import { ACTIONS, hasPermission } from '@/lib/rbac'
 
 const items = [
-  { href: '/dashboard', label: '工作台', minRole: 'volunteer' },
-  { href: '/cases', label: '案件中心', minRole: 'volunteer' },
-  { href: '/tasks', label: '任务中心', minRole: 'volunteer' },
-  { href: '/dialects', label: '方言中心', minRole: 'volunteer' },
-  { href: '/attachments', label: '附件管理', minRole: 'admin' },
-  { href: '/site-settings', label: '网站设置', minRole: 'admin' },
-  { href: '/feature-settings', label: '功能设置', minRole: 'admin' },
-  { href: '/monitor', label: '服务监控', minRole: 'admin' },
-  { href: '/organizations', label: '组织管理', minRole: 'admin' },
-  { href: '/users', label: '人员管理', minRole: 'admin' },
-  { href: '/audit', label: '审计中心', minRole: 'admin' },
-  { href: '/settings', label: '个人设置', minRole: 'volunteer' },
+  { href: '/dashboard', label: '工作台' },
+  { href: '/cases', label: '案件中心', action: ACTIONS.MISSING_MODIFY },
+  { href: '/tasks', label: '任务中心', action: ACTIONS.TASK_VIEW },
+  { href: '/dialects', label: '方言中心', action: ACTIONS.DIALECT_MODIFY },
+  { href: '/dialects/cards', label: '方言卡片', action: ACTIONS.DIALECT_MANAGE },
+  { href: '/attachments', label: '附件管理', action: ACTIONS.USER_MODIFY },
+  { href: '/site-settings', label: '网站设置', action: ACTIONS.USER_MODIFY },
+  { href: '/feature-settings', label: '功能设置', action: ACTIONS.USER_MODIFY },
+  { href: '/monitor', label: '服务监控', action: ACTIONS.USER_MODIFY },
+  { href: '/organizations', label: '组织管理', action: ACTIONS.ORG_MANAGE },
+  { href: '/users', label: '人员管理', action: ACTIONS.USER_VIEW },
+  { href: '/audit', label: '审计中心', action: ACTIONS.USER_MODIFY },
+  { href: '/settings', label: '个人设置' },
 ]
 
 export function AppShell({ children }: PropsWithChildren) {
@@ -39,7 +40,9 @@ export function AppShell({ children }: PropsWithChildren) {
           <small>走失人员寻亲协作平台</small>
         </div>
         <nav className="nav-list">
-          {items.filter((item) => hasMinRole(user, item.minRole)).map((item) => {
+          {items
+            .filter((item) => !item.action || hasPermission(user, item.action))
+            .map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
             return (
               <Link key={item.href} href={item.href} className={`nav-item ${active ? 'active' : ''}`}>

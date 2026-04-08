@@ -6,7 +6,7 @@ import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-import { hasMinRole } from '@/lib/rbac'
+import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { fmtTime, listFrom } from '@/lib/data'
 import { API_BASE } from '@/lib/request'
 import { systemService } from '@/services/system'
@@ -81,11 +81,11 @@ export default function AttachmentsPage() {
   }, [ready])
 
   if (!ready) return null
-  if (!hasMinRole(user, 'admin')) {
+  if (!hasPermission(user, ACTIONS.USER_MODIFY)) {
     return (
       <AppShell>
         <ModuleHeader title="附件管理" desc="文件查询、下载、删除与统计" />
-        <PageState error="当前账号无权限访问该页面（需要 admin 及以上）" />
+        <PageState error="当前账号无权限访问该页面（需要 user:modify 权限）" />
       </AppShell>
     )
   }

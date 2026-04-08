@@ -32,6 +32,11 @@ export function saveAuth(payload: AuthLoginResponse): void {
   localStorage.setItem(USER_KEY, JSON.stringify(payload.user))
 }
 
+export function saveCurrentUser(user: User): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(USER_KEY, JSON.stringify(user))
+}
+
 export function clearAuth(): void {
   if (typeof window === 'undefined') return
   localStorage.removeItem(ACCESS_TOKEN_KEY)

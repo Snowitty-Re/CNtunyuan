@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCurrentUser, getAccessToken } from '@/lib/auth'
+import { getCurrentUser, getAccessToken, saveCurrentUser } from '@/lib/auth'
+import { authService } from '@/services/auth'
 import type { User } from '@/types/api'
 
 export function useAuthGuard() {
@@ -16,8 +17,23 @@ export function useAuthGuard() {
       router.replace('/login')
       return
     }
-    setUser(getCurrentUser())
-    setReady(true)
+    const local = getCurrentUser()
+    setUser(local)
+    authService
+      .me()
+      .then((me) => {
+        setUser(me)
+        saveCurrentUser(me)
+      })
+      .catch(() => {
+        if (!local) {
+          router.replace('/login')
+          return
+        }
+      })
+      .finally(() => {
+        setReady(true)
+      })
   }, [router])
 
   return { ready, user }

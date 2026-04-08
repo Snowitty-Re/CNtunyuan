@@ -24,6 +24,15 @@ export type User = {
   org_id?: string | null
   org_name?: string
   organization?: { id: string; name: string } | null
+  permissions?: string[]
+  permission_codes?: string[]
+  permissionCodes?: string[]
+  effective_permissions?: string[]
+  effectivePermissions?: string[]
+  authz?: {
+    permissions?: string[]
+    permission_codes?: string[]
+  } | null
   created_at?: string
 }
 
@@ -115,15 +124,46 @@ export type Dialect = {
   region?: string
   province?: string
   city?: string
+  district?: string
+  dialect_type?: string
+  duration?: number
+  file_size?: number
+  format?: string
+  tags?: string
+  description?: string
   collect_address?: string
   collect_latitude?: number
   collect_longitude?: number
+  batch_id?: string
+  card_group_id?: string
+  card_id?: string
+  card_content?: string
+  card_image_url?: string
   status?: string
   audio_url?: string
   featured?: boolean
   play_count?: number
   like_count?: number
   created_at?: string
+}
+
+export type DialectCard = {
+  id: string
+  group_id: string
+  content: string
+  image_url?: string
+  sort_order?: number
+  required?: boolean
+  status?: 'active' | 'inactive' | string
+}
+
+export type DialectCardGroup = {
+  id: string
+  name: string
+  description?: string
+  sort_order?: number
+  status?: 'active' | 'inactive' | string
+  cards?: DialectCard[]
 }
 
 export type Organization = {

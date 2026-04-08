@@ -6,7 +6,7 @@ import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-import { hasMinRole } from '@/lib/rbac'
+import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { fmtTime } from '@/lib/data'
 import { systemService } from '@/services/system'
 
@@ -49,11 +49,11 @@ export default function MonitorPage() {
   }, [ready])
 
   if (!ready) return null
-  if (!hasMinRole(user, 'admin')) {
+  if (!hasPermission(user, ACTIONS.USER_MODIFY)) {
     return (
       <AppShell>
         <ModuleHeader title="服务监控" desc="健康检查、依赖状态与指标预览" />
-        <PageState error="当前账号无权限访问该页面（需要 admin 及以上）" />
+        <PageState error="当前账号无权限访问该页面（需要 user:modify 权限）" />
       </AppShell>
     )
   }
