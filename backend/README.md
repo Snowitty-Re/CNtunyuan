@@ -125,6 +125,20 @@ go run cmd/app/main.go
 
 - API 文档: http://localhost:8080/swagger/index.html
 - 健康检查: http://localhost:8080/api/v1/health
+- 权限重构 curl 验收: `docs/authz-curl-acceptance.md`
+
+## 权限重构验收
+
+本项目已提供完整的权限重构 curl 验收脚本方案，覆盖：
+
+- 多角色权限边界（`super_admin/admin/manager/volunteer`）
+- 多组织层级权限（上级组织/下级组织/跨组织）
+- 策略变更申请与审批流（`org/global`）
+- 回滚申请 scope 防伪造校验
+- 权限通知列表/未读统计/已读操作
+- 公共资源访问策略（走失人员列表公开）
+
+详细步骤与脚本见：`docs/authz-curl-acceptance.md`
 
 ## API 端点
 

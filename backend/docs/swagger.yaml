@@ -1749,6 +1749,37 @@ definitions:
     required:
     - code
     type: object
+  internal_interfaces_http_handler.policyRuleItem:
+    properties:
+      effect:
+        type: string
+      enabled:
+        type: boolean
+      priority:
+        type: integer
+      resource_type:
+        type: string
+      scope_rule:
+        type: string
+    type: object
+  internal_interfaces_http_handler.replacePolicyRulesRequest:
+    properties:
+      approval_code:
+        type: string
+      rules:
+        items:
+          $ref: '#/definitions/internal_interfaces_http_handler.policyRuleItem'
+        type: array
+    type: object
+  internal_interfaces_http_handler.replaceRolePermissionsRequest:
+    properties:
+      approval_code:
+        type: string
+      permission_codes:
+        items:
+          type: string
+        type: array
+    type: object
   internal_interfaces_http_handler.updateSystemConfigRequest:
     properties:
       config:
@@ -4537,6 +4568,567 @@ paths:
       summary: Get user statistics
       tags:
       - 个人中心
+  /system/authz/change-logs:
+    get:
+      description: 分页查询权限策略变更日志，支持按变更类型、目标键、操作者和时间范围筛选
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认20，最大100
+        in: query
+        name: page_size
+        type: integer
+      - description: 操作类型：apply/rollback
+        in: query
+        name: operation
+        type: string
+      - description: 变更类型：role_permissions/policy_rules
+        in: query
+        name: change_type
+        type: string
+      - description: 目标键，如 admin 或 task:view
+        in: query
+        name: target_key
+        type: string
+      - description: 回滚来源变更ID
+        in: query
+        name: rollback_of_id
+        type: string
+      - description: 操作者ID
+        in: query
+        name: operator_id
+        type: string
+      - description: 开始时间，格式：2006-01-02
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间，格式：2006-01-02
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取策略变更日志
+      tags:
+      - 系统配置
+  /system/authz/decisions:
+    get:
+      description: 分页查询权限决策日志，支持按动作、是否允许、操作者、资源类型和时间范围筛选
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认20，最大100
+        in: query
+        name: page_size
+        type: integer
+      - description: 权限动作，如 user:modify
+        in: query
+        name: action
+        type: string
+      - description: 是否允许，true/false
+        in: query
+        name: allowed
+        type: string
+      - description: 操作者ID
+        in: query
+        name: operator_id
+        type: string
+      - description: 资源类型，如 user/task
+        in: query
+        name: resource_type
+        type: string
+      - description: 决策原因，如 DENY_ORG_SCOPE
+        in: query
+        name: reason
+        type: string
+      - description: 开始时间，格式：2006-01-02
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间，格式：2006-01-02
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 获取权限决策日志
+      tags:
+      - 系统配置
+  /system/authz/notifications:
+    get:
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认20，最大100
+        in: query
+        name: page_size
+        type: integer
+      - description: 状态(unread/read)
+        in: query
+        name: status
+        type: string
+      - description: 分类(authz)
+        in: query
+        name: category
+        type: string
+      - description: 关联ID
+        in: query
+        name: related_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 查询权限相关通知
+      tags:
+      - 系统配置
+  /system/authz/notifications/{notification_id}/read:
+    post:
+      parameters:
+      - description: 通知ID
+        in: path
+        name: notification_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 标记权限通知已读
+      tags:
+      - 系统配置
+  /system/authz/notifications/read-all:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 全部标记已读
+      tags:
+      - 系统配置
+  /system/authz/notifications/unread-count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 统计未读权限通知
+      tags:
+      - 系统配置
+  /system/authz/preview/policy-rules/{permission_code}:
+    post:
+      consumes:
+      - application/json
+      description: Dry-run 方式预览策略规则替换的差异与冲突校验，不会实际落库
+      parameters:
+      - description: 权限编码，如 task:view
+        in: path
+        name: permission_code
+        required: true
+        type: string
+      - description: 目标规则集合
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.replacePolicyRulesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 预检查策略规则变更
+      tags:
+      - 系统配置
+  /system/authz/preview/role-permissions/{role}:
+    post:
+      consumes:
+      - application/json
+      description: Dry-run 方式预览角色权限替换的增删项，不会实际落库
+      parameters:
+      - description: 角色：super_admin/admin/manager/volunteer
+        in: path
+        name: role
+        required: true
+        type: string
+      - description: 目标权限集合
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_interfaces_http_handler.replaceRolePermissionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 预检查角色权限变更
+      tags:
+      - 系统配置
+  /system/authz/requests:
+    get:
+      description: 分页查询策略变更申请列表（提交、审批、执行状态）
+      parameters:
+      - description: 页码，默认1
+        in: query
+        name: page
+        type: integer
+      - description: 每页数量，默认20，最大100
+        in: query
+        name: page_size
+        type: integer
+      - description: 申请类型(role_permissions/policy_rules/rollback)
+        in: query
+        name: request_type
+        type: string
+      - description: 申请状态(pending/approved/rejected)
+        in: query
+        name: status
+        type: string
+      - description: 作用域(global/org)
+        in: query
+        name: scope_type
+        type: string
+      - description: 申请人用户ID
+        in: query
+        name: requested_by
+        type: string
+      - description: 目标组织ID（组织作用域时）
+        in: query
+        name: target_org_id
+        type: string
+      - description: 目标键（角色/权限码/变更ID）
+        in: query
+        name: target_key
+        type: string
+      - description: 开始时间，格式：2006-01-02
+        in: query
+        name: start_time
+        type: string
+      - description: 结束时间，格式：2006-01-02
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 查询策略变更申请
+      tags:
+      - 系统配置
+  /system/authz/requests/{request_id}/review:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: 审批策略变更申请
+      tags:
+      - 系统配置
+  /system/authz/requests/policy-rules/{permission_code}:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: 提交策略规则变更申请
+      tags:
+      - 系统配置
+  /system/authz/requests/role-permissions/{role}:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: 提交角色权限变更申请
+      tags:
+      - 系统配置
+  /system/authz/requests/rollback/{change_id}:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      security:
+      - ApiKeyAuth: []
+      summary: 提交回滚申请
+      tags:
+      - 系统配置
+  /system/authz/rollback-preview/{change_id}:
+    get:
+      description: 预览指定策略变更ID执行回滚后的影响，不会实际写入
+      parameters:
+      - description: 策略变更日志ID
+        in: path
+        name: change_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 回滚权限策略预览
+      tags:
+      - 系统配置
+  /system/authz/rollback/{change_id}:
+    post:
+      consumes:
+      - application/json
+      description: 按策略变更日志 ID 回滚到变更前状态，仅超级管理员可操作
+      parameters:
+      - description: 策略变更日志ID
+        in: path
+        name: change_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response'
+      security:
+      - ApiKeyAuth: []
+      summary: 回滚权限策略变更
+      tags:
+      - 系统配置
   /system/config:
     get:
       description: 获取当前系统配置（敏感字段已掩码，仅管理员可访问）

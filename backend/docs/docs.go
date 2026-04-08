@@ -4494,6 +4494,887 @@ const docTemplate = `{
                 }
             }
         },
+        "/system/authz/change-logs": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "分页查询权限策略变更日志，支持按变更类型、目标键、操作者和时间范围筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "获取策略变更日志",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20，最大100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "操作类型：apply/rollback",
+                        "name": "operation",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "变更类型：role_permissions/policy_rules",
+                        "name": "change_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "目标键，如 admin 或 task:view",
+                        "name": "target_key",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "回滚来源变更ID",
+                        "name": "rollback_of_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "操作者ID",
+                        "name": "operator_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "开始时间，格式：2006-01-02",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "结束时间，格式：2006-01-02",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/decisions": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "分页查询权限决策日志，支持按动作、是否允许、操作者、资源类型和时间范围筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "获取权限决策日志",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20，最大100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "权限动作，如 user:modify",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "是否允许，true/false",
+                        "name": "allowed",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "操作者ID",
+                        "name": "operator_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "资源类型，如 user/task",
+                        "name": "resource_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "决策原因，如 DENY_ORG_SCOPE",
+                        "name": "reason",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "开始时间，格式：2006-01-02",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "结束时间，格式：2006-01-02",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "查询权限相关通知",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20，最大100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态(unread/read)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "分类(authz)",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关联ID",
+                        "name": "related_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/notifications/read-all": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "全部标记已读",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/notifications/unread-count": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "统计未读权限通知",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/notifications/{notification_id}/read": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "标记权限通知已读",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "通知ID",
+                        "name": "notification_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/preview/policy-rules/{permission_code}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Dry-run 方式预览策略规则替换的差异与冲突校验，不会实际落库",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "预检查策略规则变更",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "权限编码，如 task:view",
+                        "name": "permission_code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "目标规则集合",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.replacePolicyRulesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/preview/role-permissions/{role}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Dry-run 方式预览角色权限替换的增删项，不会实际落库",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "预检查角色权限变更",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "角色：super_admin/admin/manager/volunteer",
+                        "name": "role",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "目标权限集合",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_interfaces_http_handler.replaceRolePermissionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/requests": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "分页查询策略变更申请列表（提交、审批、执行状态）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "查询策略变更申请",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页数量，默认20，最大100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "申请类型(role_permissions/policy_rules/rollback)",
+                        "name": "request_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "申请状态(pending/approved/rejected)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "作用域(global/org)",
+                        "name": "scope_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "申请人用户ID",
+                        "name": "requested_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "目标组织ID（组织作用域时）",
+                        "name": "target_org_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "目标键（角色/权限码/变更ID）",
+                        "name": "target_key",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "开始时间，格式：2006-01-02",
+                        "name": "start_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "结束时间，格式：2006-01-02",
+                        "name": "end_time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/requests/policy-rules/{permission_code}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "提交策略规则变更申请",
+                "responses": {}
+            }
+        },
+        "/system/authz/requests/role-permissions/{role}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "提交角色权限变更申请",
+                "responses": {}
+            }
+        },
+        "/system/authz/requests/rollback/{change_id}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "提交回滚申请",
+                "responses": {}
+            }
+        },
+        "/system/authz/requests/{request_id}/review": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "审批策略变更申请",
+                "responses": {}
+            }
+        },
+        "/system/authz/rollback-preview/{change_id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "预览指定策略变更ID执行回滚后的影响，不会实际写入",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "回滚权限策略预览",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "策略变更日志ID",
+                        "name": "change_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/system/authz/rollback/{change_id}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "按策略变更日志 ID 回滚到变更前状态，仅超级管理员可操作",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "系统配置"
+                ],
+                "summary": "回滚权限策略变更",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "策略变更日志ID",
+                        "name": "change_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/system/config": {
             "get": {
                 "security": [
@@ -9831,6 +10712,54 @@ const docTemplate = `{
                 "code": {
                     "type": "string",
                     "example": "021ZlG1005f8lN1dR4100vP4oJ0ZlG1M"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.policyRuleItem": {
+            "type": "object",
+            "properties": {
+                "effect": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "resource_type": {
+                    "type": "string"
+                },
+                "scope_rule": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_interfaces_http_handler.replacePolicyRulesRequest": {
+            "type": "object",
+            "properties": {
+                "approval_code": {
+                    "type": "string"
+                },
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_interfaces_http_handler.policyRuleItem"
+                    }
+                }
+            }
+        },
+        "internal_interfaces_http_handler.replaceRolePermissionsRequest": {
+            "type": "object",
+            "properties": {
+                "approval_code": {
+                    "type": "string"
+                },
+                "permission_codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
