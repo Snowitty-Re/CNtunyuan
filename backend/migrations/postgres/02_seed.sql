@@ -138,5 +138,80 @@ FROM ty_permissions
 ON CONFLICT (user_id, permission_id) DO NOTHING;
 
 -- ============================================================
+-- 6. 初始化角色权限映射（RBAC）
+-- ============================================================
+INSERT INTO ty_role_permissions (id, role, permission_code, effect, enabled, priority) VALUES
+    -- super_admin
+    (uuid_generate_v4(), 'super_admin', 'user:create', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'user:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'user:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'task:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'task:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'task:edit', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'task:execute', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'missing:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'missing:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'dialect:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'dialect:manage', 'allow', true, 100),
+    -- admin
+    (uuid_generate_v4(), 'admin', 'user:create', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'user:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'user:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'task:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'task:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'task:edit', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'task:execute', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'missing:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'missing:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'dialect:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'dialect:manage', 'allow', true, 100),
+    -- manager
+    (uuid_generate_v4(), 'manager', 'user:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'user:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'task:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'task:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'task:edit', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'task:execute', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'missing:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'missing:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'dialect:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'dialect:manage', 'allow', true, 100),
+    -- volunteer
+    (uuid_generate_v4(), 'volunteer', 'user:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'user:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'task:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'task:edit', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'task:execute', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'missing:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'dialect:modify', 'allow', true, 100)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 7. 初始化 ABAC 策略规则
+-- ============================================================
+INSERT INTO ty_policy_rules (id, permission_code, resource_type, scope_rule, effect, priority, enabled) VALUES
+    (uuid_generate_v4(), 'user:create', 'user', 'ORG_DESCENDANT', 'allow', 100, true),
+    (uuid_generate_v4(), 'user:modify', 'user', 'SELF', 'allow', 100, true),
+    (uuid_generate_v4(), 'user:modify', 'user', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'user:view', 'user', 'SELF', 'allow', 100, true),
+    (uuid_generate_v4(), 'user:view', 'user', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'task:manage', 'task', 'ORG_DESCENDANT', 'allow', 100, true),
+    (uuid_generate_v4(), 'task:view', 'task', 'CREATOR', 'allow', 100, true),
+    (uuid_generate_v4(), 'task:view', 'task', 'ASSIGNEE', 'allow', 110, true),
+    (uuid_generate_v4(), 'task:view', 'task', 'ORG_DESCENDANT', 'allow', 120, true),
+    (uuid_generate_v4(), 'task:edit', 'task', 'CREATOR', 'allow', 100, true),
+    (uuid_generate_v4(), 'task:edit', 'task', 'ASSIGNEE', 'allow', 110, true),
+    (uuid_generate_v4(), 'task:edit', 'task', 'ORG_DESCENDANT', 'allow', 120, true),
+    (uuid_generate_v4(), 'task:execute', 'task', 'ASSIGNEE', 'allow', 100, true),
+    (uuid_generate_v4(), 'task:execute', 'task', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'missing:modify', 'missing_person', 'REPORTER', 'allow', 100, true),
+    (uuid_generate_v4(), 'missing:modify', 'missing_person', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'missing:manage', 'missing_person', 'ORG_DESCENDANT', 'allow', 100, true),
+    (uuid_generate_v4(), 'dialect:modify', 'dialect', 'OWNER', 'allow', 100, true),
+    (uuid_generate_v4(), 'dialect:modify', 'dialect', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'dialect:manage', 'dialect', 'ORG_DESCENDANT', 'allow', 100, true)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
 -- 完成
 -- ============================================================

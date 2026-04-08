@@ -899,5 +899,237 @@ FROM ty_permissions
 ON CONFLICT (user_id, permission_id) DO NOTHING;
 
 -- ============================================================
+-- 6. 权限系统二阶段：角色权限映射与ABAC策略表
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_role_permissions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('super_admin', 'admin', 'manager', 'volunteer')),
+    permission_code VARCHAR(100) NOT NULL,
+    effect VARCHAR(10) NOT NULL DEFAULT 'allow' CHECK (effect IN ('allow', 'deny')),
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    priority INTEGER NOT NULL DEFAULT 100
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_role_permission_active ON ty_role_permissions(role, permission_code) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role_enabled ON ty_role_permissions(role, enabled) WHERE deleted_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS ty_policy_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    permission_code VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL,
+    scope_rule VARCHAR(50) NOT NULL,
+    condition_json JSONB,
+    effect VARCHAR(10) NOT NULL DEFAULT 'allow' CHECK (effect IN ('allow', 'deny')),
+    priority INTEGER NOT NULL DEFAULT 100,
+    enabled BOOLEAN NOT NULL DEFAULT true
+);
+CREATE INDEX IF NOT EXISTS idx_policy_rules_permission ON ty_policy_rules(permission_code) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_policy_rules_resource ON ty_policy_rules(resource_type) WHERE deleted_at IS NULL;
+DROP TRIGGER IF EXISTS update_role_permissions_updated_at ON ty_role_permissions;
+CREATE TRIGGER update_role_permissions_updated_at BEFORE UPDATE ON ty_role_permissions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+DROP TRIGGER IF EXISTS update_policy_rules_updated_at ON ty_policy_rules;
+CREATE TRIGGER update_policy_rules_updated_at BEFORE UPDATE ON ty_policy_rules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+INSERT INTO ty_role_permissions (id, role, permission_code, effect, enabled, priority) VALUES
+    (uuid_generate_v4(), 'super_admin', 'user:create', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'user:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'user:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'task:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'task:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'task:edit', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'task:execute', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'missing:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'missing:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'dialect:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'super_admin', 'dialect:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'user:create', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'user:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'user:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'task:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'task:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'task:edit', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'task:execute', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'missing:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'missing:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'dialect:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'admin', 'dialect:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'user:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'user:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'task:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'task:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'task:edit', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'task:execute', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'missing:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'missing:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'dialect:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'manager', 'dialect:manage', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'user:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'user:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'task:view', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'task:edit', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'task:execute', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'missing:modify', 'allow', true, 100),
+    (uuid_generate_v4(), 'volunteer', 'dialect:modify', 'allow', true, 100)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO ty_policy_rules (id, permission_code, resource_type, scope_rule, effect, priority, enabled) VALUES
+    (uuid_generate_v4(), 'user:create', 'user', 'ORG_DESCENDANT', 'allow', 100, true),
+    (uuid_generate_v4(), 'user:modify', 'user', 'SELF', 'allow', 100, true),
+    (uuid_generate_v4(), 'user:modify', 'user', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'user:view', 'user', 'SELF', 'allow', 100, true),
+    (uuid_generate_v4(), 'user:view', 'user', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'task:manage', 'task', 'ORG_DESCENDANT', 'allow', 100, true),
+    (uuid_generate_v4(), 'task:view', 'task', 'CREATOR', 'allow', 100, true),
+    (uuid_generate_v4(), 'task:view', 'task', 'ASSIGNEE', 'allow', 110, true),
+    (uuid_generate_v4(), 'task:view', 'task', 'ORG_DESCENDANT', 'allow', 120, true),
+    (uuid_generate_v4(), 'task:edit', 'task', 'CREATOR', 'allow', 100, true),
+    (uuid_generate_v4(), 'task:edit', 'task', 'ASSIGNEE', 'allow', 110, true),
+    (uuid_generate_v4(), 'task:edit', 'task', 'ORG_DESCENDANT', 'allow', 120, true),
+    (uuid_generate_v4(), 'task:execute', 'task', 'ASSIGNEE', 'allow', 100, true),
+    (uuid_generate_v4(), 'task:execute', 'task', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'missing:modify', 'missing_person', 'REPORTER', 'allow', 100, true),
+    (uuid_generate_v4(), 'missing:modify', 'missing_person', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'missing:manage', 'missing_person', 'ORG_DESCENDANT', 'allow', 100, true),
+    (uuid_generate_v4(), 'dialect:modify', 'dialect', 'OWNER', 'allow', 100, true),
+    (uuid_generate_v4(), 'dialect:modify', 'dialect', 'ORG_DESCENDANT', 'allow', 110, true),
+    (uuid_generate_v4(), 'dialect:manage', 'dialect', 'ORG_DESCENDANT', 'allow', 100, true)
+ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS ty_authz_decisions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    operator_id UUID,
+    operator_role VARCHAR(20),
+    operator_org_id UUID,
+    action VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL,
+    resource_id VARCHAR(100),
+    allowed BOOLEAN NOT NULL,
+    reason VARCHAR(50) NOT NULL,
+    trace_id VARCHAR(100)
+);
+CREATE INDEX IF NOT EXISTS idx_authz_decisions_created_at ON ty_authz_decisions(created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_decisions_action_allowed ON ty_authz_decisions(action, allowed) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_decisions_operator ON ty_authz_decisions(operator_id, operator_role) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_decisions_resource ON ty_authz_decisions(resource_type, resource_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_decisions_reason ON ty_authz_decisions(reason) WHERE deleted_at IS NULL;
+DROP TRIGGER IF EXISTS update_authz_decisions_updated_at ON ty_authz_decisions;
+CREATE TRIGGER update_authz_decisions_updated_at BEFORE UPDATE ON ty_authz_decisions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS ty_authz_policy_changes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    operator_id UUID,
+    operator_role VARCHAR(20),
+    operation VARCHAR(20) NOT NULL DEFAULT 'apply' CHECK (operation IN ('apply', 'rollback')),
+    change_type VARCHAR(30) NOT NULL CHECK (change_type IN ('role_permissions', 'policy_rules')),
+    target_key VARCHAR(120) NOT NULL,
+    rollback_of_id UUID,
+    before_json TEXT,
+    after_json TEXT,
+    trace_id VARCHAR(100)
+);
+CREATE INDEX IF NOT EXISTS idx_authz_policy_changes_created_at ON ty_authz_policy_changes(created_at DESC) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_policy_changes_type_target ON ty_authz_policy_changes(change_type, target_key) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_policy_changes_operator ON ty_authz_policy_changes(operator_id, operator_role) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_policy_changes_rollback_of_id ON ty_authz_policy_changes(rollback_of_id) WHERE deleted_at IS NULL;
+DROP TRIGGER IF EXISTS update_authz_policy_changes_updated_at ON ty_authz_policy_changes;
+CREATE TRIGGER update_authz_policy_changes_updated_at BEFORE UPDATE ON ty_authz_policy_changes
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS ty_authz_policy_change_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    request_type VARCHAR(30) NOT NULL CHECK (request_type IN ('role_permissions', 'policy_rules', 'rollback')),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    target_key VARCHAR(120) NOT NULL,
+    payload_json TEXT,
+    preview_json TEXT,
+    request_note TEXT,
+    requested_by UUID,
+    requested_by_role VARCHAR(20),
+    review_note TEXT,
+    reviewed_by UUID,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    executed BOOLEAN NOT NULL DEFAULT FALSE,
+    executed_at TIMESTAMP WITH TIME ZONE,
+    executed_log_id UUID,
+    trace_id VARCHAR(100)
+);
+CREATE INDEX IF NOT EXISTS idx_authz_policy_change_requests_type_status ON ty_authz_policy_change_requests(request_type, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_policy_change_requests_requested_by ON ty_authz_policy_change_requests(requested_by, requested_by_role) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_policy_change_requests_target_key ON ty_authz_policy_change_requests(target_key) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_policy_change_requests_created_at ON ty_authz_policy_change_requests(created_at DESC) WHERE deleted_at IS NULL;
+DROP TRIGGER IF EXISTS update_authz_policy_change_requests_updated_at ON ty_authz_policy_change_requests;
+CREATE TRIGGER update_authz_policy_change_requests_updated_at BEFORE UPDATE ON ty_authz_policy_change_requests
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================
 -- 完成
 -- ============================================================
+
+-- 24. 站内通知表 (ty_system_notifications)
+CREATE TABLE IF NOT EXISTS ty_system_notifications (
+    id UUID PRIMARY KEY,
+    category VARCHAR(40) NOT NULL DEFAULT 'authz',
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    recipient_id UUID,
+    recipient_role VARCHAR(20),
+    status VARCHAR(20) NOT NULL DEFAULT 'unread',
+    related_type VARCHAR(60),
+    related_id VARCHAR(80),
+    operator_id UUID,
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT chk_system_notifications_status CHECK (status IN ('unread', 'read'))
+);
+CREATE INDEX IF NOT EXISTS idx_system_notifications_recipient_id_status ON ty_system_notifications(recipient_id, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_system_notifications_recipient_role_status ON ty_system_notifications(recipient_role, status) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_system_notifications_category_created ON ty_system_notifications(category, created_at DESC) WHERE deleted_at IS NULL;
+DROP TRIGGER IF EXISTS update_system_notifications_updated_at ON ty_system_notifications;
+CREATE TRIGGER update_system_notifications_updated_at BEFORE UPDATE ON ty_system_notifications
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 权限策略申请作用域扩展（global/org）
+ALTER TABLE ty_authz_policy_change_requests
+    ADD COLUMN IF NOT EXISTS scope_type VARCHAR(20) NOT NULL DEFAULT 'global',
+    ADD COLUMN IF NOT EXISTS target_org_id UUID;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'chk_authz_policy_change_requests_scope_type'
+    ) THEN
+        ALTER TABLE ty_authz_policy_change_requests
+            ADD CONSTRAINT chk_authz_policy_change_requests_scope_type
+            CHECK (scope_type IN ('global', 'org'));
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_authz_policy_change_requests_scope_type ON ty_authz_policy_change_requests(scope_type) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_authz_policy_change_requests_target_org_id ON ty_authz_policy_change_requests(target_org_id) WHERE deleted_at IS NULL;
+
+-- 权限策略按组织作用域生效（org_id 为空表示全局）
+ALTER TABLE ty_role_permissions ADD COLUMN IF NOT EXISTS org_id UUID;
+ALTER TABLE ty_policy_rules ADD COLUMN IF NOT EXISTS org_id UUID;
+DROP INDEX IF EXISTS uk_role_permission_active;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_role_permission_active ON ty_role_permissions(role, permission_code, org_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_role_permissions_org_enabled ON ty_role_permissions(org_id, enabled) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_policy_rules_permission_org ON ty_policy_rules(permission_code, org_id) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_policy_rules_org_priority ON ty_policy_rules(org_id, priority) WHERE deleted_at IS NULL;

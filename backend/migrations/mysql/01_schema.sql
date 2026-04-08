@@ -617,8 +617,180 @@ CREATE INDEX idx_audit_logs_created_at ON ty_audit_logs(created_at);
 CREATE INDEX idx_audit_logs_trace_id ON ty_audit_logs(trace_id);
 CREATE INDEX idx_audit_logs_request_ip ON ty_audit_logs(request_ip);
 
+-- ============================================================
+-- 18. 角色权限映射表 (ty_role_permissions)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_role_permissions (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+
+    role VARCHAR(20) NOT NULL,
+    permission_code VARCHAR(100) NOT NULL,
+    effect VARCHAR(10) NOT NULL DEFAULT 'allow',
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    priority INT NOT NULL DEFAULT 100,
+
+    CONSTRAINT chk_role_permissions_role CHECK (role IN ('super_admin', 'admin', 'manager', 'volunteer')),
+    CONSTRAINT chk_role_permissions_effect CHECK (effect IN ('allow', 'deny'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限映射表';
+
+CREATE UNIQUE INDEX uk_role_permission_active ON ty_role_permissions(role, permission_code, deleted_at);
+CREATE INDEX idx_role_permissions_role_enabled ON ty_role_permissions(role, enabled, deleted_at);
+
+-- ============================================================
+-- 19. 策略规则表 (ty_policy_rules)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_policy_rules (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+
+    permission_code VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL,
+    scope_rule VARCHAR(50) NOT NULL,
+    condition_json JSON NULL,
+    effect VARCHAR(10) NOT NULL DEFAULT 'allow',
+    priority INT NOT NULL DEFAULT 100,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+
+    CONSTRAINT chk_policy_rules_effect CHECK (effect IN ('allow', 'deny'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ABAC策略规则表';
+
+CREATE INDEX idx_policy_rules_permission ON ty_policy_rules(permission_code, deleted_at);
+CREATE INDEX idx_policy_rules_resource ON ty_policy_rules(resource_type, deleted_at);
+
+-- ============================================================
+-- 20. 授权决策审计日志表 (ty_authz_decisions)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_authz_decisions (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+
+    operator_id CHAR(36) NULL,
+    operator_role VARCHAR(20) NULL,
+    operator_org_id CHAR(36) NULL,
+    action VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL,
+    resource_id VARCHAR(100) NULL,
+    allowed TINYINT(1) NOT NULL,
+    reason VARCHAR(50) NOT NULL,
+    trace_id VARCHAR(100) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='授权决策审计日志';
+
+CREATE INDEX idx_authz_decisions_created_at ON ty_authz_decisions(created_at, deleted_at);
+CREATE INDEX idx_authz_decisions_action_allowed ON ty_authz_decisions(action, allowed, deleted_at);
+CREATE INDEX idx_authz_decisions_operator ON ty_authz_decisions(operator_id, operator_role, deleted_at);
+CREATE INDEX idx_authz_decisions_resource ON ty_authz_decisions(resource_type, resource_id, deleted_at);
+CREATE INDEX idx_authz_decisions_reason ON ty_authz_decisions(reason, deleted_at);
+
+-- ============================================================
+-- 21. 权限策略变更审计日志表 (ty_authz_policy_changes)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_authz_policy_changes (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+
+    operator_id CHAR(36) NULL,
+    operator_role VARCHAR(20) NULL,
+    operation VARCHAR(20) NOT NULL DEFAULT 'apply',
+    change_type VARCHAR(30) NOT NULL,
+    target_key VARCHAR(120) NOT NULL,
+    rollback_of_id CHAR(36) NULL,
+    before_json TEXT NULL,
+    after_json TEXT NULL,
+    trace_id VARCHAR(100) NULL,
+
+    CONSTRAINT chk_authz_policy_changes_type CHECK (change_type IN ('role_permissions', 'policy_rules')),
+    CONSTRAINT chk_authz_policy_changes_operation CHECK (operation IN ('apply', 'rollback'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限策略变更审计日志';
+
+CREATE INDEX idx_authz_policy_changes_created_at ON ty_authz_policy_changes(created_at, deleted_at);
+CREATE INDEX idx_authz_policy_changes_type_target ON ty_authz_policy_changes(change_type, target_key, deleted_at);
+CREATE INDEX idx_authz_policy_changes_operator ON ty_authz_policy_changes(operator_id, operator_role, deleted_at);
+CREATE INDEX idx_authz_policy_changes_rollback_of_id ON ty_authz_policy_changes(rollback_of_id, deleted_at);
+
+-- ============================================================
+-- 22. 权限策略变更审批申请表 (ty_authz_policy_change_requests)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_authz_policy_change_requests (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    request_type VARCHAR(30) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    target_key VARCHAR(120) NOT NULL,
+    payload_json TEXT NULL,
+    preview_json TEXT NULL,
+    request_note TEXT NULL,
+    requested_by CHAR(36) NULL,
+    requested_by_role VARCHAR(20) NULL,
+    review_note TEXT NULL,
+    reviewed_by CHAR(36) NULL,
+    reviewed_at TIMESTAMP NULL DEFAULT NULL,
+    executed TINYINT(1) NOT NULL DEFAULT 0,
+    executed_at TIMESTAMP NULL DEFAULT NULL,
+    executed_log_id CHAR(36) NULL,
+    trace_id VARCHAR(100) NULL,
+    CONSTRAINT chk_authz_policy_change_requests_type CHECK (request_type IN ('role_permissions', 'policy_rules', 'rollback')),
+    CONSTRAINT chk_authz_policy_change_requests_status CHECK (status IN ('pending', 'approved', 'rejected'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限策略变更审批申请表';
+
+CREATE INDEX idx_authz_policy_change_requests_type_status ON ty_authz_policy_change_requests(request_type, status, deleted_at);
+CREATE INDEX idx_authz_policy_change_requests_requested_by ON ty_authz_policy_change_requests(requested_by, requested_by_role, deleted_at);
+CREATE INDEX idx_authz_policy_change_requests_target_key ON ty_authz_policy_change_requests(target_key, deleted_at);
+CREATE INDEX idx_authz_policy_change_requests_created_at ON ty_authz_policy_change_requests(created_at, deleted_at);
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
 -- 完成
 -- ============================================================
+
+-- 23. 站内通知表 (ty_system_notifications)
+CREATE TABLE IF NOT EXISTS ty_system_notifications (
+    id CHAR(36) PRIMARY KEY,
+    category VARCHAR(40) NOT NULL DEFAULT 'authz',
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    recipient_id CHAR(36) NULL,
+    recipient_role VARCHAR(20) NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'unread',
+    related_type VARCHAR(60) NULL,
+    related_id VARCHAR(80) NULL,
+    operator_id CHAR(36) NULL,
+    read_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT chk_system_notifications_status CHECK (status IN ('unread', 'read'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX idx_system_notifications_recipient_id_status ON ty_system_notifications(recipient_id, status, deleted_at);
+CREATE INDEX idx_system_notifications_recipient_role_status ON ty_system_notifications(recipient_role, status, deleted_at);
+CREATE INDEX idx_system_notifications_category_created ON ty_system_notifications(category, created_at, deleted_at);
+
+-- 权限策略申请作用域扩展（global/org）
+ALTER TABLE ty_authz_policy_change_requests
+    ADD COLUMN IF NOT EXISTS scope_type VARCHAR(20) NOT NULL DEFAULT 'global' AFTER status,
+    ADD COLUMN IF NOT EXISTS target_org_id CHAR(36) NULL AFTER scope_type;
+ALTER TABLE ty_authz_policy_change_requests
+    ADD CONSTRAINT chk_authz_policy_change_requests_scope_type
+    CHECK (scope_type IN ('global', 'org'));
+CREATE INDEX idx_authz_policy_change_requests_scope_type ON ty_authz_policy_change_requests(scope_type, deleted_at);
+CREATE INDEX idx_authz_policy_change_requests_target_org_id ON ty_authz_policy_change_requests(target_org_id, deleted_at);
+
+-- 权限策略按组织作用域生效（org_id 为空表示全局）
+ALTER TABLE ty_role_permissions ADD COLUMN IF NOT EXISTS org_id CHAR(36) NULL AFTER permission_code;
+ALTER TABLE ty_policy_rules ADD COLUMN IF NOT EXISTS org_id CHAR(36) NULL AFTER permission_code;
+DROP INDEX uk_role_permission_active ON ty_role_permissions;
+CREATE UNIQUE INDEX uk_role_permission_active ON ty_role_permissions(role, permission_code, org_id, deleted_at);
+CREATE INDEX idx_role_permissions_org_enabled ON ty_role_permissions(org_id, enabled, deleted_at);
+CREATE INDEX idx_policy_rules_permission_org ON ty_policy_rules(permission_code, org_id, deleted_at);
+CREATE INDEX idx_policy_rules_org_priority ON ty_policy_rules(org_id, priority, deleted_at);
