@@ -13,6 +13,15 @@ type FieldType = 'text' | 'number' | 'password' | 'bool'
 type FieldDef = { key: string; label: string; type: FieldType; placeholder?: string }
 type SectionDef = { title: string; fields: FieldDef[] }
 
+const fileManagedPrefixes = ['database.']
+const fileManagedKeys = new Set([
+  'server.port',
+  'server.mode',
+  'server.read_timeout',
+  'server.write_timeout',
+  'server.max_header_bytes',
+])
+
 const sections: SectionDef[] = [
   {
     title: 'server',
@@ -332,7 +341,7 @@ export default function SiteSettingsPage() {
     try {
       const res = await systemService.updateSiteConfig(config)
       setConfig({ ...initialConfig(), ...(res.config || {}) })
-      setNotice({ type: 'success', text: '配置已保存到后端 config.yaml（建议重启后端生效）' })
+      setNotice({ type: 'success', text: '配置已保存到数据库覆盖层；database 与启动级参数仍由 config.yaml 管理，建议重启后端生效。' })
     } catch (err) {
       setNotice({ type: 'error', text: err instanceof Error ? err.message : '保存配置失败' })
     } finally {
@@ -376,11 +385,12 @@ export default function SiteSettingsPage() {
 
   function renderField(f: FieldDef) {
     const value = config[f.key]
+    const readOnly = isFileManagedField(f.key)
     if (f.type === 'bool') {
       return (
         <label key={f.key}>
           <div>{f.label}</div>
-          <label><input type="checkbox" checked={Boolean(value)} onChange={(e) => setValue(f.key, e.target.checked)} /> 启用</label>
+          <label><input type="checkbox" checked={Boolean(value)} disabled={readOnly} onChange={(e) => setValue(f.key, e.target.checked)} /> 启用{readOnly ? '（文件管理）' : ''}</label>
         </label>
       )
     }
@@ -392,8 +402,10 @@ export default function SiteSettingsPage() {
           type={f.type === 'number' ? 'number' : f.type === 'password' ? 'password' : 'text'}
           placeholder={f.placeholder || ''}
           value={value ?? ''}
+          disabled={readOnly}
           onChange={(e) => setValue(f.key, f.type === 'number' ? Number(e.target.value || 0) : e.target.value)}
         />
+        {readOnly ? <small style={{ color: '#8c8c8c' }}>此项由 `config.yaml` 管理，不走数据库覆盖。</small> : null}
       </label>
     )
   }
@@ -412,7 +424,7 @@ export default function SiteSettingsPage() {
     <AppShell>
       <ModuleHeader
         title="网站设置"
-        desc={`对齐 config.yaml 的系统配置中心（共 ${sections.length} 组 / ${sectionCount} 项）`}
+        desc={`数据库覆盖式网站设置中心（共 ${sections.length} 组 / ${sectionCount} 项）`}
         right={
           <div className="row wrap">
             <button className="btn" type="button" onClick={exportJson}>
@@ -427,7 +439,7 @@ export default function SiteSettingsPage() {
       />
       <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <div className="panel" style={{ marginBottom: 12, color: '#7a3e00', background: '#fff7e6', borderColor: '#ffd591' }}>
-        当前页面已接入后端配置读写，密钥类字段会以掩码展示。保持掩码不改动即可保留原值。
+        当前页面保存到数据库覆盖层，不再直接改写 `config.yaml`。密钥类字段会以掩码展示；保持掩码不改动即可保留原值。`database.*` 与启动级 `server.*` 参数仍由文件管理。
       </div>
       <form className="grid" onSubmit={save}>
         {sections.map((section) => (
@@ -449,4 +461,9 @@ export default function SiteSettingsPage() {
       </form>
     </AppShell>
   )
+}
+
+function isFileManagedField(key: string) {
+  if (fileManagedKeys.has(key)) return true
+  return fileManagedPrefixes.some((prefix) => key.startsWith(prefix))
 }

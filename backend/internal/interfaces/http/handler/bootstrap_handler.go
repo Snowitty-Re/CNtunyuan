@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +13,7 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/spf13/viper"
-	"gopkg.in/yaml.v3"
+	"gorm.io/gorm"
 )
 
 const initDefaultOrgID = "00000000-0000-0000-0000-000000000000"
@@ -24,6 +21,7 @@ const initDefaultOrgID = "00000000-0000-0000-0000-000000000000"
 type BootstrapHandler struct {
 	userRepo       repository.UserRepository
 	healthService  *service.HealthService
+	db             *gorm.DB
 	initializeLock sync.Mutex
 }
 
@@ -63,10 +61,11 @@ type BootstrapInitializeAdminRequest struct {
 	Email    string `json:"email"`
 }
 
-func NewBootstrapHandler(userRepo repository.UserRepository, healthService *service.HealthService) *BootstrapHandler {
+func NewBootstrapHandler(userRepo repository.UserRepository, healthService *service.HealthService, db *gorm.DB) *BootstrapHandler {
 	return &BootstrapHandler{
 		userRepo:      userRepo,
 		healthService: healthService,
+		db:            db,
 	}
 }
 
@@ -110,15 +109,12 @@ func (h *BootstrapHandler) GetStatus(c *gin.Context) {
 		}
 	}
 
-	configPath := resolveConfigPath()
-	configWritable := isConfigWritable(configPath)
-
 	response.Success(c, gin.H{
 		"initialized":       superAdminCount > 0,
 		"super_admin_count": superAdminCount,
 		"checks": gin.H{
 			"database_connected": dbConnected,
-			"config_writable":    configWritable,
+			"settings_storage":   "database_overrides",
 			"health_status":      healthStatus,
 		},
 		"database": gin.H{
@@ -141,7 +137,7 @@ func (h *BootstrapHandler) GetStatus(c *gin.Context) {
 			"enable_wechat_login_mini_program": cfg.System.EnableWechatLoginMiniProgram,
 			"enable_sms_login":                 cfg.System.EnableSMSLogin,
 		},
-		"config_path": configPath,
+		"config_path": "config.yaml(database only) + ty_system_settings(runtime overrides)",
 		"server_time": time.Now().Format(time.RFC3339),
 	})
 }
@@ -287,12 +283,18 @@ func (h *BootstrapHandler) Initialize(c *gin.Context) {
 		return
 	}
 
-	configPath := resolveConfigPath()
-	if err := saveConfigFile(configPath, &working); err != nil {
-		response.InternalServerError(c, "failed to save config: "+err.Error())
-		return
+	if req.Site != nil {
+		siteFlat := buildSiteOverrideMap(req.Site)
+		if len(siteFlat) > 0 {
+			nextCfg, _, err := config.SaveRuntimeOverrides(c.Request.Context(), h.db, cfg, siteFlat)
+			if err != nil {
+				response.InternalServerError(c, "failed to save runtime settings: "+err.Error())
+				return
+			}
+			config.SetConfig(nextCfg)
+			working = *nextCfg
+		}
 	}
-	config.SetConfig(&working)
 
 	if err := h.userRepo.Create(c.Request.Context(), superAdmin); err != nil {
 		response.InternalServerError(c, "failed to create super admin: "+err.Error())
@@ -301,7 +303,7 @@ func (h *BootstrapHandler) Initialize(c *gin.Context) {
 
 	response.SuccessWithMessage(c, "初始化完成", gin.H{
 		"initialized":  true,
-		"config_path":  configPath,
+		"config_path":  "config.yaml(database only) + ty_system_settings(runtime overrides)",
 		"super_admin":  gin.H{"phone": superAdmin.Phone, "nickname": superAdmin.Nickname},
 		"server_time":  time.Now().Format(time.RFC3339),
 		"next_actions": []string{"请使用超级管理员账号登录 Web 端", "建议重启后端以确保所有配置完全生效"},
@@ -367,36 +369,37 @@ func applySiteConfig(cfg *config.Config, site *BootstrapInitializeSiteRequest) {
 	}
 }
 
-func resolveConfigPath() string {
-	configPath := strings.TrimSpace(viper.ConfigFileUsed())
-	if configPath == "" {
-		configPath = filepath.Join("config", "config.yaml")
+func buildSiteOverrideMap(site *BootstrapInitializeSiteRequest) map[string]interface{} {
+	if site == nil {
+		return nil
 	}
-	return configPath
-}
-
-func saveConfigFile(configPath string, cfg *config.Config) error {
-	bytes, err := yaml.Marshal(cfg)
-	if err != nil {
-		return err
+	overrides := map[string]interface{}{}
+	if strings.TrimSpace(site.Domain) != "" {
+		overrides["server.domain"] = strings.TrimSpace(site.Domain)
 	}
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		return err
+	if strings.TrimSpace(site.CORSOrigins) != "" {
+		overrides["server.cors_origins"] = strings.TrimSpace(site.CORSOrigins)
 	}
-	return os.WriteFile(configPath, bytes, 0o600)
-}
-
-func isConfigWritable(configPath string) bool {
-	if strings.TrimSpace(configPath) == "" {
-		return false
+	if strings.TrimSpace(site.DefaultOrgName) != "" {
+		overrides["system.default_org_name"] = strings.TrimSpace(site.DefaultOrgName)
 	}
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		return false
+	if strings.TrimSpace(site.DefaultOrgCode) != "" {
+		overrides["system.default_org_code"] = strings.TrimSpace(site.DefaultOrgCode)
 	}
-	file, err := os.OpenFile(configPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600)
-	if err != nil {
-		return false
+	if site.EnableRegister != nil {
+		overrides["system.enable_register"] = *site.EnableRegister
 	}
-	_ = file.Close()
-	return true
+	if site.EnableWechatLogin != nil {
+		overrides["system.enable_wechat_login"] = *site.EnableWechatLogin
+	}
+	if site.EnableWechatWeb != nil {
+		overrides["system.enable_wechat_login_web"] = *site.EnableWechatWeb
+	}
+	if site.EnableWechatMini != nil {
+		overrides["system.enable_wechat_login_mini_program"] = *site.EnableWechatMini
+	}
+	if site.EnableSMSLogin != nil {
+		overrides["system.enable_sms_login"] = *site.EnableSMSLogin
+	}
+	return overrides
 }

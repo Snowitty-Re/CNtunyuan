@@ -6,6 +6,7 @@
 package di
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -66,6 +67,15 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	}
 	if db == nil {
 		return nil, fmt.Errorf("数据库连接失败: db 为 nil")
+	}
+
+	runtimeCfg, _, err := config.LoadRuntimeOverrides(context.Background(), db, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("加载数据库配置覆盖失败: %w", err)
+	}
+	if runtimeCfg != nil {
+		cfg = runtimeCfg
+		config.SetConfig(cfg)
 	}
 
 	// 创建缓存
@@ -177,8 +187,8 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	taskHandler := handler.NewTaskHandler(taskService)
 	uploadHandler := handler.NewUploadHandler(fileService)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
-	bootstrapHandler := handler.NewBootstrapHandler(userRepo, healthService)
-	systemConfigHandler := handler.NewSystemConfigHandlerWithAuthz(authzService)
+	bootstrapHandler := handler.NewBootstrapHandler(userRepo, healthService, db)
+	systemConfigHandler := handler.NewSystemConfigHandlerWithAuthz(authzService, db)
 
 	// 创建路由
 	r := router.NewRouter(

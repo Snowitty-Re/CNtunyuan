@@ -8,7 +8,7 @@ type InitStatus = {
   initialized: boolean
   checks?: {
     database_connected?: boolean
-    config_writable?: boolean
+    settings_storage?: string
     health_status?: string
   }
   database?: {
@@ -172,9 +172,9 @@ export default function BootstrapInitPage() {
             </div>
           </div>
           <div className="section-card">
-            <b>配置文件写入</b>
+            <b>站点设置存储</b>
             <div className="hint" style={{ marginTop: 8 }}>
-              {status?.checks?.config_writable ? '可写' : '不可写'}
+              {status?.checks?.settings_storage === 'database_overrides' ? '数据库覆盖层' : '未就绪'}
             </div>
           </div>
           <div className="section-card">

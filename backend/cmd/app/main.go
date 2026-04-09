@@ -137,6 +137,7 @@ func checkDatabase(cfg *config.Config) error {
 		"ty_dialect_cards",
 		"ty_files",
 		"ty_audit_logs",
+		"ty_system_settings",
 	}
 
 	logger.Info("Checking database tables...")

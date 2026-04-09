@@ -1098,6 +1098,21 @@ CREATE INDEX idx_system_notifications_recipient_id_status ON ty_system_notificat
 CREATE INDEX idx_system_notifications_recipient_role_status ON ty_system_notifications(recipient_role, status, deleted_at);
 CREATE INDEX idx_system_notifications_category_created ON ty_system_notifications(category, created_at, deleted_at);
 
+-- 25. 系统运行配置覆盖表（数据库覆盖 config.yaml）
+CREATE TABLE IF NOT EXISTS ty_system_settings (
+    id CHAR(36) PRIMARY KEY,
+    category VARCHAR(50) NOT NULL,
+    setting_key VARCHAR(120) NOT NULL,
+    setting_value TEXT NOT NULL,
+    value_type VARCHAR(20) NOT NULL DEFAULT 'string',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    UNIQUE KEY uk_system_settings_key_active (setting_key, deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX idx_system_settings_category_active ON ty_system_settings(category, deleted_at);
+CREATE INDEX idx_system_settings_deleted_at ON ty_system_settings(deleted_at);
+
 -- 权限策略申请作用域扩展（global/org）
 ALTER TABLE ty_authz_policy_change_requests
     ADD COLUMN IF NOT EXISTS scope_type VARCHAR(20) NOT NULL DEFAULT 'global' AFTER status,
