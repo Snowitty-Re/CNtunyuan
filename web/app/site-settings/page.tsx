@@ -313,7 +313,17 @@ export default function SiteSettingsPage() {
   const [notice, setNotice] = useState<Notice | null>(null)
   const [config, setConfig] = useState<Record<string, any>>(initialConfig())
   const [loading, setLoading] = useState(false)
-  const sectionCount = useMemo(() => sections.reduce((s, x) => s + x.fields.length, 0), [])
+  const visibleSections = useMemo(
+    () =>
+      sections
+        .map((section) => ({
+          ...section,
+          fields: section.fields.filter((field) => !isFileManagedField(field.key)),
+        }))
+        .filter((section) => section.fields.length > 0),
+    [],
+  )
+  const sectionCount = useMemo(() => visibleSections.reduce((s, x) => s + x.fields.length, 0), [visibleSections])
 
   async function loadConfig() {
     setLoading(true)
@@ -341,9 +351,9 @@ export default function SiteSettingsPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await systemService.updateSiteConfig(config)
+      const res = await systemService.updateSiteConfig(pickVisibleConfig(config))
       setConfig({ ...initialConfig(), ...(res.config || {}) })
-      setNotice({ type: 'success', text: '配置已保存到数据库覆盖层；database 与启动级参数仍由 config.yaml 管理，建议重启后端生效。' })
+      setNotice({ type: 'success', text: '配置已保存到数据库覆盖层。当前页面已隐藏 config.yaml 管理项，必要时重启后端使运行参数完全生效。' })
     } catch (err) {
       setNotice({ type: 'error', text: err instanceof Error ? err.message : '保存配置失败' })
     } finally {
@@ -357,7 +367,7 @@ export default function SiteSettingsPage() {
   }
 
   function exportJson() {
-    const content = JSON.stringify(config, null, 2)
+    const content = JSON.stringify(pickVisibleConfig(config), null, 2)
     const blob = new Blob([content], { type: 'application/json;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -376,7 +386,7 @@ export default function SiteSettingsPage() {
       try {
         const parsed = JSON.parse(String(reader.result || '{}'))
         if (!parsed || typeof parsed !== 'object') throw new Error('invalid')
-        setConfig((prev) => ({ ...prev, ...parsed }))
+        setConfig((prev) => ({ ...prev, ...pickVisibleConfig(parsed as Record<string, any>) }))
         setNotice({ type: 'success', text: '设置已导入，请检查后保存' })
       } catch {
         setNotice({ type: 'error', text: '导入失败：JSON 格式不正确' })
@@ -387,12 +397,11 @@ export default function SiteSettingsPage() {
 
   function renderField(f: FieldDef) {
     const value = config[f.key]
-    const readOnly = isFileManagedField(f.key)
     if (f.type === 'bool') {
       return (
         <label key={f.key}>
           <div>{f.label}</div>
-          <label><input type="checkbox" checked={Boolean(value)} disabled={readOnly} onChange={(e) => setValue(f.key, e.target.checked)} /> 启用{readOnly ? '（文件管理）' : ''}</label>
+          <label><input type="checkbox" checked={Boolean(value)} onChange={(e) => setValue(f.key, e.target.checked)} /> 启用</label>
         </label>
       )
     }
@@ -404,10 +413,8 @@ export default function SiteSettingsPage() {
           type={f.type === 'number' ? 'number' : f.type === 'password' ? 'password' : 'text'}
           placeholder={f.placeholder || ''}
           value={value ?? ''}
-          disabled={readOnly}
           onChange={(e) => setValue(f.key, f.type === 'number' ? Number(e.target.value || 0) : e.target.value)}
         />
-        {readOnly ? <small style={{ color: '#8c8c8c' }}>此项由 `config.yaml` 管理，不走数据库覆盖。</small> : null}
       </label>
     )
   }
@@ -426,7 +433,7 @@ export default function SiteSettingsPage() {
     <AppShell>
       <ModuleHeader
         title="网站设置"
-        desc={`数据库覆盖式网站设置中心（共 ${sections.length} 组 / ${sectionCount} 项）`}
+        desc={`数据库覆盖式网站设置中心（共 ${visibleSections.length} 组 / ${sectionCount} 项）`}
         right={
           <div className="row wrap">
             <button className="btn" type="button" onClick={exportJson}>
@@ -441,10 +448,10 @@ export default function SiteSettingsPage() {
       />
       <NoticeBar notice={notice} onClose={() => setNotice(null)} />
       <div className="panel" style={{ marginBottom: 12, color: '#7a3e00', background: '#fff7e6', borderColor: '#ffd591' }}>
-        当前页面保存到数据库覆盖层，不再直接改写 `config.yaml`。密钥类字段会以掩码展示；保持掩码不改动即可保留原值。`database.*` 与启动级 `server.*` 参数仍由文件管理。
+        当前页面仅展示数据库覆盖层可管理项，不再显示 `config.yaml` 管理的数据库连接与启动级参数。密钥类字段会以掩码展示；保持掩码不改动即可保留原值。
       </div>
       <form className="grid" onSubmit={save}>
-        {sections.map((section) => (
+        {visibleSections.map((section) => (
           <div className="section-card" key={section.title}>
             <b>{section.title}</b>
             <div className="grid cols-3" style={{ marginTop: 10 }}>
@@ -468,4 +475,8 @@ export default function SiteSettingsPage() {
 function isFileManagedField(key: string) {
   if (fileManagedKeys.has(key)) return true
   return fileManagedPrefixes.some((prefix) => key.startsWith(prefix))
+}
+
+function pickVisibleConfig(source: Record<string, any>) {
+  return Object.fromEntries(Object.entries(source).filter(([key]) => !isFileManagedField(key)))
 }
