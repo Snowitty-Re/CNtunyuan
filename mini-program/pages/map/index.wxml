@@ -1,5 +1,4 @@
 <view class="map-page">
-  <!-- 全屏地图 -->
   <map
     id="map"
     class="full-map"
@@ -7,6 +6,7 @@
     longitude="{{longitude}}"
     scale="{{scale}}"
     markers="{{markers}}"
+    include-points="{{includePoints}}"
     show-location
     show-compass
     enable-zoom
@@ -17,147 +17,142 @@
     bindregionchange="onRegionChange"
   ></map>
 
-  <!-- 顶部搜索栏 -->
-  <view class="search-overlay">
-    <view class="search-bar">
-      <view class="search-icon-wrap">
-        <text class="iconfont icon-search"></text>
+  <view class="hero-overlay">
+    <view class="hero-card">
+      <view class="hero-top">
+        <view>
+          <view class="hero-title">案件地图</view>
+          <view class="hero-subtitle">随地图视野自动更新案件，不再手动切换</view>
+        </view>
+        <view class="hero-badge">{{visibleCount}}</view>
       </view>
-      <input
-        class="search-input"
-        type="text"
-        placeholder="搜索案件名称或地点"
-        placeholder-class="search-placeholder"
-        value="{{keyword}}"
-        bindinput="onSearchInput"
-        confirm-type="search"
-        bindconfirm="onSearch"
-      />
-      <view class="search-btn" bindtap="onSearch" wx:if="{{keyword}}">
-        <text>搜索</text>
+
+      <view class="hero-stats">
+        <view class="hero-stat">
+          <text class="hero-stat-value">{{matchedCount}}</text>
+          <text class="hero-stat-label">可定位案件</text>
+        </view>
+        <view class="hero-stat">
+          <text class="hero-stat-value">{{visibleCount}}</text>
+          <text class="hero-stat-label">当前视野</text>
+        </view>
+        <view class="hero-stat">
+          <text class="hero-stat-value">{{selectedStatusLabel}}</text>
+          <text class="hero-stat-label">筛选状态</text>
+        </view>
       </view>
     </view>
   </view>
 
-  <!-- 状态筛选条 -->
   <view class="filter-overlay">
     <scroll-view class="filter-scroll" scroll-x enable-flex>
-      <view
-        class="filter-chip {{status === '' ? 'active' : ''}}"
-        data-status=""
-        bindtap="onStatusChange"
-      >全部</view>
-      <view
-        class="filter-chip {{status === 'missing' ? 'active' : ''}}"
-        data-status="missing"
-        bindtap="onStatusChange"
-      >
+      <view class="filter-chip {{status === '' ? 'active' : ''}}" data-status="" bindtap="onStatusChange">全部</view>
+      <view class="filter-chip {{status === 'missing' ? 'active' : ''}}" data-status="missing" bindtap="onStatusChange">
         <view class="chip-dot dot-red"></view>
         <text>失踪中</text>
       </view>
-      <view
-        class="filter-chip {{status === 'searching' ? 'active' : ''}}"
-        data-status="searching"
-        bindtap="onStatusChange"
-      >
+      <view class="filter-chip {{status === 'searching' ? 'active' : ''}}" data-status="searching" bindtap="onStatusChange">
         <view class="chip-dot dot-orange"></view>
         <text>寻找中</text>
       </view>
-      <view
-        class="filter-chip {{status === 'found' ? 'active' : ''}}"
-        data-status="found"
-        bindtap="onStatusChange"
-      >
+      <view class="filter-chip {{status === 'found' ? 'active' : ''}}" data-status="found" bindtap="onStatusChange">
         <view class="chip-dot dot-green"></view>
         <text>已找到</text>
+      </view>
+      <view class="filter-chip {{status === 'reunited' ? 'active' : ''}}" data-status="reunited" bindtap="onStatusChange">
+        <view class="chip-dot dot-blue"></view>
+        <text>已团圆</text>
+      </view>
+      <view class="filter-chip {{status === 'closed' ? 'active' : ''}}" data-status="closed" bindtap="onStatusChange">
+        <view class="chip-dot dot-gray"></view>
+        <text>已结案</text>
       </view>
     </scroll-view>
   </view>
 
-  <!-- 右侧浮动按钮 -->
-  <view class="float-btns">
-    <view class="float-btn" bindtap="locateCurrentPosition" hover-class="float-hover">
-      <text class="iconfont icon-location"></text>
-    </view>
-    <view class="float-btn {{loading ? 'spinning' : ''}}" bindtap="onRefresh" hover-class="float-hover">
-      <text class="iconfont icon-refresh"></text>
+  <view class="search-overlay">
+    <view class="search-input-wrap">
+      <text class="search-icon">搜</text>
+      <input
+        class="search-input"
+        type="text"
+        placeholder="搜索姓名、地区、详细地址"
+        placeholder-class="search-placeholder"
+        value="{{keyword}}"
+        bindinput="onSearchInput"
+      />
+      <view class="search-clear" wx:if="{{keyword}}" bindtap="clearKeyword">清空</view>
     </view>
   </view>
 
-  <!-- 底部案件列表滑动面板 -->
-  <view class="case-panel {{showCaseList ? 'show' : ''}}">
-    <!-- 面板把手 -->
-    <view class="panel-handle-area" bindtap="hideCaseList">
+  <view class="float-btns">
+    <view class="float-btn" bindtap="locateCurrentPosition" hover-class="float-hover">
+      <text class="float-text">定位</text>
+    </view>
+    <view class="float-btn {{loading ? 'spinning' : ''}}" bindtap="onRefresh" hover-class="float-hover">
+      <text class="float-text">刷新</text>
+    </view>
+  </view>
+
+  <view class="panel-shell {{panelExpanded ? 'expanded' : 'collapsed'}}">
+    <view class="panel-toggle" bindtap="togglePanel">
       <view class="panel-handle"></view>
+      <text class="panel-toggle-text">{{panelExpanded ? '收起' : '展开案件面板'}}</text>
     </view>
 
-    <!-- 面板头部 -->
-    <view class="panel-header">
-      <view class="panel-title-row">
-        <text class="panel-title">案件列表</text>
-        <view class="panel-count-badge">{{markers.length}}</view>
+    <view class="selected-brief" wx:if="{{selectedCase}}">
+      <view class="selected-brief-main">
+        <text class="selected-brief-name">{{selectedCase.name || '未命名案件'}}</text>
+        <text class="selected-brief-location">{{selectedCase.displayLocation}}</text>
       </view>
-      <view class="panel-close" bindtap="hideCaseList">
-        <text class="iconfont icon-close"></text>
+      <view class="selected-brief-actions">
+        <view class="brief-btn ghost" bindtap="focusSelectedCase">定位</view>
+        <view class="brief-btn" data-id="{{selectedCase.id}}" bindtap="goToCaseDetail">详情</view>
       </view>
     </view>
 
-    <!-- 案件列表 -->
+    <view class="panel-headline">
+      <view>
+        <text class="panel-title">当前地图范围内案件</text>
+        <text class="panel-desc">拖动或缩放地图后会自动更新</text>
+      </view>
+      <view class="panel-count">{{visibleCases.length}}</view>
+    </view>
+
     <scroll-view class="case-scroll" scroll-y>
-      <block wx:if="{{markers.length > 0}}">
+      <block wx:if="{{visibleCases.length > 0}}">
         <view
-          class="case-card"
-          wx:for="{{markers}}"
+          class="case-card {{selectedCase && selectedCase.id === item.id ? 'case-card-active' : ''}}"
+          wx:for="{{visibleCases}}"
           wx:key="id"
-          data-item="{{item.data}}"
-          bindtap="goToCaseDetail"
-          data-id="{{item.data.id}}"
-          hover-class="case-card-hover"
+          data-id="{{item.id}}"
+          bindtap="selectCase"
         >
-          <image
-            class="case-photo"
-            src="{{item.data.photos && item.data.photos.length > 0 ? item.data.photos[0].url : '/assets/icons/default-avatar.png'}}"
-            mode="aspectFill"
-          />
+          <image class="case-photo" src="{{item.cover}}" mode="aspectFill" />
           <view class="case-info">
             <view class="case-name-row">
-              <text class="case-name">{{item.data.name}}</text>
-              <view class="case-status-tag status-{{item.data.status}}">
-                {{item.data.status_text}}
-              </view>
+              <text class="case-name">{{item.name || '未命名案件'}}</text>
+              <view class="case-status-tag status-{{item.status}}">{{item.status_text}}</view>
             </view>
-            <view class="case-location-row">
-              <text class="iconfont icon-location case-loc-icon"></text>
-              <text class="case-loc-text">{{item.data.province || ''}}{{item.data.city || ''}}{{item.data.district || ''}}{{item.data.address || '未知位置'}}</text>
-            </view>
-            <text class="case-time-text">失踪时间：{{item.data.missing_time}}</text>
+            <text class="case-location">{{item.displayLocation}}</text>
+            <text class="case-time">失踪时间：{{item.missing_time_text}}</text>
           </view>
-          <view class="case-nav-btn" data-item="{{item.data}}" catchtap="navigateToLocation">
-            <text class="iconfont icon-navigation"></text>
-            <text class="nav-label">导航</text>
+          <view class="case-side-actions">
+            <view class="mini-action" catchtap="selectCase" data-id="{{item.id}}">定位</view>
+            <view class="mini-action solid" data-id="{{item.id}}" catchtap="goToCaseDetail">详情</view>
           </view>
         </view>
       </block>
 
-      <!-- 空状态 -->
       <view class="panel-empty" wx:else>
-        <view class="empty-illustration">
-          <text class="iconfont icon-empty"></text>
-        </view>
-        <text class="empty-text">暂无案件数据</text>
+        <view class="empty-icon">图</view>
+        <text class="empty-title">当前地图范围暂无案件</text>
+        <text class="empty-text">可以拖动地图查看附近区域，或调整上方状态筛选</text>
       </view>
     </scroll-view>
   </view>
 
-  <!-- 底部操作栏 -->
-  <view class="bottom-actions {{showCaseList ? 'hidden' : ''}}">
-    <view class="action-btn-primary" bindtap="showCaseList" hover-class="btn-hover">
-      <text class="iconfont icon-list"></text>
-      <text>案件列表</text>
-    </view>
-    <view class="action-btn-secondary" bindtap="goToCreateCase" hover-class="btn-hover">
-      <text class="iconfont icon-add"></text>
-      <text>发布案件</text>
-    </view>
+  <view class="bottom-actions">
+    <view class="action-btn-primary" bindtap="goToCreateCase" hover-class="btn-hover">发布案件</view>
   </view>
 </view>

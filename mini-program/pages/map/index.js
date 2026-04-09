@@ -1,175 +1,364 @@
 const services = require('../../services/index')
-const { showError, showToast, joinLocation, formatDate } = require('../../utils/util')
+const { showError, showToast, joinLocation, formatDate, normalizeMediaUrl, debounce } = require('../../utils/util')
 const app = getApp()
 
-const STATUS_COLOR = {
-  missing:   '#ff4d4f',
-  searching: '#faad14',
-  found:     '#52c41a',
-  reunited:  '#52c41a',
-  closed:    '#999999'
-}
-
 const STATUS_TEXT = {
-  missing:   '失踪中',
+  missing: '失踪中',
   searching: '寻找中',
-  found:     '已找到',
-  reunited:  '已团圆',
-  closed:    '已结案'
+  found: '已找到',
+  reunited: '已团圆',
+  closed: '已结案'
 }
 
-// Default map center: Beijing
-const DEFAULT_LAT  = 39.9042
-const DEFAULT_LNG  = 116.4074
+const STATUS_MARKER_ICON = {
+  missing: '/assets/images/marker_red.png',
+  searching: '/assets/images/marker_orange.png',
+  found: '/assets/images/marker_green.png',
+  reunited: '/assets/images/marker_blue.png',
+  closed: '/assets/images/marker.png'
+}
+
+const STATUS_LABEL_BG = {
+  missing: '#ffe5e5',
+  searching: '#fff0df',
+  found: '#e6f7e6',
+  reunited: '#e6f4ff',
+  closed: '#efefef'
+}
+
+const STATUS_LABEL_COLOR = {
+  missing: '#d9363e',
+  searching: '#d46b08',
+  found: '#389e0d',
+  reunited: '#1677ff',
+  closed: '#666666'
+}
+
+const DEFAULT_LAT = 39.9042
+const DEFAULT_LNG = 116.4074
 const DEFAULT_SCALE = 5
 
 Page({
   data: {
-    cases:        [],
-    markers:      [],
-    latitude:     DEFAULT_LAT,
-    longitude:    DEFAULT_LNG,
-    scale:        DEFAULT_SCALE,
+    loading: false,
+    status: '',
+    keyword: '',
+    panelExpanded: true,
+
+    latitude: DEFAULT_LAT,
+    longitude: DEFAULT_LNG,
+    scale: DEFAULT_SCALE,
+    markers: [],
+    includePoints: [],
+
+    allCases: [],
+    filteredCases: [],
+    visibleCases: [],
     selectedCase: null,
-    loading:      false,
-    showCaseList: false,
-    status:       '',
-    keyword:      ''
+
+    totalCount: 0,
+    matchedCount: 0,
+    visibleCount: 0,
+    mappableCount: 0,
+    selectedStatusLabel: '全部状态'
   },
 
   onLoad() {
     if (!app.ensureAuth || !app.ensureAuth()) return
-    this.loadCases()
-    this.locateCurrentPosition()
-  },
+    this.mapCtx = wx.createMapContext('map', this)
+    this.debouncedSyncVisibleCases = debounce(() => {
+      this.syncVisibleCasesByRegion()
+    }, 180)
+    this.debouncedApplySearch = debounce(() => {
+      this.applyFilters()
+    }, 180)
 
-  // ── Data Loading ──────────────────────────────────────────────────────────
+    this.loadCases()
+  },
 
   async loadCases() {
     this.setData({ loading: true })
     try {
-      const result = await services.missingPerson.getList({
+      const params = {
         page: 1,
-        page_size: 100,
-        status: this.data.status || undefined
+        page_size: 100
+      }
+      if (this.data.status) {
+        params.status = this.data.status
+      }
+      const result = await services.missingPerson.getList(params)
+
+      const allCases = (result.list || []).map((item) => this.normalizeCase(item))
+      this.setData({
+        allCases,
+        totalCount: allCases.length,
+        loading: false
       })
-      const cases = (result.list || []).map(item => ({
-        ...item,
-        status_text:     STATUS_TEXT[item.status] || item.status,
-        displayLocation: joinLocation(item),
-        missing_time:    item.missing_time ? formatDate(item.missing_time, 'YYYY-MM-DD HH:mm') : '未知时间'
-      }))
-      const markers = this._buildMarkers(cases)
-      this.setData({ cases, markers, loading: false })
+      this.applyFilters()
     } catch (error) {
       console.error('加载案件失败:', error)
       this.setData({ loading: false })
-      showError('加载失败')
+      showError('案件地图加载失败')
     }
   },
 
-  // ── Map Helpers ───────────────────────────────────────────────────────────
-
-  _buildMarkers(cases) {
-    return cases
-      .filter(item => item.missing_latitude && item.missing_longitude)
-      .map((item, index) => ({
-        id:        index,
-        latitude:  item.missing_latitude,
-        longitude: item.missing_longitude,
-        iconPath:  '/assets/images/marker.png',
-        width:     36,
-        height:    36,
-        callout: {
-          content:      item.name || '走失人员',
-          color:        '#333333',
-          fontSize:     12,
-          borderRadius: 4,
-          bgColor:      '#ffffff',
-          padding:      5,
-          display:      'BYCLICK'
-        },
-        // Non-standard: store case reference for panel list
-        data: item
-      }))
+  normalizeCase(item) {
+    const latitude = Number(item.missing_latitude || 0)
+    const longitude = Number(item.missing_longitude || 0)
+    const photos = Array.isArray(item.photos) ? item.photos : []
+    return {
+      ...item,
+      missing_latitude: latitude,
+      missing_longitude: longitude,
+      hasCoordinates: !!(latitude && longitude),
+      status_text: STATUS_TEXT[item.status] || item.status || '未知状态',
+      displayLocation: joinLocation(item),
+      missing_time_text: item.missing_time ? formatDate(item.missing_time, 'YYYY-MM-DD HH:mm') : '未知时间',
+      cover: photos[0] && photos[0].url ? normalizeMediaUrl(photos[0].url) : '/assets/images/default-avatar.png'
+    }
   },
 
-  // ── Map Events ────────────────────────────────────────────────────────────
+  applyFilters() {
+    const keyword = (this.data.keyword || '').trim().toLowerCase()
+    const filteredCases = this.data.allCases.filter((item) => {
+      if (!item.hasCoordinates) return false
+      if (!keyword) return true
+      const name = (item.name || '').toLowerCase()
+      const location = (item.displayLocation || '').toLowerCase()
+      const detail = (item.address || '').toLowerCase()
+      return name.includes(keyword) || location.includes(keyword) || detail.includes(keyword)
+    })
+
+    const markers = this.buildMarkers(filteredCases)
+    const includePoints = filteredCases.map((item) => ({
+      latitude: item.missing_latitude,
+      longitude: item.missing_longitude
+    }))
+
+    const currentSelectedID = this.data.selectedCase ? this.data.selectedCase.id : ''
+    const selectedCase = filteredCases.find((item) => item.id === currentSelectedID) || filteredCases[0] || null
+
+    this.setData({
+      filteredCases,
+      markers,
+      includePoints,
+      matchedCount: filteredCases.length,
+      mappableCount: filteredCases.length,
+      selectedCase,
+      selectedStatusLabel: this.getStatusLabel(this.data.status)
+    })
+
+    if (!filteredCases.length) {
+      this.setData({
+        visibleCases: [],
+        visibleCount: 0,
+        panelExpanded: true
+      })
+      return
+    }
+
+    this.focusOnCases(filteredCases)
+
+    setTimeout(() => {
+      this.syncVisibleCasesByRegion()
+    }, 220)
+  },
+
+  focusOnCases(cases) {
+    const targetCases = Array.isArray(cases) ? cases.filter((item) => item.hasCoordinates) : []
+    if (!targetCases.length) {
+      return
+    }
+
+    if (targetCases.length === 1) {
+      this.setData({
+        latitude: targetCases[0].missing_latitude,
+        longitude: targetCases[0].missing_longitude,
+        scale: 12
+      })
+      return
+    }
+
+    const summary = targetCases.reduce((acc, item) => {
+      acc.lat += item.missing_latitude
+      acc.lng += item.missing_longitude
+      return acc
+    }, { lat: 0, lng: 0 })
+
+    this.setData({
+      latitude: summary.lat / targetCases.length,
+      longitude: summary.lng / targetCases.length,
+      scale: 5
+    })
+  },
+
+  buildMarkers(cases) {
+    this.markerCaseMap = {}
+    return cases.map((item, index) => {
+      const markerID = index + 1
+      this.markerCaseMap[markerID] = item
+      return {
+        id: markerID,
+        latitude: item.missing_latitude,
+        longitude: item.missing_longitude,
+        iconPath: STATUS_MARKER_ICON[item.status] || STATUS_MARKER_ICON.missing,
+        width: 42,
+        height: 52,
+        anchor: {
+          x: 0.5,
+          y: 1
+        },
+        callout: {
+          content: item.name || '未命名案件',
+          color: STATUS_LABEL_COLOR[item.status] || '#2f241f',
+          fontSize: 11,
+          borderRadius: 12,
+          bgColor: STATUS_LABEL_BG[item.status] || '#fffaf5',
+          padding: 5,
+          display: 'BYCLICK'
+        }
+      }
+    })
+  },
+
+  getStatusLabel(status) {
+    if (!status) return '全部状态'
+    return STATUS_TEXT[status] || status
+  },
+
+  syncVisibleCasesByRegion() {
+    if (!this.mapCtx || !this.data.filteredCases.length) {
+      return
+    }
+
+    this.mapCtx.getRegion({
+      success: (region) => {
+        const southwest = region && region.southwest ? region.southwest : {}
+        const northeast = region && region.northeast ? region.northeast : {}
+        const minLat = Number(southwest.latitude || 0)
+        const maxLat = Number(northeast.latitude || 0)
+        const minLng = Number(southwest.longitude || 0)
+        const maxLng = Number(northeast.longitude || 0)
+
+        const visibleCases = this.data.filteredCases.filter((item) => {
+          const lat = item.missing_latitude
+          const lng = item.missing_longitude
+          return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng
+        })
+
+        const nextVisibleCases = visibleCases.length ? visibleCases : this.data.filteredCases.slice(0, 8)
+        const currentSelectedID = this.data.selectedCase ? this.data.selectedCase.id : ''
+        const selectedCase = nextVisibleCases.find((item) => item.id === currentSelectedID) || nextVisibleCases[0] || null
+
+        this.setData({
+          visibleCases: nextVisibleCases,
+          visibleCount: visibleCases.length || nextVisibleCases.length,
+          selectedCase
+        })
+      },
+      fail: () => {
+        const fallbackCases = this.data.filteredCases.slice(0, 8)
+        this.setData({
+          visibleCases: fallbackCases,
+          visibleCount: fallbackCases.length,
+          selectedCase: this.data.selectedCase || fallbackCases[0] || null
+        })
+      }
+    })
+  },
 
   locateCurrentPosition() {
     wx.getLocation({
       type: 'gcj02',
       success: (res) => {
         this.setData({
-          latitude:  res.latitude,
+          latitude: res.latitude,
           longitude: res.longitude,
-          scale:     12
+          scale: 11
         })
-      },
-      fail() {
-        // Permission denied — keep default center
+        setTimeout(() => {
+          this.syncVisibleCasesByRegion()
+        }, 220)
       }
     })
   },
 
   onMarkerTap(e) {
-    const marker = this.data.markers[e.markerId]
-    if (marker) {
-      this.setData({ selectedCase: marker.data, showCaseList: true })
-    }
-  },
-
-  onRegionChange() {
-    // No action needed for basic usage
+    const caseItem = this.markerCaseMap && this.markerCaseMap[e.markerId]
+    if (!caseItem) return
+    this.setData({
+      selectedCase: caseItem,
+      panelExpanded: true,
+      latitude: caseItem.missing_latitude,
+      longitude: caseItem.missing_longitude,
+      scale: 15
+    })
   },
 
   onMapTap() {
-    this.setData({ showCaseList: false, selectedCase: null })
+    this.setData({
+      panelExpanded: true
+    })
   },
 
-  // ── Panel ─────────────────────────────────────────────────────────────────
-
-  showCaseList() {
-    this.setData({ showCaseList: true })
+  onRegionChange(e) {
+    if (!e || e.type !== 'end') return
+    if (this.debouncedSyncVisibleCases) {
+      this.debouncedSyncVisibleCases()
+    }
   },
 
-  hideCaseList() {
-    this.setData({ showCaseList: false, selectedCase: null })
+  onStatusChange(e) {
+    const status = e.currentTarget.dataset.status || ''
+    if (status === this.data.status) return
+    this.setData({ status })
+    this.loadCases()
+  },
+
+  onSearchInput(e) {
+    this.setData({ keyword: e.detail.value || '' })
+    if (this.debouncedApplySearch) {
+      this.debouncedApplySearch()
+    }
+  },
+
+  clearKeyword() {
+    this.setData({ keyword: '' })
+    this.applyFilters()
+  },
+
+  togglePanel() {
+    this.setData({
+      panelExpanded: !this.data.panelExpanded
+    })
   },
 
   selectCase(e) {
     const id = e.currentTarget.dataset.id
-    const caseItem = this.data.cases.find(c => c.id === id)
-    if (caseItem) {
-      this.setData({ selectedCase: caseItem, showCaseList: true })
-    }
+    const caseItem = this.data.filteredCases.find((item) => item.id === id)
+    if (!caseItem) return
+
+    this.setData({
+      selectedCase: caseItem,
+      latitude: caseItem.missing_latitude,
+      longitude: caseItem.missing_longitude,
+      scale: 15,
+      panelExpanded: true
+    })
   },
 
-  // ── Filter & Search ───────────────────────────────────────────────────────
-
-  onStatusChange(e) {
-    const status = e.currentTarget.dataset.status
-    this.setData({ status }, () => { this.loadCases() })
-  },
-
-  onSearchInput(e) {
-    this.setData({ keyword: e.detail.value })
-  },
-
-  onSearch() {
-    const { keyword, cases } = this.data
-    if (!keyword) {
-      this.loadCases()
+  focusSelectedCase() {
+    const caseItem = this.data.selectedCase
+    if (!caseItem || !caseItem.hasCoordinates) {
+      showToast('当前案件暂无坐标信息')
       return
     }
-    const filtered = cases.filter(item =>
-      (item.name && item.name.includes(keyword)) ||
-      (item.displayLocation && item.displayLocation.includes(keyword))
-    )
-    this.setData({ cases: filtered, markers: this._buildMarkers(filtered), showCaseList: true })
+    this.setData({
+      latitude: caseItem.missing_latitude,
+      longitude: caseItem.missing_longitude,
+      scale: 16
+    })
   },
-
-  // ── Navigation ────────────────────────────────────────────────────────────
 
   goToCaseDetail(e) {
     const id = e.currentTarget.dataset.id
@@ -186,20 +375,17 @@ Page({
 
   navigateToLocation(e) {
     const item = e.currentTarget.dataset.item
-    if (!item) return
-    if (item.missing_latitude && item.missing_longitude) {
-      wx.openLocation({
-        latitude:  item.missing_latitude,
-        longitude: item.missing_longitude,
-        name:      item.name || '走失地点',
-        address:   item.displayLocation || ''
-      })
-    } else {
-      wx.showToast({ title: '暂无坐标信息', icon: 'none' })
+    if (!item || !item.hasCoordinates) {
+      showToast('暂无坐标信息')
+      return
     }
+    wx.openLocation({
+      latitude: item.missing_latitude,
+      longitude: item.missing_longitude,
+      name: item.name || '走失地点',
+      address: item.displayLocation || ''
+    })
   },
-
-  // ── Phone Call ────────────────────────────────────────────────────────────
 
   makePhoneCall(e) {
     const phone = e.currentTarget.dataset.phone
@@ -208,7 +394,7 @@ Page({
       return
     }
     wx.showModal({
-      title:   '拨打电话',
+      title: '拨打电话',
       content: `确认拨打 ${phone}？`,
       success: (res) => {
         if (res.confirm) {
