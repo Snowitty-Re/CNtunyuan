@@ -28,6 +28,9 @@ export const systemService = {
   uploadStats() {
     return http<any>('/upload/stats')
   },
+  listFiles(query: Record<string, string | number | undefined>) {
+    return http<any>('/upload', { query })
+  },
   filesByEntity(entityType: string, entityId: string) {
     return http<any[]>(`/upload/entity/${entityType}/${entityId}`)
   },

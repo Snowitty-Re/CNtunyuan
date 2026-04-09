@@ -16,6 +16,7 @@ type FileResponse struct {
 	MimeType     string    `json:"mime_type"`
 	Size         int64     `json:"size"`
 	SizeReadable string    `json:"size_readable"`
+	Path         string    `json:"path"`
 	URL          string    `json:"url"`
 	StorageType  string    `json:"storage_type"`
 	UploaderID   string    `json:"uploader_id"`
@@ -27,11 +28,13 @@ type FileResponse struct {
 
 // FileListRequest 文件列表请求
 type FileListRequest struct {
-	Page       int    `form:"page,default=1" binding:"min=1"`
-	PageSize   int    `form:"page_size,default=10" binding:"min=1,max=100"`
-	Keyword    string `form:"keyword"`
-	FileType   string `form:"file_type"`
-	UploaderID string `form:"uploader_id"`
+	Page        int    `form:"page,default=1" binding:"min=1"`
+	PageSize    int    `form:"page_size,default=12" binding:"min=1,max=100"`
+	Keyword     string `form:"keyword"`
+	FileType    string `form:"file_type"`
+	UploaderID  string `form:"uploader_id"`
+	EntityType  string `form:"entity_type"`
+	StorageType string `form:"storage_type"`
 }
 
 // FileListResponse 文件列表响应
@@ -72,6 +75,7 @@ func ToFileResponse(file *entity.File) FileResponse {
 		MimeType:     file.MimeType,
 		Size:         file.Size,
 		SizeReadable: FormatFileSize(file.Size),
+		Path:         file.Path,
 		URL:          file.URL,
 		StorageType:  string(file.StorageType),
 		UploaderID:   file.UploaderID,

@@ -130,6 +130,7 @@ func (h *BootstrapHandler) GetStatus(c *gin.Context) {
 			"domain":                           cfg.Server.Domain,
 			"cors_origins":                     cfg.Server.CORSOrigins,
 			"default_org_name":                 cfg.System.DefaultOrgName,
+			"logo_url":                         cfg.System.LogoURL,
 			"default_org_code":                 cfg.System.DefaultOrgCode,
 			"enable_register":                  cfg.System.EnableRegister,
 			"enable_wechat_login":              cfg.System.EnableWechatLogin,

@@ -168,6 +168,7 @@ const sections: SectionDef[] = [
     title: 'system',
     fields: [
       { key: 'system.default_org_name', label: '默认组织名称', type: 'text' },
+      { key: 'system.logo_url', label: '网站 Logo 地址', type: 'text', placeholder: 'https://example.com/logo.png' },
       { key: 'system.default_org_code', label: '默认组织编码', type: 'text' },
       { key: 'system.enable_register', label: '开放注册', type: 'bool' },
       { key: 'system.enable_wechat_login', label: '启用微信登录(兼容总开关)', type: 'bool' },
@@ -287,6 +288,7 @@ function initialConfig(): Record<string, any> {
     'notification.jpush_app_key': '',
     'notification.jpush_master_secret': '',
     'system.default_org_name': '助力团圆志愿者协会',
+    'system.logo_url': '',
     'system.default_org_code': 'ROOT',
     'system.enable_register': true,
     'system.enable_wechat_login': false,

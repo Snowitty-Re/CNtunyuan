@@ -10,6 +10,9 @@ import (
 type FileRepository interface {
 	Repository[entity.File]
 
+	// List 按条件分页列出文件
+	List(ctx context.Context, query *FileQuery) (*PageResult[entity.File], error)
+
 	// FindByUploader 根据上传者查找
 	FindByUploader(ctx context.Context, uploaderID string, pagination Pagination) (*PageResult[entity.File], error)
 

@@ -114,6 +114,7 @@ notification:
 
 system:
   default_org_name: "助力团圆志愿者协会"
+  logo_url: ""
   default_org_code: "ROOT"
   enable_register: true
   enable_wechat_login: true  # 兼容旧总开关，建议同时显式配置下面两个独立开关

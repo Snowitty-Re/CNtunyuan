@@ -253,6 +253,7 @@ go run cmd/app/main.go
 - `PUT    /api/v1/tasks/:id/progress` - 更新进度
 
 ### 文件上传 `/upload`
+- `GET    /api/v1/upload` - 文件管理中心列表（管理员，支持分页筛选）
 - `POST   /api/v1/upload` - 单文件上传（最大 50MB）
 - `POST   /api/v1/upload/batch` - 批量上传
 - `GET    /api/v1/upload/stats` - 文件统计（管理员）

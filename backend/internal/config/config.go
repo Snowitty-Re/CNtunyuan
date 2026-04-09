@@ -211,6 +211,7 @@ type NotificationConfig struct {
 // SystemConfig 系统配置
 type SystemConfig struct {
 	DefaultOrgName                    string `mapstructure:"default_org_name"`
+	LogoURL                           string `mapstructure:"logo_url"`
 	DefaultOrgCode                    string `mapstructure:"default_org_code"`
 	EnableRegister                    bool   `mapstructure:"enable_register"`
 	EnableWechatLogin                 bool   `mapstructure:"enable_wechat_login"`
@@ -361,6 +362,7 @@ func setDefaults() {
 
 	// System defaults
 	viper.SetDefault("system.default_org_name", "助力团圆志愿者协会")
+	viper.SetDefault("system.logo_url", "")
 	viper.SetDefault("system.default_org_code", "ROOT")
 	viper.SetDefault("system.enable_register", true)
 	viper.SetDefault("system.enable_wechat_login", true)

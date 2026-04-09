@@ -5547,7 +5547,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "更新并持久化系统配置到 config.yaml（敏感字段传掩码将保留原值）",
+                "description": "更新并持久化系统配置到数据库覆盖层（敏感字段传掩码将保留原值）",
                 "consumes": [
                     "application/json"
                 ],
@@ -7168,6 +7168,106 @@ const docTemplate = `{
             }
         },
         "/upload": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页获取文件管理中心列表，支持关键词、类型、上传人、业务类型、存储类型筛选",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "文件管理"
+                ],
+                "summary": "文件列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "关键词（文件名/原名/描述）",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件类型 image/audio/video/document",
+                        "name": "file_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "上传人ID",
+                        "name": "uploader_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "业务类型",
+                        "name": "entity_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "存储类型 local/oss/cos",
+                        "name": "storage_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "获取成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_internal_application_dto.FileListResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未授权",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务器内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_pkg_response.Response"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -8858,6 +8958,29 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_Snowitty-Re_CNtunyuan_internal_application_dto.FileListResponse": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_Snowitty-Re_CNtunyuan_internal_application_dto.FileResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_Snowitty-Re_CNtunyuan_internal_application_dto.FileResponse": {
             "type": "object",
             "properties": {
@@ -8886,6 +9009,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "original_name": {
+                    "type": "string"
+                },
+                "path": {
                     "type": "string"
                 },
                 "size": {
@@ -10668,6 +10794,12 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "enable_wechat_login": {
+                    "type": "boolean"
+                },
+                "enable_wechat_login_mini_program": {
+                    "type": "boolean"
+                },
+                "enable_wechat_login_web": {
                     "type": "boolean"
                 }
             }

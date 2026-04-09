@@ -100,6 +100,7 @@ var databaseManagedConfigKeys = map[string]struct{}{
 	"notification.jpush_app_key":                   {},
 	"notification.jpush_master_secret":             {},
 	"system.default_org_name":                      {},
+	"system.logo_url":                              {},
 	"system.default_org_code":                      {},
 	"system.enable_register":                       {},
 	"system.enable_wechat_login":                   {},
@@ -218,6 +219,7 @@ func FlattenConfig(cfg *Config) map[string]interface{} {
 		"notification.jpush_master_secret": cfg.Notification.JPushMasterSecret,
 
 		"system.default_org_name":                      cfg.System.DefaultOrgName,
+		"system.logo_url":                              cfg.System.LogoURL,
 		"system.default_org_code":                      cfg.System.DefaultOrgCode,
 		"system.enable_register":                       cfg.System.EnableRegister,
 		"system.enable_wechat_login":                   cfg.System.EnableWechatLogin,

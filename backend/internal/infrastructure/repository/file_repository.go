@@ -23,6 +23,41 @@ func NewFileRepository(db *gorm.DB) repository.FileRepository {
 	}
 }
 
+// List 按条件分页查询文件
+func (r *FileRepositoryImpl) List(ctx context.Context, query *repository.FileQuery) (*repository.PageResult[entity.File], error) {
+	var files []entity.File
+	var total int64
+
+	db := r.db.WithContext(ctx).Model(&entity.File{})
+
+	if keyword := strings.TrimSpace(query.Keyword); keyword != "" {
+		like := "%" + keyword + "%"
+		db = db.Where("(file_name LIKE ? OR original_name LIKE ? OR description LIKE ?)", like, like, like)
+	}
+	if query.FileType != "" {
+		db = db.Where("file_type = ?", query.FileType)
+	}
+	if query.UploaderID != "" {
+		db = db.Where("uploader_id = ?", query.UploaderID)
+	}
+	if entityType := strings.TrimSpace(query.EntityType); entityType != "" {
+		db = db.Where("entity_type = ?", entityType)
+	}
+	if query.StorageType != "" {
+		db = db.Where("storage_type = ?", query.StorageType)
+	}
+
+	if err := db.Count(&total).Error; err != nil {
+		return nil, err
+	}
+
+	if err := r.Paginate(db.Order("created_at DESC"), query.Pagination).Find(&files).Error; err != nil {
+		return nil, err
+	}
+
+	return repository.NewPageResult(files, total, query.Page, query.PageSize), nil
+}
+
 // Create 创建文件记录（处理空 UUID 字段，避免写入空字符串导致 PG 报错）
 func (r *FileRepositoryImpl) Create(ctx context.Context, file *entity.File) error {
 	db := r.db.WithContext(ctx)

@@ -33,6 +33,7 @@ func (h *UploadHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *
 	upload := router.Group("/upload")
 	upload.Use(authMiddleware.Required())
 	{
+		upload.GET("", middleware.RequireAdmin(), h.List)
 		upload.POST("", h.Upload)
 		upload.POST("/batch", h.UploadBatch)
 		// 静态路由必须在参数路由之前注册，防止 Gin 路由冲突
@@ -43,6 +44,41 @@ func (h *UploadHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *
 		upload.DELETE("/:id", h.Delete)
 		upload.PUT("/:id/bind", h.BindToEntity)
 	}
+}
+
+// List 文件管理中心列表
+// @Summary 文件列表
+// @Description 分页获取文件管理中心列表，支持关键词、类型、上传人、业务类型、存储类型筛选
+// @Tags 文件管理
+// @Accept json
+// @Produce json
+// @Param page query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Param keyword query string false "关键词（文件名/原名/描述）"
+// @Param file_type query string false "文件类型 image/audio/video/document"
+// @Param uploader_id query string false "上传人ID"
+// @Param entity_type query string false "业务类型"
+// @Param storage_type query string false "存储类型 local/oss/cos"
+// @Success 200 {object} response.Response{data=dto.FileListResponse} "获取成功"
+// @Failure 400 {object} response.Response "请求参数错误"
+// @Failure 401 {object} response.Response "未授权"
+// @Failure 500 {object} response.Response "服务器内部错误"
+// @Router /upload [get]
+// @Security BearerAuth
+func (h *UploadHandler) List(c *gin.Context) {
+	var req dto.FileListRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+
+	result, err := h.fileService.List(c.Request.Context(), &req)
+	if err != nil {
+		response.InternalServerError(c, "failed to list files")
+		return
+	}
+
+	response.Success(c, result)
 }
 
 // Upload 单文件上传

@@ -181,14 +181,13 @@ func (s *FileAppService) List(ctx context.Context, req *dto.FileListRequest) (*d
 	query := repository.NewFileQuery()
 	query.Page = req.Page
 	query.PageSize = req.PageSize
-	query.Keyword = req.Keyword
-	query.FileType = entity.FileType(req.FileType)
-	query.UploaderID = req.UploaderID
+	query.Keyword = strings.TrimSpace(req.Keyword)
+	query.FileType = entity.FileType(strings.TrimSpace(req.FileType))
+	query.UploaderID = strings.TrimSpace(req.UploaderID)
+	query.EntityType = strings.TrimSpace(req.EntityType)
+	query.StorageType = entity.StorageType(strings.TrimSpace(req.StorageType))
 
-	result, err := s.fileRepo.Search(ctx, req.Keyword, repository.Pagination{
-		Page:     req.Page,
-		PageSize: req.PageSize,
-	})
+	result, err := s.fileRepo.List(ctx, query)
 	if err != nil {
 		return nil, err
 	}

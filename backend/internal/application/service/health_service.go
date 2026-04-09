@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"runtime"
 	"time"
 
@@ -31,10 +32,12 @@ type HealthCheck struct {
 
 // HealthStatus 整体健康状态
 type HealthStatusResult struct {
-	Status    HealthStatus           `json:"status"`
-	Version   string                 `json:"version"`
-	Timestamp time.Time              `json:"timestamp"`
-	Checks    map[string]HealthCheck `json:"checks"`
+	Status      HealthStatus           `json:"status"`
+	Version     string                 `json:"version"`
+	Environment string                 `json:"environment"`
+	Timestamp   time.Time              `json:"timestamp"`
+	Runtime     map[string]interface{} `json:"runtime"`
+	Checks      map[string]HealthCheck `json:"checks"`
 }
 
 // HealthService 健康检查服务
@@ -54,10 +57,19 @@ func NewHealthService(db *gorm.DB, cache domainService.Cache) *HealthService {
 // CheckHealth 检查健康状态
 func (s *HealthService) CheckHealth(ctx context.Context) *HealthStatusResult {
 	result := &HealthStatusResult{
-		Status:    HealthStatusUP,
-		Version:   "2.0.0",
-		Timestamp: time.Now(),
-		Checks:    make(map[string]HealthCheck),
+		Status:      HealthStatusUP,
+		Version:     "2.0.0",
+		Environment: resolveEnvironment(),
+		Timestamp:   time.Now(),
+		Runtime: map[string]interface{}{
+			"go_version": runtime.Version(),
+			"go_os":      runtime.GOOS,
+			"go_arch":    runtime.GOARCH,
+			"cpu_count":  runtime.NumCPU(),
+			"goroutines": runtime.NumGoroutine(),
+			"gomaxprocs": runtime.GOMAXPROCS(0),
+		},
+		Checks: make(map[string]HealthCheck),
 	}
 
 	// 检查数据库
@@ -223,4 +235,14 @@ func (s *HealthService) GetDBStats() *sql.DBStats {
 
 	stats := sqlDB.Stats()
 	return &stats
+}
+
+func resolveEnvironment() string {
+	if env := os.Getenv("CNTY_ENV"); env != "" {
+		return env
+	}
+	if env := os.Getenv("APP_ENV"); env != "" {
+		return env
+	}
+	return "local"
 }

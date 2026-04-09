@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { PropsWithChildren, useEffect, useState } from 'react'
 import { clearAuth, getCurrentUser } from '@/lib/auth'
 import { ACTIONS, hasPermission } from '@/lib/rbac'
+import { useSiteBrand } from '@/hooks/useSiteBrand'
 
 const items = [
   { href: '/dashboard', label: '工作台' },
@@ -27,17 +28,27 @@ export function AppShell({ children }: PropsWithChildren) {
   const router = useRouter()
   const user = getCurrentUser()
   const [menuOpen, setMenuOpen] = useState(false)
+  const brand = useSiteBrand()
 
   useEffect(() => {
     setMenuOpen(false)
   }, [pathname])
 
+  useEffect(() => {
+    document.title = brand.title
+  }, [brand.title])
+
   return (
     <div className="shell">
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
-          助力团圆 Web
-          <small>走失人员寻亲协作平台</small>
+          <div className="brand-row">
+            {brand.logoUrl ? <img className="brand-logo" src={brand.logoUrl} alt={brand.orgName} /> : <span className="brand-mark">{brand.orgName.slice(0, 1)}</span>}
+            <div>
+              {brand.orgName}
+              <small>走失人员寻亲协作平台</small>
+            </div>
+          </div>
         </div>
         <nav className="nav-list">
           {items
@@ -59,8 +70,8 @@ export function AppShell({ children }: PropsWithChildren) {
             菜单
           </button>
           <div>
-            <h1 className="top-title">团圆寻亲志愿者系统</h1>
-            <p className="top-subtitle">以温暖协作连接每一次线索与团圆</p>
+            <h1 className="top-title">{brand.title}</h1>
+            <p className="top-subtitle">{brand.subtitle}</p>
           </div>
           <div className="top-user">
             <img

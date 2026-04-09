@@ -141,6 +141,14 @@ func (m *MockFileRepository) Exists(ctx context.Context, id string) (bool, error
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockFileRepository) List(ctx context.Context, query *repository.FileQuery) (*repository.PageResult[entity.File], error) {
+	args := m.Called(ctx, query)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*repository.PageResult[entity.File]), args.Error(1)
+}
+
 // Implement FileRepository specific methods
 func (m *MockFileRepository) FindByUploader(ctx context.Context, uploaderID string, pagination repository.Pagination) (*repository.PageResult[entity.File], error) {
 	args := m.Called(ctx, uploaderID, pagination)
@@ -923,10 +931,14 @@ func TestFileAppService_List_Success(t *testing.T) {
 		TotalPages: 1,
 	}
 
-	mockRepo.On("Search", mock.Anything, req.Keyword, repository.Pagination{
-		Page:     req.Page,
-		PageSize: req.PageSize,
-	}).Return(pageResult, nil)
+	mockRepo.On("List", mock.Anything, mock.MatchedBy(func(query *repository.FileQuery) bool {
+		return query != nil &&
+			query.Page == req.Page &&
+			query.PageSize == req.PageSize &&
+			query.Keyword == req.Keyword &&
+			query.FileType == entity.FileType(req.FileType) &&
+			query.UploaderID == req.UploaderID
+	})).Return(pageResult, nil)
 
 	ctx := testutil.Context()
 	resp, err := service.List(ctx, req)
@@ -940,7 +952,7 @@ func TestFileAppService_List_Success(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestFileAppService_List_SearchFailed(t *testing.T) {
+func TestFileAppService_List_Failed(t *testing.T) {
 	service, mockRepo, _, _ := setupFileServiceTest(t)
 
 	req := &dto.FileListRequest{
@@ -949,19 +961,21 @@ func TestFileAppService_List_SearchFailed(t *testing.T) {
 		Keyword:  "test",
 	}
 
-	searchError := errors.New("search failed")
+	listError := errors.New("list failed")
 
-	mockRepo.On("Search", mock.Anything, req.Keyword, repository.Pagination{
-		Page:     req.Page,
-		PageSize: req.PageSize,
-	}).Return(nil, searchError)
+	mockRepo.On("List", mock.Anything, mock.MatchedBy(func(query *repository.FileQuery) bool {
+		return query != nil &&
+			query.Page == req.Page &&
+			query.PageSize == req.PageSize &&
+			query.Keyword == req.Keyword
+	})).Return(nil, listError)
 
 	ctx := testutil.Context()
 	resp, err := service.List(ctx, req)
 
 	require.Error(t, err)
 	assert.Nil(t, resp)
-	assert.Equal(t, searchError, err)
+	assert.Equal(t, listError, err)
 }
 
 // ============================================================================
@@ -1232,6 +1246,31 @@ func (r *GormFileRepository) Exists(ctx context.Context, id string) (bool, error
 	var count int64
 	err := r.db.WithContext(ctx).Model(&entity.File{}).Where("id = ?", id).Count(&count).Error
 	return count > 0, err
+}
+
+func (r *GormFileRepository) List(ctx context.Context, query *repository.FileQuery) (*repository.PageResult[entity.File], error) {
+	var files []entity.File
+	var total int64
+	db := r.db.WithContext(ctx).Model(&entity.File{})
+	if query.Keyword != "" {
+		like := "%" + query.Keyword + "%"
+		db = db.Where("(file_name LIKE ? OR original_name LIKE ? OR description LIKE ?)", like, like, like)
+	}
+	if query.FileType != "" {
+		db = db.Where("file_type = ?", query.FileType)
+	}
+	if query.UploaderID != "" {
+		db = db.Where("uploader_id = ?", query.UploaderID)
+	}
+	if query.EntityType != "" {
+		db = db.Where("entity_type = ?", query.EntityType)
+	}
+	if query.StorageType != "" {
+		db = db.Where("storage_type = ?", query.StorageType)
+	}
+	db.Count(&total)
+	db.Order("created_at DESC").Offset((query.Page - 1) * query.PageSize).Limit(query.PageSize).Find(&files)
+	return repository.NewPageResult(files, total, query.Page, query.PageSize), nil
 }
 
 // Implement FileRepository specific methods (minimal for tests)
