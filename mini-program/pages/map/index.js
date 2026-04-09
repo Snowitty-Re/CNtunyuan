@@ -77,7 +77,7 @@ Page({
         id:        index,
         latitude:  item.missing_latitude,
         longitude: item.missing_longitude,
-        iconPath:  '/assets/icons/marker.png',
+        iconPath:  '/assets/images/marker.png',
         width:     36,
         height:    36,
         callout: {

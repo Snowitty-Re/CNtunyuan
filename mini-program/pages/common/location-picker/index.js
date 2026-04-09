@@ -44,7 +44,7 @@ Page({
       longitude,
       width: 32,
       height: 32,
-      iconPath: '/assets/icons/marker.png'
+      iconPath: '/assets/images/marker.png'
     }
     this.setData({
       latitude,
