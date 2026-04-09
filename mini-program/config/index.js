@@ -7,7 +7,7 @@ const ENV = {
 // - ''：按自动逻辑判断
 // - 'dev'：强制走本地
 // - 'prod'：强制走线上
-const FORCE_ENV = 'prod'
+const FORCE_ENV = ''
 
 function resolveEnv() {
   // 优先使用强制环境（便于线上联调）
