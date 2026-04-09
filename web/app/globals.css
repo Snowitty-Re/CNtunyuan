@@ -682,6 +682,20 @@ a {
   align-items: center;
 }
 
+.audit-filters {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.audit-filters-keyword {
+  grid-column: span 2;
+}
+
+.audit-request-cell {
+  min-width: 280px;
+  max-width: 420px;
+  word-break: break-word;
+}
+
 .attachment-preview-shell {
   min-height: 520px;
 }

@@ -3,6 +3,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/application/service"
@@ -63,17 +64,20 @@ type AuditModuleStatItem struct {
 
 // ListRequest 列表查询请求
 type ListRequest struct {
-	Page      int    `form:"page" binding:"min=1"`
-	PageSize  int    `form:"page_size" binding:"min=1,max=100"`
-	UserID    string `form:"user_id"`
-	Module    string `form:"module"`
-	Action    string `form:"action"`
-	Type      string `form:"type"`
-	Status    string `form:"status"`
-	StartTime string `form:"start_time"`
-	EndTime   string `form:"end_time"`
-	Keyword   string `form:"keyword"`
-	RequestIP string `form:"request_ip"`
+	Page       int    `form:"page" binding:"min=1"`
+	PageSize   int    `form:"page_size" binding:"min=1,max=100"`
+	UserID     string `form:"user_id"`
+	Username   string `form:"username"`
+	Module     string `form:"module"`
+	Action     string `form:"action"`
+	Type       string `form:"type"`
+	Status     string `form:"status"`
+	StartTime  string `form:"start_time"`
+	EndTime    string `form:"end_time"`
+	Keyword    string `form:"keyword"`
+	RequestIP  string `form:"request_ip"`
+	Path       string `form:"path"`
+	StatusCode string `form:"status_code"`
 }
 
 // List 获取审计日志列表
@@ -86,14 +90,17 @@ type ListRequest struct {
 // @Param page query int false "页码，默认1" default(1) minimum(1)
 // @Param page_size query int false "每页数量，默认20" default(20) minimum(1) maximum(100)
 // @Param user_id query string false "用户ID"
+// @Param username query string false "用户名"
 // @Param module query string false "模块名称，如：用户管理、案件管理等"
 // @Param action query string false "操作名称，如：创建、更新、删除等"
 // @Param type query string false "日志类型：login/logout/create/update/delete/query/export/upload/download/other"
 // @Param status query string false "状态：success/failure"
-// @Param start_time query string false "开始时间，格式：2006-01-02"
-// @Param end_time query string false "结束时间，格式：2006-01-02"
+// @Param start_time query string false "开始时间，支持 2006-01-02 / RFC3339 / datetime-local"
+// @Param end_time query string false "结束时间，支持 2006-01-02 / RFC3339 / datetime-local"
 // @Param keyword query string false "关键词搜索"
 // @Param request_ip query string false "请求IP地址"
+// @Param path query string false "请求路径关键字"
+// @Param status_code query int false "响应状态码"
 // @Success 200 {object} response.Response{data=AuditPaginatedResult} "成功"
 // @Failure 400 {object} response.Response "参数错误"
 // @Failure 401 {object} response.Response "未授权"
@@ -119,10 +126,12 @@ func (h *AuditHandler) List(c *gin.Context) {
 	query.Page = req.Page
 	query.PageSize = req.PageSize
 	query.UserID = req.UserID
+	query.Username = req.Username
 	query.Module = req.Module
 	query.Action = req.Action
 	query.Keyword = req.Keyword
 	query.RequestIP = req.RequestIP
+	query.RequestPath = req.Path
 
 	if req.Type != "" {
 		query.Type = entity.AuditLogType(req.Type)
@@ -132,14 +141,18 @@ func (h *AuditHandler) List(c *gin.Context) {
 	}
 
 	if req.StartTime != "" {
-		if t, err := time.Parse("2006-01-02", req.StartTime); err == nil {
+		if t, ok := parseAuditTime(req.StartTime, false); ok {
 			query.StartTime = &t
 		}
 	}
 	if req.EndTime != "" {
-		if t, err := time.Parse("2006-01-02", req.EndTime); err == nil {
-			endOfDay := t.Add(24*time.Hour - time.Second)
-			query.EndTime = &endOfDay
+		if t, ok := parseAuditTime(req.EndTime, true); ok {
+			query.EndTime = &t
+		}
+	}
+	if req.StatusCode != "" {
+		if code, err := strconv.Atoi(req.StatusCode); err == nil {
+			query.ResponseCode = &code
 		}
 	}
 
@@ -151,6 +164,28 @@ func (h *AuditHandler) List(c *gin.Context) {
 	}
 
 	response.Success(c, result)
+}
+
+func parseAuditTime(raw string, endOfDay bool) (time.Time, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, false
+	}
+	layouts := []string{
+		time.RFC3339,
+		"2006-01-02T15:04",
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, raw); err == nil {
+			if layout == "2006-01-02" && endOfDay {
+				t = t.Add(24*time.Hour - time.Second)
+			}
+			return t, true
+		}
+	}
+	return time.Time{}, false
 }
 
 // GetByID 根据ID获取审计日志

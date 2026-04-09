@@ -1972,6 +1972,10 @@ paths:
         in: query
         name: user_id
         type: string
+      - description: 用户名
+        in: query
+        name: username
+        type: string
       - description: 模块名称，如：用户管理、案件管理等
         in: query
         name: module
@@ -1988,11 +1992,11 @@ paths:
         in: query
         name: status
         type: string
-      - description: 开始时间，格式：2006-01-02
+      - description: 开始时间，支持 2006-01-02 / RFC3339 / datetime-local
         in: query
         name: start_time
         type: string
-      - description: 结束时间，格式：2006-01-02
+      - description: 结束时间，支持 2006-01-02 / RFC3339 / datetime-local
         in: query
         name: end_time
         type: string
@@ -2004,6 +2008,14 @@ paths:
         in: query
         name: request_ip
         type: string
+      - description: 请求路径关键字
+        in: query
+        name: path
+        type: string
+      - description: 响应状态码
+        in: query
+        name: status_code
+        type: integer
       produces:
       - application/json
       responses:

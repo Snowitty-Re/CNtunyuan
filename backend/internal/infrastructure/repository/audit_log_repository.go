@@ -51,6 +51,9 @@ func (r *AuditLogRepositoryImpl) List(ctx context.Context, query *entity.AuditLo
 	if query.UserID != "" {
 		db = db.Where("user_id = ?", query.UserID)
 	}
+	if query.Username != "" {
+		db = db.Where("username LIKE ?", "%"+query.Username+"%")
+	}
 	if query.Module != "" {
 		db = db.Where("module = ?", query.Module)
 	}
@@ -66,6 +69,12 @@ func (r *AuditLogRepositoryImpl) List(ctx context.Context, query *entity.AuditLo
 	if query.RequestIP != "" {
 		db = db.Where("request_ip = ?", query.RequestIP)
 	}
+	if query.RequestPath != "" {
+		db = db.Where("request_url LIKE ?", "%"+query.RequestPath+"%")
+	}
+	if query.ResponseCode != nil {
+		db = db.Where("response_code = ?", *query.ResponseCode)
+	}
 	if query.StartTime != nil {
 		db = db.Where("created_at >= ?", query.StartTime)
 	}
@@ -73,8 +82,11 @@ func (r *AuditLogRepositoryImpl) List(ctx context.Context, query *entity.AuditLo
 		db = db.Where("created_at <= ?", query.EndTime)
 	}
 	if query.Keyword != "" {
-		db = db.Where("description LIKE ? OR username LIKE ? OR action LIKE ?",
-			"%"+query.Keyword+"%", "%"+query.Keyword+"%", "%"+query.Keyword+"%")
+		like := "%" + query.Keyword + "%"
+		db = db.Where(
+			"description LIKE ? OR username LIKE ? OR action LIKE ? OR module LIKE ? OR request_url LIKE ? OR request_method LIKE ? OR trace_id LIKE ?",
+			like, like, like, like, like, like, like,
+		)
 	}
 
 	// 获取总数

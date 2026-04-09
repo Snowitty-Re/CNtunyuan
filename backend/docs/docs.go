@@ -164,6 +164,12 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "description": "用户名",
+                        "name": "username",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "模块名称，如：用户管理、案件管理等",
                         "name": "module",
                         "in": "query"
@@ -188,13 +194,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "开始时间，格式：2006-01-02",
+                        "description": "开始时间，支持 2006-01-02 / RFC3339 / datetime-local",
                         "name": "start_time",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "结束时间，格式：2006-01-02",
+                        "description": "结束时间，支持 2006-01-02 / RFC3339 / datetime-local",
                         "name": "end_time",
                         "in": "query"
                     },
@@ -208,6 +214,18 @@ const docTemplate = `{
                         "type": "string",
                         "description": "请求IP地址",
                         "name": "request_ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "请求路径关键字",
+                        "name": "path",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "响应状态码",
+                        "name": "status_code",
                         "in": "query"
                     }
                 ],

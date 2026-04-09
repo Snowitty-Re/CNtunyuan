@@ -1,8 +1,9 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
+import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
 import { StatusTag } from '@/components/shared/StatusTag'
@@ -11,137 +12,108 @@ import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { fmtTime, listFrom } from '@/lib/data'
 import { auditService, type AuditLog } from '@/services/audit'
 
+const rangeOptions = [
+  { value: 1, label: '近1天' },
+  { value: 7, label: '近7天' },
+  { value: 30, label: '近30天' },
+]
+
+const typeOptions = [
+  { value: '', label: '全部类型' },
+  { value: 'login', label: '登录' },
+  { value: 'logout', label: '登出' },
+  { value: 'create', label: '创建' },
+  { value: 'update', label: '更新' },
+  { value: 'delete', label: '删除' },
+  { value: 'query', label: '查询' },
+  { value: 'upload', label: '上传' },
+  { value: 'download', label: '下载' },
+  { value: 'other', label: '其他' },
+]
+
 export default function AuditPage() {
   const { ready, user } = useAuthGuard()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState<Notice | null>(null)
   const [items, setItems] = useState<AuditLog[]>([])
   const [stats, setStats] = useState<Record<string, number>>({})
-  const [moduleStats, setModuleStats] = useState<Array<{ name: string; count: number }>>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [logType, setLogType] = useState('')
-  const [module, setModule] = useState('')
-  const [pathKeyword, setPathKeyword] = useState('')
-  const [statusCode, setStatusCode] = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [activityUserId, setActivityUserId] = useState('')
-  const [activityLoading, setActivityLoading] = useState(false)
-  const [activityError, setActivityError] = useState('')
-  const [activityItems, setActivityItems] = useState<any[]>([])
+  const [pageSize] = useState(20)
+  const [filters, setFilters] = useState({
+    rangeDays: 7,
+    type: '',
+    module: '',
+    username: '',
+    path: '',
+    statusCode: '',
+    keyword: '',
+  })
 
-  async function load(nextPage = page) {
+  async function loadStats() {
+    try {
+      const start = calcStartDate(filters.rangeDays)
+      const end = new Date().toISOString()
+      const data = await auditService.stats({
+        start_time: start.slice(0, 10),
+        end_time: end.slice(0, 10),
+      })
+      setStats({
+        total: Number(data.total_count || 0),
+        today: Number(data.today_count || 0),
+        operation: Number(data.operation_count || 0),
+        error: Number(data.error_count || 0),
+      })
+    } catch {
+      setStats({})
+    }
+  }
+
+  async function load(nextPage = page, nextFilters = filters) {
     setLoading(true)
     setError('')
     try {
       const data = await auditService.list({
         page: nextPage,
-        page_size: 30,
-        log_type: logType || undefined,
-        module: module || undefined,
-        path: pathKeyword || undefined,
-        status_code: statusCode || undefined,
-        start_time: dateFrom ? new Date(dateFrom).toISOString() : undefined,
-        end_time: dateTo ? new Date(dateTo).toISOString() : undefined,
+        page_size: pageSize,
+        type: nextFilters.type || undefined,
+        module: nextFilters.module.trim() || undefined,
+        username: nextFilters.username.trim() || undefined,
+        path: nextFilters.path.trim() || undefined,
+        status_code: nextFilters.statusCode.trim() || undefined,
+        keyword: nextFilters.keyword.trim() || undefined,
+        start_time: calcStartDate(nextFilters.rangeDays),
+        end_time: new Date().toISOString(),
       })
       const normalized = listFrom<AuditLog>(data)
       setItems(normalized.list)
       setTotal(normalized.total)
       setPage(nextPage)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败')
+      setError(err instanceof Error ? err.message : '审计记录加载失败')
+      setItems([])
+      setTotal(0)
     } finally {
       setLoading(false)
     }
   }
 
-  function exportCsv() {
-    if (items.length === 0) return
-    const headers = ['time', 'module', 'type', 'user', 'method', 'path', 'status_code', 'ip']
-    const lines = items.map((row) =>
-      [
-        row.created_at || '',
-        row.module || '',
-        row.log_type || '',
-        row.username || row.user_id || '',
-        row.method || '',
-        row.path || '',
-        row.status_code || '',
-        row.ip || '',
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(','),
-    )
-    const content = `\ufeff${[headers.join(','), ...lines].join('\n')}`
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `audit-logs-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  async function loadStats() {
-    try {
-      const [data, moduleData] = await Promise.all([auditService.stats(), auditService.moduleStats({ days: 7 })])
-      setStats({
-        total: Number(data.total || data.total_logs || 0),
-        today: Number(data.today || data.today_logs || 0),
-        error: Number(data.error || data.error_count || 0),
-        login: Number(data.login || data.login_count || 0),
-      })
-      const rawList = listFrom<any>(moduleData).list
-      const normalized = rawList.map((m: any) => ({
-        name: m.module || m.name || 'unknown',
-        count: Number(m.count || m.total || m.value || 0),
-      }))
-      setModuleStats(normalized.sort((a: any, b: any) => b.count - a.count).slice(0, 8))
-    } catch {
-      setStats({})
-      setModuleStats([])
-    }
-  }
-
-  async function loadUserActivity(targetUserId?: string) {
-    const uid = (targetUserId ?? activityUserId).trim()
-    if (!uid) {
-      setActivityItems([])
-      setActivityError('')
-      return
-    }
-    setActivityLoading(true)
-    setActivityError('')
-    try {
-      const data = await auditService.userActivity(uid, { page: 1, page_size: 50, days: 7 })
-      setActivityItems(listFrom<any>(data).list)
-    } catch (err) {
-      setActivityError(err instanceof Error ? err.message : '查询失败')
-      setActivityItems([])
-    } finally {
-      setActivityLoading(false)
-    }
-  }
-
   useEffect(() => {
     if (ready) {
-      load(1)
+      load(1, filters)
       loadStats()
-      const uid = new URLSearchParams(window.location.search).get('user_id') || ''
-      if (uid) {
-        setActivityUserId(uid)
-        loadUserActivity(uid)
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize])
 
   if (!ready) return null
   if (!hasPermission(user, ACTIONS.USER_MODIFY)) {
     return (
       <AppShell>
-        <ModuleHeader title="审计中心" desc="追踪关键操作、请求状态与风险行为" />
+        <ModuleHeader title="审计记录" desc="查看近期关键操作与异常请求" />
         <PageState error="当前账号无权限访问该页面（需要 user:modify 权限）" />
       </AppShell>
     )
@@ -149,173 +121,135 @@ export default function AuditPage() {
 
   return (
     <AppShell>
-      <ModuleHeader title="审计中心" desc="追踪关键操作、请求状态与风险行为" />
-      <div className="kpi-grid" style={{ marginBottom: 12 }}>
-        <div className="kpi">
-          <div className="label">日志总数</div>
-          <div className="value">{stats.total || 0}</div>
+      <ModuleHeader
+        title="审计记录"
+        desc="默认聚焦近期记录，支持按类型、模块、人员、路径与状态码快速定位"
+        right={
+          <button className="btn" type="button" onClick={() => { load(1, filters); loadStats() }}>
+            刷新
+          </button>
+        }
+      />
+      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
+
+      <div className="insight-grid" style={{ marginTop: 0 }}>
+        <div className="stat-card stat-card-amber">
+          <span>当前范围日志数</span>
+          <strong>{stats.total || 0}</strong>
+          <small>默认只展示近期审计记录</small>
         </div>
-        <div className="kpi">
-          <div className="label">今日新增</div>
-          <div className="value">{stats.today || 0}</div>
+        <div className="stat-card stat-card-blue">
+          <span>今日新增</span>
+          <strong>{stats.today || 0}</strong>
+          <small>今日产生的审计日志</small>
         </div>
-        <div className="kpi">
-          <div className="label">异常日志</div>
-          <div className="value">{stats.error || 0}</div>
+        <div className="stat-card stat-card-green">
+          <span>关键操作</span>
+          <strong>{stats.operation || 0}</strong>
+          <small>排除登录/登出/查询后的操作</small>
         </div>
-        <div className="kpi">
-          <div className="label">登录事件</div>
-          <div className="value">{stats.login || 0}</div>
+        <div className="stat-card stat-card-rose">
+          <span>异常记录</span>
+          <strong>{stats.error || 0}</strong>
+          <small>失败请求或错误事件</small>
         </div>
       </div>
-      <form
-        className="panel row wrap"
-        onSubmit={(e: FormEvent) => {
-          e.preventDefault()
-          load(1)
-        }}
-      >
-        <input className="input" placeholder="模块名（如 task/user）" value={module} onChange={(e) => setModule(e.target.value)} />
-        <input className="input" placeholder="请求路径（如 /tasks）" value={pathKeyword} onChange={(e) => setPathKeyword(e.target.value)} />
-        <input
-          className="input"
-          placeholder="状态码（如 500）"
-          value={statusCode}
-          onChange={(e) => setStatusCode(e.target.value.replace(/[^\d]/g, ''))}
-        />
-        <input className="input" type="datetime-local" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        <input className="input" type="datetime-local" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        <select className="select" value={logType} onChange={(e) => setLogType(e.target.value)}>
-          <option value="">全部类型</option>
-          <option value="login">login</option>
-          <option value="create">create</option>
-          <option value="update">update</option>
-          <option value="delete">delete</option>
-          <option value="query">query</option>
-          <option value="upload">upload</option>
-        </select>
-        <button className="btn primary" type="submit">
-          筛选
-        </button>
-        <button className="btn" type="button" onClick={exportCsv}>
-          导出CSV
-        </button>
-      </form>
-      <div className="panel">
-        <b>近 7 天模块操作分布</b>
-        {moduleStats.length === 0 ? (
-          <div style={{ marginTop: 10, color: '#6b7280' }}>暂无模块统计数据</div>
-        ) : (
-          <div className="bar-list" style={{ marginTop: 10 }}>
-            {moduleStats.map((m) => {
-              const max = moduleStats[0]?.count || 1
-              const pct = Math.max(4, Math.round((m.count / max) * 100))
-              return (
-                <div className="bar-row" key={m.name}>
-                  <span>{m.name}</span>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ width: `${pct}%` }} />
-                  </div>
-                  <b style={{ textAlign: 'right' }}>{m.count}</b>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-      <div className="panel">
-        <b>用户行为追踪（近 7 天）</b>
+
+      <section className="section-card">
         <form
-          className="row wrap"
-          style={{ marginTop: 10 }}
+          className="filters-grid audit-filters"
           onSubmit={(e: FormEvent) => {
             e.preventDefault()
-            loadUserActivity()
+            load(1, filters)
+            loadStats()
           }}
         >
-          <input
-            className="input"
-            placeholder="输入用户 ID"
-            style={{ minWidth: 260 }}
-            value={activityUserId}
-            onChange={(e) => setActivityUserId(e.target.value)}
-          />
-          <button className="btn" type="submit" disabled={activityLoading}>
-            {activityLoading ? '查询中...' : '查询'}
-          </button>
+          <select className="select" value={String(filters.rangeDays)} onChange={(e) => setFilters((prev) => ({ ...prev, rangeDays: Number(e.target.value) }))}>
+            {rangeOptions.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </select>
+          <select className="select" value={filters.type} onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value }))}>
+            {typeOptions.map((item) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </select>
+          <input className="input" placeholder="模块，如 用户管理" value={filters.module} onChange={(e) => setFilters((prev) => ({ ...prev, module: e.target.value }))} />
+          <input className="input" placeholder="人员名" value={filters.username} onChange={(e) => setFilters((prev) => ({ ...prev, username: e.target.value }))} />
+          <input className="input" placeholder="请求路径关键字" value={filters.path} onChange={(e) => setFilters((prev) => ({ ...prev, path: e.target.value }))} />
+          <input className="input" placeholder="状态码" value={filters.statusCode} onChange={(e) => setFilters((prev) => ({ ...prev, statusCode: e.target.value.replace(/[^\d]/g, '') }))} />
+          <input className="input audit-filters-keyword" placeholder="关键词（描述 / 用户 / trace_id / 请求）" value={filters.keyword} onChange={(e) => setFilters((prev) => ({ ...prev, keyword: e.target.value }))} />
+          <div className="row wrap">
+            <button className="btn primary" type="submit">应用筛选</button>
+            <button
+              className="btn ghost"
+              type="button"
+              onClick={() => {
+                const next = { rangeDays: 7, type: '', module: '', username: '', path: '', statusCode: '', keyword: '' }
+                setFilters(next)
+                load(1, next)
+              }}
+            >
+              重置
+            </button>
+          </div>
         </form>
-        {activityError ? <div style={{ marginTop: 10, color: '#dc2626' }}>{activityError}</div> : null}
-        {activityItems.length > 0 ? (
-          <div className="table-wrap" style={{ marginTop: 10 }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>模块</th>
-                  <th>类型</th>
-                  <th>请求</th>
-                  <th>状态码</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activityItems.map((row) => (
-                  <tr key={row.id || `${row.created_at}-${row.path}`}>
-                    <td>{fmtTime(row.created_at)}</td>
-                    <td>{row.module || '-'}</td>
-                    <td>
-                      <StatusTag status={row.log_type || row.type || '-'} />
-                    </td>
-                    <td>
-                      {(row.method || '').toUpperCase()} {row.path || '-'}
-                    </td>
-                    <td>{row.status_code || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : activityUserId && !activityLoading && !activityError ? (
-          <div style={{ marginTop: 10, color: '#6b7280' }}>未查询到该用户近期行为</div>
-        ) : null}
-      </div>
-      <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
-      {!loading && !error && items.length > 0 ? (
+      </section>
+
+      <PageState loading={loading && items.length === 0} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page, filters)} />
+
+      {!error && items.length > 0 ? (
         <>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>模块</th>
-                  <th>类型</th>
-                  <th>用户</th>
-                  <th>请求</th>
-                  <th>状态码</th>
-                  <th>IP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row) => (
-                  <tr key={row.id}>
-                    <td>{fmtTime(row.created_at)}</td>
-                    <td>{row.module || '-'}</td>
-                    <td>
-                      <StatusTag status={row.log_type || '-'} />
-                    </td>
-                    <td>{row.username || row.user_id || '-'}</td>
-                    <td>
-                      {(row.method || '').toUpperCase()} {row.path || '-'}
-                    </td>
-                    <td>{row.status_code || '-'}</td>
-                    <td>{row.ip || '-'}</td>
+          <div className="section-card">
+            <div className="row wrap" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <b>审计记录列表</b>
+                <div className="hint">第 {page} / {totalPages} 页，共 {total} 条</div>
+              </div>
+            </div>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>时间</th>
+                    <th>模块</th>
+                    <th>类型</th>
+                    <th>人员</th>
+                    <th>请求</th>
+                    <th>状态码</th>
+                    <th>状态</th>
+                    <th>IP</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map((row) => (
+                    <tr key={row.id}>
+                      <td>{fmtTime(row.created_at)}</td>
+                      <td>{row.module || '-'}</td>
+                      <td><StatusTag status={row.log_type || row.type || '-'} /></td>
+                      <td>{row.username || row.user_id || '-'}</td>
+                      <td className="audit-request-cell">
+                        <div>{(row.method || row.request_method || '').toUpperCase()} {row.path || row.request_url || '-'}</div>
+                        {row.action ? <div className="hint">{row.action}</div> : null}
+                      </td>
+                      <td>{row.status_code || row.response_code || '-'}</td>
+                      <td><StatusTag status={row.status || '-'} /></td>
+                      <td>{row.ip || row.request_ip || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <Pagination page={page} pageSize={30} total={total} onChange={load} />
+          <Pagination page={page} pageSize={pageSize} total={total} onChange={(nextPage) => load(nextPage, filters)} />
         </>
       ) : null}
     </AppShell>
   )
+}
+
+function calcStartDate(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() - Math.max(0, days))
+  return date.toISOString()
 }
