@@ -6,6 +6,7 @@ import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
 import { ConfirmButton } from '@/components/shared/ConfirmButton'
+import { SafeImage } from '@/components/shared/SafeImage'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { dialectService } from '@/services/dialects'
@@ -290,7 +291,7 @@ export default function DialectCardsPage() {
                     <tr key={card.id}>
                       <td>
                         {card.image_url ? (
-                          <img src={card.image_url} alt={card.content || 'card'} style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: 10 }} />
+                          <SafeImage src={card.image_url} alt={card.content || 'card'} width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: 10 }} />
                         ) : (
                           <div style={{ width: 88, height: 88, borderRadius: 10, background: 'var(--bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>无图</div>
                         )}

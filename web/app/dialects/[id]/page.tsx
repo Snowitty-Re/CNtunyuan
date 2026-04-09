@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
+import { SafeImage } from '@/components/shared/SafeImage'
 import { StatusTag } from '@/components/shared/StatusTag'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { fmtTime, listFrom } from '@/lib/data'
@@ -95,10 +96,12 @@ export default function DialectDetailPage() {
           {item.card_image_url ? (
             <div style={{ marginTop: 12 }}>
               <b>卡片图片</b>
-              <img
+              <SafeImage
                 src={item.card_image_url}
                 alt={item.card_content || 'dialect-card'}
-                style={{ width: '100%', maxHeight: 320, objectFit: 'contain', marginTop: 8, borderRadius: 10, border: '1px solid var(--border)' }}
+                width={1200}
+                height={720}
+                style={{ width: '100%', maxHeight: 320, height: 'auto', objectFit: 'contain', marginTop: 8, borderRadius: 10, border: '1px solid var(--border)' }}
               />
             </div>
           ) : null}

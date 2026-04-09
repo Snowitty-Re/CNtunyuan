@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
+import { SafeImage } from '@/components/shared/SafeImage'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { dialectService } from '@/services/dialects'
@@ -312,12 +313,15 @@ export default function DialectCreatePage() {
               </div>
               <div style={{ marginTop: 12 }}>
                 {currentCard.image_url ? (
-                  <img
+                  <SafeImage
                     src={currentCard.image_url}
                     alt={currentCard.content || 'dialect-card'}
+                    width={1400}
+                    height={900}
                     style={{
                       width: '100%',
                       maxHeight: 360,
+                      height: 'auto',
                       objectFit: 'contain',
                       borderRadius: 12,
                       border: '1px solid var(--border)',

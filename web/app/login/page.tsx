@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { authService } from '@/services/auth'
 import { systemService } from '@/services/system'
 import { saveAuth } from '@/lib/auth'
+import { SafeImage } from '@/components/shared/SafeImage'
 import { useSiteBrand } from '@/hooks/useSiteBrand'
 
 declare global {
@@ -164,7 +165,7 @@ export default function LoginPage() {
       <div className="auth-hero">
         <div className="auth-hero-badge">助力团圆协作中枢</div>
         <div className="auth-brand-lockup">
-          {brand.logoUrl ? <img className="auth-brand-logo" src={brand.logoUrl} alt={brand.orgName} /> : <span className="auth-brand-mark">{brand.orgName.slice(0, 1)}</span>}
+          {brand.logoUrl ? <SafeImage className="auth-brand-logo" src={brand.logoUrl} alt={brand.orgName} width={72} height={72} /> : <span className="auth-brand-mark">{brand.orgName.slice(0, 1)}</span>}
         </div>
         <h1 className="auth-hero-title">{brand.orgName}</h1>
         <p className="auth-hero-subtitle">{brand.subtitle}</p>

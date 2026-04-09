@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { PropsWithChildren, useEffect, useState } from 'react'
 import { clearAuth, getCurrentUser } from '@/lib/auth'
 import { ACTIONS, hasPermission } from '@/lib/rbac'
+import { SafeImage } from '@/components/shared/SafeImage'
 import { useSiteBrand } from '@/hooks/useSiteBrand'
 
 const items = [
@@ -43,7 +44,7 @@ export function AppShell({ children }: PropsWithChildren) {
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="brand">
           <div className="brand-row">
-            {brand.logoUrl ? <img className="brand-logo" src={brand.logoUrl} alt={brand.orgName} /> : <span className="brand-mark">{brand.orgName.slice(0, 1)}</span>}
+            {brand.logoUrl ? <SafeImage className="brand-logo" src={brand.logoUrl} alt={brand.orgName} width={44} height={44} /> : <span className="brand-mark">{brand.orgName.slice(0, 1)}</span>}
             <div>
               {brand.orgName}
               <small>走失人员寻亲协作平台</small>
@@ -74,13 +75,12 @@ export function AppShell({ children }: PropsWithChildren) {
             <p className="top-subtitle">{brand.subtitle}</p>
           </div>
           <div className="top-user">
-            <img
+            <SafeImage
               className="top-avatar"
               src={user?.avatar || '/default-avatar.svg'}
               alt={user?.nickname || 'avatar'}
-              onError={(e) => {
-                ;(e.currentTarget as HTMLImageElement).src = '/default-avatar.svg'
-              }}
+              width={34}
+              height={34}
             />
             <span>{user?.nickname || user?.phone || '未登录'}</span>
             <span className="role-badge">{user?.role || '-'}</span>

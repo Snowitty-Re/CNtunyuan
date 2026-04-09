@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { authService } from '@/services/auth'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
+import { SafeImage } from '@/components/shared/SafeImage'
 
 export default function SettingsPage() {
   const { ready } = useAuthGuard()
@@ -135,13 +136,12 @@ export default function SettingsPage() {
       <ModuleHeader title="个人设置" desc="查看账号信息与后续扩展配置" />
       <form className="section-card grid cols-2" onSubmit={onSave}>
         <div className="row" style={{ gridColumn: '1 / -1' }}>
-          <img
+          <SafeImage
             className="profile-avatar"
             src={avatar || '/default-avatar.svg'}
             alt={nickname || 'avatar'}
-            onError={(e) => {
-              ;(e.currentTarget as HTMLImageElement).src = '/default-avatar.svg'
-            }}
+            width={56}
+            height={56}
           />
           <div>
             <div style={{ fontWeight: 600 }}>{nickname || phone || '当前用户'}</div>

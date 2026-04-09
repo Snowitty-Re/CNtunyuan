@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { PageState } from '@/components/shared/PageState'
+import { SafeImage } from '@/components/shared/SafeImage'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { fmtTime, listFrom } from '@/lib/data'
@@ -76,7 +77,7 @@ export default function AttachmentsPage() {
       const result = listFrom<any>(data)
       setFiles(result.list)
       setTotal(Number(result.total || 0))
-      setPreviewFile((current) => {
+      setPreviewFile((current: any | null) => {
         if (current) {
           const matched = result.list.find((item: any) => item.id === current.id)
           if (matched) return matched
@@ -372,7 +373,16 @@ function normalizeFileUrl(raw: string) {
 function renderPreview(file: any, kind: string) {
   const url = resolveFileUrl(file)
   if (kind === 'image') {
-    return <img className="attachment-preview-image" src={url} alt={file?.original_name || 'preview'} />
+    return (
+      <SafeImage
+        className="attachment-preview-image"
+        src={url}
+        alt={file?.original_name || 'preview'}
+        width={1200}
+        height={900}
+        style={{ width: '100%', height: 'auto', maxHeight: 420, objectFit: 'contain' }}
+      />
+    )
   }
   if (kind === 'audio') {
     return <audio controls preload="metadata" style={{ width: '100%' }} src={url} />

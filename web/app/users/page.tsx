@@ -9,6 +9,7 @@ import { PageState } from '@/components/shared/PageState'
 import { Pagination } from '@/components/shared/Pagination'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { StatusTag } from '@/components/shared/StatusTag'
+import { SafeImage } from '@/components/shared/SafeImage'
 import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { ACTIONS, hasPermission } from '@/lib/rbac'
@@ -454,13 +455,12 @@ export default function UsersPage() {
                       <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} />
                     </td>
                     {columnVisible.avatar ? <td>
-                      <img
+                      <SafeImage
                         className="cell-avatar"
                         src={row.avatar || '/default-avatar.svg'}
                         alt={row.nickname || row.phone || 'avatar'}
-                        onError={(e) => {
-                          ;(e.currentTarget as HTMLImageElement).src = '/default-avatar.svg'
-                        }}
+                        width={34}
+                        height={34}
                       />
                     </td> : null}
                     {columnVisible.nickname ? <td>{row.nickname || '-'}</td> : null}
