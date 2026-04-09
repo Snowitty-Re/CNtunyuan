@@ -431,7 +431,57 @@ CREATE INDEX idx_task_comments_parent ON ty_task_comments(parent_id);
 CREATE INDEX idx_task_comments_deleted_at ON ty_task_comments(deleted_at);
 
 -- ============================================================
--- 12. 方言表 (ty_dialects)
+-- 12. 方言卡片分组表 (ty_dialect_card_groups)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_dialect_card_groups (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+
+    name VARCHAR(100) NOT NULL COMMENT '分组名称',
+    description VARCHAR(255) DEFAULT '' COMMENT '分组描述',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '排序',
+    status VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT '状态',
+    created_by CHAR(36) NOT NULL COMMENT '创建人ID',
+
+    CONSTRAINT chk_dialect_card_group_status CHECK (status IN ('active', 'inactive')),
+    CONSTRAINT fk_dialect_card_group_creator FOREIGN KEY (created_by) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='方言卡片分组表';
+
+CREATE INDEX idx_dialect_card_groups_status ON ty_dialect_card_groups(status);
+CREATE INDEX idx_dialect_card_groups_sort ON ty_dialect_card_groups(sort_order, created_at);
+CREATE INDEX idx_dialect_card_groups_deleted_at ON ty_dialect_card_groups(deleted_at);
+
+-- ============================================================
+-- 13. 方言卡片表 (ty_dialect_cards)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_dialect_cards (
+    id CHAR(36) PRIMARY KEY,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+
+    group_id CHAR(36) NOT NULL COMMENT '分组ID',
+    content VARCHAR(200) NOT NULL COMMENT '卡片内容',
+    image_url VARCHAR(255) DEFAULT '' COMMENT '卡片图片',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '排序',
+    required TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否必填',
+    status VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT '状态',
+    created_by CHAR(36) NOT NULL COMMENT '创建人ID',
+
+    CONSTRAINT chk_dialect_card_status CHECK (status IN ('active', 'inactive')),
+    CONSTRAINT fk_dialect_cards_group FOREIGN KEY (group_id) REFERENCES ty_dialect_card_groups(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_dialect_cards_creator FOREIGN KEY (created_by) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='方言录入卡片表';
+
+CREATE INDEX idx_dialect_cards_group ON ty_dialect_cards(group_id);
+CREATE INDEX idx_dialect_cards_status ON ty_dialect_cards(status);
+CREATE INDEX idx_dialect_cards_sort ON ty_dialect_cards(group_id, sort_order, created_at);
+CREATE INDEX idx_dialect_cards_deleted_at ON ty_dialect_cards(deleted_at);
+
+-- ============================================================
+-- 14. 方言表 (ty_dialects)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_dialects (
     id CHAR(36) PRIMARY KEY,
@@ -459,12 +509,17 @@ CREATE TABLE IF NOT EXISTS ty_dialects (
     collect_address VARCHAR(255) COMMENT '采集地址',
     collect_latitude DECIMAL(10,7) COMMENT '采集纬度',
     collect_longitude DECIMAL(10,7) COMMENT '采集经度',
+    batch_id CHAR(36) NULL COMMENT '批次ID',
+    card_group_id CHAR(36) NULL COMMENT '卡片分组ID',
+    card_id CHAR(36) NULL COMMENT '卡片ID',
     missing_person_id CHAR(36) COMMENT '关联走失人员ID',
     uploader_id CHAR(36) NOT NULL COMMENT '上传人ID',
     org_id CHAR(36) NOT NULL COMMENT '组织ID',
     
     CONSTRAINT fk_dialect_uploader FOREIGN KEY (uploader_id) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_dialect_org FOREIGN KEY (org_id) REFERENCES ty_organizations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_dialects_card_group FOREIGN KEY (card_group_id) REFERENCES ty_dialect_card_groups(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_dialects_card FOREIGN KEY (card_id) REFERENCES ty_dialect_cards(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_dialect_missing_person FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT chk_dialect_type CHECK (dialect_type IN ('phrase', 'story', 'song', 'daily', 'other')),
     CONSTRAINT chk_dialect_status CHECK (status IN ('active', 'inactive', 'pending'))
@@ -477,10 +532,14 @@ CREATE INDEX idx_dialects_region ON ty_dialects(region);
 CREATE INDEX idx_dialects_uploader ON ty_dialects(uploader_id);
 CREATE INDEX idx_dialects_org ON ty_dialects(org_id);
 CREATE INDEX idx_dialects_featured ON ty_dialects(is_featured);
+CREATE INDEX idx_dialects_batch_id ON ty_dialects(batch_id);
+CREATE INDEX idx_dialects_card_group_id ON ty_dialects(card_group_id);
+CREATE INDEX idx_dialects_card_id ON ty_dialects(card_id);
 CREATE INDEX idx_dialects_deleted_at ON ty_dialects(deleted_at);
+CREATE UNIQUE INDEX uk_dialects_batch_card ON ty_dialects(batch_id, card_id);
 
 -- ============================================================
--- 13. 方言评论表 (ty_dialect_comments)
+-- 15. 方言评论表 (ty_dialect_comments)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_dialect_comments (
     id CHAR(36) PRIMARY KEY,
@@ -507,7 +566,7 @@ CREATE INDEX idx_dialect_comments_parent ON ty_dialect_comments(parent_id);
 CREATE INDEX idx_dialect_comments_deleted_at ON ty_dialect_comments(deleted_at);
 
 -- ============================================================
--- 14. 方言点赞表 (ty_dialect_likes)
+-- 16. 方言点赞表 (ty_dialect_likes)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_dialect_likes (
     id CHAR(36) PRIMARY KEY,
@@ -526,7 +585,7 @@ CREATE INDEX idx_dialect_likes_dialect ON ty_dialect_likes(dialect_id);
 CREATE INDEX idx_dialect_likes_user ON ty_dialect_likes(user_id);
 
 -- ============================================================
--- 15. 方言播放记录表 (ty_dialect_play_logs)
+-- 17. 方言播放记录表 (ty_dialect_play_logs)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_dialect_play_logs (
     id CHAR(36) PRIMARY KEY,

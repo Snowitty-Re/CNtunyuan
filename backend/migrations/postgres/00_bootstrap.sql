@@ -439,7 +439,59 @@ CREATE INDEX idx_task_comments_parent ON ty_task_comments(parent_id) WHERE delet
 CREATE INDEX idx_task_comments_deleted_at ON ty_task_comments(deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- ============================================================
--- 12. 方言表 (ty_dialects)
+-- 12. 方言卡片分组表 (ty_dialect_card_groups)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_dialect_card_groups (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255) DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    created_by UUID NOT NULL,
+
+    CONSTRAINT fk_dialect_card_group_creator FOREIGN KEY (created_by) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+COMMENT ON TABLE ty_dialect_card_groups IS '方言卡片分组表';
+
+CREATE INDEX idx_dialect_card_groups_status ON ty_dialect_card_groups(status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_dialect_card_groups_sort ON ty_dialect_card_groups(sort_order, created_at) WHERE deleted_at IS NULL;
+CREATE INDEX idx_dialect_card_groups_deleted_at ON ty_dialect_card_groups(deleted_at) WHERE deleted_at IS NOT NULL;
+
+-- ============================================================
+-- 13. 方言卡片表 (ty_dialect_cards)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS ty_dialect_cards (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+
+    group_id UUID NOT NULL,
+    content VARCHAR(200) NOT NULL,
+    image_url VARCHAR(255) DEFAULT '',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    required BOOLEAN NOT NULL DEFAULT TRUE,
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+    created_by UUID NOT NULL,
+
+    CONSTRAINT fk_dialect_cards_group FOREIGN KEY (group_id) REFERENCES ty_dialect_card_groups(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_dialect_cards_creator FOREIGN KEY (created_by) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+COMMENT ON TABLE ty_dialect_cards IS '方言录入卡片表';
+
+CREATE INDEX idx_dialect_cards_group ON ty_dialect_cards(group_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_dialect_cards_status ON ty_dialect_cards(status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_dialect_cards_sort ON ty_dialect_cards(group_id, sort_order, created_at) WHERE deleted_at IS NULL;
+CREATE INDEX idx_dialect_cards_deleted_at ON ty_dialect_cards(deleted_at) WHERE deleted_at IS NOT NULL;
+
+-- ============================================================
+-- 14. 方言表 (ty_dialects)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_dialects (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -467,12 +519,17 @@ CREATE TABLE IF NOT EXISTS ty_dialects (
     collect_address VARCHAR(255),
     collect_latitude DECIMAL(10,7),
     collect_longitude DECIMAL(10,7),
+    batch_id UUID,
+    card_group_id UUID,
+    card_id UUID,
     missing_person_id UUID,
     uploader_id UUID NOT NULL,
     org_id UUID NOT NULL,
     
     CONSTRAINT fk_dialect_uploader FOREIGN KEY (uploader_id) REFERENCES ty_users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_dialect_org FOREIGN KEY (org_id) REFERENCES ty_organizations(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_dialects_card_group FOREIGN KEY (card_group_id) REFERENCES ty_dialect_card_groups(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_dialects_card FOREIGN KEY (card_id) REFERENCES ty_dialect_cards(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_dialect_missing_person FOREIGN KEY (missing_person_id) REFERENCES ty_missing_persons(id) ON DELETE SET NULL ON UPDATE CASCADE
 );
 
@@ -487,10 +544,14 @@ CREATE INDEX idx_dialects_region ON ty_dialects(region) WHERE deleted_at IS NULL
 CREATE INDEX idx_dialects_uploader ON ty_dialects(uploader_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_dialects_org ON ty_dialects(org_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_dialects_featured ON ty_dialects(is_featured) WHERE is_featured = TRUE AND deleted_at IS NULL;
+CREATE INDEX idx_dialects_batch_id ON ty_dialects(batch_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_dialects_card_group_id ON ty_dialects(card_group_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_dialects_card_id ON ty_dialects(card_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_dialects_deleted_at ON ty_dialects(deleted_at) WHERE deleted_at IS NOT NULL;
+CREATE UNIQUE INDEX uk_dialects_batch_card ON ty_dialects(batch_id, card_id) WHERE batch_id IS NOT NULL AND card_id IS NOT NULL AND deleted_at IS NULL;
 
 -- ============================================================
--- 13. 方言评论表 (ty_dialect_comments)
+-- 15. 方言评论表 (ty_dialect_comments)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_dialect_comments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -519,7 +580,7 @@ CREATE INDEX idx_dialect_comments_parent ON ty_dialect_comments(parent_id) WHERE
 CREATE INDEX idx_dialect_comments_deleted_at ON ty_dialect_comments(deleted_at) WHERE deleted_at IS NOT NULL;
 
 -- ============================================================
--- 14. 方言点赞表 (ty_dialect_likes)
+-- 16. 方言点赞表 (ty_dialect_likes)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_dialect_likes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -540,7 +601,7 @@ CREATE INDEX idx_dialect_likes_dialect ON ty_dialect_likes(dialect_id);
 CREATE INDEX idx_dialect_likes_user ON ty_dialect_likes(user_id);
 
 -- ============================================================
--- 15. 方言播放记录表 (ty_dialect_play_logs)
+-- 17. 方言播放记录表 (ty_dialect_play_logs)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS ty_dialect_play_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -674,6 +735,10 @@ CREATE TRIGGER update_task_attachments_updated_at BEFORE UPDATE ON ty_task_attac
 CREATE TRIGGER update_task_logs_updated_at BEFORE UPDATE ON ty_task_logs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_task_comments_updated_at BEFORE UPDATE ON ty_task_comments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_dialect_card_groups_updated_at BEFORE UPDATE ON ty_dialect_card_groups
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_dialect_cards_updated_at BEFORE UPDATE ON ty_dialect_cards
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_dialects_updated_at BEFORE UPDATE ON ty_dialects
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
