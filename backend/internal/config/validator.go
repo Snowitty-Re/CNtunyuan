@@ -197,8 +197,17 @@ func (v *ConfigValidator) validateStorage(cfg *Config) {
 
 // validateWeChat 验证微信配置
 func (v *ConfigValidator) validateWeChat(cfg *Config) {
-	// 如果启用了微信登录，需要验证配置
-	if cfg.System.EnableWechatLogin {
+	// 只要微信能力总开关开启，且任一登录入口启用，就必须具备基础微信配置。
+	miniEnabled := cfg.System.EnableWechatLoginMiniProgram
+	webEnabled := cfg.System.EnableWechatLoginWeb
+	legacyEnabled := cfg.System.EnableWechatLogin
+
+	if !miniEnabled && !webEnabled {
+		miniEnabled = legacyEnabled
+		webEnabled = legacyEnabled
+	}
+
+	if cfg.WeChat.EnableLogin && (miniEnabled || webEnabled) {
 		if cfg.WeChat.AppID == "" || cfg.WeChat.AppID == "your-app-id" {
 			v.addError("wechat.app_id", "启用微信登录时AppID不能为空")
 		}

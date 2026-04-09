@@ -4,6 +4,7 @@
 server:
   port: "8080"
   mode: "debug"  # debug/release
+  domain: "http://localhost:8080"  # 用于生成文件访问地址、回调地址等
   read_timeout: 30
   write_timeout: 30
   max_header_bytes: 1048576
@@ -39,6 +40,7 @@ jwt:
 wechat:
   app_id: "your-app-id"
   app_secret: "your-app-secret"
+  enable_login: true  # 微信能力总开关，关闭后 Web/小程序微信登录均不可用
   mch_id: ""
   api_key: ""
   notify_url: ""
@@ -48,7 +50,7 @@ storage:
   local_path: ./uploads # 本地存储路径
   base_url: http://localhost:8080/uploads
   max_file_size: 52428800  # 50MB
-  allowed_types: "jpg,jpeg,png,gif,webp,mp4,mp3,wav,pdf,doc,docx"
+  allowed_types: "jpg,jpeg,png,gif,webp,mp4,webm,mp3,wav,m4a,aac,ogg,opus,flac"
   # OSS配置(使用阿里云时填写)
   oss_access_key_id: ""
   oss_access_key_secret: ""
@@ -114,7 +116,9 @@ system:
   default_org_name: "助力团圆志愿者协会"
   default_org_code: "ROOT"
   enable_register: true
-  enable_wechat_login: true
+  enable_wechat_login: true  # 兼容旧总开关，建议同时显式配置下面两个独立开关
+  enable_wechat_login_web: true
+  enable_wechat_login_mini_program: true
   enable_sms_login: false
   authz_policy_change_requires_approval: false
   authz_policy_change_approval_code: ""
@@ -125,3 +129,8 @@ system:
 security:
   max_login_attempts: 5     # 最大登录失败次数
   lockout_duration: 1800    # 锁定时长（秒），默认30分钟
+
+backup:
+  enabled: false
+  backup_dir: "./backups"
+  retention: 7
