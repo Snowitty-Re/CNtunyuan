@@ -140,7 +140,7 @@ func (s *Scheduler) rejectExpiredAuthzPolicyRequests() {
 	}
 
 	ctx := context.Background()
-	updated, err := s.authzSvc.AutoRejectExpiredPolicyChangeRequests(ctx, expireHours, "system:auto-timeout")
+	updated, err := s.authzSvc.AutoRejectExpiredPolicyChangeRequests(ctx, expireHours, "")
 	if err != nil {
 		logger.Error("Failed to auto reject expired authz policy requests", logger.Err(err))
 		return

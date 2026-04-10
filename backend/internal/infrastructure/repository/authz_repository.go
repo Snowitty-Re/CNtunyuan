@@ -884,9 +884,16 @@ func nullableString(value string) *string {
 }
 
 func (r *AuthzPolicyRepositoryImpl) RejectExpiredPolicyChangeRequests(ctx context.Context, before time.Time, reviewedBy, reviewNote string) (int64, error) {
+	var reviewedByValue interface{}
+	trimmedReviewedBy := strings.TrimSpace(reviewedBy)
+	if trimmedReviewedBy != "" {
+		if _, err := uuid.Parse(trimmedReviewedBy); err == nil {
+			reviewedByValue = trimmedReviewedBy
+		}
+	}
 	updates := map[string]interface{}{
 		"status":      string(entity.AuthzPolicyRequestRejected),
-		"reviewed_by": strings.TrimSpace(reviewedBy),
+		"reviewed_by": reviewedByValue,
 		"reviewed_at": time.Now(),
 		"review_note": strings.TrimSpace(reviewNote),
 		"updated_at":  time.Now(),
