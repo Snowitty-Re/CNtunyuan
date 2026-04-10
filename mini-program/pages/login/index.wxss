@@ -365,6 +365,37 @@ page {
   text-align: center;
 }
 
+.policy-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.policy-check {
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 8rpx;
+  border: 2rpx solid #ccbca8;
+  background: #fffdf8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.policy-check.checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.policy-check-mark {
+  color: #fff;
+  font-size: 18rpx;
+  line-height: 1;
+}
+
 .footer-text,
 .footer-link {
   font-size: 22rpx;
@@ -377,4 +408,12 @@ page {
 
 .footer-link {
   color: var(--primary);
+}
+
+.policy-hint {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 20rpx;
+  line-height: 1.6;
+  color: #a89f95;
 }

@@ -1,10 +1,14 @@
 const services = require('../../services/index')
 const { validatePhone, showError, showSuccess, showLoading, hideLoading } = require('../../utils/util')
 
+const POLICY_VERSION = '2026-04-10'
+const POLICY_AGREEMENT_KEY = 'policyAgreement'
+
 Page({
   data: {
     loading: false,
     loginType: 'wechat', // wechat, phone
+    agreedToPolicies: false,
     isRegister: false,
     phone: '',
     password: '',
@@ -18,6 +22,8 @@ Page({
   },
 
   onLoad(options) {
+    this.restorePolicyAgreement()
+
     // 检查是否已登录
     const token = wx.getStorageSync('token')
     if (token) {
@@ -61,6 +67,7 @@ Page({
   // 微信一键登录
   async handleWechatLogin() {
     if (this.data.loading) return
+    if (!(await this.ensurePoliciesAgreed('wechat_login'))) return
     
     this.setData({ loading: true })
     showLoading('登录中...')
@@ -140,6 +147,7 @@ Page({
   // 微信一键绑定手机号（优先方案）
   async handleWechatPhoneBind(e) {
     if (!this.data.isBinding || this.data.loading) return
+    if (!(await this.ensurePoliciesAgreed('wechat_bind_phone'))) return
 
     const code = e && e.detail ? e.detail.code : ''
     if (!code || code === 'getPhoneNumber:fail user deny') {
@@ -178,6 +186,7 @@ Page({
   async handleWechatPhoneForAuth(e) {
     const { isRegister, isResetPassword, password, loading } = this.data
     if (loading || (!isRegister && !isResetPassword)) return
+    if (!(await this.ensurePoliciesAgreed(isRegister ? 'wechat_register' : 'wechat_reset_password'))) return
 
     if (!password) {
       showError(isResetPassword ? '请输入新密码' : '请输入密码')
@@ -316,6 +325,16 @@ Page({
     }
   },
 
+  restorePolicyAgreement() {
+    try {
+      const saved = wx.getStorageSync(POLICY_AGREEMENT_KEY)
+      const agreed = !!(saved && saved.version === POLICY_VERSION && saved.agreed === true)
+      this.setData({ agreedToPolicies: agreed })
+    } catch (e) {
+      this.setData({ agreedToPolicies: false })
+    }
+  },
+
   // 手机号登录
   async handlePhoneLogin() {
     const { phone, password, isBinding, isRegister, isResetPassword } = this.data
@@ -323,6 +342,7 @@ Page({
       showError('请使用微信手机号授权按钮完成验证')
       return
     }
+    if (!(await this.ensurePoliciesAgreed('phone_login'))) return
 
     if (!validatePhone(phone)) {
       showError('请输入正确的手机号')
@@ -415,6 +435,33 @@ Page({
       smsCode: '',
       password: ''
     })
+  },
+
+  ensurePoliciesAgreed(action = '') {
+    if (this.data.agreedToPolicies) return Promise.resolve(true)
+    showError('请先阅读并勾选同意《用户协议》与《隐私政策》')
+    return Promise.resolve(false)
+  },
+
+  confirmPolicyAgreement() {
+    const payload = {
+      agreed: true,
+      version: POLICY_VERSION,
+      agreedAt: Date.now()
+    }
+    wx.setStorageSync(POLICY_AGREEMENT_KEY, payload)
+    this.setData({
+      agreedToPolicies: true
+    })
+  },
+
+  togglePoliciesAgreement() {
+    if (this.data.agreedToPolicies) {
+      wx.removeStorageSync(POLICY_AGREEMENT_KEY)
+      this.setData({ agreedToPolicies: false })
+      return
+    }
+    this.confirmPolicyAgreement()
   },
 
   // 用户协议

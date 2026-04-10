@@ -141,9 +141,15 @@
   </view>
 
   <view class="footer">
-    <text class="footer-text">登录即表示同意</text>
-    <text class="footer-link" bindtap="goToAgreement">《用户协议》</text>
-    <text class="footer-text">和</text>
-    <text class="footer-link" bindtap="goToPrivacy">《隐私政策》</text>
+    <view class="policy-row" bindtap="togglePoliciesAgreement">
+      <view class="policy-check {{agreedToPolicies ? 'checked' : ''}}">
+        <text wx:if="{{agreedToPolicies}}" class="policy-check-mark">✓</text>
+      </view>
+      <text class="footer-text">我已阅读并同意</text>
+      <text class="footer-link" catchtap="goToAgreement">《用户协议》</text>
+      <text class="footer-text">和</text>
+      <text class="footer-link" catchtap="goToPrivacy">《隐私政策》</text>
+    </view>
+    <text class="policy-hint">请先阅读协议内容，再自主勾选同意后继续登录或注册</text>
   </view>
 </view>
