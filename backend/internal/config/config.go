@@ -1,8 +1,11 @@
 package config
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -233,51 +236,140 @@ type BackupConfig struct {
 }
 
 var globalConfig *Config
+var globalStartupSource = "bootstrap-managed"
+var globalStartupConfigPath = "default"
+
+type fileConfigOptions struct {
+	Required          bool
+	UseManagedStartup bool
+}
 
 // LoadConfig 加载配置
 func LoadConfig(configPath string) (*Config, error) {
-	viper.SetConfigType("yaml")
+	return loadConfig(configPath, fileConfigOptions{Required: true, UseManagedStartup: true})
+}
 
+// LoadStartupConfig 加载启动配置；允许 config.yaml 缺失，并叠加系统托管的启动配置。
+func LoadStartupConfig(configPath string) (*Config, error) {
+	return loadConfig(configPath, fileConfigOptions{Required: false, UseManagedStartup: true})
+}
+
+// LoadConfigFileOnly 强制仅读取本地配置文件，不使用托管启动配置。
+func LoadConfigFileOnly(configPath string) (*Config, error) {
+	return loadConfig(configPath, fileConfigOptions{Required: true, UseManagedStartup: false})
+}
+
+func loadConfig(configPath string, opts fileConfigOptions) (*Config, error) {
+	v := viper.New()
+	v.SetConfigType("yaml")
+
+	applyConfigPath(v, configPath)
+
+	// 设置默认值
+	setDefaultsFor(v)
+
+	// 启用环境变量覆盖（格式: CNTY_DATABASE_PASSWORD 覆盖 database.password）
+	v.SetEnvPrefix("CNTY")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	// 读取配置文件
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok || opts.Required {
+			return nil, fmt.Errorf("读取配置文件失败: %w", err)
+		}
+	}
+
+	var cfg Config
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("解析配置失败: %w", err)
+	}
+
+	if opts.UseManagedStartup {
+		loaded, err := LoadManagedStartupConfig(resolveManagedStartupConfigPath(configPath))
+		if err != nil {
+			return nil, err
+		}
+		if loaded != nil {
+			cfg = MergeManagedStartupConfig(&cfg, loaded)
+		}
+	}
+
+	normalizeConfig(&cfg)
+
+	globalConfig = &cfg
+	return &cfg, nil
+}
+
+func applyConfigPath(v *viper.Viper, configPath string) {
 	if configPath != "" {
 		// 检查是否是文件路径
 		info, err := os.Stat(configPath)
 		if err == nil && info.IsDir() {
 			// 是目录，在该目录下查找 config.yaml
-			viper.AddConfigPath(configPath)
-			viper.SetConfigName("config")
+			v.AddConfigPath(configPath)
+			v.SetConfigName("config")
 		} else if err == nil {
 			// 是文件
-			viper.SetConfigFile(configPath)
+			v.SetConfigFile(configPath)
 		} else {
 			// 路径不存在，尝试作为目录处理
-			viper.AddConfigPath(configPath)
-			viper.SetConfigName("config")
+			v.AddConfigPath(configPath)
+			v.SetConfigName("config")
 		}
 	} else {
-		viper.AddConfigPath("./config")
-		viper.SetConfigName("config")
+		v.AddConfigPath("./config")
+		v.SetConfigName("config")
+	}
+}
+
+func normalizeConfig(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+	if strings.TrimSpace(cfg.Server.Port) == "" {
+		cfg.Server.Port = "8080"
+	}
+	if strings.TrimSpace(cfg.Server.Mode) == "" {
+		cfg.Server.Mode = "release"
+	}
+	if strings.TrimSpace(cfg.Server.Domain) == "" {
+		cfg.Server.Domain = "http://localhost:" + cfg.Server.Port
 	}
 
-	// 设置默认值
-	setDefaults()
-
-	// 启用环境变量覆盖（格式: CNTY_DATABASE_PASSWORD 覆盖 database.password）
-	viper.SetEnvPrefix("CNTY")
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AutomaticEnv()
-
-	// 读取配置文件
-	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("读取配置文件失败: %w", err)
+	if strings.TrimSpace(cfg.JWT.Secret) == "" || len(strings.TrimSpace(cfg.JWT.Secret)) < 32 {
+		cfg.JWT.Secret = generateRandomHex(32)
+	}
+	if cfg.JWT.ExpireTime <= 0 {
+		cfg.JWT.ExpireTime = 604800
+	}
+	if cfg.JWT.RefreshTime <= 0 {
+		cfg.JWT.RefreshTime = 2592000
 	}
 
-	var config Config
-	if err := viper.Unmarshal(&config); err != nil {
-		return nil, fmt.Errorf("解析配置失败: %w", err)
+	if cfg.Storage.Type == "" {
+		cfg.Storage.Type = "local"
+	}
+	if strings.EqualFold(cfg.Storage.Type, "local") {
+		if strings.TrimSpace(cfg.Storage.LocalPath) == "" {
+			cfg.Storage.LocalPath = "./uploads"
+		}
+		if !filepath.IsAbs(cfg.Storage.LocalPath) {
+			if abs, err := filepath.Abs(cfg.Storage.LocalPath); err == nil {
+				cfg.Storage.LocalPath = abs
+			}
+		}
+		if strings.TrimSpace(cfg.Storage.BaseURL) == "" {
+			cfg.Storage.BaseURL = strings.TrimRight(cfg.Server.Domain, "/") + "/uploads"
+		}
 	}
 
-	globalConfig = &config
-	return &config, nil
+	if strings.TrimSpace(cfg.Log.OutputPath) == "" {
+		cfg.Log.OutputPath = "./logs"
+	}
+	if strings.TrimSpace(cfg.Backup.BackupDir) == "" {
+		cfg.Backup.BackupDir = "./backups"
+	}
 }
 
 // GetConfig 获取全局配置
@@ -290,94 +382,121 @@ func SetConfig(cfg *Config) {
 	globalConfig = cfg
 }
 
+func SetStartupMetadata(source, configPath string) {
+	if strings.TrimSpace(source) != "" {
+		globalStartupSource = strings.TrimSpace(source)
+	}
+	if strings.TrimSpace(configPath) == "" {
+		globalStartupConfigPath = "default"
+	} else {
+		globalStartupConfigPath = strings.TrimSpace(configPath)
+	}
+}
+
+func GetStartupMetadata() (source string, configPath string) {
+	return globalStartupSource, globalStartupConfigPath
+}
+
 func setDefaults() {
+	setDefaultsFor(viper.GetViper())
+}
+
+func setDefaultsFor(v *viper.Viper) {
 	// Server defaults
-	viper.SetDefault("server.port", "8080")
-	viper.SetDefault("server.mode", "release")
-	viper.SetDefault("server.domain", "http://localhost:8080")
-	viper.SetDefault("server.read_timeout", 30)
-	viper.SetDefault("server.write_timeout", 30)
-	viper.SetDefault("server.max_header_bytes", 1048576)
-	viper.SetDefault("server.cors_origins", "http://localhost:3000,http://localhost:5173")
+	v.SetDefault("server.port", "8080")
+	v.SetDefault("server.mode", "release")
+	v.SetDefault("server.domain", "http://localhost:8080")
+	v.SetDefault("server.read_timeout", 30)
+	v.SetDefault("server.write_timeout", 30)
+	v.SetDefault("server.max_header_bytes", 1048576)
+	v.SetDefault("server.cors_origins", "http://localhost:3000,http://localhost:5173")
 
 	// Database defaults
-	viper.SetDefault("database.type", "postgres")
-	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", 5432)
-	viper.SetDefault("database.database", "cntuanyuan")
-	viper.SetDefault("database.ssl_mode", "disable")
-	viper.SetDefault("database.charset", "UTF8")
-	viper.SetDefault("database.max_idle_conns", 10)
-	viper.SetDefault("database.max_open_conns", 100)
-	viper.SetDefault("database.conn_max_lifetime", 3600)
+	v.SetDefault("database.type", "postgres")
+	v.SetDefault("database.host", "localhost")
+	v.SetDefault("database.port", 5432)
+	v.SetDefault("database.database", "cntuanyuan")
+	v.SetDefault("database.ssl_mode", "disable")
+	v.SetDefault("database.charset", "UTF8")
+	v.SetDefault("database.max_idle_conns", 10)
+	v.SetDefault("database.max_open_conns", 100)
+	v.SetDefault("database.conn_max_lifetime", 3600)
 
 	// Redis defaults
-	viper.SetDefault("redis.host", "localhost")
-	viper.SetDefault("redis.port", 6379)
-	viper.SetDefault("redis.db", 0)
-	viper.SetDefault("redis.pool_size", 10)
-	viper.SetDefault("redis.min_idle_conns", 2)
+	v.SetDefault("redis.host", "localhost")
+	v.SetDefault("redis.port", 6379)
+	v.SetDefault("redis.db", 0)
+	v.SetDefault("redis.pool_size", 10)
+	v.SetDefault("redis.min_idle_conns", 2)
 
 	// JWT defaults
-	viper.SetDefault("jwt.expire_time", 604800)   // 7天
-	viper.SetDefault("jwt.refresh_time", 2592000) // 30天
+	v.SetDefault("jwt.expire_time", 604800)   // 7天
+	v.SetDefault("jwt.refresh_time", 2592000) // 30天
 
 	// Storage defaults
-	viper.SetDefault("storage.type", "local")
-	viper.SetDefault("storage.local_path", "./uploads")
-	viper.SetDefault("storage.base_url", "http://localhost:8080/uploads")
-	viper.SetDefault("storage.max_file_size", 52428800) // 50MB
-	viper.SetDefault("storage.allowed_types", "jpg,jpeg,png,gif,webp,mp4,webm,mp3,wav,m4a,aac,ogg,opus,flac")
+	v.SetDefault("storage.type", "local")
+	v.SetDefault("storage.local_path", "./uploads")
+	v.SetDefault("storage.base_url", "http://localhost:8080/uploads")
+	v.SetDefault("storage.max_file_size", 52428800) // 50MB
+	v.SetDefault("storage.allowed_types", "jpg,jpeg,png,gif,webp,mp4,webm,mp3,wav,m4a,aac,ogg,opus,flac")
 
 	// SMS defaults
-	viper.SetDefault("sms.provider", "aliyun")
-	viper.SetDefault("sms.sign_name", "助力团圆")
-	viper.SetDefault("sms.dev_mode", false)
-	viper.SetDefault("sms.code_expiry", 300)
-	viper.SetDefault("sms.template_verify_code", "verify_code") // 注册验证码模板（参数：{1}=code）
-	viper.SetDefault("sms.template_reset_password", "")
-	viper.SetDefault("sms.template_change_phone", "")
+	v.SetDefault("sms.provider", "aliyun")
+	v.SetDefault("sms.sign_name", "助力团圆")
+	v.SetDefault("sms.dev_mode", false)
+	v.SetDefault("sms.code_expiry", 300)
+	v.SetDefault("sms.template_verify_code", "verify_code") // 注册验证码模板（参数：{1}=code）
+	v.SetDefault("sms.template_reset_password", "")
+	v.SetDefault("sms.template_change_phone", "")
 
 	// Email defaults
-	viper.SetDefault("email.enabled", false)
-	viper.SetDefault("email.smtp_host", "smtp.qq.com")
-	viper.SetDefault("email.smtp_port", 587)
-	viper.SetDefault("email.use_tls", true)
+	v.SetDefault("email.enabled", false)
+	v.SetDefault("email.smtp_host", "smtp.qq.com")
+	v.SetDefault("email.smtp_port", 587)
+	v.SetDefault("email.use_tls", true)
 
 	// Map defaults
-	viper.SetDefault("map.provider", "tencent")
+	v.SetDefault("map.provider", "tencent")
 
 	// Log defaults
-	viper.SetDefault("log.level", "info")
-	viper.SetDefault("log.format", "json")
-	viper.SetDefault("log.output_path", "./logs")
-	viper.SetDefault("log.file_name", "app.log")
-	viper.SetDefault("log.max_size", 100)
-	viper.SetDefault("log.max_backups", 10)
-	viper.SetDefault("log.max_age", 30)
-	viper.SetDefault("log.compress", true)
+	v.SetDefault("log.level", "info")
+	v.SetDefault("log.format", "json")
+	v.SetDefault("log.output_path", "./logs")
+	v.SetDefault("log.file_name", "app.log")
+	v.SetDefault("log.max_size", 100)
+	v.SetDefault("log.max_backups", 10)
+	v.SetDefault("log.max_age", 30)
+	v.SetDefault("log.compress", true)
 
 	// Notification defaults
-	viper.SetDefault("notification.push_enabled", false)
+	v.SetDefault("notification.push_enabled", false)
 
 	// System defaults
-	viper.SetDefault("system.default_org_name", "助力团圆志愿者协会")
-	viper.SetDefault("system.logo_url", "")
-	viper.SetDefault("system.default_org_code", "ROOT")
-	viper.SetDefault("system.enable_register", true)
-	viper.SetDefault("system.enable_wechat_login", true)
-	viper.SetDefault("system.enable_sms_login", false)
-	viper.SetDefault("system.authz_policy_change_requires_approval", false)
-	viper.SetDefault("system.authz_policy_change_approval_code", "")
-	viper.SetDefault("system.authz_policy_request_expire_hours", 72)
-	viper.SetDefault("system.rate_limit", 100)
+	v.SetDefault("system.default_org_name", "助力团圆志愿者协会")
+	v.SetDefault("system.logo_url", "")
+	v.SetDefault("system.default_org_code", "ROOT")
+	v.SetDefault("system.enable_register", true)
+	v.SetDefault("system.enable_wechat_login", true)
+	v.SetDefault("system.enable_sms_login", false)
+	v.SetDefault("system.authz_policy_change_requires_approval", false)
+	v.SetDefault("system.authz_policy_change_approval_code", "")
+	v.SetDefault("system.authz_policy_request_expire_hours", 72)
+	v.SetDefault("system.rate_limit", 100)
 
 	// Security defaults
-	viper.SetDefault("security.max_login_attempts", 5)
-	viper.SetDefault("security.lockout_duration", 1800)
+	v.SetDefault("security.max_login_attempts", 5)
+	v.SetDefault("security.lockout_duration", 1800)
 
 	// Backup defaults
-	viper.SetDefault("backup.enabled", false)
-	viper.SetDefault("backup.backup_dir", "./backups")
-	viper.SetDefault("backup.retention", 7)
+	v.SetDefault("backup.enabled", false)
+	v.SetDefault("backup.backup_dir", "./backups")
+	v.SetDefault("backup.retention", 7)
+}
+
+func generateRandomHex(byteLen int) string {
+	buf := make([]byte, byteLen)
+	if _, err := rand.Read(buf); err != nil {
+		return strings.Repeat("a", byteLen*2)
+	}
+	return hex.EncodeToString(buf)
 }

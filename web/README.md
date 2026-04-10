@@ -22,7 +22,7 @@ npm run dev
 ### Web 微信扫码登录配置说明
 
 1. 在微信开放平台创建/配置“网站应用”（不是小程序应用）。
-2. 获取网站应用 AppID（和 AppSecret），并在后端 `config.yaml` 中配置对应微信参数。
+2. 获取网站应用 AppID（和 AppSecret），并在后端“网站设置 / 系统配置”或启动级托管配置中配置对应微信参数。
 3. 将 `NEXT_PUBLIC_WECHAT_WEB_APP_ID` 配置为网站应用 AppID。
 4. 将回调地址配置为同一个域名下的 `/login`，并在微信开放平台白名单中放行该回调域名。
 5. Web 登录页会自动渲染微信扫码组件；扫码后微信回跳到 `/login?code=...`，前端调用后端 `/auth/wechat-web-login` 完成登录。

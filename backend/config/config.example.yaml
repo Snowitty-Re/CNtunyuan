@@ -1,5 +1,8 @@
 # 助力团圆系统 - 示例配置文件
-# 复制此文件为 config.yaml 并根据实际情况修改
+# 说明：
+# 1. 首次启动已支持通过 Web 初始化向导完成数据库/超级管理员设置，不再强制要求手工创建 config.yaml
+# 2. 如需手工预置启动参数，可复制此文件为 config.yaml，并通过 --config 显式加载
+# 3. 初始化完成后，系统会额外生成 backend/config/bootstrap.runtime.json 作为启动级托管配置，请勿提交到版本库
 
 server:
   port: "8080"

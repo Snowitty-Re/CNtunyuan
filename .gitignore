@@ -40,6 +40,7 @@ backend/config/config.yaml
 backend/config/config.local.yaml
 backend/config/config.prod.yaml
 backend/config/config.yaml.bak
+backend/config/bootstrap.runtime.json
 *.pem
 *.key
 

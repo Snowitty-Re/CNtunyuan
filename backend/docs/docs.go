@@ -1361,7 +1361,7 @@ const docTemplate = `{
         },
         "/bootstrap/initialize": {
             "post": {
-                "description": "首次启动时写入配置并创建超级管理员；若已有 super_admin 则拒绝重复初始化",
+                "description": "首次启动时验证数据库、自动建表、写入启动配置与站点设置，并创建超级管理员",
                 "consumes": [
                     "application/json"
                 ],
@@ -1413,7 +1413,7 @@ const docTemplate = `{
         },
         "/bootstrap/status": {
             "get": {
-                "description": "检查系统是否已初始化，并返回数据库连通、配置可写等检测结果",
+                "description": "检查系统是否已初始化，并返回数据库连通、配置可写、Schema 就绪等检测结果",
                 "produces": [
                     "application/json"
                 ],
@@ -1439,7 +1439,7 @@ const docTemplate = `{
         },
         "/bootstrap/validate-db": {
             "post": {
-                "description": "用提交的数据库配置进行连通性测试（不会落盘）",
+                "description": "用提交的数据库配置进行连通性测试，并返回 schema 就绪状态（不会落盘）",
                 "consumes": [
                     "application/json"
                 ],

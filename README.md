@@ -33,36 +33,25 @@ git clone https://github.com/Snowitty-Re/CNtunyuan.git
 cd CNtunyuan
 ```
 
-### 2. 初始化数据库并启动后端
+### 2. 启动后端
 
 ```bash
 cd backend
 
-# 配置数据库 (config/config.yaml)
-cp config/config.example.yaml config/config.yaml
-# 编辑 config.yaml 填写数据库信息
-
-# 首次初始化数据库（二选一）
-# PostgreSQL:
-psql -U postgres -d cntuanyuan -f migrations/postgres/00_bootstrap.sql
-# MySQL:
-mysql -u root -p cntuanyuan < migrations/mysql/00_bootstrap.sql
-
-# 历史库升级（仅旧环境）
-# PostgreSQL:
-# psql -U postgres -d cntuanyuan -f migrations/postgres/06_schema_consistency_and_performance.sql
-# psql -U postgres -d cntuanyuan -f migrations/postgres/07_dialect_schema_alignment.sql
-# MySQL:
-# mysql -u root -p cntuanyuan < migrations/mysql/06_schema_consistency_and_performance.sql
-# mysql -u root -p cntuanyuan < migrations/mysql/07_dialect_schema_alignment.sql
-
-# 启动服务
+# 默认启动：bootstrap-managed 模式
 go run cmd/app/main.go
+
+# 显式本地配置模式：只读取指定配置文件
+go run cmd/app/main.go --config ./config/config.yaml
 ```
 
 服务启动后访问：
 - API 文档：http://localhost:8080/swagger/index.html
 - 健康检查：http://localhost:8080/api/v1/health
+
+启动模式说明：
+- 默认无参数：`bootstrap-managed`，优先用于首启初始化与托管启动配置
+- `--config <path>`：`file-config`，严格按本地配置文件启动；配置错误时直接失败，不回退初始化模式
 
 ### 3. 启动 Web 管理端（可选）
 
@@ -77,11 +66,18 @@ npm run dev
 
 ### 3.1 首次初始化向导（推荐）
 
-首次部署且数据库为空时，访问 `http://localhost:3000/login` 会自动跳转到 `http://localhost:3000/init`，按向导完成：
+首次部署且尚未初始化时，访问 `http://localhost:3000/login` 会自动跳转到 `http://localhost:3000/init`，按向导完成：
 
 - 数据库连接检测
+- 自动执行 `00_bootstrap.sql` 建表与基础数据初始化
 - 站点参数初始化（domain/cors/default org 等）
 - 创建超级管理员账号
+
+说明：
+
+- 不再强制要求手工编辑 `backend/config/config.yaml`
+- 初始化成功后，系统会生成 `backend/config/bootstrap.runtime.json` 保存启动级配置
+- 初始化完成后请重启后端，使服务从初始化模式切换到完整模式
 
 初始化状态接口：
 

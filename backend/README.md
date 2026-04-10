@@ -70,7 +70,12 @@ go mod download
 
 ### 2. 配置文件
 
-编辑 `config/config.yaml`:
+现在支持两种方式：
+
+1. 推荐：直接启动后端和 Web，进入 `/init` 完成首次初始化，无需预先编写 `config.yaml`
+2. 可选：使用 `--config` 显式指定本地配置文件，进入传统 file-config 模式
+
+如需手工配置，编辑 `config/config.yaml`:
 
 ```yaml
 database:
@@ -87,9 +92,13 @@ jwt:
   expire_time: 7200      # access token 有效期（秒）
 ```
 
-> **安全要求**：`jwt.secret` 必须至少 32 个字符，否则服务启动失败。建议使用随机生成的强密钥（64+ 字符）。
+> 初始化向导完成后，系统会自动生成 `config/bootstrap.runtime.json` 保存数据库/JWT/存储等启动级配置。该文件属于本地运行态文件，不应提交到版本库。
 
-### 3. 数据库初始化（首次）
+### 3. 数据库初始化（可选）
+
+如果你采用 Web 初始化向导，系统会在数据库连接通过后自动执行 `00_bootstrap.sql`，通常无需手工执行以下命令。
+
+仅在你希望手工预建数据库结构时使用：
 
 ```bash
 cd backend
@@ -118,7 +127,12 @@ mysql -u root -p cntuanyuan < migrations/mysql/07_dialect_schema_alignment.sql
 
 ```bash
 cd backend
+
+# 默认：bootstrap-managed 模式
 go run cmd/app/main.go
+
+# 指定本地配置：file-config 模式
+go run cmd/app/main.go --config ./config/config.yaml
 ```
 
 服务将在 `http://localhost:8080` 启动。
@@ -127,14 +141,20 @@ go run cmd/app/main.go
 - 健康检查: http://localhost:8080/api/v1/health
 - 权限重构 curl 验收: `docs/authz-curl-acceptance.md`
 
+启动模式约定：
+
+- `bootstrap-managed`：默认模式，读取托管启动配置并支持首启引导
+- `file-config`：显式 `--config` 模式，只读取指定配置文件，不读取托管启动配置；若数据库配置不可用则直接启动失败
+
 ### 4.1 首次 Web 初始化（新环境）
 
-当系统尚未存在超级管理员账号时，可通过 Web 初始化向导完成首次落地：
+当系统尚未初始化时，可通过 Web 初始化向导完成首次落地：
 
 1. 启动后端与 Web
 2. 打开 `http://localhost:3000/login`（会自动跳转 `/init`）
 3. 依次完成：
    - 数据库连接检测
+   - 自动建表与基础数据初始化
    - 站点配置初始化
    - 超级管理员创建
 
@@ -144,7 +164,7 @@ go run cmd/app/main.go
 - `POST /api/v1/bootstrap/validate-db`
 - `POST /api/v1/bootstrap/initialize`
 
-> 初始化成功后建议重启后端，以确保配置完全生效。
+> 初始化成功后必须重启后端，使服务从 bootstrap 模式切换为 full 模式。
 
 ## 权限重构验收
 

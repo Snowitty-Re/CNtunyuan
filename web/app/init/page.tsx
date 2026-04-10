@@ -6,8 +6,10 @@ import { systemService } from '@/services/system'
 
 type InitStatus = {
   initialized: boolean
+  startup_mode?: string
   checks?: {
     database_connected?: boolean
+    schema_ready?: boolean
     settings_storage?: string
     health_status?: string
   }
@@ -172,19 +174,29 @@ export default function BootstrapInitPage() {
             </div>
           </div>
           <div className="section-card">
-            <b>站点设置存储</b>
+            <b>Schema 状态</b>
             <div className="hint" style={{ marginTop: 8 }}>
-              {status?.checks?.settings_storage === 'database_overrides' ? '数据库覆盖层' : '未就绪'}
+              {status?.checks?.schema_ready ? '已建表' : '待初始化'}
             </div>
           </div>
           <div className="section-card">
-            <b>服务健康状态</b>
-            <div className="hint" style={{ marginTop: 8 }}>{status?.checks?.health_status || 'unknown'}</div>
+            <b>当前启动模式</b>
+            <div className="hint" style={{ marginTop: 8 }}>
+              {status?.startup_mode === 'full' ? '完整模式' : '初始化模式'}
+            </div>
+          </div>
+        </div>
+
+        <div className="section-card" style={{ marginBottom: 12 }}>
+          <b>初始化说明</b>
+          <div className="hint" style={{ marginTop: 8, lineHeight: 1.7 }}>
+            后端已支持无 `config.yaml` 首次启动。此页面会完成数据库检测、自动建表、站点基础设置与超级管理员创建。
+            初始化成功后，请重启后端，使服务从“初始化模式”切换到“完整模式”。
           </div>
         </div>
 
         <div className="form-section">
-          <h3 className="form-section-title">1) 数据库设置（含连通性检测）</h3>
+          <h3 className="form-section-title">1) 数据库设置（含连通性检测与自动建表）</h3>
           <div className="grid cols-3">
             <label>
               <span className="field-label">类型</span>

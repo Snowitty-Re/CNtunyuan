@@ -34,10 +34,19 @@ import (
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
 	"github.com/Snowitty-Re/CNtunyuan/internal/di"
 	"github.com/Snowitty-Re/CNtunyuan/internal/infrastructure/database"
+	"github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/handler"
+	httpRouter "github.com/Snowitty-Re/CNtunyuan/internal/interfaces/http/router"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+type startupOptions struct {
+	ConfigPath    string
+	UseConfigFile bool
+	CheckDB       bool
+	ShowHelp      bool
+}
 
 func main() {
 	// 初始化日志
@@ -50,55 +59,68 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 加载配置（从 ./config 目录加载 config.yaml）
-	cfg, err := config.LoadConfig("")
+	opts, err := parseStartupOptions(os.Args[1:])
+	if err != nil {
+		logger.Error("Invalid startup options", logger.Err(err))
+		printUsage()
+		os.Exit(1)
+	}
+	if opts.ShowHelp {
+		printUsage()
+		return
+	}
+
+	cfg, mode, err := loadStartupConfiguration(opts)
 	if err != nil {
 		logger.Error("Failed to load config", logger.Err(err))
 		os.Exit(1)
 	}
 
-	// 验证配置
-	if !config.ValidateAndPrint(cfg) {
-		logger.Error("Configuration validation failed")
-		os.Exit(1)
-	}
-
 	// 根据配置设置 Gin 运行模式，确保 server.mode 生效
 	setGinMode(cfg.Server.Mode)
+	config.SetStartupMetadata(mode, displayConfigPath(opts.ConfigPath))
+	logger.Info("Startup configuration resolved",
+		logger.String("mode", mode),
+		logger.String("config_path", displayConfigPath(opts.ConfigPath)),
+	)
 
-	// 处理命令行参数
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
-		case "-check-db":
-			// 检查数据库连接和表结构
-			if err := checkDatabase(cfg); err != nil {
-				logger.Error("Database check failed", logger.Err(err))
-				os.Exit(1)
-			}
-			return
-		case "-help", "--help", "-h":
-			fmt.Println("Usage: go run cmd/app/main.go [option]")
-			fmt.Println()
-			fmt.Println("Options:")
-			fmt.Println("  -check-db   Check database connectivity and required tables")
-			fmt.Println("  -help       Show this help message")
-			return
-		default:
-			logger.Error("Unknown option", logger.String("option", os.Args[1]))
-			fmt.Println("Use -help to see available options.")
+	if opts.CheckDB {
+		if err := checkDatabase(cfg); err != nil {
+			logger.Error("Database check failed", logger.Err(err))
 			os.Exit(1)
 		}
+		return
 	}
 
-	// 创建依赖容器
-	container, err := di.NewContainer(cfg)
-	if err != nil {
-		logger.Error("Failed to create container", logger.Err(err))
-		os.Exit(1)
+	// 优先进入完整模式；数据库未配置或不可用时退化到初始化引导模式
+	if cfg.Database.IsValid() {
+		container, containerErr := di.NewContainer(cfg)
+		if containerErr == nil {
+			startServer(cfg, container.Router.GetEngine(), func(context.Context) {
+				if container.Cache != nil {
+					if err := container.Cache.Close(); err != nil {
+						logger.Error("Failed to close cache", logger.Err(err))
+					}
+				}
+			})
+			return
+		}
+		if opts.UseConfigFile {
+			logger.Error("Full startup failed in file-config mode", logger.Err(containerErr))
+			os.Exit(1)
+		}
+		logger.Warn("Full startup unavailable, switching to bootstrap mode", logger.Err(containerErr))
+	} else {
+		if opts.UseConfigFile {
+			logger.Error("Database config incomplete in file-config mode")
+			os.Exit(1)
+		}
+		logger.Warn("Database config incomplete, switching to bootstrap mode")
 	}
 
-	// 启动 HTTP 服务器
-	startServer(cfg, container)
+	bootstrapHandler := handler.NewBootstrapHandler(nil, nil, nil)
+	engine := httpRouter.NewBootstrapEngine(bootstrapHandler)
+	startServer(cfg, engine, nil)
 }
 
 func setGinMode(mode string) {
@@ -208,9 +230,7 @@ func columnExists(db *gorm.DB, tableName, columnName string) (bool, error) {
 }
 
 // startServer 启动服务器
-func startServer(cfg *config.Config, container *di.Container) {
-	engine := container.Router.GetEngine()
-
+func startServer(cfg *config.Config, engine http.Handler, onShutdown func(context.Context)) {
 	// 创建 HTTP 服务器
 	port := cfg.Server.Port
 	if port == "" {
@@ -251,11 +271,68 @@ func startServer(cfg *config.Config, container *di.Container) {
 	}
 
 	// 关闭缓存连接
-	if container.Cache != nil {
-		if err := container.Cache.Close(); err != nil {
-			logger.Error("Failed to close cache", logger.Err(err))
-		}
+	if onShutdown != nil {
+		onShutdown(ctx)
 	}
 
 	logger.Info("Server stopped")
+}
+
+func parseStartupOptions(args []string) (startupOptions, error) {
+	opts := startupOptions{}
+	for i := 0; i < len(args); i++ {
+		arg := strings.TrimSpace(args[i])
+		switch arg {
+		case "-help", "--help", "-h":
+			opts.ShowHelp = true
+		case "-check-db":
+			opts.CheckDB = true
+		case "--config":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("--config requires a file path")
+			}
+			i++
+			opts.ConfigPath = strings.TrimSpace(args[i])
+			opts.UseConfigFile = true
+		default:
+			return opts, fmt.Errorf("unknown option: %s", arg)
+		}
+	}
+	return opts, nil
+}
+
+func loadStartupConfiguration(opts startupOptions) (*config.Config, string, error) {
+	if opts.UseConfigFile {
+		cfg, err := config.LoadConfigFileOnly(opts.ConfigPath)
+		if err != nil {
+			return nil, "", err
+		}
+		return cfg, "file-config", nil
+	}
+
+	cfg, err := config.LoadStartupConfig(opts.ConfigPath)
+	if err != nil {
+		return nil, "", err
+	}
+	return cfg, "bootstrap-managed", nil
+}
+
+func printUsage() {
+	fmt.Println("Usage: go run cmd/app/main.go [options]")
+	fmt.Println()
+	fmt.Println("Options:")
+	fmt.Println("  --config <path>  Force file-config mode and read only the specified config.yaml")
+	fmt.Println("  -check-db        Check database connectivity and required tables")
+	fmt.Println("  -help            Show this help message")
+	fmt.Println()
+	fmt.Println("Startup modes:")
+	fmt.Println("  default          bootstrap-managed mode (managed startup config + init wizard)")
+	fmt.Println("  --config         file-config mode (local config only, no managed startup config)")
+}
+
+func displayConfigPath(path string) string {
+	if strings.TrimSpace(path) == "" {
+		return "default"
+	}
+	return path
 }
