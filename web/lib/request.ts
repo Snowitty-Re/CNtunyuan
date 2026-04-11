@@ -82,6 +82,10 @@ export async function http<T>(path: string, options: RequestOptions = {}): Promi
   let data = await run()
   if (data !== undefined) return data
 
+  if (!auth) {
+    throw new Error('未授权访问')
+  }
+
   const refreshed = auth ? await refreshToken() : false
   if (!refreshed) {
     clearAuth()

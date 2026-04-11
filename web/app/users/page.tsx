@@ -198,6 +198,16 @@ export default function UsersPage() {
     }
   }
 
+  async function runSingleUserAction(action: () => Promise<unknown>, successText: string) {
+    try {
+      await action()
+      await load(page)
+      setNotice({ type: 'success', text: successText })
+    } catch (err) {
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '操作失败' })
+    }
+  }
+
   function openDetail(user: User) {
     setEditingUser(user)
     setEditNickname(user.nickname || '')
@@ -486,7 +496,12 @@ export default function UsersPage() {
                         <button
                           className="btn"
                           type="button"
-                          onClick={() => userService.updateRole(row.id, roleMap[row.id] || row.role).then(() => load(page))}
+                          onClick={() =>
+                            runSingleUserAction(
+                              () => userService.updateRole(row.id, roleMap[row.id] || row.role),
+                              '用户角色已更新',
+                            )
+                          }
                         >
                           保存角色
                         </button>
@@ -499,18 +514,39 @@ export default function UsersPage() {
                     {columnVisible.organization ? <td>{row.organization?.name || row.org_name || '-'}</td> : null}
                     {columnVisible.actions ? <td>
                       <div className="row wrap">
-                        <button className="btn" type="button" onClick={() => userService.updateStatus(row.id, 'active').then(() => load(page))}>
+                        <button
+                          className="btn"
+                          type="button"
+                          onClick={() =>
+                            runSingleUserAction(
+                              () => userService.updateStatus(row.id, 'active'),
+                              statusFilter === 'inactive' ? '审批已通过，用户已从当前待审批列表移除' : '用户状态已更新为激活',
+                            )
+                          }
+                        >
                           {row.status === 'inactive' ? '审批通过' : '激活'}
                         </button>
-                        <button className="btn danger" type="button" onClick={() => userService.updateStatus(row.id, 'inactive').then(() => load(page))}>
+                        <button
+                          className="btn danger"
+                          type="button"
+                          onClick={() =>
+                            runSingleUserAction(
+                              () => userService.updateStatus(row.id, 'inactive'),
+                              '用户已禁用',
+                            )
+                          }
+                        >
                           禁用
                         </button>
                         <ConfirmButton
                           text="删除"
                           message={`确认删除用户「${row.nickname || row.phone}」？`}
-                          onConfirm={() => {
-                            userService.remove(row.id).then(() => load(page))
-                          }}
+                          onConfirm={() =>
+                            runSingleUserAction(
+                              () => userService.remove(row.id),
+                              '用户已删除',
+                            )
+                          }
                           className="btn danger"
                         />
                         <button className="btn ghost" type="button" onClick={() => openDetail(row)}>
