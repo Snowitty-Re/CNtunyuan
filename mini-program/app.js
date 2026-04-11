@@ -89,13 +89,13 @@ App({
 
   // ==================== 认证相关 ====================
 
-  // 微信登录
+  // 快捷登录
   wxLogin() {
     return new Promise((resolve, reject) => {
       wx.login({
         success: (res) => {
           if (res.code) {
-            // 调用后端微信登录接口
+            // 调用后端快捷登录接口
             request({
               url: '/auth/wechat-login',
               method: 'POST',
@@ -105,7 +105,7 @@ App({
               resolve(result)
             }).catch(reject)
           } else {
-            reject(new Error(res.errMsg || '微信登录失败'))
+            reject(new Error(res.errMsg || '快捷登录失败'))
           }
         },
         fail: reject

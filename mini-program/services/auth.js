@@ -5,8 +5,8 @@ const { get, post } = require('../utils/request')
  */
 module.exports = {
   /**
-   * 微信登录
-   * @param {String} code 微信登录码
+   * 快捷登录
+   * @param {String} code 登录凭证
    * @param {Object} userInfo 用户信息（可选）
    */
   wechatLogin(code, userInfo = null) {
@@ -70,15 +70,15 @@ module.exports = {
   },
 
   /**
-   * 微信一键绑定手机号
-   * @param {String} wechatCode 微信 getPhoneNumber 返回的 code
+   * 快捷绑定手机号
+   * @param {String} wechatCode getPhoneNumber 返回的 code
    */
   bindPhoneByWechatCode(wechatCode) {
     return post('/auth/bind-phone', { wechat_code: wechatCode })
   },
 
   /**
-   * 绑定微信账号（手机号登录用户）
+   * 绑定第三方账号（手机号登录用户）
    * @param {String} code wx.login 返回的 code
    */
   bindWechat(code) {
@@ -86,7 +86,7 @@ module.exports = {
   },
 
   /**
-   * 解绑微信账号
+   * 解绑第三方账号
    */
   unbindWechat() {
     return post('/auth/unbind-wechat')

@@ -39,7 +39,7 @@ Page({
     // 功能菜单
     menuList: [
       { icon: 'edit', text: '编辑资料', url: '/pages/volunteer/edit-profile', type: 'navigate' },
-      { icon: 'user', text: '绑定微信', type: 'action', action: 'bindWechat' },
+      { icon: 'user', text: '绑定第三方账号', type: 'action', action: 'bindWechat' },
       { icon: 'task', text: '我的任务', url: '/pages/tasks/my', type: 'navigate' },
       { icon: 'notification', text: '消息通知', url: '/pages/notification/list', type: 'navigate', badge: 0 },
       { icon: 'certificate', text: '志愿者证书', url: '', type: 'toast' },
@@ -115,7 +115,7 @@ Page({
         if (item.action === 'bindWechat') {
           return {
             ...item,
-            text: mergedUserInfo.wxBound ? '解绑微信' : '绑定微信'
+            text: mergedUserInfo.wxBound ? '解绑第三方账号' : '绑定第三方账号'
           }
         }
         return item
@@ -199,7 +199,7 @@ Page({
   async bindWechat() {
     try {
       if (this.data.userInfo.wxBound) {
-        const confirm = await showConfirm('确认解绑', '解绑后可重新绑定其他微信账号')
+        const confirm = await showConfirm('确认解绑', '解绑后可重新绑定其他第三方账号')
         if (!confirm) return
 
         await authService.unbindWechat()
@@ -209,16 +209,16 @@ Page({
           wx_bound: false
         }
         const menuList = (this.data.menuList || []).map((item) =>
-          item.action === 'bindWechat' ? { ...item, text: '绑定微信' } : item
+          item.action === 'bindWechat' ? { ...item, text: '绑定第三方账号' } : item
         )
         this.setData({ userInfo, menuList })
         wx.setStorageSync('userInfo', userInfo)
-        showSuccess('微信解绑成功')
+        showSuccess('第三方账号解绑成功')
         return
       }
       const loginRes = await wx.login()
       if (!loginRes.code) {
-        showToast('获取微信授权失败')
+        showToast('获取授权失败')
         return
       }
       await authService.bindWechat(loginRes.code)
@@ -229,13 +229,13 @@ Page({
         wx_bound: true
       }
       const menuList = (this.data.menuList || []).map((item) =>
-        item.action === 'bindWechat' ? { ...item, text: '解绑微信' } : item
+        item.action === 'bindWechat' ? { ...item, text: '解绑第三方账号' } : item
       )
       this.setData({ userInfo, menuList })
       wx.setStorageSync('userInfo', userInfo)
-      showSuccess('微信绑定成功')
+      showSuccess('第三方账号绑定成功')
     } catch (error) {
-      console.error('绑定微信失败:', error)
+      console.error('绑定第三方账号失败:', error)
       showToast(error.message || '绑定失败')
     }
   },

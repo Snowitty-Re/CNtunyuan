@@ -7,7 +7,7 @@ const POLICY_AGREEMENT_KEY = 'policyAgreement'
 Page({
   data: {
     loading: false,
-    loginType: 'wechat', // wechat, phone
+    loginType: 'wechat', // quick, phone
     agreedToPolicies: false,
     isRegister: false,
     phone: '',
@@ -18,7 +18,7 @@ Page({
     canSendCode: false,
     isBinding: false, // 是否处于绑定手机号流程
     isResetPassword: false, // 是否处于重置密码流程
-    tempUserInfo: null // 临时用户信息（微信登录后未绑定手机号）
+    tempUserInfo: null // 临时用户信息（快捷登录后未绑定手机号）
   },
 
   onLoad(options) {
@@ -51,7 +51,7 @@ Page({
     })
   },
 
-  // 返回微信登录（从绑定页面返回）
+  // 返回快捷登录（从绑定页面返回）
   backToWechatLogin() {
     this.setData({
       loginType: 'wechat',
@@ -62,9 +62,9 @@ Page({
     })
   },
 
-  // ==================== 微信登录 ====================
+  // ==================== 快捷登录 ====================
 
-  // 微信一键登录
+  // 快捷登录
   async handleWechatLogin() {
     if (this.data.loading) return
     if (!(await this.ensurePoliciesAgreed('wechat_login'))) return
@@ -73,11 +73,11 @@ Page({
     showLoading('登录中...')
 
     try {
-      // 获取微信登录码
+      // 获取登录凭证
       const wxLoginRes = await wx.login()
       
       if (!wxLoginRes.code) {
-        throw new Error('获取微信登录码失败')
+        throw new Error('获取登录凭证失败')
       }
 
       // 获取用户信息（头像、昵称）
@@ -92,7 +92,7 @@ Page({
         // 用户拒绝授权时继续登录，使用后端默认资料
       }
 
-      // 调用后端微信登录
+      // 调用后端快捷登录
       const result = await services.auth.wechatLogin(wxLoginRes.code, userInfo)
       
       hideLoading()
@@ -135,7 +135,7 @@ Page({
 
     } catch (error) {
       hideLoading()
-      console.error('微信登录失败:', error)
+      console.error('快捷登录失败:', error)
       showError(error.message || '登录失败')
     } finally {
       this.setData({ loading: false })
@@ -144,7 +144,7 @@ Page({
 
   // ==================== 手机号登录 ====================
 
-  // 微信一键绑定手机号（优先方案）
+  // 快捷绑定手机号（优先方案）
   async handleWechatPhoneBind(e) {
     if (!this.data.isBinding || this.data.loading) return
     if (!(await this.ensurePoliciesAgreed('wechat_bind_phone'))) return
@@ -175,14 +175,14 @@ Page({
       }, 1200)
     } catch (error) {
       hideLoading()
-      console.error('微信手机号绑定失败:', error)
-      showError(error.message || '微信绑定失败')
+      console.error('手机号快捷绑定失败:', error)
+      showError(error.message || '绑定失败')
     } finally {
       this.setData({ loading: false })
     }
   },
 
-  // 注册/重置密码：微信手机号授权
+  // 注册/重置密码：手机号快捷验证
   async handleWechatPhoneForAuth(e) {
     const { isRegister, isResetPassword, password, loading } = this.data
     if (loading || (!isRegister && !isResetPassword)) return
@@ -238,7 +238,7 @@ Page({
       })
     } catch (error) {
       hideLoading()
-      console.error('微信手机号验证失败:', error)
+      console.error('手机号快捷验证失败:', error)
       showError(error.message || '操作失败')
     } finally {
       this.setData({ loading: false })
@@ -339,7 +339,7 @@ Page({
   async handlePhoneLogin() {
     const { phone, password, isBinding, isRegister, isResetPassword } = this.data
     if (isBinding || isRegister || isResetPassword) {
-      showError('请使用微信手机号授权按钮完成验证')
+      showError('请使用手机号快捷验证按钮完成验证')
       return
     }
     if (!(await this.ensurePoliciesAgreed('phone_login'))) return

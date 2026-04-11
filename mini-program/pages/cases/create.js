@@ -216,7 +216,7 @@ Page({
   },
 
   /**
-   * 选择位置（使用微信小程序选择位置API）
+   * 选择位置（使用小程序选择位置 API）
    */
   chooseLocation() {
     wx.chooseLocation({

@@ -1,11 +1,11 @@
 :root {
-  --bg: #f7f2ea;
-  --ink: #2b2b2b;
-  --muted: #837b72;
+  --bg: #f8efe4;
+  --ink: #2d241b;
+  --muted: #806f60;
   --primary: #d9652b;
-  --primary-deep: #bf4f1d;
-  --panel: #fffaf3;
-  --line: #eadfce;
+  --primary-deep: #a8471c;
+  --panel: #fffaf2;
+  --line: #ead8c1;
   --success: #07c160;
 }
 
@@ -17,9 +17,27 @@ page {
 .login-page {
   min-height: 100vh;
   position: relative;
-  padding: 56rpx 38rpx 48rpx;
+  padding: 132rpx 34rpx 52rpx;
   box-sizing: border-box;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  background:
+    linear-gradient(155deg, rgba(255, 247, 234, 0.96) 0%, rgba(248, 226, 204, 0.92) 58%, rgba(255, 250, 242, 0.98) 100%);
+}
+
+@supports (padding-top: constant(safe-area-inset-top)) {
+  .login-page {
+    padding-top: calc(132rpx + constant(safe-area-inset-top));
+  }
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  .login-page {
+    padding-top: calc(132rpx + env(safe-area-inset-top));
+  }
 }
 
 .bg-layer {
@@ -35,19 +53,19 @@ page {
 }
 
 .orb-a {
-  width: 520rpx;
-  height: 520rpx;
-  top: -140rpx;
-  right: -140rpx;
-  background: radial-gradient(circle, rgba(217, 101, 43, 0.28) 0%, rgba(217, 101, 43, 0.06) 70%, rgba(217, 101, 43, 0) 100%);
+  width: 560rpx;
+  height: 560rpx;
+  top: -180rpx;
+  right: -170rpx;
+  background: radial-gradient(circle, rgba(217, 101, 43, 0.26) 0%, rgba(217, 101, 43, 0.07) 68%, rgba(217, 101, 43, 0) 100%);
 }
 
 .orb-b {
-  width: 420rpx;
-  height: 420rpx;
-  bottom: -120rpx;
-  left: -120rpx;
-  background: radial-gradient(circle, rgba(255, 181, 77, 0.22) 0%, rgba(255, 181, 77, 0.04) 72%, rgba(255, 181, 77, 0) 100%);
+  width: 480rpx;
+  height: 480rpx;
+  bottom: -150rpx;
+  left: -160rpx;
+  background: radial-gradient(circle, rgba(255, 184, 93, 0.26) 0%, rgba(255, 184, 93, 0.05) 70%, rgba(255, 184, 93, 0) 100%);
 }
 
 .mesh {
@@ -69,78 +87,110 @@ page {
   left: -250rpx;
 }
 
-.hero {
+.login-content {
   position: relative;
   z-index: 2;
-  margin-bottom: 26rpx;
+  width: 100%;
+  transform: translateY(26rpx);
+}
+
+.hero {
+  position: relative;
+  margin-bottom: 30rpx;
+}
+
+.brand-card {
+  min-height: 178rpx;
+  padding: 26rpx;
+  border-radius: 36rpx;
+  background: linear-gradient(145deg, rgba(255, 253, 248, 0.94) 0%, rgba(255, 245, 232, 0.78) 100%);
+  border: 2rpx solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 20rpx 50rpx rgba(128, 83, 43, 0.14);
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  box-sizing: border-box;
+}
+
+.brand-copy {
+  flex: 1;
+  min-width: 0;
 }
 
 .hero-topline {
   display: inline-block;
-  padding: 8rpx 20rpx;
+  padding: 7rpx 18rpx;
   border-radius: 999rpx;
-  background: rgba(191, 79, 29, 0.08);
+  background: rgba(191, 79, 29, 0.1);
   color: var(--primary-deep);
-  font-size: 20rpx;
+  font-size: 19rpx;
   letter-spacing: 1rpx;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .logo-wrap {
-  width: 126rpx;
-  height: 126rpx;
-  margin-top: 22rpx;
-  border-radius: 30rpx;
-  background: #fff;
-  box-shadow: 0 8rpx 24rpx rgba(191, 79, 29, 0.18);
+  width: 138rpx;
+  height: 138rpx;
+  border-radius: 34rpx;
+  background: linear-gradient(145deg, #fff 0%, #fff3e4 100%);
+  border: 2rpx solid rgba(217, 101, 43, 0.12);
+  box-shadow: 0 14rpx 30rpx rgba(191, 79, 29, 0.18);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
 .logo {
-  width: 104rpx;
-  height: 104rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 26rpx;
 }
 
 .hero-title {
   display: block;
-  margin-top: 20rpx;
-  font-size: 56rpx;
+  margin-top: 16rpx;
+  font-size: 50rpx;
   color: #271f16;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 4rpx;
+  line-height: 1.1;
 }
 
 .hero-subtitle {
   display: block;
-  margin-top: 8rpx;
+  margin-top: 18rpx;
+  padding-left: 4rpx;
   font-size: 24rpx;
   color: var(--muted);
 }
 
 .panel {
   position: relative;
-  z-index: 2;
-  background: var(--panel);
+  background: rgba(255, 250, 242, 0.96);
   border: 2rpx solid var(--line);
-  border-radius: 30rpx;
-  padding: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(81, 56, 32, 0.08);
+  border-radius: 34rpx;
+  padding: 26rpx;
+  box-shadow: 0 18rpx 48rpx rgba(81, 56, 32, 0.12);
 }
 
 .mode-switch {
-  background: #f2e8da;
-  border-radius: 18rpx;
+  background: #f1e2cf;
+  border-radius: 22rpx;
   padding: 8rpx;
   display: flex;
   gap: 8rpx;
-  margin-bottom: 18rpx;
+  margin-bottom: 22rpx;
 }
 
 .mode-item {
   flex: 1;
-  height: 72rpx;
-  border-radius: 14rpx;
+  height: 76rpx;
+  border-radius: 17rpx;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -156,13 +206,13 @@ page {
 }
 
 .block {
-  border-radius: 22rpx;
-  padding: 20rpx;
+  border-radius: 26rpx;
+  padding: 24rpx;
 }
 
 .wechat-block {
-  background: linear-gradient(180deg, rgba(7, 193, 96, 0.09) 0%, rgba(255, 255, 255, 0.8) 100%);
-  border: 2rpx solid rgba(7, 193, 96, 0.24);
+  background: linear-gradient(180deg, rgba(217, 101, 43, 0.09) 0%, rgba(255, 255, 255, 0.82) 100%);
+  border: 2rpx solid rgba(217, 101, 43, 0.22);
 }
 
 .phone-block {
@@ -197,7 +247,7 @@ page {
 
 .point {
   font-size: 25rpx;
-  color: #2a6d45;
+  color: #7a4a2d;
 }
 
 .point::before {
@@ -241,8 +291,8 @@ page {
 }
 
 .field-box {
-  height: 88rpx;
-  border-radius: 16rpx;
+  height: 94rpx;
+  border-radius: 18rpx;
   border: 2rpx solid #e6d9c7;
   background: #fffdf8;
   display: flex;
@@ -266,7 +316,7 @@ page {
 
 .field-input {
   flex: 1;
-  height: 88rpx;
+  height: 94rpx;
   font-size: 30rpx;
   color: var(--ink);
 }
@@ -304,8 +354,8 @@ page {
 
 .btn {
   width: 100% !important;
-  height: 88rpx;
-  border-radius: 16rpx !important;
+  height: 94rpx;
+  border-radius: 18rpx !important;
   border: none !important;
   margin: 8rpx 0 0;
   padding: 0 !important;
@@ -325,8 +375,8 @@ page {
 }
 
 .btn-wechat {
-  background: linear-gradient(140deg, #07c160 0%, #07a652 100%);
-  box-shadow: 0 8rpx 20rpx rgba(7, 166, 82, 0.3);
+  background: linear-gradient(140deg, var(--primary) 0%, #ec8344 100%);
+  box-shadow: 0 8rpx 20rpx rgba(217, 101, 43, 0.32);
 }
 
 .btn-wechat text {
@@ -360,7 +410,6 @@ page {
 
 .footer {
   position: relative;
-  z-index: 2;
   margin-top: 24rpx;
   text-align: center;
 }

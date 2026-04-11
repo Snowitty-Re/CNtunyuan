@@ -6,150 +6,156 @@
     <view class="mesh mesh-2"></view>
   </view>
 
-  <view class="hero">
-    <view class="hero-topline">CNtunyuan Volunteer System</view>
-    <view class="logo-wrap">
-      <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
-    </view>
-    <text class="hero-title">助力团圆</text>
-    <text class="hero-subtitle">线索协作 · 快速联动 · 真实可追溯</text>
-  </view>
-
-  <view class="panel">
-    <view class="mode-switch" wx:if="{{!isBinding}}">
-      <view
-        class="mode-item {{loginType === 'wechat' ? 'active' : ''}}"
-        data-type="wechat"
-        bindtap="switchLoginType"
-      >
-        <text>微信快捷登录</text>
+  <view class="login-content">
+    <view class="hero">
+      <view class="brand-card">
+        <view class="logo-wrap">
+          <image class="logo" src="/assets/icons/logo.png" mode="aspectFit"></image>
+        </view>
+        <view class="brand-copy">
+          <view class="hero-topline">CNtuanyuan Volunteer System</view>
+          <text class="hero-title">助力团圆</text>
+        </view>
       </view>
-      <view
-        class="mode-item {{loginType === 'phone' ? 'active' : ''}}"
-        data-type="phone"
-        bindtap="switchLoginType"
-      >
-        <text>手机号登录</text>
-      </view>
+      <text class="hero-subtitle">线索协作 · 快速联动 · 真实可追溯</text>
     </view>
 
-    <view class="block wechat-block" wx:if="{{loginType === 'wechat' && !isBinding}}">
-      <view class="block-head">
-        <text class="block-title">推荐方式</text>
-        <text class="block-tip">授权后自动关联账号</text>
-      </view>
-      <view class="wechat-points">
-        <text class="point">免记密码，登录更快</text>
-        <text class="point">账号状态自动同步</text>
-      </view>
-      <button
-        class="btn btn-wechat"
-        bindtap="handleWechatLogin"
-        loading="{{loading}}"
-        disabled="{{loading}}"
-      >
-        <text>微信一键登录</text>
-      </button>
-    </view>
-
-    <view class="block phone-block" wx:if="{{loginType === 'phone' || isBinding}}">
-      <view class="block-head">
-        <text class="block-title">{{isBinding ? '绑定手机号' : (isRegister ? '注册账号' : (isResetPassword ? '重置密码' : '手机号登录'))}}</text>
-        <text class="block-tip">{{isBinding ? '请使用微信手机号授权完成绑定' : (isRegister ? '请使用微信手机号授权注册，注册后需管理员审批' : (isResetPassword ? '请使用微信手机号授权验证并重置密码' : '请输入手机号与密码'))}}</text>
-      </view>
-
-      <view class="bind-banner" wx:if="{{isBinding}}">
-        <text class="bind-banner-text">当前微信账号未绑定手机号</text>
-      </view>
-
-      <view class="wechat-bind-fast" wx:if="{{isBinding}}">
-        <button
-          class="btn btn-wechat"
-          open-type="getPhoneNumber"
-          bindgetphonenumber="handleWechatPhoneBind"
-          loading="{{loading}}"
-          disabled="{{loading}}"
+    <view class="panel">
+      <view class="mode-switch" wx:if="{{!isBinding}}">
+        <view
+          class="mode-item {{loginType === 'wechat' ? 'active' : ''}}"
+          data-type="wechat"
+          bindtap="switchLoginType"
         >
-          <text>微信一键绑定手机号</text>
-        </button>
-        <text class="wechat-bind-tip">需授权获取当前微信绑定手机号</text>
-      </view>
-
-      <view class="wechat-bind-fast" wx:if="{{!isBinding && (isRegister || isResetPassword)}}">
-        <button
-          class="btn btn-wechat"
-          open-type="getPhoneNumber"
-          bindgetphonenumber="handleWechatPhoneForAuth"
-          loading="{{loading}}"
-          disabled="{{loading}}"
+          <text>快捷登录</text>
+        </view>
+        <view
+          class="mode-item {{loginType === 'phone' ? 'active' : ''}}"
+          data-type="phone"
+          bindtap="switchLoginType"
         >
-          <text>{{isRegister ? '微信手机号验证并注册' : '微信手机号验证并重置密码'}}</text>
-        </button>
-        <text class="wechat-bind-tip">需授权获取当前微信绑定手机号</text>
-      </view>
-
-      <view class="field" wx:if="{{!isBinding && !isRegister && !isResetPassword}}">
-        <text class="field-label">手机号</text>
-        <view class="field-box">
-          <text class="prefix">+86</text>
-          <input
-            class="field-input"
-            type="number"
-            maxlength="11"
-            placeholder="请输入手机号"
-            placeholder-class="placeholder-style"
-            value="{{phone}}"
-            bindinput="onPhoneInput"
-          />
+          <text>手机号登录</text>
         </view>
       </view>
 
-      <view class="field" wx:if="{{!isBinding}}">
-        <text class="field-label">{{isResetPassword ? '新密码' : '登录密码'}}</text>
-        <view class="field-box">
-          <input
-            class="field-input"
-            type="password"
-            placeholder="{{isResetPassword ? '请输入新密码' : '请输入密码'}}"
-            placeholder-class="placeholder-style"
-            value="{{password}}"
-            bindinput="onPasswordInput"
-          />
+      <view class="block wechat-block" wx:if="{{loginType === 'wechat' && !isBinding}}">
+        <view class="block-head">
+          <text class="block-title">推荐方式</text>
+          <text class="block-tip">授权后自动关联账号</text>
+        </view>
+        <view class="wechat-points">
+          <text class="point">免记密码，登录更快</text>
+          <text class="point">账号状态自动同步</text>
+        </view>
+        <button
+          class="btn btn-wechat"
+          bindtap="handleWechatLogin"
+          loading="{{loading}}"
+          disabled="{{loading}}"
+        >
+          <text>手机号快捷登录</text>
+        </button>
+      </view>
+
+      <view class="block phone-block" wx:if="{{loginType === 'phone' || isBinding}}">
+        <view class="block-head">
+          <text class="block-title">{{isBinding ? '绑定手机号' : (isRegister ? '注册账号' : (isResetPassword ? '重置密码' : '手机号登录'))}}</text>
+          <text class="block-tip">{{isBinding ? '请使用手机号快捷验证完成绑定' : (isRegister ? '请使用手机号快捷验证完成注册，注册后需管理员审批' : (isResetPassword ? '请使用手机号快捷验证并重置密码' : '请输入手机号与密码'))}}</text>
+        </view>
+
+        <view class="bind-banner" wx:if="{{isBinding}}">
+          <text class="bind-banner-text">当前账号未绑定手机号</text>
+        </view>
+
+        <view class="wechat-bind-fast" wx:if="{{isBinding}}">
+          <button
+            class="btn btn-wechat"
+            open-type="getPhoneNumber"
+            bindgetphonenumber="handleWechatPhoneBind"
+            loading="{{loading}}"
+            disabled="{{loading}}"
+          >
+            <text>手机号快捷绑定</text>
+          </button>
+          <text class="wechat-bind-tip">需授权获取当前手机号</text>
+        </view>
+
+        <view class="wechat-bind-fast" wx:if="{{!isBinding && (isRegister || isResetPassword)}}">
+          <button
+            class="btn btn-wechat"
+            open-type="getPhoneNumber"
+            bindgetphonenumber="handleWechatPhoneForAuth"
+            loading="{{loading}}"
+            disabled="{{loading}}"
+          >
+            <text>{{isRegister ? '手机号快捷验证并注册' : '手机号快捷验证并重置密码'}}</text>
+          </button>
+          <text class="wechat-bind-tip">需授权获取当前手机号</text>
+        </view>
+
+        <view class="field" wx:if="{{!isBinding && !isRegister && !isResetPassword}}">
+          <text class="field-label">手机号</text>
+          <view class="field-box">
+            <text class="prefix">+86</text>
+            <input
+              class="field-input"
+              type="number"
+              maxlength="11"
+              placeholder="请输入手机号"
+              placeholder-class="placeholder-style"
+              value="{{phone}}"
+              bindinput="onPhoneInput"
+            />
+          </view>
+        </view>
+
+        <view class="field" wx:if="{{!isBinding}}">
+          <text class="field-label">{{isResetPassword ? '新密码' : '登录密码'}}</text>
+          <view class="field-box">
+            <input
+              class="field-input"
+              type="password"
+              placeholder="{{isResetPassword ? '请输入新密码' : '请输入密码'}}"
+              placeholder-class="placeholder-style"
+              value="{{password}}"
+              bindinput="onPasswordInput"
+            />
+          </view>
+        </view>
+
+        <button
+          class="btn btn-primary"
+          bindtap="handlePhoneLogin"
+          loading="{{loading}}"
+          disabled="{{loading}}"
+          wx:if="{{!isBinding && !isRegister && !isResetPassword}}"
+        >
+          <text>登录</text>
+        </button>
+
+        <view class="actions" wx:if="{{!isBinding}}">
+          <text class="action-link" bindtap="goToRegister">{{isRegister ? '已在注册模式' : '注册账号'}}</text>
+          <text class="action-divider">|</text>
+          <text class="action-link" bindtap="goToForgot">{{isResetPassword ? '已在重置模式' : '忘记密码'}}</text>
+        </view>
+
+        <view class="actions" wx:if="{{isBinding}}">
+          <text class="action-link" bindtap="backToWechatLogin">返回快捷登录</text>
         </view>
       </view>
-
-      <button
-        class="btn btn-primary"
-        bindtap="handlePhoneLogin"
-        loading="{{loading}}"
-        disabled="{{loading}}"
-        wx:if="{{!isBinding && !isRegister && !isResetPassword}}"
-      >
-        <text>登录</text>
-      </button>
-
-      <view class="actions" wx:if="{{!isBinding}}">
-        <text class="action-link" bindtap="goToRegister">{{isRegister ? '已在注册模式' : '注册账号'}}</text>
-        <text class="action-divider">|</text>
-        <text class="action-link" bindtap="goToForgot">{{isResetPassword ? '已在重置模式' : '忘记密码'}}</text>
-      </view>
-
-      <view class="actions" wx:if="{{isBinding}}">
-        <text class="action-link" bindtap="backToWechatLogin">返回微信登录</text>
-      </view>
     </view>
-  </view>
 
-  <view class="footer">
-    <view class="policy-row" bindtap="togglePoliciesAgreement">
-      <view class="policy-check {{agreedToPolicies ? 'checked' : ''}}">
-        <text wx:if="{{agreedToPolicies}}" class="policy-check-mark">✓</text>
+    <view class="footer">
+      <view class="policy-row" bindtap="togglePoliciesAgreement">
+        <view class="policy-check {{agreedToPolicies ? 'checked' : ''}}">
+          <text wx:if="{{agreedToPolicies}}" class="policy-check-mark">✓</text>
+        </view>
+        <text class="footer-text">我已阅读并同意</text>
+        <text class="footer-link" catchtap="goToAgreement">《用户协议》</text>
+        <text class="footer-text">和</text>
+        <text class="footer-link" catchtap="goToPrivacy">《隐私政策》</text>
       </view>
-      <text class="footer-text">我已阅读并同意</text>
-      <text class="footer-link" catchtap="goToAgreement">《用户协议》</text>
-      <text class="footer-text">和</text>
-      <text class="footer-link" catchtap="goToPrivacy">《隐私政策》</text>
+      <text class="policy-hint">请先阅读协议内容，再自主勾选同意后继续登录或注册</text>
     </view>
-    <text class="policy-hint">请先阅读协议内容，再自主勾选同意后继续登录或注册</text>
   </view>
 </view>

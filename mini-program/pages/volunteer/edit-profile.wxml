@@ -21,7 +21,7 @@
         open-type="chooseAvatar"
         bindchooseavatar="chooseWechatAvatar"
       >
-        使用微信头像
+        使用平台头像
       </button>
     </view>
   </view>

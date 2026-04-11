@@ -100,12 +100,12 @@ Page({
     }
   },
 
-  // 使用微信头像
+  // 使用平台头像
   async chooseWechatAvatar(e) {
     try {
       const avatarUrl = e?.detail?.avatarUrl
       if (!avatarUrl) {
-        showToast('获取微信头像失败')
+        showToast('获取头像失败')
         return
       }
 
@@ -115,10 +115,10 @@ Page({
         'form.avatar': uploadRes.url || uploadRes.data?.url || avatarUrl,
         uploadLoading: false
       })
-      showSuccess('微信头像已应用')
+      showSuccess('头像已应用')
     } catch (error) {
-      console.error('使用微信头像失败:', error)
-      showToast('微信头像上传失败')
+      console.error('使用平台头像失败:', error)
+      showToast('头像上传失败')
       this.setData({ uploadLoading: false })
     }
   },
