@@ -1,406 +1,592 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SwapOutlined,
+} from '@ant-design/icons'
+import {
+  App,
+  Breadcrumb,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Tree,
+  Typography,
+} from 'antd'
+import type { DataNode } from 'antd/es/tree'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { ModuleHeader } from '@/components/shared/ModuleHeader'
-import { ConfirmButton } from '@/components/shared/ConfirmButton'
-import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
-import { PageState } from '@/components/shared/PageState'
-import { Pagination } from '@/components/shared/Pagination'
-import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-import { ACTIONS, hasPermission } from '@/lib/rbac'
-import { fmtTime, listFrom } from '@/lib/data'
+import { listFrom } from '@/lib/data'
+import { ORG_STATUS_OPTIONS, ORG_TYPE_OPTIONS, orgStatusLabel, orgTypeLabel } from '@/lib/orgTypes'
+import { isAdmin } from '@/lib/rbac'
 import { organizationService } from '@/services/organizations'
 import type { Organization } from '@/types/api'
 
+type FlatOrg = Organization & { key: string }
+
+function flattenOrgs(nodes: Organization[], acc: FlatOrg[] = []): FlatOrg[] {
+  nodes.forEach((n) => {
+    acc.push({ ...n, key: n.id })
+    if (n.children?.length) flattenOrgs(n.children, acc)
+  })
+  return acc
+}
+
+function toTreeData(nodes: Organization[]): DataNode[] {
+  return nodes.map((n) => ({
+    key: n.id,
+    title: `${n.name}（${orgTypeLabel(n.type)}）`,
+    children: n.children?.length ? toTreeData(n.children) : undefined,
+  }))
+}
+
+/** Exclude self and descendants from parent candidates */
+function collectDescendantIds(node: Organization | undefined, set: Set<string>) {
+  if (!node) return
+  set.add(node.id)
+  node.children?.forEach((c) => collectDescendantIds(c, set))
+}
+
+function findNode(nodes: Organization[], id: string): Organization | undefined {
+  for (const n of nodes) {
+    if (n.id === id) return n
+    if (n.children?.length) {
+      const hit = findNode(n.children, id)
+      if (hit) return hit
+    }
+  }
+  return undefined
+}
+
 export default function OrganizationsPage() {
-  const { ready, user } = useAuthGuard()
+  const { ready, user } = useAuthGuard({ requireAdmin: true })
+  const { message } = App.useApp()
+  const canWrite = isAdmin(user)
+
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [items, setItems] = useState<Organization[]>([])
   const [tree, setTree] = useState<Organization[]>([])
+  const [list, setList] = useState<Organization[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [keyword, setKeyword] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [moveTarget, setMoveTarget] = useState<Record<string, string>>({})
+  const [typeFilter, setTypeFilter] = useState<string | undefined>()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [path, setPath] = useState<Organization[]>([])
 
-  const [name, setName] = useState('')
-  const [code, setCode] = useState('')
-  const [type, setType] = useState('team')
-  const [editingOrg, setEditingOrg] = useState<Organization | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
-  const [savingDetail, setSavingDetail] = useState(false)
-  const [editName, setEditName] = useState('')
-  const [editCode, setEditCode] = useState('')
-  const [editType, setEditType] = useState('team')
-  const [editParentId, setEditParentId] = useState('')
-  const [editDesc, setEditDesc] = useState('')
-  const [editAddress, setEditAddress] = useState('')
-  const [editContactName, setEditContactName] = useState('')
-  const [editContactPhone, setEditContactPhone] = useState('')
-  const [editSortOrder, setEditSortOrder] = useState('0')
-  const [notice, setNotice] = useState<Notice | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [moveOpen, setMoveOpen] = useState(false)
+  const [editing, setEditing] = useState<Organization | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  async function load(
-    nextPage = page,
-    filters?: {
-      keyword?: string
-      type?: string
-    },
-  ) {
+  const [createForm] = Form.useForm()
+  const [editForm] = Form.useForm()
+  const [moveForm] = Form.useForm()
+
+  const flat = useMemo(() => flattenOrgs(tree), [tree])
+  const selected = useMemo(
+    () => (selectedId ? flat.find((o) => o.id === selectedId) || list.find((o) => o.id === selectedId) || null : null),
+    [selectedId, flat, list],
+  )
+
+  const blockedParentIds = useMemo(() => {
+    const set = new Set<string>()
+    if (editing) collectDescendantIds(findNode(tree, editing.id), set)
+    return set
+  }, [editing, tree])
+
+  const parentOptions = useMemo(
+    () =>
+      flat
+        .filter((o) => !blockedParentIds.has(o.id))
+        .map((o) => ({ value: o.id, label: `${o.name}（${orgTypeLabel(o.type)}）` })),
+    [flat, blockedParentIds],
+  )
+
+  const load = useCallback(async () => {
     setLoading(true)
-    setError('')
     try {
-      const qKeyword = filters?.keyword ?? keyword
-      const qType = filters?.type ?? typeFilter
-      const [data, treeData] = await Promise.all([
-        organizationService.list({ page: nextPage, page_size: 20, keyword: qKeyword || undefined, type: qType || undefined }),
+      const [treeData, listData] = await Promise.all([
         organizationService.tree(),
+        organizationService.list({
+          page,
+          page_size: pageSize,
+          keyword: keyword || undefined,
+          type: typeFilter || undefined,
+        }),
       ])
-      const normalized = listFrom<Organization>(data)
-      setItems(normalized.list)
-      setTotal(normalized.total)
-      setTree(Array.isArray(treeData) ? treeData : [])
-      setPage(nextPage)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败')
+      setTree(treeData)
+      const pageResult = listFrom<Organization>(listData)
+      setList(pageResult.list)
+      setTotal(pageResult.total)
+      if (!selectedId && treeData[0]?.id) setSelectedId(treeData[0].id)
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '加载组织失败')
     } finally {
       setLoading(false)
     }
-  }
-
-  function flattenTree(nodes: Organization[], level = 0): Array<{ id: string; name: string; level: number }> {
-    const out: Array<{ id: string; name: string; level: number }> = []
-    nodes.forEach((n) => {
-      out.push({ id: n.id, name: n.name, level })
-      if (Array.isArray(n.children) && n.children.length > 0) {
-        out.push(...flattenTree(n.children, level + 1))
-      }
-    })
-    return out
-  }
-
-  async function moveOrg(id: string) {
-    const parentId = moveTarget[id] || null
-    try {
-      await organizationService.move(id, parentId || null)
-      load(page)
-      setNotice({ type: 'success', text: '组织移动成功' })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '移动失败' })
-    }
-  }
-
-  function resetFilters() {
-    setKeyword('')
-    setTypeFilter('')
-    load(1, { keyword: '', type: '' })
-  }
-
-  async function quickCreate(e: FormEvent) {
-    e.preventDefault()
-    if (!name.trim() || !code.trim()) return
-    try {
-      await organizationService.create({
-        name: name.trim(),
-        code: code.trim(),
-        type: type || 'team',
-      })
-      setName('')
-      setCode('')
-      setType('team')
-      load(1)
-      setNotice({ type: 'success', text: '组织创建成功' })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
-    }
-  }
-
-  function openDetail(org: Organization) {
-    setEditingOrg(org)
-    setEditName(org.name || '')
-    setEditCode(org.code || '')
-    setEditType(org.type || 'team')
-    setEditParentId(org.parent_id || '')
-    setEditDesc(org.description || '')
-    setEditAddress(org.address || '')
-    setEditContactName(org.contact_name || '')
-    setEditContactPhone(org.contact_phone || '')
-    setEditSortOrder(String(org.sort_order || 0))
-    setDetailOpen(true)
-  }
-
-  async function saveDetail(e: FormEvent) {
-    e.preventDefault()
-    if (!editingOrg) return
-    setSavingDetail(true)
-    try {
-      await organizationService.update(editingOrg.id, {
-        name: editName.trim(),
-        code: editCode.trim(),
-        type: editType || 'team',
-        parent_id: editParentId || null,
-        description: editDesc.trim(),
-        address: editAddress.trim(),
-        contact_name: editContactName.trim(),
-        contact_phone: editContactPhone.trim(),
-        sort_order: Number(editSortOrder) || 0,
-      })
-      setDetailOpen(false)
-      setEditingOrg(null)
-      load(page)
-      setNotice({ type: 'success', text: '组织信息已更新' })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '保存失败' })
-    } finally {
-      setSavingDetail(false)
-    }
-  }
-
-  function exportCsv() {
-    const rows = items
-    if (rows.length === 0) return
-    const headers = ['id', 'name', 'code', 'type', 'parent_id', 'contact_name', 'contact_phone', 'address', 'sort_order', 'created_at']
-    const lines = rows.map((row) =>
-      [
-        row.id,
-        row.name || '',
-        row.code || '',
-        row.type || '',
-        row.parent_id || '',
-        row.contact_name || '',
-        row.contact_phone || '',
-        row.address || '',
-        row.sort_order ?? '',
-        row.created_at || '',
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(','),
-    )
-    const content = `\ufeff${[headers.join(','), ...lines].join('\n')}`
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `organizations-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    setNotice({ type: 'success', text: `已导出 ${rows.length} 条组织数据` })
-  }
+  }, [page, pageSize, keyword, typeFilter, message, selectedId])
 
   useEffect(() => {
-    if (ready) load(1)
+    if (!ready) return
+    load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready])
+  }, [ready, page, pageSize, keyword, typeFilter])
 
-  if (!ready) return null
-  if (!hasPermission(user, ACTIONS.ORG_MANAGE)) {
+  useEffect(() => {
+    if (!selectedId || !ready) {
+      setPath([])
+      return
+    }
+    organizationService
+      .path(selectedId)
+      .then((p) => setPath(Array.isArray(p) ? p : []))
+      .catch(() => setPath([]))
+  }, [selectedId, ready])
+
+  async function onCreate(values: Record<string, unknown>) {
+    setSubmitting(true)
+    try {
+      await organizationService.create({
+        name: String(values.name || '').trim(),
+        code: String(values.code || '').trim(),
+        type: String(values.type || 'team'),
+        parent_id: values.parent_id ? String(values.parent_id) : undefined,
+        description: values.description ? String(values.description) : undefined,
+        address: values.address ? String(values.address) : undefined,
+        contact_name: values.contact_name ? String(values.contact_name) : undefined,
+        contact_phone: values.contact_phone ? String(values.contact_phone) : undefined,
+        sort_order: typeof values.sort_order === 'number' ? values.sort_order : undefined,
+      })
+      message.success('组织创建成功')
+      setCreateOpen(false)
+      createForm.resetFields()
+      await load()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '创建失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function openEdit(org: Organization) {
+    setEditing(org)
+    editForm.setFieldsValue({
+      name: org.name,
+      code: org.code,
+      description: org.description,
+      address: org.address,
+      contact_name: org.contact_name,
+      contact_phone: org.contact_phone,
+      status: org.status || 'active',
+      sort_order: org.sort_order ?? 0,
+    })
+    setEditOpen(true)
+  }
+
+  async function onEdit(values: Record<string, unknown>) {
+    if (!editing) return
+    setSubmitting(true)
+    try {
+      await organizationService.update(editing.id, {
+        name: String(values.name || '').trim(),
+        code: String(values.code || '').trim(),
+        description: values.description != null ? String(values.description) : undefined,
+        address: values.address != null ? String(values.address) : undefined,
+        contact_name: values.contact_name != null ? String(values.contact_name) : undefined,
+        contact_phone: values.contact_phone != null ? String(values.contact_phone) : undefined,
+        status: values.status ? String(values.status) : undefined,
+        sort_order: typeof values.sort_order === 'number' ? values.sort_order : undefined,
+      })
+      message.success('组织已更新')
+      setEditOpen(false)
+      setEditing(null)
+      await load()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '更新失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function openMove(org: Organization) {
+    setEditing(org)
+    moveForm.setFieldsValue({ new_parent_id: org.parent_id || undefined })
+    setMoveOpen(true)
+  }
+
+  async function onMove(values: Record<string, unknown>) {
+    if (!editing) return
+    const parentId = String(values.new_parent_id || '').trim()
+    if (!parentId) {
+      message.warning('请选择目标父组织（暂不支持移到顶级，需后端放开空 parent）')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await organizationService.move(editing.id, parentId)
+      message.success('组织已移动')
+      setMoveOpen(false)
+      setEditing(null)
+      await load()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '移动失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function onDelete(org: Organization) {
+    try {
+      await organizationService.remove(org.id)
+      message.success('已删除')
+      if (selectedId === org.id) setSelectedId(null)
+      await load()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '删除失败')
+    }
+  }
+
+  if (!ready) {
     return (
       <AppShell>
-        <ModuleHeader title="组织管理" desc="组织结构维护、编码治理与组织信息管理" />
-        <PageState error="当前账号无权限访问该页面（需要 org:manage 权限）" />
+        <Card loading />
       </AppShell>
     )
   }
 
   return (
     <AppShell>
-      <ModuleHeader title="组织管理" desc="组织结构维护、编码治理与组织信息管理" />
-      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
-      <form
-        className="panel row wrap"
-        onSubmit={(e) => {
-          e.preventDefault()
-          load(1)
-        }}
-      >
-        <input className="input" placeholder="组织名称/编码关键词" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-        <select className="select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-          <option value="">全部类型</option>
-          <option value="team">team</option>
-          <option value="group">group</option>
-          <option value="branch">branch</option>
-        </select>
-        <button className="btn" type="submit">
-          筛选
-        </button>
-        <button className="btn ghost" type="button" onClick={resetFilters}>
-          重置
-        </button>
-      </form>
-      <form className="panel row wrap" onSubmit={quickCreate}>
-        <input className="input" placeholder="组织名称" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="input" placeholder="组织编码（唯一）" value={code} onChange={(e) => setCode(e.target.value)} />
-        <select className="select" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="team">team</option>
-          <option value="group">group</option>
-          <option value="branch">branch</option>
-        </select>
-        <button className="btn primary" type="submit">
-          创建组织
-        </button>
-        <button className="btn" type="button" onClick={exportCsv}>
-          导出CSV
-        </button>
-      </form>
-      <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
-      {!loading && !error && items.length > 0 ? (
-        <>
-          <div className="section-card" style={{ marginBottom: 12 }}>
-            <b>组织树视图</b>
-            <div className="table-wrap" style={{ marginTop: 10 }}>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>组织</th>
-                    <th>层级</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {flattenTree(tree).map((node) => (
-                    <tr key={node.id}>
-                      <td>{`${'　'.repeat(node.level)}${node.name}`}</td>
-                      <td>L{node.level}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>名称</th>
-                  <th>编码</th>
-                  <th>类型</th>
-                  <th>父组织</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row) => (
-                  <tr key={row.id}>
-                    <td>{row.name}</td>
-                    <td>{row.code}</td>
-                    <td>{row.type || '-'}</td>
-                    <td>
-                      <select
-                        className="select"
-                        value={moveTarget[row.id] ?? row.parent_id ?? ''}
-                        onChange={(e) =>
-                          setMoveTarget((prev) => ({
-                            ...prev,
-                            [row.id]: e.target.value,
-                          }))
-                        }
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              组织管理
+            </Typography.Title>
+            <Typography.Text type="secondary">层级结构、编码治理与组织信息（管理员）</Typography.Text>
+          </Col>
+          <Col>
+            <Space>
+              <Button icon={<ReloadOutlined />} onClick={() => load()}>
+                刷新
+              </Button>
+              {canWrite ? (
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    createForm.setFieldsValue({
+                      type: 'team',
+                      parent_id: selectedId || undefined,
+                      sort_order: 0,
+                    })
+                    setCreateOpen(true)
+                  }}
+                >
+                  新建组织
+                </Button>
+              ) : null}
+            </Space>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col xs={24} lg={8}>
+            <Card title="组织树" size="small" loading={loading}>
+              {tree.length ? (
+                <Tree
+                  showLine
+                  defaultExpandAll
+                  selectedKeys={selectedId ? [selectedId] : []}
+                  treeData={toTreeData(tree)}
+                  onSelect={(keys) => {
+                    if (keys[0]) setSelectedId(String(keys[0]))
+                  }}
+                />
+              ) : (
+                <Empty description="暂无组织树" />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} lg={16}>
+            <Card size="small" style={{ marginBottom: 16 }}>
+              {path.length ? (
+                <Breadcrumb
+                  items={path.map((p) => ({
+                    title: (
+                      <a
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setSelectedId(p.id)
+                        }}
                       >
-                        <option value="">顶级组织</option>
-                        {flattenTree(tree)
-                          .filter((n) => n.id !== row.id)
-                          .map((n) => (
-                            <option key={n.id} value={n.id}>
-                              {`${'　'.repeat(n.level)}${n.name}`}
-                            </option>
-                          ))}
-                      </select>
-                    </td>
-                    <td>
-                      <div className="row wrap">
-                        <button className="btn" type="button" onClick={() => moveOrg(row.id)}>
+                        {p.name}
+                      </a>
+                    ),
+                  }))}
+                />
+              ) : (
+                <Typography.Text type="secondary">选择左侧节点查看路径</Typography.Text>
+              )}
+              {selected ? (
+                <div style={{ marginTop: 12 }}>
+                  <Space wrap>
+                    <Typography.Text strong>{selected.name}</Typography.Text>
+                    <Tag>{orgTypeLabel(selected.type)}</Tag>
+                    <Tag color={selected.status === 'inactive' ? 'default' : 'success'}>
+                      {orgStatusLabel(selected.status)}
+                    </Tag>
+                    <Typography.Text type="secondary">编码 {selected.code}</Typography.Text>
+                  </Space>
+                  {canWrite ? (
+                    <div style={{ marginTop: 12 }}>
+                      <Space>
+                        <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(selected)}>
+                          编辑
+                        </Button>
+                        <Button size="small" icon={<SwapOutlined />} onClick={() => openMove(selected)}>
                           移动
-                        </button>
-                        <ConfirmButton
-                          text="删除"
-                          message={`确认删除组织「${row.name}」？`}
-                          onConfirm={() => {
-                            organizationService.remove(row.id).then(() => load(page))
+                        </Button>
+                        <Popconfirm title={`确认删除「${selected.name}」？`} onConfirm={() => onDelete(selected)}>
+                          <Button size="small" danger icon={<DeleteOutlined />}>
+                            删除
+                          </Button>
+                        </Popconfirm>
+                        <Button
+                          size="small"
+                          type="link"
+                          href={`/users?org_id=${selected.id}`}
+                          onClick={(e) => {
+                            e.preventDefault()
+                            window.location.href = `/users?org_id=${selected.id}`
                           }}
-                          className="btn danger"
-                        />
-                        <button className="btn ghost" type="button" onClick={() => openDetail(row)}>
-                          详情/编辑
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Pagination page={page} pageSize={20} total={total} onChange={load} />
-        </>
-      ) : null}
-      <Dialog
-        open={detailOpen}
-        title={editingOrg ? `组织详情：${editingOrg.name}` : '组织详情'}
-        onClose={() => {
-          if (!savingDetail) setDetailOpen(false)
-        }}
+                        >
+                          查看成员
+                        </Button>
+                      </Space>
+                    </div>
+                  ) : null}
+                  {selected.description ? (
+                    <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
+                      {selected.description}
+                    </Typography.Paragraph>
+                  ) : null}
+                </div>
+              ) : null}
+            </Card>
+
+            <Card title="组织列表" size="small">
+              <Space wrap style={{ marginBottom: 12 }}>
+                <Input.Search
+                  allowClear
+                  placeholder="名称/编码"
+                  style={{ width: 220 }}
+                  onSearch={(v) => {
+                    setPage(1)
+                    setKeyword(v.trim())
+                  }}
+                />
+                <Select
+                  allowClear
+                  placeholder="类型"
+                  style={{ width: 140 }}
+                  options={ORG_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                  onChange={(v) => {
+                    setPage(1)
+                    setTypeFilter(v)
+                  }}
+                />
+              </Space>
+              <Table
+                rowKey="id"
+                size="small"
+                loading={loading}
+                dataSource={list}
+                pagination={{
+                  current: page,
+                  pageSize,
+                  total,
+                  showSizeChanger: true,
+                  onChange: (p, ps) => {
+                    setPage(p)
+                    setPageSize(ps)
+                  },
+                }}
+                onRow={(row) => ({
+                  onClick: () => setSelectedId(row.id),
+                  style: { cursor: 'pointer' },
+                })}
+                columns={[
+                  { title: '名称', dataIndex: 'name' },
+                  { title: '编码', dataIndex: 'code', width: 120 },
+                  {
+                    title: '类型',
+                    dataIndex: 'type',
+                    width: 100,
+                    render: (t: string) => orgTypeLabel(t),
+                  },
+                  {
+                    title: '状态',
+                    dataIndex: 'status',
+                    width: 90,
+                    render: (s: string) => (
+                      <Tag color={s === 'inactive' ? 'default' : 'success'}>{orgStatusLabel(s)}</Tag>
+                    ),
+                  },
+                  {
+                    title: '操作',
+                    width: 200,
+                    render: (_, row) =>
+                      canWrite ? (
+                        <Space size="small" onClick={(e) => e.stopPropagation()}>
+                          <Button type="link" size="small" onClick={() => openEdit(row)}>
+                            编辑
+                          </Button>
+                          <Button type="link" size="small" onClick={() => openMove(row)}>
+                            移动
+                          </Button>
+                          <Popconfirm title="确认删除？" onConfirm={() => onDelete(row)}>
+                            <Button type="link" size="small" danger>
+                              删除
+                            </Button>
+                          </Popconfirm>
+                        </Space>
+                      ) : (
+                        '-'
+                      ),
+                  },
+                ]}
+              />
+            </Card>
+          </Col>
+        </Row>
+      </Space>
+
+      <Modal
+        title="新建组织"
+        open={createOpen}
+        onCancel={() => setCreateOpen(false)}
+        onOk={() => createForm.submit()}
+        confirmLoading={submitting}
+        destroyOnClose
       >
-        {editingOrg ? (
-          <form className="grid cols-2" onSubmit={saveDetail}>
-            <div>组织ID：{editingOrg.id}</div>
-            <div>创建时间：{fmtTime(editingOrg.created_at)}</div>
-            <label>
-              <div>名称</div>
-              <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} />
-            </label>
-            <label>
-              <div>编码</div>
-              <input className="input" value={editCode} onChange={(e) => setEditCode(e.target.value)} />
-            </label>
-            <label>
-              <div>类型</div>
-              <select className="select" value={editType} onChange={(e) => setEditType(e.target.value)}>
-                <option value="team">team</option>
-                <option value="group">group</option>
-                <option value="branch">branch</option>
-              </select>
-            </label>
-            <label>
-              <div>父组织</div>
-              <select className="select" value={editParentId} onChange={(e) => setEditParentId(e.target.value)}>
-                <option value="">顶级组织</option>
-                {flattenTree(tree)
-                  .filter((n) => n.id !== editingOrg.id)
-                  .map((n) => (
-                    <option key={n.id} value={n.id}>
-                      {`${'　'.repeat(n.level)}${n.name}`}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              <div>联系人</div>
-              <input className="input" value={editContactName} onChange={(e) => setEditContactName(e.target.value)} />
-            </label>
-            <label>
-              <div>联系电话</div>
-              <input className="input" value={editContactPhone} onChange={(e) => setEditContactPhone(e.target.value)} />
-            </label>
-            <label>
-              <div>地址</div>
-              <input className="input" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} />
-            </label>
-            <label>
-              <div>排序</div>
-              <input className="input" value={editSortOrder} onChange={(e) => setEditSortOrder(e.target.value.replace(/[^\d-]/g, ''))} />
-            </label>
-            <label style={{ gridColumn: '1 / -1' }}>
-              <div>描述</div>
-              <textarea className="textarea" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} />
-            </label>
-            <div className="row" style={{ gridColumn: '1 / -1' }}>
-              <button className="btn primary" type="submit" disabled={savingDetail}>
-                {savingDetail ? '保存中...' : '保存变更'}
-              </button>
-            </div>
-          </form>
+        <Form form={createForm} layout="vertical" onFinish={onCreate}>
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="code" label="编码" rules={[{ required: true, message: '请输入唯一编码' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="type" label="类型" rules={[{ required: true }]}>
+            <Select options={ORG_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />
+          </Form.Item>
+          <Form.Item name="parent_id" label="父组织" extra="不选则创建为顶级（若后端允许）">
+            <Select allowClear showSearch optionFilterProp="label" options={parentOptions} />
+          </Form.Item>
+          <Form.Item name="contact_name" label="联系人">
+            <Input />
+          </Form.Item>
+          <Form.Item name="contact_phone" label="联系电话">
+            <Input />
+          </Form.Item>
+          <Form.Item name="address" label="地址">
+            <Input />
+          </Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <Form.Item name="sort_order" label="排序">
+            <InputNumber style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={editing ? `编辑：${editing.name}` : '编辑组织'}
+        open={editOpen}
+        onCancel={() => {
+          setEditOpen(false)
+          setEditing(null)
+        }}
+        onOk={() => editForm.submit()}
+        confirmLoading={submitting}
+        destroyOnClose
+      >
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+          类型创建后不可修改；调整层级请使用「移动」。
+        </Typography.Paragraph>
+        {editing ? (
+          <Space style={{ marginBottom: 12 }}>
+            <Tag>{orgTypeLabel(editing.type)}</Tag>
+            <Typography.Text type="secondary">ID {editing.id}</Typography.Text>
+          </Space>
         ) : null}
-      </Dialog>
+        <Form form={editForm} layout="vertical" onFinish={onEdit}>
+          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="code" label="编码" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="status" label="状态">
+            <Select options={ORG_STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />
+          </Form.Item>
+          <Form.Item name="contact_name" label="联系人">
+            <Input />
+          </Form.Item>
+          <Form.Item name="contact_phone" label="联系电话">
+            <Input />
+          </Form.Item>
+          <Form.Item name="address" label="地址">
+            <Input />
+          </Form.Item>
+          <Form.Item name="description" label="描述">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <Form.Item name="sort_order" label="排序">
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={editing ? `移动：${editing.name}` : '移动组织'}
+        open={moveOpen}
+        onCancel={() => {
+          setMoveOpen(false)
+          setEditing(null)
+        }}
+        onOk={() => moveForm.submit()}
+        confirmLoading={submitting}
+        destroyOnClose
+      >
+        <Form form={moveForm} layout="vertical" onFinish={onMove}>
+          <Form.Item
+            name="new_parent_id"
+            label="新父组织"
+            rules={[{ required: true, message: '请选择父组织' }]}
+            extra="暂不支持移到顶级（后端 new_parent_id 为必填）"
+          >
+            <Select showSearch optionFilterProp="label" options={parentOptions} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </AppShell>
   )
 }

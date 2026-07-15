@@ -171,11 +171,13 @@ export type Organization = {
   name: string
   code: string
   type?: string
+  level?: number
   parent_id?: string | null
   description?: string
   address?: string
   contact_name?: string
   contact_phone?: string
+  status?: string
   sort_order?: number
   children?: Organization[]
   created_at?: string
