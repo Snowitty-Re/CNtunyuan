@@ -22,7 +22,7 @@
 | 后端 | Go 1.23+, Gin, GORM, PostgreSQL/MySQL, Redis, JWT |
 | API 文档 | Swagger UI (swaggo/swag 自动生成) |
 | 小程序 | 微信小程序原生开发 |
-| Web | Next.js 14, React 18, TypeScript |
+| Web | Next.js 14, React 18, TypeScript, Ant Design 5+ |
 
 ## 快速开始
 
