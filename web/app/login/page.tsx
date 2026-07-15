@@ -1,12 +1,15 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { LockOutlined, UserOutlined, WechatOutlined } from '@ant-design/icons'
+import { Alert, App, Button, Card, Form, Input, Space, Tabs, Typography } from 'antd'
 import { useRouter } from 'next/navigation'
-import { authService } from '@/services/auth'
-import { systemService } from '@/services/system'
-import { saveAuth } from '@/lib/auth'
+import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '@/components/providers/AuthProvider'
 import { SafeImage } from '@/components/shared/SafeImage'
 import { useSiteBrand } from '@/hooks/useSiteBrand'
+import { saveAuth } from '@/lib/auth'
+import { authService } from '@/services/auth'
+import { systemService } from '@/services/system'
 
 declare global {
   interface Window {
@@ -39,24 +42,17 @@ function appendScript(src: string): Promise<void> {
   })
 }
 
-const highlights = [
-  { value: '案件协同', label: '从登记、线索到团圆闭环' },
-  { value: '任务审批', label: '跟进记录、评论、审批全程留痕' },
-  { value: '方言采集', label: '分卡片批次录音，提升识别效率' },
-]
-
 export default function LoginPage() {
   const router = useRouter()
   const brand = useSiteBrand()
-  const [mode, setMode] = useState<'password' | 'wechat-scan'>('password')
-  const [username, setUsername] = useState('13800138000')
-  const [password, setPassword] = useState('admin123')
+  const { message } = App.useApp()
+  const { setUser } = useAuth()
+  const [mode, setMode] = useState<'password' | 'wechat'>('password')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [tips, setTips] = useState('')
   const [oauthCode, setOauthCode] = useState('')
   const [oauthState, setOauthState] = useState('')
-  const [allowWechatLogin, setAllowWechatLogin] = useState(true)
+  const [allowWechatLogin, setAllowWechatLogin] = useState(false)
 
   const wechatAppID = process.env.NEXT_PUBLIC_WECHAT_WEB_APP_ID || ''
   const redirectURI = useMemo(() => {
@@ -71,22 +67,6 @@ export default function LoginPage() {
     document.title = `${brand.orgName} 登录`
   }, [brand.orgName])
 
-  async function onPasswordSubmit(e: FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setTips('')
-    try {
-      const data = await authService.login(username.trim(), password)
-      saveAuth(data)
-      router.replace('/dashboard')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '登录失败')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
     ;(async () => {
       try {
@@ -96,13 +76,14 @@ export default function LoginPage() {
           return
         }
         const site = bootstrap?.site || {}
-        const enabled = site.enable_wechat_login_web !== undefined
-          ? Boolean(site.enable_wechat_login_web)
-          : Boolean(site.enable_wechat_login)
+        const enabled =
+          site.enable_wechat_login_web !== undefined
+            ? Boolean(site.enable_wechat_login_web)
+            : Boolean(site.enable_wechat_login)
         setAllowWechatLogin(enabled)
-        setMode(enabled ? 'wechat-scan' : 'password')
+        if (enabled) setMode('wechat')
       } catch {
-        // ignore bootstrap status errors on login page
+        // ignore
       }
     })()
   }, [router])
@@ -119,10 +100,11 @@ export default function LoginPage() {
     ;(async () => {
       setLoading(true)
       setError('')
-      setTips('正在完成微信登录...')
       try {
         const data = await authService.wechatWebLogin(oauthCode)
         saveAuth(data)
+        setUser(data.user)
+        message.success('登录成功')
         router.replace('/dashboard')
       } catch (err) {
         setError(err instanceof Error ? err.message : '微信登录失败')
@@ -130,10 +112,10 @@ export default function LoginPage() {
         setLoading(false)
       }
     })()
-  }, [oauthCode, router])
+  }, [oauthCode, router, setUser, message])
 
   useEffect(() => {
-    if (!allowWechatLogin || mode !== 'wechat-scan' || oauthCode) return
+    if (!allowWechatLogin || mode !== 'wechat' || oauthCode) return
     if (!wechatAppID) {
       setError('缺少 NEXT_PUBLIC_WECHAT_WEB_APP_ID，无法启用微信扫码登录')
       return
@@ -160,80 +142,109 @@ export default function LoginPage() {
     })()
   }, [allowWechatLogin, mode, wechatAppID, redirectURI, oauthCode, oauthState, loginState])
 
+  async function onPassword(values: { username: string; password: string }) {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await authService.login(values.username.trim(), values.password)
+      saveAuth(data)
+      setUser(data.user)
+      message.success('登录成功')
+      router.replace('/dashboard')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '登录失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <div className="auth-page">
-      <div className="auth-hero">
-        <div className="auth-hero-badge">助力团圆协作中枢</div>
-        <div className="auth-brand-lockup">
-          {brand.logoUrl ? <SafeImage className="auth-brand-logo" src={brand.logoUrl} alt={brand.orgName} width={72} height={72} /> : <span className="auth-brand-mark">{brand.orgName.slice(0, 1)}</span>}
-        </div>
-        <h1 className="auth-hero-title">{brand.orgName}</h1>
-        <p className="auth-hero-subtitle">{brand.subtitle}</p>
-        <div className="auth-highlight-grid">
-          {highlights.map((item) => (
-            <div className="auth-highlight" key={item.value}>
-              <b>{item.value}</b>
-              <span>{item.label}</span>
-            </div>
-          ))}
-        </div>
-        <div className="auth-hero-panel">
-          <div className="auth-hero-panel-title">适用场景</div>
-          <ul className="auth-hero-list">
-            <li>志愿者组织管理与跨层级协作</li>
-            <li>案件、任务、方言线索统一沉淀</li>
-            <li>跟进审批、附件留痕、服务监控</li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="auth-card">
-        <div className="auth-card-header">
-          <div>
-            <div className="auth-card-eyebrow">Web Console</div>
-            <h2 className="auth-card-title">进入管理后台</h2>
-            <p className="auth-card-desc">使用账号密码或微信扫码进入工作台。</p>
-          </div>
-          {allowWechatLogin ? (
-            <div className="auth-switch">
-              <button className={`btn ${mode === 'wechat-scan' ? 'primary' : ''}`} type="button" onClick={() => setMode('wechat-scan')}>
-                微信扫码
-              </button>
-              <button className={`btn ${mode === 'password' ? 'primary' : ''}`} type="button" onClick={() => setMode('password')}>
-                账号密码
-              </button>
-            </div>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        background:
+          'radial-gradient(circle at 12% 8%, rgba(255, 193, 117, 0.25) 0, transparent 30%), linear-gradient(180deg, #fff9f3 0%, #fff6ee 100%)',
+      }}
+    >
+      <Card style={{ width: 420, maxWidth: '100%', boxShadow: '0 12px 40px rgba(120,70,20,0.12)' }}>
+        <Space direction="vertical" size="middle" style={{ width: '100%', textAlign: 'center' }}>
+          {brand.logoUrl ? (
+            <SafeImage src={brand.logoUrl} alt={brand.orgName} width={64} height={64} style={{ borderRadius: 14, margin: '0 auto' }} />
           ) : (
-            <div className="hint">当前系统已关闭微信登录</div>
-          )}
-        </div>
-
-        {allowWechatLogin && mode === 'wechat-scan' ? (
-          <div className="auth-qr-shell">
-            <div className="auth-qr-card">
-              <div id="wechat-scan-container" />
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                margin: '0 auto',
+                borderRadius: 14,
+                background: '#d97706',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 28,
+                fontWeight: 700,
+              }}
+            >
+              {brand.orgName.slice(0, 1)}
             </div>
-            <div className="hint" style={{ textAlign: 'center' }}>请使用微信扫描二维码并确认登录</div>
+          )}
+          <div>
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              {brand.orgName}
+            </Typography.Title>
+            <Typography.Text type="secondary">{brand.subtitle || '志愿者协作管理端'}</Typography.Text>
           </div>
-        ) : (
-          <form className="auth-form" onSubmit={onPasswordSubmit}>
-            <label>
-              <div className="field-label">账号（手机号）</div>
-              <input className="input auth-input" value={username} onChange={(e) => setUsername(e.target.value)} />
-            </label>
-            <label>
-              <div className="field-label">密码</div>
-              <input className="input auth-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            </label>
-            <button className="btn primary auth-submit" type="submit" disabled={loading}>
-              {loading ? '正在登录...' : '登录后台'}
-            </button>
-          </form>
-        )}
 
-        {error ? <div className="alert">{error}</div> : null}
-        {tips ? <div style={{ color: '#166534', marginTop: 10 }}>{tips}</div> : null}
-      </div>
+          {error ? <Alert type="error" showIcon message={error} /> : null}
+
+          <Tabs
+            activeKey={mode}
+            onChange={(k) => setMode(k as 'password' | 'wechat')}
+            items={[
+              {
+                key: 'password',
+                label: '账号登录',
+                children: (
+                  <Form layout="vertical" onFinish={onPassword} requiredMark={false}>
+                    <Form.Item name="username" label="手机号 / 用户名" rules={[{ required: true, message: '请输入账号' }]}>
+                      <Input size="large" prefix={<UserOutlined />} placeholder="请输入账号" autoComplete="username" />
+                    </Form.Item>
+                    <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }]}>
+                      <Input.Password size="large" prefix={<LockOutlined />} placeholder="请输入密码" autoComplete="current-password" />
+                    </Form.Item>
+                    <Button type="primary" htmlType="submit" size="large" block loading={loading}>
+                      登录
+                    </Button>
+                  </Form>
+                ),
+              },
+              ...(allowWechatLogin
+                ? [
+                    {
+                      key: 'wechat',
+                      label: (
+                        <span>
+                          <WechatOutlined /> 微信扫码
+                        </span>
+                      ),
+                      children: (
+                        <div>
+                          <div id="wechat-scan-container" style={{ minHeight: 280, display: 'flex', justifyContent: 'center' }} />
+                          {loading ? <Typography.Text type="secondary">正在完成微信登录…</Typography.Text> : null}
+                        </div>
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </Space>
+      </Card>
     </div>
   )
 }
