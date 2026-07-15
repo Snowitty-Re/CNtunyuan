@@ -244,7 +244,7 @@
         <view class="mgr-icon mgr-task"></view>
         <text class="mgr-label">创建任务</text>
       </view>
-      <view class="manager-btn" wx:if="{{canManageCase}}" bindtap="editCase">
+      <view class="manager-btn" wx:if="{{canModifyCase}}" bindtap="editCase">
         <view class="mgr-icon mgr-edit"></view>
         <text class="mgr-label">编辑案件</text>
       </view>

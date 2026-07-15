@@ -1,7 +1,7 @@
 const userService = require('../../services/user')
 const organizationService = require('../../services/organization')
 const { showToast, showLoading, hideLoading, formatDate } = require('../../utils/util')
-const { ACTIONS } = require('../../utils/permission')
+const { ACTIONS, isManagerRole } = require('../../utils/permission')
 const app = getApp()
 
 Page({
@@ -32,7 +32,8 @@ Page({
     loading: false,
     noMore: false,
     canCreateUser: false,
-    canModifyUser: false
+    canModifyUser: false,
+    canUpdateStatus: false
   },
 
   onLoad(options) {
@@ -44,10 +45,13 @@ Page({
     }
     const role = options && options.role ? String(options.role) : ''
     const roleIndex = this.data.roleOptions.findIndex(item => item.key === role)
+    const userInfo = wx.getStorageSync('userInfo') || app.globalData.userInfo || {}
 
     this.setData({
       canCreateUser: app.hasPermission(ACTIONS.USER_CREATE),
       canModifyUser: app.hasPermission(ACTIONS.USER_MODIFY),
+      // Backend: PUT /users/:id/status requires manager+
+      canUpdateStatus: isManagerRole(userInfo),
       roleFilter: roleIndex >= 0 ? role : '',
       roleIndex: roleIndex >= 0 ? roleIndex : 0
     })
@@ -171,7 +175,7 @@ Page({
   },
 
   onUserActions(e) {
-    if (!this.data.canModifyUser) {
+    if (!this.data.canModifyUser && !this.data.canUpdateStatus) {
       showToast('无权限操作')
       return
     }
@@ -181,15 +185,22 @@ Page({
 
     const options = []
     if (this.data.canModifyUser) options.push({ key: 'edit', label: '编辑用户' })
-    if (item.status === 'inactive') {
-      options.push({ key: 'active', label: '审批通过（设为正常）' })
-    } else if (item.status !== 'active') {
-      options.push({ key: 'active', label: '设为正常' })
+    if (this.data.canUpdateStatus) {
+      if (item.status === 'inactive') {
+        options.push({ key: 'active', label: '审批通过（设为正常）' })
+      } else if (item.status !== 'active') {
+        options.push({ key: 'active', label: '设为正常' })
+      }
+      if (item.status !== 'inactive') options.push({ key: 'inactive', label: '设为禁用' })
+      if (item.status !== 'banned') options.push({ key: 'banned', label: '设为封禁' })
     }
-    if (item.status !== 'inactive') options.push({ key: 'inactive', label: '设为禁用' })
-    if (item.status !== 'banned') options.push({ key: 'banned', label: '设为封禁' })
     if (this.data.canModifyUser) options.push({ key: 'role', label: '调整角色' })
     if (this.data.canModifyUser) options.push({ key: 'delete', label: '删除用户' })
+
+    if (options.length === 0) {
+      showToast('无可执行操作')
+      return
+    }
 
     wx.showActionSheet({
       itemList: options.map(o => o.label),
@@ -210,7 +221,7 @@ Page({
   },
 
   async changeStatus(item, status) {
-    if (!this.data.canModifyUser) {
+    if (!this.data.canUpdateStatus) {
       showToast('无权限操作')
       return
     }

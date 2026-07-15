@@ -392,7 +392,7 @@ Page({
    * 编辑案件
    */
   editCase() {
-    if (!this.data.canManageCase) {
+    if (!this.data.canModifyCase) {
       wx.showToast({ title: '无权限操作', icon: 'none' })
       return
     }

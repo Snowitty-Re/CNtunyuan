@@ -1,3 +1,9 @@
+/**
+ * Client RBAC aligned with backend route middleware:
+ * - org write / user create-update: admin+
+ * - user list/status, task manage, case manage: manager+
+ * - case/dialect modify: volunteer+
+ */
 const ACTIONS = {
   USER_CREATE: 'user:create',
   USER_MODIFY: 'user:modify',
@@ -50,7 +56,6 @@ const ROLE_PERMISSIONS = {
     ACTIONS.ORG_MANAGE
   ],
   manager: [
-    ACTIONS.USER_MODIFY,
     ACTIONS.USER_VIEW,
     ACTIONS.TASK_MANAGE,
     ACTIONS.TASK_VIEW,
@@ -59,12 +64,9 @@ const ROLE_PERMISSIONS = {
     ACTIONS.MISSING_MODIFY,
     ACTIONS.MISSING_MANAGE,
     ACTIONS.DIALECT_MODIFY,
-    ACTIONS.DIALECT_MANAGE,
-    ACTIONS.ORG_MANAGE
+    ACTIONS.DIALECT_MANAGE
   ],
   volunteer: [
-    ACTIONS.USER_VIEW,
-    ACTIONS.USER_MODIFY,
     ACTIONS.TASK_VIEW,
     ACTIONS.TASK_EDIT,
     ACTIONS.TASK_EXECUTE,
@@ -83,6 +85,10 @@ function getRoleLevel(role = '') {
 
 function isManagerRole(userInfo = {}) {
   return getRoleLevel(getUserRole(userInfo)) >= ROLE_LEVEL.manager
+}
+
+function isAdminRole(userInfo = {}) {
+  return getRoleLevel(getUserRole(userInfo)) >= ROLE_LEVEL.admin
 }
 
 function collectExplicitPermissions(userInfo = {}) {
@@ -118,7 +124,10 @@ function resolvePermissionSet(userInfo = {}) {
 function hasPermission(userInfo = {}, action = '') {
   const permission = String(action || '').trim()
   if (!permission) return false
-  if (permission === ACTIONS.ORG_MANAGE) return isManagerRole(userInfo)
+  // Backend org write + user create/update require admin
+  if (permission === ACTIONS.ORG_MANAGE) return isAdminRole(userInfo)
+  if (permission === ACTIONS.USER_CREATE) return isAdminRole(userInfo)
+  if (permission === ACTIONS.USER_MODIFY) return isAdminRole(userInfo)
 
   const set = resolvePermissionSet(userInfo)
   return set.has(permission)
@@ -141,6 +150,7 @@ module.exports = {
   getUserRole,
   getRoleLevel,
   isManagerRole,
+  isAdminRole,
   hasPermission,
   canAny,
   canAll,

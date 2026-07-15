@@ -42,10 +42,11 @@ Page({
   async onLoad(options) {
     if (!app.ensureAuth || !app.ensureAuth()) return
     const id = options && options.id ? options.id : ''
+    // Backend: create/update user require admin (USER_CREATE / USER_MODIFY)
     const canModify = app.hasPermission(ACTIONS.USER_MODIFY)
     const canCreate = app.hasPermission(ACTIONS.USER_CREATE)
     if ((id && !canModify) || (!id && !canCreate)) {
-      showToast('无权限操作')
+      showToast(id ? '仅管理员可编辑用户' : '仅管理员可创建用户')
       wx.navigateBack()
       return
     }
