@@ -33,7 +33,19 @@ git clone https://github.com/Snowitty-Re/CNtunyuan.git
 cd CNtunyuan
 ```
 
-### 2. 启动后端
+### 2. 启动本地依赖（Docker，推荐）
+
+本机 **不要安装** PostgreSQL / Redis，使用容器：
+
+```bash
+docker compose up -d
+```
+
+- Postgres：`localhost:5432`（用户/密码 `postgres`，库 `cntuanyuan`）
+- Redis：`localhost:6379`
+- 详情见 [docs/dev-docker.md](docs/dev-docker.md)
+
+### 3. 启动后端
 
 ```bash
 cd backend
@@ -53,7 +65,7 @@ go run cmd/app/main.go --config ./config/config.yaml
 - 默认无参数：`bootstrap-managed`，优先用于首启初始化与托管启动配置
 - `--config <path>`：`file-config`，严格按本地配置文件启动；配置错误时直接失败，不回退初始化模式
 
-### 3. 启动 Web 管理端（可选）
+### 4. 启动 Web 管理端（可选）
 
 ```bash
 cd web
@@ -64,7 +76,7 @@ npm run dev
 
 访问：http://localhost:3000
 
-### 3.1 首次初始化向导（推荐）
+### 4.1 首次初始化向导（推荐）
 
 首次部署且尚未初始化时，访问 `http://localhost:3000/login` 会自动跳转到 `http://localhost:3000/init`，按向导完成：
 
