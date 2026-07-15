@@ -66,6 +66,9 @@ const ROLE_MAP = {
   volunteer:   '志愿者'
 }
 
+/** 默认头像（本地静态资源） */
+const DEFAULT_AVATAR = '/assets/images/default-avatar.png'
+
 module.exports = {
   TASK_STATUS_MAP,
   TASK_PRIORITY_MAP,
@@ -74,5 +77,6 @@ module.exports = {
   CASE_STATUS_MAP,
   CASE_STATUS_COLOR,
   GENDER_MAP,
-  ROLE_MAP
+  ROLE_MAP,
+  DEFAULT_AVATAR
 }

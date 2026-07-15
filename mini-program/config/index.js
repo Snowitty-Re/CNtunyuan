@@ -4,10 +4,10 @@ const ENV = {
 }
 
 // 强制环境开关：'' | 'dev' | 'prod'
-// - ''：按自动逻辑判断
-// - 'dev'：强制走本地
-// - 'prod'：强制走线上
-const FORCE_ENV = 'prod'
+// - ''：按微信 envVersion 自动（develop/trial → dev，release → prod）
+// - 'dev'：强制本地 127.0.0.1:8080
+// - 'prod'：强制线上（仅在需要时手动改）
+const FORCE_ENV = ''
 
 function resolveEnv() {
   // 优先使用强制环境（便于线上联调）
