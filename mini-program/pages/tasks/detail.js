@@ -1,4 +1,5 @@
 const taskService = require('../../services/task')
+const userService = require('../../services/user')
 const { formatDate, formatTimeAgo, showSuccess, showToast, showConfirm, showLoading, hideLoading } = require('../../utils/util')
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_PRIORITY_COLOR } = require('../../utils/constants')
 const { ACTIONS } = require('../../utils/permission')
@@ -21,6 +22,7 @@ Page({
     canExecuteTask: false,
     isAssignee: false,
     canOperateAsAssignee: false,
+    assignUsers: [],
     statusMap:        TASK_STATUS_MAP,
     priorityMap:      TASK_PRIORITY_MAP,
     priorityColorMap: TASK_PRIORITY_COLOR
@@ -112,32 +114,49 @@ Page({
     }
   },
 
-  // 分配任务（管理者）- 使用页面内选择而非跳转
+  // 分配任务（管理者）- 人员选择器
   async assignTask() {
     if (!this.data.canManageTask) {
       showToast('无权限操作')
       return
     }
 
-    // 显示输入框让用户输入执行人ID
-    wx.showModal({
-      title: '分配任务',
-      editable: true,
-      placeholderText: '请输入执行人ID',
-      success: async (res) => {
-        if (res.confirm && res.content) {
+    try {
+      showLoading('加载人员...')
+      let users = this.data.assignUsers
+      if (!users.length) {
+        const res = await userService.getList({ page: 1, page_size: 100, status: 'active' })
+        users = (res.list || []).filter((u) => u && u.id)
+        this.setData({ assignUsers: users })
+      }
+      hideLoading()
+      if (!users.length) {
+        showToast('暂无可分配人员')
+        return
+      }
+      const names = users.map((u) => u.nickname || u.phone || u.id)
+      wx.showActionSheet({
+        itemList: names.slice(0, 6),
+        success: async ({ tapIndex }) => {
+          const user = users[tapIndex]
+          if (!user) return
           try {
             showLoading('分配中...')
-            await taskService.assign(this.data.taskId, res.content)
+            await taskService.assign(this.data.taskId, user.id)
+            hideLoading()
             showSuccess('分配成功')
             this.loadTaskDetail()
             this.loadTaskLogs()
           } catch (error) {
-            showToast('分配失败')
+            hideLoading()
+            showToast((error && error.message) || '分配失败')
           }
         }
-      }
-    })
+      })
+    } catch (error) {
+      hideLoading()
+      showToast((error && error.message) || '加载人员失败')
+    }
   },
 
   // 开始任务（执行人）
@@ -320,14 +339,17 @@ Page({
     }
   },
 
-  // 查看执行人信息
+  // 查看执行人信息（资料页仅支持当前用户，改为弹窗展示）
   viewAssignee() {
     const { task } = this.data
-    if (task && task.assignee) {
-      wx.navigateTo({
-        url: `/pages/volunteer/profile?id=${task.assignee_id}`
-      })
-    }
+    if (!task || !task.assignee) return
+    const name = task.assignee.nickname || task.assignee.name || '未命名'
+    const phone = task.assignee.phone || '未绑定手机'
+    wx.showModal({
+      title: '执行人',
+      content: `${name}\n${phone}`,
+      showCancel: false
+    })
   },
 
   // 查看位置

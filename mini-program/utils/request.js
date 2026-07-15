@@ -319,9 +319,9 @@ function handleTokenExpired(failedRequest, resolve, reject) {
 }
 
 /**
- * 上传文件
+ * 上传文件（401 时尝试 refresh 后重试一次）
  */
-const uploadFile = (url, filePath, name = 'file', formData = {}) => {
+const uploadFile = (url, filePath, name = 'file', formData = {}, allowRetry = true) => {
   return new Promise((resolve, reject) => {
     const token = getToken()
     
@@ -344,9 +344,17 @@ const uploadFile = (url, filePath, name = 'file', formData = {}) => {
             if (data.code === 0 || data.code === 200) {
               resolve(data.data)
             } else if (data.code === 401) {
-              // Token 过期
-              handleAuthFail()
-              reject(new Error('登录已过期'))
+              if (!allowRetry) {
+                handleAuthFail()
+                reject(new Error('登录已过期'))
+                return
+              }
+              refreshToken()
+                .then(() => uploadFile(url, filePath, name, formData, false).then(resolve).catch(reject))
+                .catch(() => {
+                  handleAuthFail()
+                  reject(new Error('登录已过期'))
+                })
             } else {
               wx.showToast({
                 title: data.message || '上传失败',
@@ -358,8 +366,17 @@ const uploadFile = (url, filePath, name = 'file', formData = {}) => {
             resolve(res.data)
           }
         } else if (res.statusCode === 401) {
-          handleAuthFail()
-          reject(new Error('登录已过期'))
+          if (!allowRetry) {
+            handleAuthFail()
+            reject(new Error('登录已过期'))
+            return
+          }
+          refreshToken()
+            .then(() => uploadFile(url, filePath, name, formData, false).then(resolve).catch(reject))
+            .catch(() => {
+              handleAuthFail()
+              reject(new Error('登录已过期'))
+            })
         } else {
           wx.showToast({
             title: `上传失败: ${res.statusCode}`,
