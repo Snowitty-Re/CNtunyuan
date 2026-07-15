@@ -55,6 +55,18 @@ func NewUserAppService(
 	}
 }
 
+// canAssignRole enforces strict role ceiling: operator level must be strictly higher than target role.
+// Only super_admin may assign super_admin.
+func canAssignRole(operator *entity.User, targetRole entity.Role) bool {
+	if operator == nil {
+		return false
+	}
+	if targetRole == entity.RoleSuperAdmin {
+		return operator.IsSuperAdmin()
+	}
+	return entity.GetRoleLevel(operator.Role) > entity.GetRoleLevel(targetRole)
+}
+
 // Create create user
 func (s *UserAppService) Create(ctx context.Context, req *dto.CreateUserRequest, operators ...*entity.User) (*dto.UserResponse, error) {
 	req.Email = strings.TrimSpace(req.Email)
@@ -67,7 +79,16 @@ func (s *UserAppService) Create(ctx context.Context, req *dto.CreateUserRequest,
 	if len(operators) > 0 {
 		operator = operators[0]
 	}
-	if operator != nil && !operator.IsSuperAdmin() {
+	if operator == nil {
+		return nil, ErrCannotModify
+	}
+	if !isValidRole(req.Role) {
+		return nil, ErrInvalidRole
+	}
+	if !canAssignRole(operator, req.Role) {
+		return nil, ErrCannotModify
+	}
+	if !operator.IsSuperAdmin() {
 		decision, err := s.authz.CanCreateUserInOrg(ctx, operator, req.OrgID)
 		if err != nil {
 			return nil, err
@@ -93,10 +114,6 @@ func (s *UserAppService) Create(ctx context.Context, req *dto.CreateUserRequest,
 		if exists {
 			return nil, ErrEmailExists
 		}
-	}
-
-	if !isValidRole(req.Role) {
-		return nil, ErrInvalidRole
 	}
 
 	user, err := entity.NewUser(req.Nickname, req.Phone, req.OrgID, req.Role)
@@ -165,12 +182,22 @@ func (s *UserAppService) Update(ctx context.Context, id string, req *dto.UpdateU
 		if !isValidRole(req.Role) {
 			return nil, ErrInvalidRole
 		}
-		if !operator.HasPermission(req.Role) {
+		if !canAssignRole(operator, req.Role) {
 			return nil, ErrCannotModify
 		}
 		user.Role = req.Role
 	}
-	if req.OrgID != "" {
+	if req.OrgID != "" && req.OrgID != user.OrgID {
+		// Destination org must be within operator scope
+		if !operator.IsSuperAdmin() {
+			decision, scopeErr := s.authz.CanCreateUserInOrg(ctx, operator, req.OrgID)
+			if scopeErr != nil {
+				return nil, scopeErr
+			}
+			if !decision.Allowed {
+				return nil, ErrCannotModify
+			}
+		}
 		user.OrgID = req.OrgID
 	}
 	if req.Status != "" {
@@ -355,7 +382,7 @@ func (s *UserAppService) UpdateRole(ctx context.Context, id string, role entity.
 		return ErrCannotModify
 	}
 
-	if !operator.HasPermission(role) {
+	if !canAssignRole(operator, role) {
 		return ErrCannotModify
 	}
 

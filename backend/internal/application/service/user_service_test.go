@@ -77,9 +77,15 @@ func TestUserAppService_Create(t *testing.T) {
 		},
 	}
 
+	operator := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: "op-super"},
+		Role:       entity.RoleSuperAdmin,
+		OrgID:      org.ID,
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.Create(testutil.Context(), tt.req)
+			resp, err := service.Create(testutil.Context(), tt.req, operator)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -90,6 +96,56 @@ func TestUserAppService_Create(t *testing.T) {
 			assert.Equal(t, tt.req.Phone, resp.Phone)
 		})
 	}
+}
+
+func TestUserAppService_Create_RoleCeiling(t *testing.T) {
+	service, tdb := setupUserTest(t)
+	defer tdb.Close()
+
+	org := &entity.Organization{
+		BaseEntity: entity.BaseEntity{ID: "test-org-ceiling"},
+		Name:       "测试组织",
+		Code:       "CEIL001",
+		Type:       entity.OrgTypeCity,
+	}
+	testutil.MustCreate(t, tdb.DB, org)
+
+	admin := &entity.User{
+		BaseEntity: entity.BaseEntity{ID: "op-admin"},
+		Role:       entity.RoleAdmin,
+		OrgID:      org.ID,
+	}
+
+	// admin cannot create super_admin
+	_, err := service.Create(testutil.Context(), &dto.CreateUserRequest{
+		Nickname: "越权超管",
+		Phone:    "13900000001",
+		Password: "password123",
+		OrgID:    org.ID,
+		Role:     entity.RoleSuperAdmin,
+	}, admin)
+	assert.ErrorIs(t, err, ErrCannotModify)
+
+	// admin cannot create peer admin (strict ceiling)
+	_, err = service.Create(testutil.Context(), &dto.CreateUserRequest{
+		Nickname: "同级管理员",
+		Phone:    "13900000002",
+		Password: "password123",
+		OrgID:    org.ID,
+		Role:     entity.RoleAdmin,
+	}, admin)
+	assert.ErrorIs(t, err, ErrCannotModify)
+
+	// admin can create manager
+	resp, err := service.Create(testutil.Context(), &dto.CreateUserRequest{
+		Nickname: "合法管理者",
+		Phone:    "13900000003",
+		Password: "password123",
+		OrgID:    org.ID,
+		Role:     entity.RoleManager,
+	}, admin)
+	require.NoError(t, err)
+	assert.Equal(t, string(entity.RoleManager), resp.Role)
 }
 
 func TestUserAppService_GetByID(t *testing.T) {

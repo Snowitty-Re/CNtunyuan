@@ -90,6 +90,8 @@ func (h *UserHandler) Create(c *gin.Context) {
 			response.BadRequest(c, "invalid role")
 		case service.ErrInvalidOrgID:
 			response.BadRequest(c, "invalid organization id")
+		case service.ErrCannotModify:
+			response.Forbidden(c, "permission denied")
 		default:
 			logger.Error("Create user failed", logger.Err(err))
 			response.InternalServerError(c, "create user failed")
