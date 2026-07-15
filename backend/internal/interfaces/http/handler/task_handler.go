@@ -37,7 +37,7 @@ func (h *TaskHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *mi
 	{
 		tasks.GET("", h.List)
 		tasks.GET("/my", h.GetMyTasks)
-		tasks.GET("/pending", h.GetPendingTasks)
+		tasks.GET("/pending", middleware.RequireManager(), h.GetPendingTasks)
 		tasks.GET("/overdue", middleware.RequireManager(), h.GetOverdueTasks)
 		tasks.GET("/stats", h.GetStats)
 		tasks.GET("/:id", h.GetByID)

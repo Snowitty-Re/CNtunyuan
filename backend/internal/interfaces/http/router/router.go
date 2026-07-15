@@ -122,9 +122,12 @@ func NewRouter(
 
 // Setup 设置路由
 func (r *Router) Setup() {
-	// 本地存储静态文件路由（仅 local 模式）
+	// 本地存储静态文件：仅 debug 模式开放（生产应使用鉴权下载或 OSS/COS）
+	// release 下不挂载公开 /uploads，避免未鉴权直链访问
 	if cfg := config.GetConfig(); cfg != nil && cfg.Storage.Type == "local" && cfg.Storage.LocalPath != "" {
-		r.engine.Static("/uploads", cfg.Storage.LocalPath)
+		if strings.EqualFold(cfg.Server.Mode, "debug") {
+			r.engine.Static("/uploads", cfg.Storage.LocalPath)
+		}
 	}
 
 	// Swagger UI - 公开访问

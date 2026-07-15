@@ -261,11 +261,8 @@ func (s *FileAppService) canWriteFile(file *entity.File, userID string, isManage
 }
 
 func (s *FileAppService) canReadFile(file *entity.File, userID string, isManager bool) bool {
-	if s.canWriteFile(file, userID, isManager) {
-		return true
-	}
-	// 允许读取已绑定到业务实体的文件（案件/任务/方言等）
-	return file.EntityType != "" && file.EntityID != ""
+	// Manager 或上传者可读；不再对“任意已绑定实体文件”放行（防 IDOR）
+	return s.canWriteFile(file, userID, isManager)
 }
 
 // GetStats 获取文件统计
