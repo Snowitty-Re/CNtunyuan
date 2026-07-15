@@ -7,7 +7,7 @@ Page({
       {
         group: '通用',
         items: [
-          { icon: 'notification', title: '消息通知', type: 'switch', key: 'notification' },
+          { icon: 'notification', title: '消息通知（本地摘要）', type: 'switch', key: 'notification', value: true },
           { icon: 'delete', title: '清除缓存', type: 'action', key: 'clearCache' }
         ]
       },
@@ -26,12 +26,26 @@ Page({
 
   onLoad() {
     if (!app.ensureAuth || !app.ensureAuth()) return
+    this.syncNotificationSwitch()
     this.calculateCacheSize()
   },
 
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
+    this.syncNotificationSwitch()
     this.calculateCacheSize()
+  },
+
+  syncNotificationSwitch() {
+    const enabled = wx.getStorageSync('setting_notification')
+    const on = enabled === '' || enabled === undefined || enabled === null ? true : !!enabled
+    const settings = this.data.settings.map((group) => ({
+      ...group,
+      items: group.items.map((item) =>
+        item.key === 'notification' ? { ...item, value: on } : item
+      )
+    }))
+    this.setData({ settings })
   },
 
   // 计算缓存大小
@@ -58,8 +72,20 @@ Page({
         this.handleAction(item.key)
         break
       case 'switch':
-        // 处理开关
         break
+    }
+  },
+
+  onSwitchChange(e) {
+    const key = e.currentTarget.dataset.key
+    const next = !!e.detail.value
+    if (key === 'notification') {
+      wx.setStorageSync('setting_notification', next)
+      this.syncNotificationSwitch()
+      wx.showToast({
+        title: next ? '已开启本地摘要' : '已关闭本地摘要',
+        icon: 'none'
+      })
     }
   },
 
@@ -74,11 +100,19 @@ Page({
             const token = wx.getStorageSync('token')
             const refreshToken = wx.getStorageSync('refresh_token')
             const userInfo = wx.getStorageSync('userInfo')
+            const policyAgreement = wx.getStorageSync('policyAgreement')
+            const settingNotification = wx.getStorageSync('setting_notification')
             wx.clearStorageSync()
-            // 恢复登录数据
+            // 恢复登录数据与协议勾选
             if (token) wx.setStorageSync('token', token)
             if (refreshToken) wx.setStorageSync('refresh_token', refreshToken)
             if (userInfo) wx.setStorageSync('userInfo', userInfo)
+            if (policyAgreement !== '' && policyAgreement !== undefined) {
+              wx.setStorageSync('policyAgreement', policyAgreement)
+            }
+            if (settingNotification !== '' && settingNotification !== undefined) {
+              wx.setStorageSync('setting_notification', settingNotification)
+            }
             wx.showToast({
               title: '清除成功',
               icon: 'success'

@@ -7,7 +7,7 @@
     <view class="header-content">
       <view class="header-top">
         <view class="title-row">
-          <text class="page-title">消息通知</text>
+          <text class="page-title">动态摘要</text>
           <view class="unread-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}</view>
         </view>
         <view class="header-actions">

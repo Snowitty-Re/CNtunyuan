@@ -16,7 +16,7 @@
         <button size="mini" class="btn" data-index="{{index}}" bindtap="onOrgActions">管理</button>
       </view>
     </view>
-    <view class="empty" wx:if="{{!loading && list.length === 0}}">暂无组织数据</view>
+    <empty-state show="{{!loading && list.length === 0}}" text="暂无组织数据" subText="点击右上角新建组织" />
     <view class="loading" wx:if="{{loading}}">加载中...</view>
     <view class="nomore" wx:if="{{!loading && noMore && list.length > 0}}">没有更多了</view>
   </view>

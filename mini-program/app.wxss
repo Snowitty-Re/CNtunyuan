@@ -4,6 +4,7 @@
 page {
   --primary: #FF8C42;
   --primary-dark: #E67E22;
+  --primary-mid: #FF6B35;
   --primary-light: #FFF7E6;
   --success: #52c41a;
   --danger: #ff4d4f;
@@ -55,7 +56,7 @@ page {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-mid) 100%);
   color: #fff;
 }
 

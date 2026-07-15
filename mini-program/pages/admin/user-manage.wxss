@@ -1,7 +1,13 @@
-.page { min-height: 100vh; background: #FDF8F3; padding: 20rpx; box-sizing: border-box; }
-.toolbar { margin-bottom: 12rpx; display: flex; justify-content: flex-end; }
-.pending-btn { margin-right: 12rpx; background: #FFF7E6; color: #D46B08; border-radius: 10rpx; padding: 0 20rpx; }
-.create-btn { background: #FF8C42; color: #fff; border-radius: 10rpx; padding: 0 24rpx; }
+.page { min-height: 100vh; background: var(--bg, #FDF8F3); padding: 24rpx; box-sizing: border-box; }
+.toolbar { margin-bottom: 16rpx; display: flex; justify-content: flex-end; align-items: center; }
+.pending-btn { margin-right: 12rpx; background: var(--primary-light, #FFF7E6); color: #D46B08; border-radius: 12rpx; padding: 0 20rpx; }
+.create-btn {
+  background: linear-gradient(135deg, var(--primary, #FF8C42) 0%, var(--primary-mid, #FF6B35) 100%);
+  color: #fff;
+  border-radius: 12rpx;
+  padding: 0 24rpx;
+  border: none;
+}
 .search-row { display: flex; gap: 12rpx; }
 .search-input { flex: 1; height: 72rpx; background: #fff; border-radius: 12rpx; padding: 0 18rpx; border: 1rpx solid #eee; }
 .search-btn { height: 72rpx; line-height: 72rpx; background: #FF8C42; color: #fff; border-radius: 12rpx; padding: 0 24rpx; }
@@ -10,9 +16,19 @@
 .filter-picker { height: 68rpx; line-height: 68rpx; background: #fff; border-radius: 10rpx; border: 1rpx solid #eee; padding: 0 16rpx; color: #6E5C4B; font-size: 24rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tabs { display: flex; gap: 12rpx; margin-top: 16rpx; }
 .tab { flex: 1; text-align: center; padding: 14rpx 0; border-radius: 10rpx; background: #fff; color: #8C7B6B; }
-.tab.active { background: #FF8C42; color: #fff; font-weight: 600; }
+.tab.active {
+  background: linear-gradient(135deg, var(--primary, #FF8C42) 0%, var(--primary-mid, #FF6B35) 100%);
+  color: #fff;
+  font-weight: 600;
+}
 .list { margin-top: 16rpx; }
-.card { background: #fff; border-radius: 14rpx; padding: 18rpx; margin-bottom: 14rpx; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05); }
+.card {
+  background: var(--bg-card, #fff);
+  border-radius: var(--card-radius, 16rpx);
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(120, 70, 20, 0.06);
+}
 .top { display: flex; justify-content: space-between; align-items: center; }
 .name { font-size: 30rpx; color: #2D1F10; font-weight: 600; margin-right: 12rpx; }
 .phone { font-size: 24rpx; color: #8C7B6B; }

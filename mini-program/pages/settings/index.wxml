@@ -29,7 +29,14 @@
           <text class="item-title">{{setting.title}}</text>
           <view class="item-extra">
             <text wx:if="{{setting.key === 'clearCache'}}" class="cache-size">{{cacheSize}}</text>
-            <text class="iconfont icon-arrow-right item-arrow"></text>
+            <switch
+              wx:if="{{setting.type === 'switch'}}"
+              checked="{{setting.value}}"
+              color="#FF8C42"
+              data-key="{{setting.key}}"
+              catchchange="onSwitchChange"
+            />
+            <text wx:elif="{{setting.type !== 'switch'}}" class="iconfont icon-arrow-right item-arrow"></text>
           </view>
         </view>
       </view>

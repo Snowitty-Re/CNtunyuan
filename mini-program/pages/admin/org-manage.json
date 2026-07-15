@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "组织管理"
+  "navigationBarTitleText": "组织管理",
+  "usingComponents": {
+    "empty-state": "/components/empty/empty"
+  }
 }
