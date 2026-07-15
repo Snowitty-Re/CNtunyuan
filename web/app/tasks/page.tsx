@@ -1,725 +1,196 @@
 'use client'
 
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { App, Button, Card, Input, Progress, Select, Space, Table, Tag, Typography } from 'antd'
 import Link from 'next/link'
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { ModuleHeader } from '@/components/shared/ModuleHeader'
-import { ConfirmButton } from '@/components/shared/ConfirmButton'
-import { PageState } from '@/components/shared/PageState'
-import { Pagination } from '@/components/shared/Pagination'
-import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
-import { StatusTag } from '@/components/shared/StatusTag'
-import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { fmtTime, listFrom } from '@/lib/data'
 import { taskService } from '@/services/tasks'
-import { userService } from '@/services/users'
-import type { Task, User } from '@/types/api'
+import type { Task } from '@/types/api'
 
-const TASK_FILTER_KEY = 'web_tasks_filters_v1'
-const TASK_COL_KEY = 'web_tasks_columns_v1'
-const TASK_LIST_IDS_KEY = 'web_tasks_list_ids_v1'
-const TASK_DENSITY_KEY = 'web_tasks_density_v1'
+const STATUS_OPTIONS = [
+  { value: 'draft', label: '草稿' },
+  { value: 'pending', label: '待处理' },
+  { value: 'assigned', label: '已分配' },
+  { value: 'in_progress', label: '进行中' },
+  { value: 'completed', label: '已完成' },
+  { value: 'cancelled', label: '已取消' },
+  { value: 'overdue', label: '已逾期' },
+]
+
+const statusColor: Record<string, string> = {
+  draft: 'default',
+  pending: 'warning',
+  assigned: 'processing',
+  in_progress: 'processing',
+  completed: 'success',
+  cancelled: 'default',
+  overdue: 'error',
+}
+
+const priorityColor: Record<string, string> = {
+  low: 'default',
+  normal: 'blue',
+  medium: 'blue',
+  high: 'orange',
+  urgent: 'red',
+}
 
 export default function TasksPage() {
   const { ready } = useAuthGuard()
+  const { message } = App.useApp()
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [items, setItems] = useState<Task[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [status, setStatus] = useState('')
+  const [pageSize, setPageSize] = useState(20)
   const [keyword, setKeyword] = useState('')
-  const [priority, setPriority] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [assigneeId, setAssigneeId] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [sortBy, setSortBy] = useState('deadline')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-  const [newTitle, setNewTitle] = useState('')
-  const [users, setUsers] = useState<User[]>([])
-  const [assignMap, setAssignMap] = useState<Record<string, string>>({})
-  const [batchAssigneeId, setBatchAssigneeId] = useState('')
-  const [stats, setStats] = useState<Record<string, number>>({})
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [createOpen, setCreateOpen] = useState(false)
-  const [batchCancelOpen, setBatchCancelOpen] = useState(false)
-  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false)
-  const [notice, setNotice] = useState<Notice | null>(null)
-  const [booted, setBooted] = useState(false)
-  const [columnVisible, setColumnVisible] = useState<Record<string, boolean>>({
-    title: true,
-    status: true,
-    priority: true,
-    progress: true,
-    deadline: true,
-    actions: true,
-  })
-  const [compactTable, setCompactTable] = useState(false)
-  const sortedItems = useMemo(() => {
-    const list = [...items]
-    const factor = sortOrder === 'asc' ? 1 : -1
-    const rank: Record<string, number> = { low: 1, normal: 2, medium: 3, high: 4, urgent: 5 }
-    list.sort((a, b) => {
-      if (sortBy === 'progress') {
-        return (((a.progress ?? 0) - (b.progress ?? 0)) * factor)
-      }
-      if (sortBy === 'priority') {
-        return ((rank[a.priority || 'normal'] - rank[b.priority || 'normal']) * factor)
-      }
-      const aTime = new Date(a.deadline || a.created_at || 0).getTime()
-      const bTime = new Date(b.deadline || b.created_at || 0).getTime()
-      return (aTime - bTime) * factor
-    })
-    return list
-  }, [items, sortBy, sortOrder])
-  const allSelected = sortedItems.length > 0 && selectedIds.length === sortedItems.length
+  const [status, setStatus] = useState<string | undefined>()
 
-  async function load(
-    nextPage = page,
-    nextStatus = status,
-    filters?: {
-      keyword?: string
-      priority?: string
-      type?: string
-      assigneeId?: string
-      startTime?: string
-      endTime?: string
-    },
-  ) {
+  const load = useCallback(async () => {
     setLoading(true)
-    setError('')
     try {
-      const qKeyword = filters?.keyword ?? keyword
-      const qPriority = filters?.priority ?? priority
-      const qType = filters?.type ?? typeFilter
-      const qAssignee = filters?.assigneeId ?? assigneeId
-      const qStart = filters?.startTime ?? startTime
-      const qEnd = filters?.endTime ?? endTime
       const data = await taskService.list({
-        page: nextPage,
-        page_size: 20,
-        status: nextStatus || undefined,
-        keyword: qKeyword || undefined,
-        priority: qPriority || undefined,
-        type: qType || undefined,
-        assignee_id: qAssignee || undefined,
-        start_time: qStart ? new Date(qStart).toISOString() : undefined,
-        end_time: qEnd ? new Date(qEnd).toISOString() : undefined,
+        page,
+        page_size: pageSize,
+        keyword: keyword || undefined,
+        status: status || undefined,
       })
       const normalized = listFrom<Task>(data)
       setItems(normalized.list)
       setTotal(normalized.total)
-      setPage(nextPage)
-      setSelectedIds([])
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败')
+      message.error(err instanceof Error ? err.message : '加载失败')
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, pageSize, keyword, status, message])
 
-  async function quickCreate(e: FormEvent) {
-    e.preventDefault()
-    if (!newTitle.trim()) return
-    try {
-      await taskService.create({
-        title: newTitle.trim(),
-        type: 'general',
-        priority: 'medium',
-        status: 'pending',
-      })
-      setNewTitle('')
-      load(1)
-      loadStats()
-      setCreateOpen(false)
-      setNotice({ type: 'success', text: '任务创建成功' })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
-    }
-  }
+  useEffect(() => {
+    if (ready) load()
+  }, [ready, load])
 
-  async function loadUsers() {
-    try {
-      const data = await userService.list({ page: 1, page_size: 200, status: 'active' })
-      setUsers(listFrom<User>(data).list)
-    } catch {
-      setUsers([])
-    }
-  }
-
-  function resetFilters() {
-    setStatus('')
-    setKeyword('')
-    setPriority('')
-    setTypeFilter('')
-    setAssigneeId('')
-    setStartTime('')
-    setEndTime('')
-    setSortBy('deadline')
-    setSortOrder('asc')
-    load(1, '', { keyword: '', priority: '', type: '', assigneeId: '', startTime: '', endTime: '' })
-  }
-
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-  }
-
-  function toggleSelectAll(checked: boolean) {
-    setSelectedIds(checked ? sortedItems.map((x) => x.id) : [])
-  }
-
-  function invertSelection() {
-    const visibleIds = sortedItems.map((x) => x.id)
-    setSelectedIds((prev) => visibleIds.filter((id) => !prev.includes(id)))
-  }
-
-  async function batchAssign() {
-    if (selectedIds.length === 0) {
-      setNotice({ type: 'info', text: '请先勾选任务' })
-      return
-    }
-    const fallbackIds = Array.from(new Set(selectedIds.map((id) => assignMap[id]).filter(Boolean))) as string[]
-    const assigneeId = batchAssigneeId || (fallbackIds.length === 1 ? fallbackIds[0] : '')
-    if (!assigneeId) {
-      setNotice({ type: 'info', text: '请选择批量执行人，或为所选任务设置同一个执行人' })
-      return
-    }
-    try {
-      await Promise.all(selectedIds.map((id) => taskService.assign(id, assigneeId)))
-      load(page)
-      loadStats()
-      setBatchAssigneeId('')
-      setNotice({ type: 'success', text: `已批量分配 ${selectedIds.length} 个任务` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量分配失败' })
-    }
-  }
-
-  async function batchStart() {
-    if (selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => taskService.start(id)))
-      load(page)
-      loadStats()
-      setNotice({ type: 'success', text: `已批量开始 ${selectedIds.length} 个任务` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量开始失败' })
-    }
-  }
-
-  async function batchCancel() {
-    if (selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => taskService.cancel(id, '批量取消')))
-      load(page)
-      loadStats()
-      setNotice({ type: 'success', text: `已批量取消 ${selectedIds.length} 个任务` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量取消失败' })
-    }
-  }
-
-  async function batchComplete() {
-    if (selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => taskService.complete(id, { result: '批量完成', feedback: 'web批量操作' })))
-      load(page)
-      loadStats()
-      setNotice({ type: 'success', text: `已批量完成 ${selectedIds.length} 个任务` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量完成失败' })
-    }
-  }
-
-  async function batchDelete() {
-    if (selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => taskService.remove(id)))
-      load(page)
-      loadStats()
-      setNotice({ type: 'success', text: `已批量删除 ${selectedIds.length} 个任务` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量删除失败' })
-    }
-  }
-
-  function exportCsv() {
-    const rows = selectedIds.length > 0 ? sortedItems.filter((x) => selectedIds.includes(x.id)) : sortedItems
-    if (rows.length === 0) return
-    const headers = ['id', 'title', 'type', 'priority', 'status', 'progress', 'assignee', 'missing_person', 'deadline', 'created_at']
-    const lines = rows.map((row) =>
-      [
-        row.id,
-        row.title || '',
-        row.type || '',
-        row.priority || '',
-        row.status || '',
-        row.progress ?? 0,
-        row.assignee?.nickname || row.assignee?.phone || row.assignee_id || '',
-        row.missing_person?.name || row.missing_person_id || '',
-        row.deadline || '',
-        row.created_at || '',
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(','),
+  if (!ready) {
+    return (
+      <AppShell>
+        <Card loading />
+      </AppShell>
     )
-    const content = `\ufeff${[headers.join(','), ...lines].join('\n')}`
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `tasks-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    setNotice({ type: 'success', text: `已导出 ${rows.length} 条任务` })
   }
-
-  async function loadStats() {
-    try {
-      const data = await taskService.stats()
-      setStats({
-        total: Number(data.total || 0),
-        pending: Number(data.pending || 0),
-        assigned: Number(data.assigned || 0),
-        processing: Number(data.processing || 0),
-        completed: Number(data.completed || 0),
-        cancelled: Number(data.cancelled || 0),
-      })
-    } catch {
-      setStats({})
-    }
-  }
-
-  useEffect(() => {
-    if (ready && !booted) {
-      if (typeof window !== 'undefined') {
-        try {
-          const savedFilter = JSON.parse(localStorage.getItem(TASK_FILTER_KEY) || '{}')
-          const savedCols = JSON.parse(localStorage.getItem(TASK_COL_KEY) || '{}')
-          if (savedFilter && typeof savedFilter === 'object') {
-            setStatus(savedFilter.status || '')
-            setKeyword(savedFilter.keyword || '')
-            setPriority(savedFilter.priority || '')
-            setTypeFilter(savedFilter.typeFilter || '')
-            setAssigneeId(savedFilter.assigneeId || '')
-            setStartTime(savedFilter.startTime || '')
-            setEndTime(savedFilter.endTime || '')
-            setSortBy(savedFilter.sortBy || 'deadline')
-            setSortOrder(savedFilter.sortOrder || 'asc')
-            load(1, savedFilter.status || '', {
-              keyword: savedFilter.keyword || '',
-              priority: savedFilter.priority || '',
-              type: savedFilter.typeFilter || '',
-              assigneeId: savedFilter.assigneeId || '',
-              startTime: savedFilter.startTime || '',
-              endTime: savedFilter.endTime || '',
-            })
-          } else {
-            load(1)
-          }
-          if (savedCols && typeof savedCols === 'object') {
-            setColumnVisible((prev) => ({ ...prev, ...savedCols }))
-          }
-          setCompactTable(localStorage.getItem(TASK_DENSITY_KEY) === 'compact')
-        } catch {
-          load(1)
-        }
-      } else {
-        load(1)
-      }
-      loadUsers()
-      loadStats()
-      setBooted(true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, booted])
-
-  useEffect(() => {
-    if (!ready || !booted || typeof window === 'undefined') return
-    localStorage.setItem(
-      TASK_FILTER_KEY,
-      JSON.stringify({ status, keyword, priority, typeFilter, assigneeId, startTime, endTime, sortBy, sortOrder }),
-    )
-  }, [ready, booted, status, keyword, priority, typeFilter, assigneeId, startTime, endTime, sortBy, sortOrder])
-
-  useEffect(() => {
-    if (!ready || !booted || typeof window === 'undefined') return
-    localStorage.setItem(TASK_COL_KEY, JSON.stringify(columnVisible))
-  }, [ready, booted, columnVisible])
-
-  useEffect(() => {
-    if (!ready || !booted || typeof window === 'undefined') return
-    localStorage.setItem(TASK_DENSITY_KEY, compactTable ? 'compact' : 'comfortable')
-  }, [ready, booted, compactTable])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    localStorage.setItem(TASK_LIST_IDS_KEY, JSON.stringify(sortedItems.map((x) => x.id)))
-  }, [sortedItems])
-
-  if (!ready) return null
 
   return (
     <AppShell>
-      <ModuleHeader
-        title="任务中心"
-        desc="任务创建、分配、执行、跟进和闭环审批"
-        right={
-          <div className="row wrap">
-            <button className="btn" type="button" onClick={() => setCreateOpen(true)}>
-              快速新建
-            </button>
-            <Link className="btn primary" href="/tasks/create">
-              新建任务
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+          <div>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              任务中心
+            </Typography.Title>
+            <Typography.Text type="secondary">分配、执行与跟进审批</Typography.Text>
+          </div>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={() => load()}>
+              刷新
+            </Button>
+            <Link href="/tasks/create">
+              <Button type="primary" icon={<PlusOutlined />}>
+                新建任务
+              </Button>
             </Link>
-          </div>
-        }
-      />
-      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
-      <div className="kpi-grid" style={{ marginBottom: 12 }}>
-        <div className="kpi">
-          <div className="label">总任务</div>
-          <div className="value">{stats.total || 0}</div>
-        </div>
-        <div className="kpi">
-          <div className="label">待分配</div>
-          <div className="value">{stats.pending || 0}</div>
-        </div>
-        <div className="kpi">
-          <div className="label">进行中</div>
-          <div className="value">{stats.processing || 0}</div>
-        </div>
-        <div className="kpi">
-          <div className="label">已完成</div>
-          <div className="value">{stats.completed || 0}</div>
-        </div>
-      </div>
-      <div className="grid cols-2">
-        <form
-          className="panel row wrap"
-          onSubmit={(e) => {
-            e.preventDefault()
-            load(1)
-          }}
-        >
-          <input
-            className="input"
-            style={{ minWidth: 220 }}
-            placeholder="关键词（标题/描述）"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-          <button
-            className={`btn ${status === '' ? 'primary' : ''}`}
-            type="button"
-            onClick={() => {
-              const next = ''
-              setStatus(next)
-              load(1, next)
-            }}
-          >
-            全部
-          </button>
-          <button
-            className={`btn ${status === 'pending' ? 'primary' : ''}`}
-            type="button"
-            onClick={() => {
-              const next = 'pending'
-              setStatus(next)
-              load(1, next)
-            }}
-          >
-            待分配
-          </button>
-          <button
-            className={`btn ${status === 'processing' ? 'primary' : ''}`}
-            type="button"
-            onClick={() => {
-              const next = 'processing'
-              setStatus(next)
-              load(1, next)
-            }}
-          >
-            进行中
-          </button>
-          <button
-            className={`btn ${status === 'completed' ? 'primary' : ''}`}
-            type="button"
-            onClick={() => {
-              const next = 'completed'
-              setStatus(next)
-              load(1, next)
-            }}
-          >
-            已完成
-          </button>
-          <select className="select" value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">全部状态</option>
-            <option value="pending">待分配</option>
-            <option value="assigned">已分配</option>
-            <option value="processing">进行中</option>
-            <option value="completed">已完成</option>
-            <option value="cancelled">已取消</option>
-          </select>
-          <select className="select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-            <option value="">全部类型</option>
-            <option value="general">general</option>
-            <option value="search">search</option>
-            <option value="verify">verify</option>
-            <option value="field">field</option>
-          </select>
-          <select className="select" value={priority} onChange={(e) => setPriority(e.target.value)}>
-            <option value="">全部优先级</option>
-            <option value="low">low</option>
-            <option value="normal">normal</option>
-            <option value="medium">medium</option>
-            <option value="high">high</option>
-            <option value="urgent">urgent</option>
-          </select>
-          <select className="select" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-            <option value="">全部执行人</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nickname || u.phone || u.id}
-              </option>
-            ))}
-          </select>
-          <input className="input" type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-          <input className="input" type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-          <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="deadline">按截止时间</option>
-            <option value="priority">按优先级</option>
-            <option value="progress">按进度</option>
-          </select>
-          <select className="select" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}>
-            <option value="asc">升序</option>
-            <option value="desc">降序</option>
-          </select>
-          <button className="btn" type="submit">
-            筛选
-          </button>
-          <button className="btn ghost" type="button" onClick={resetFilters}>
-            重置
-          </button>
-        </form>
-        <div className="panel row wrap">
-          <b>批量操作</b>
-          <span>已选 {selectedIds.length} 项</span>
-          <button className="btn ghost" type="button" onClick={() => toggleSelectAll(true)}>
-            全选本页
-          </button>
-          <button className="btn ghost" type="button" onClick={() => toggleSelectAll(false)}>
-            清空选择
-          </button>
-          <button className="btn ghost" type="button" onClick={invertSelection}>
-            反选
-          </button>
-          <select className="select" style={{ minWidth: 180 }} value={batchAssigneeId} onChange={(e) => setBatchAssigneeId(e.target.value)}>
-            <option value="">选择批量执行人</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nickname || u.phone || u.id}
-              </option>
-            ))}
-          </select>
-          <button className="btn" type="button" onClick={batchAssign}>
-            批量分配
-          </button>
-          <button className="btn" type="button" onClick={batchStart}>
-            批量开始
-          </button>
-          <button className="btn" type="button" onClick={batchComplete}>
-            批量完成
-          </button>
-          <button className="btn danger" type="button" onClick={() => setBatchCancelOpen(true)} disabled={selectedIds.length === 0}>
-            批量取消
-          </button>
-          <button className="btn danger" type="button" onClick={() => setBatchDeleteOpen(true)} disabled={selectedIds.length === 0}>
-            批量删除
-          </button>
-          <button className="btn" type="button" onClick={exportCsv}>
-            导出CSV
-          </button>
-        </div>
-      </div>
-      <div className="panel row wrap">
-        <b>列显示</b>
-        <label><input type="checkbox" checked={columnVisible.title} onChange={(e) => setColumnVisible((v) => ({ ...v, title: e.target.checked }))} /> 标题</label>
-        <label><input type="checkbox" checked={columnVisible.status} onChange={(e) => setColumnVisible((v) => ({ ...v, status: e.target.checked }))} /> 状态</label>
-        <label><input type="checkbox" checked={columnVisible.priority} onChange={(e) => setColumnVisible((v) => ({ ...v, priority: e.target.checked }))} /> 优先级</label>
-        <label><input type="checkbox" checked={columnVisible.progress} onChange={(e) => setColumnVisible((v) => ({ ...v, progress: e.target.checked }))} /> 进度</label>
-        <label><input type="checkbox" checked={columnVisible.deadline} onChange={(e) => setColumnVisible((v) => ({ ...v, deadline: e.target.checked }))} /> 截止时间</label>
-        <label><input type="checkbox" checked={columnVisible.actions} onChange={(e) => setColumnVisible((v) => ({ ...v, actions: e.target.checked }))} /> 操作</label>
-        <span style={{ marginLeft: 'auto' }} />
-        <button className={`btn ${compactTable ? '' : 'primary'}`} type="button" onClick={() => setCompactTable(false)}>
-          舒适
-        </button>
-        <button className={`btn ${compactTable ? 'primary' : ''}`} type="button" onClick={() => setCompactTable(true)}>
-          紧凑
-        </button>
-      </div>
+          </Space>
+        </Space>
 
-      <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
-      {!loading && !error && items.length > 0 ? (
-        <>
-          <div className="table-wrap">
-            <table className={`table ${compactTable ? 'compact' : ''}`}>
-              <thead>
-                <tr>
-                  <th>
-                    <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
-                  </th>
-                  {columnVisible.title ? <th>标题</th> : null}
-                  {columnVisible.status ? <th>状态</th> : null}
-                  {columnVisible.priority ? <th>优先级</th> : null}
-                  {columnVisible.progress ? <th>进度</th> : null}
-                  {columnVisible.deadline ? <th>截止时间</th> : null}
-                  {columnVisible.actions ? <th>操作</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedItems.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} />
-                    </td>
-                    {columnVisible.title ? <td>{row.title}</td> : null}
-                    {columnVisible.status ? (
-                      <td>
-                        <StatusTag status={row.status || '-'} />
-                      </td>
-                    ) : null}
-                    {columnVisible.priority ? <td>{row.priority || '-'}</td> : null}
-                    {columnVisible.progress ? <td>{row.progress ?? 0}%</td> : null}
-                    {columnVisible.deadline ? <td>{fmtTime(row.deadline || row.created_at)}</td> : null}
-                    {columnVisible.actions ? <td>
-                      <div className="row wrap">
-                        <Link className="btn ghost" href={`/tasks/${row.id}`}>
-                          详情
-                        </Link>
-                        {row.status === 'assigned' ? (
-                          <button className="btn" type="button" onClick={() => taskService.start(row.id).then(() => load(page))}>
-                            开始
-                          </button>
-                        ) : null}
-                        {(row.status === 'pending' || row.status === 'assigned') && users.length > 0 ? (
-                          <>
-                            <select
-                              className="select"
-                              style={{ minWidth: 150 }}
-                              value={assignMap[row.id] || ''}
-                              onChange={(e) =>
-                                setAssignMap((prev) => ({
-                                  ...prev,
-                                  [row.id]: e.target.value,
-                                }))
-                              }
-                            >
-                              <option value="">选择执行人</option>
-                              {users.map((u) => (
-                                <option key={u.id} value={u.id}>
-                                  {u.nickname || u.phone || u.id}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              className="btn"
-                              type="button"
-                              onClick={() => {
-                                const assigneeId = assignMap[row.id]
-                                if (!assigneeId) return
-                                taskService.assign(row.id, assigneeId).then(() => {
-                                  load(page)
-                                  loadStats()
-                                })
-                              }}
-                            >
-                              分配
-                            </button>
-                          </>
-                        ) : null}
-                        {row.status === 'processing' ? (
-                          <button
-                            className="btn"
-                            type="button"
-                            onClick={() =>
-                              taskService.complete(row.id, { result: 'web端提交完成', feedback: '已处理' }).then(() => {
-                                load(page)
-                                loadStats()
-                              })
-                            }
-                          >
-                            完成
-                          </button>
-                        ) : null}
-                        <ConfirmButton
-                          text="删除"
-                          message="确认删除该任务？"
-                          onConfirm={() => {
-                            taskService.remove(row.id).then(() => load(page))
-                          }}
-                          className="btn danger"
-                        />
-                      </div>
-                    </td> : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Pagination page={page} pageSize={20} total={total} onChange={load} />
-        </>
-      ) : null}
-      <Dialog open={createOpen} title="快速创建任务" onClose={() => setCreateOpen(false)}>
-        <form className="row wrap" onSubmit={quickCreate}>
-          <input className="input" placeholder="任务标题（必填）" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-          <button className="btn primary" type="submit">
-            创建任务
-          </button>
-        </form>
-      </Dialog>
-      <Dialog open={batchCancelOpen} title="确认批量取消" onClose={() => setBatchCancelOpen(false)}>
-        <div className="grid">
-          <div>确认批量取消 {selectedIds.length} 个任务？</div>
-          <div className="row">
-            <button className="btn ghost" type="button" onClick={() => setBatchCancelOpen(false)}>
-              取消
-            </button>
-            <button
-              className="btn danger"
-              type="button"
-              onClick={() => {
-                setBatchCancelOpen(false)
-                batchCancel()
+        <Card size="small">
+          <Space wrap style={{ marginBottom: 12 }}>
+            <Input.Search
+              allowClear
+              placeholder="任务标题关键词"
+              style={{ width: 240 }}
+              onSearch={(v) => {
+                setPage(1)
+                setKeyword(v.trim())
               }}
-            >
-              确认取消
-            </button>
-          </div>
-        </div>
-      </Dialog>
-      <Dialog open={batchDeleteOpen} title="确认批量删除" onClose={() => setBatchDeleteOpen(false)}>
-        <div className="grid">
-          <div>确认批量删除 {selectedIds.length} 个任务？该操作不可恢复。</div>
-          <div className="row">
-            <button className="btn ghost" type="button" onClick={() => setBatchDeleteOpen(false)}>
-              取消
-            </button>
-            <button
-              className="btn danger"
-              type="button"
-              onClick={() => {
-                setBatchDeleteOpen(false)
-                batchDelete()
+            />
+            <Select
+              allowClear
+              placeholder="状态"
+              style={{ width: 140 }}
+              options={STATUS_OPTIONS}
+              value={status}
+              onChange={(v) => {
+                setPage(1)
+                setStatus(v)
               }}
-            >
-              确认删除
-            </button>
-          </div>
-        </div>
-      </Dialog>
+            />
+          </Space>
+
+          <Table
+            rowKey="id"
+            size="small"
+            loading={loading}
+            dataSource={items}
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              showSizeChanger: true,
+              onChange: (p, ps) => {
+                setPage(p)
+                setPageSize(ps)
+              },
+            }}
+            columns={[
+              {
+                title: '标题',
+                dataIndex: 'title',
+                render: (title: string, row) => <Link href={`/tasks/${row.id}`}>{title}</Link>,
+              },
+              {
+                title: '状态',
+                dataIndex: 'status',
+                width: 110,
+                render: (s: string) => <Tag color={statusColor[s] || 'default'}>{s || '-'}</Tag>,
+              },
+              {
+                title: '优先级',
+                dataIndex: 'priority',
+                width: 100,
+                render: (p: string) => <Tag color={priorityColor[p] || 'default'}>{p || 'normal'}</Tag>,
+              },
+              {
+                title: '进度',
+                dataIndex: 'progress',
+                width: 140,
+                render: (p?: number) => <Progress percent={Number(p || 0)} size="small" />,
+              },
+              {
+                title: '负责人',
+                width: 120,
+                render: (_, row) => row.assignee?.nickname || row.assignee?.phone || '-',
+              },
+              {
+                title: '截止',
+                dataIndex: 'deadline',
+                width: 170,
+                render: (t: string) => fmtTime(t),
+              },
+              {
+                title: '操作',
+                width: 100,
+                render: (_, row) => (
+                  <Link href={`/tasks/${row.id}`}>
+                    <Button type="link" size="small">
+                      详情
+                    </Button>
+                  </Link>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      </Space>
     </AppShell>
   )
 }
