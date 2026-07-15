@@ -1,6 +1,6 @@
 const organizationService = require('../../services/organization')
 const { showToast, showLoading, hideLoading } = require('../../utils/util')
-const { ACTIONS } = require('../../utils/permission')
+const { ACTIONS, isSuperAdminRole } = require('../../utils/permission')
 const app = getApp()
 
 const ORG_TYPES = [
@@ -29,6 +29,7 @@ Page({
     parentOptions: [{ id: '', name: '无（顶级组织）' }],
     parentIndex: 0,
     originalParentId: '',
+    allowRootOrg: false,
     form: {
       name: '',
       code: '',
@@ -51,10 +52,13 @@ Page({
       return
     }
 
+    const operator = wx.getStorageSync('userInfo') || app.globalData.userInfo || {}
+    const allowRootOrg = isSuperAdminRole(operator)
     const id = options && options.id ? options.id : ''
     this.setData({
       id,
-      isEdit: !!id
+      isEdit: !!id,
+      allowRootOrg
     })
     wx.setNavigationBarTitle({
       title: id ? '编辑组织' : '新建组织'
@@ -69,7 +73,7 @@ Page({
   async loadParentOptions() {
     try {
       const tree = await organizationService.getTree()
-      const options = [{ id: '', name: '无（顶级组织）' }]
+      const options = this.data.allowRootOrg ? [{ id: '', name: '无（顶级组织）' }] : []
       const walk = (node, level) => {
         if (!node || !node.id) return
         const prefix = level > 0 ? `${'　'.repeat(level)}└ ` : ''
@@ -85,7 +89,12 @@ Page({
       } else {
         walk(tree, 0)
       }
-      this.setData({ parentOptions: options })
+      const patch = { parentOptions: options }
+      if (!this.data.isEdit && !this.data.allowRootOrg && options.length > 0 && !this.data.form.parent_id) {
+        patch.parentIndex = 0
+        patch['form.parent_id'] = options[0].id
+      }
+      this.setData(patch)
     } catch (e) {
       showToast('加载组织列表失败')
     }
@@ -189,6 +198,10 @@ Page({
     }
     if (this.data.id && form.parent_id && form.parent_id === this.data.id) {
       showToast('父组织不能选择自己')
+      return false
+    }
+    if (!this.data.isEdit && !form.parent_id && !this.data.allowRootOrg) {
+      showToast('请选择父组织（仅超管可建顶级）')
       return false
     }
     return true

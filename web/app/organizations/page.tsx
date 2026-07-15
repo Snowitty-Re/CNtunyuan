@@ -33,7 +33,7 @@ import { AppShell } from '@/components/layout/AppShell'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { listFrom } from '@/lib/data'
 import { ORG_STATUS_OPTIONS, ORG_TYPE_OPTIONS, orgStatusLabel, orgTypeLabel } from '@/lib/orgTypes'
-import { isAdmin } from '@/lib/rbac'
+import { isAdmin, isSuperAdmin } from '@/lib/rbac'
 import { organizationService } from '@/services/organizations'
 import type { Organization } from '@/types/api'
 
@@ -77,6 +77,7 @@ export default function OrganizationsPage() {
   const { ready, user } = useAuthGuard({ requireAdmin: true })
   const { message } = App.useApp()
   const canWrite = isAdmin(user)
+  const allowRootOrg = isSuperAdmin(user)
 
   const [loading, setLoading] = useState(true)
   const [tree, setTree] = useState<Organization[]>([])
@@ -161,13 +162,18 @@ export default function OrganizationsPage() {
   }, [selectedId, ready])
 
   async function onCreate(values: Record<string, unknown>) {
+    const parentId = values.parent_id ? String(values.parent_id) : ''
+    if (!parentId && !allowRootOrg) {
+      message.error('请选择父组织（仅超级管理员可创建顶级组织）')
+      return
+    }
     setSubmitting(true)
     try {
       await organizationService.create({
         name: String(values.name || '').trim(),
         code: String(values.code || '').trim(),
         type: String(values.type || 'team'),
-        parent_id: values.parent_id ? String(values.parent_id) : undefined,
+        parent_id: parentId || undefined,
         description: values.description ? String(values.description) : undefined,
         address: values.address ? String(values.address) : undefined,
         contact_name: values.contact_name ? String(values.contact_name) : undefined,
@@ -496,8 +502,13 @@ export default function OrganizationsPage() {
           <Form.Item name="type" label="类型" rules={[{ required: true }]}>
             <Select options={ORG_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))} />
           </Form.Item>
-          <Form.Item name="parent_id" label="父组织" extra="不选则创建为顶级（若后端允许）">
-            <Select allowClear showSearch optionFilterProp="label" options={parentOptions} />
+          <Form.Item
+            name="parent_id"
+            label="父组织"
+            rules={allowRootOrg ? [] : [{ required: true, message: '请选择父组织' }]}
+            extra={allowRootOrg ? '不选则创建为顶级组织' : '必须挂在可管理的父组织下'}
+          >
+            <Select allowClear={allowRootOrg} showSearch optionFilterProp="label" options={parentOptions} />
           </Form.Item>
           <Form.Item name="contact_name" label="联系人">
             <Input />
@@ -581,7 +592,7 @@ export default function OrganizationsPage() {
             name="new_parent_id"
             label="新父组织"
             rules={[{ required: true, message: '请选择父组织' }]}
-            extra="暂不支持移到顶级（后端 new_parent_id 为必填）"
+            extra={allowRootOrg ? '超级管理员可将组织移到其他父节点' : '仅可移到可管理范围内的父组织'}
           >
             <Select showSearch optionFilterProp="label" options={parentOptions} />
           </Form.Item>

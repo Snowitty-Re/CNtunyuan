@@ -1,7 +1,7 @@
 const userService = require('../../services/user')
 const organizationService = require('../../services/organization')
 const { showToast, showLoading, hideLoading, formatDate } = require('../../utils/util')
-const { ACTIONS, isManagerRole } = require('../../utils/permission')
+const { ACTIONS, assignableRoles, isManagerRole } = require('../../utils/permission')
 const app = getApp()
 
 Page({
@@ -242,11 +242,12 @@ Page({
       showToast('无权限操作')
       return
     }
-    const roles = [
-      { key: 'volunteer', label: '志愿者' },
-      { key: 'manager', label: '管理者' },
-      { key: 'admin', label: '管理员' }
-    ]
+    const operator = wx.getStorageSync('userInfo') || app.globalData.userInfo || {}
+    const roles = assignableRoles(operator)
+    if (!roles.length) {
+      showToast('当前账号无可分配角色')
+      return
+    }
     wx.showActionSheet({
       itemList: roles.map(r => r.label),
       success: async ({ tapIndex }) => {
@@ -260,7 +261,7 @@ Page({
           this.loadList(true)
         } catch (e) {
           hideLoading()
-          showToast('角色更新失败')
+          showToast((e && e.message) || '角色更新失败')
         }
       }
     })

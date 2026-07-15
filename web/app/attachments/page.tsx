@@ -9,8 +9,28 @@ import { SafeImage } from '@/components/shared/SafeImage'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { ACTIONS, hasPermission } from '@/lib/rbac'
 import { fmtTime, listFrom } from '@/lib/data'
+import { getAccessToken } from '@/lib/auth'
 import { API_BASE } from '@/lib/request'
 import { systemService } from '@/services/system'
+
+async function downloadWithAuth(fileId: string, filename?: string) {
+  const token = getAccessToken()
+  const res = await fetch(`${API_BASE}/upload/${fileId}/download`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) {
+    throw new Error(`下载失败 HTTP ${res.status}`)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename || fileId
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
 
 const fileTypeOptions = [
   { value: '', label: '全部类型' },
@@ -110,6 +130,16 @@ export default function AttachmentsPage() {
       await Promise.all([loadStats(), loadFiles(page, filters)])
     } catch (err) {
       setNotice({ type: 'error', text: err instanceof Error ? err.message : '删除失败' })
+    }
+  }
+
+  async function handleDownload(file: any) {
+    if (!file?.id) return
+    try {
+      await downloadWithAuth(file.id, file.original_name || file.file_name)
+      setNotice({ type: 'success', text: '已开始下载' })
+    } catch (err) {
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '下载失败' })
     }
   }
 
@@ -248,9 +278,9 @@ export default function AttachmentsPage() {
                     <div>路径：{currentFile.path || '-'}</div>
                   </div>
                   <div className="row wrap" style={{ marginTop: 12 }}>
-                    <a className="btn" href={`${API_BASE}/upload/${currentFile.id}/download`} target="_blank" rel="noreferrer">
+                    <button className="btn" type="button" onClick={() => handleDownload(currentFile)}>
                       下载
-                    </a>
+                    </button>
                     <button className="btn danger" type="button" onClick={() => deleteFile(currentFile.id)}>
                       删除
                     </button>
@@ -301,9 +331,9 @@ export default function AttachmentsPage() {
                           <td>{fmtTime(row.created_at)}</td>
                           <td>
                             <div className="row wrap">
-                              <a className="btn ghost" href={`${API_BASE}/upload/${row.id}/download`} target="_blank" rel="noreferrer">
+                              <button className="btn ghost" type="button" onClick={() => handleDownload(row)}>
                                 下载
-                              </a>
+                              </button>
                               <button className="btn danger" type="button" onClick={() => deleteFile(row.id)}>
                                 删除
                               </button>

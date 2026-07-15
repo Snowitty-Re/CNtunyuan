@@ -53,7 +53,6 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     ACTIONS.ORG_MANAGE,
   ],
   manager: [
-    ACTIONS.USER_MODIFY,
     ACTIONS.USER_VIEW,
     ACTIONS.TASK_MANAGE,
     ACTIONS.TASK_VIEW,
@@ -65,7 +64,6 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     ACTIONS.DIALECT_MANAGE,
   ],
   volunteer: [
-    ACTIONS.USER_VIEW,
     ACTIONS.TASK_VIEW,
     ACTIONS.TASK_EDIT,
     ACTIONS.TASK_EXECUTE,
@@ -89,6 +87,28 @@ export function isManager(user: User | null): boolean {
 
 export function isAdmin(user: User | null): boolean {
   return hasMinRole(user, 'admin')
+}
+
+export function isSuperAdmin(user: User | null): boolean {
+  return !!user && user.role === 'super_admin'
+}
+
+/** Backend canAssignRole: operator level must be strictly higher; only super_admin may assign super_admin */
+export function canAssignRole(operator: User | null, targetRole: string): boolean {
+  if (!operator) return false
+  if (targetRole === 'super_admin') return isSuperAdmin(operator)
+  return roleWeight(operator.role) > roleWeight(targetRole)
+}
+
+const ALL_ASSIGNABLE_ROLES: Array<{ value: string; label: string }> = [
+  { value: 'volunteer', label: '志愿者' },
+  { value: 'manager', label: '管理者' },
+  { value: 'admin', label: '管理员' },
+  { value: 'super_admin', label: '超级管理员' },
+]
+
+export function assignableRoleOptions(operator: User | null): Array<{ value: string; label: string }> {
+  return ALL_ASSIGNABLE_ROLES.filter((r) => canAssignRole(operator, r.value))
 }
 
 function collectExplicitPermissions(user: User | null): Set<string> {
@@ -124,9 +144,10 @@ export function resolvePermissionSet(user: User | null): Set<string> {
 export function hasPermission(user: User | null, action: string): boolean {
   const permission = String(action || '').trim()
   if (!permission) return false
-  // Backend org write routes require admin; keep UI gate consistent
+  // Backend write floors: admin for org/user create-modify; keep UI gate consistent
   if (permission === ACTIONS.ORG_MANAGE) return isAdmin(user)
   if (permission === ACTIONS.USER_CREATE) return isAdmin(user)
+  if (permission === ACTIONS.USER_MODIFY) return isAdmin(user)
   const set = resolvePermissionSet(user)
   return set.has(permission)
 }

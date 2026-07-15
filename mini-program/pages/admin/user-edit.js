@@ -1,14 +1,8 @@
 const userService = require('../../services/user')
 const organizationService = require('../../services/organization')
 const { showToast, showLoading, hideLoading } = require('../../utils/util')
-const { ACTIONS } = require('../../utils/permission')
+const { ACTIONS, assignableRoles } = require('../../utils/permission')
 const app = getApp()
-
-const ROLE_OPTIONS = [
-  { key: 'volunteer', label: '志愿者' },
-  { key: 'manager', label: '管理者' },
-  { key: 'admin', label: '管理员' }
-]
 
 const STATUS_OPTIONS = [
   { key: 'active', label: '正常' },
@@ -22,7 +16,7 @@ Page({
     isEdit: false,
     loading: false,
     saving: false,
-    roleOptions: ROLE_OPTIONS,
+    roleOptions: [],
     roleIndex: 0,
     statusOptions: STATUS_OPTIONS,
     statusIndex: 0,
@@ -50,7 +44,20 @@ Page({
       wx.navigateBack()
       return
     }
-    this.setData({ id, isEdit: !!id })
+    const operator = wx.getStorageSync('userInfo') || app.globalData.userInfo || {}
+    const roleOptions = assignableRoles(operator)
+    if (!roleOptions.length) {
+      showToast('当前账号无可分配角色')
+      wx.navigateBack()
+      return
+    }
+    this.setData({
+      id,
+      isEdit: !!id,
+      roleOptions,
+      roleIndex: 0,
+      'form.role': roleOptions[0].key
+    })
     wx.setNavigationBarTitle({ title: id ? '编辑用户' : '新建用户' })
 
     await this.loadOrgOptions()
@@ -91,11 +98,14 @@ Page({
     this.setData({ loading: true })
     try {
       const user = await userService.getById(id)
-      const roleIndex = ROLE_OPTIONS.findIndex(r => r.key === user.role)
+      const roleOptions = this.data.roleOptions || []
+      let roleIndex = roleOptions.findIndex(r => r.key === user.role)
+      if (roleIndex < 0) roleIndex = 0
       const statusIndex = STATUS_OPTIONS.findIndex(s => s.key === user.status)
       const orgIndex = this.data.orgOptions.findIndex(o => o.id === user.org_id)
+      const roleKey = roleOptions[roleIndex] ? roleOptions[roleIndex].key : 'volunteer'
       this.setData({
-        roleIndex: roleIndex >= 0 ? roleIndex : 0,
+        roleIndex,
         statusIndex: statusIndex >= 0 ? statusIndex : 0,
         orgIndex: orgIndex >= 0 ? orgIndex : 0,
         form: {
@@ -103,7 +113,7 @@ Page({
           phone: user.phone || '',
           email: user.email || '',
           password: '',
-          role: user.role || 'volunteer',
+          role: roleKey,
           status: user.status || 'active',
           org_id: user.org_id || (this.data.orgOptions[0] && this.data.orgOptions[0].id) || ''
         }
@@ -123,7 +133,7 @@ Page({
 
   onRoleChange(e) {
     const idx = Number(e.detail.value)
-    const option = ROLE_OPTIONS[idx]
+    const option = (this.data.roleOptions || [])[idx]
     if (!option) return
     this.setData({
       roleIndex: idx,

@@ -102,6 +102,7 @@ module.exports = {
    * 获取待分配任务
    * @param {Object} params 分页参数
    */
+  /** Backend: RequireManager — only call for manager+ */
   getPendingTasks(params = {}) {
     return get('/tasks/pending', params)
   },

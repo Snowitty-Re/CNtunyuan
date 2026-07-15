@@ -18,12 +18,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { listFrom } from '@/lib/data'
-import { ACTIONS, hasPermission, isAdmin, roleLabel } from '@/lib/rbac'
+import { ACTIONS, assignableRoleOptions, hasPermission, isAdmin, roleLabel } from '@/lib/rbac'
 import { organizationService } from '@/services/organizations'
 import { userService } from '@/services/users'
 import type { Organization, User } from '@/types/api'
 
-const ROLE_OPTIONS = [
+const ROLE_FILTER_OPTIONS = [
   { value: 'volunteer', label: '志愿者' },
   { value: 'manager', label: '管理者' },
   { value: 'admin', label: '管理员' },
@@ -61,6 +61,7 @@ export default function UsersPage() {
   const { message } = App.useApp()
   const canCreate = hasPermission(user, ACTIONS.USER_CREATE) || isAdmin(user)
   const canModify = isAdmin(user)
+  const roleOptions = useMemo(() => assignableRoleOptions(user), [user])
 
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<User[]>([])
@@ -170,10 +171,13 @@ export default function UsersPage() {
 
   function openEdit(row: User) {
     setEditing(row)
+    const roles = assignableRoleOptions(user)
+    const role =
+      roles.some((r) => r.value === row.role) ? row.role : roles[0]?.value || 'volunteer'
     editForm.setFieldsValue({
       nickname: row.nickname,
       email: row.email,
-      role: row.role,
+      role,
       status: row.status || 'active',
       org_id: row.org_id || row.organization?.id || undefined,
     })
@@ -289,7 +293,7 @@ export default function UsersPage() {
               allowClear
               placeholder="角色"
               style={{ width: 140 }}
-              options={ROLE_OPTIONS}
+              options={ROLE_FILTER_OPTIONS}
               value={roleFilter}
               onChange={(v) => {
                 setPage(1)
@@ -395,8 +399,8 @@ export default function UsersPage() {
           >
             <Input.Password />
           </Form.Item>
-          <Form.Item name="role" label="角色" rules={[{ required: true }]}>
-            <Select options={ROLE_OPTIONS} />
+          <Form.Item name="role" label="角色" rules={[{ required: true }]} extra="仅可分配低于当前账号的角色">
+            <Select options={roleOptions} />
           </Form.Item>
           <Form.Item name="org_id" label="所属组织" rules={[{ required: true, message: '必须绑定组织' }]}>
             <Select showSearch optionFilterProp="label" options={orgOptions} placeholder="请选择组织" />
@@ -422,8 +426,8 @@ export default function UsersPage() {
           <Form.Item name="email" label="邮箱">
             <Input />
           </Form.Item>
-          <Form.Item name="role" label="角色" rules={[{ required: true }]}>
-            <Select options={ROLE_OPTIONS} />
+          <Form.Item name="role" label="角色" rules={[{ required: true }]} extra="仅可分配低于当前账号的角色">
+            <Select options={roleOptions} />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
             <Select options={STATUS_OPTIONS} />

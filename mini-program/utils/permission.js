@@ -91,6 +91,29 @@ function isAdminRole(userInfo = {}) {
   return getRoleLevel(getUserRole(userInfo)) >= ROLE_LEVEL.admin
 }
 
+function isSuperAdminRole(userInfo = {}) {
+  return getUserRole(userInfo) === 'super_admin'
+}
+
+/** Align with backend canAssignRole: strict higher level; only super_admin may assign super_admin */
+function canAssignRole(operator = {}, targetRole = '') {
+  const role = String(targetRole || '').trim()
+  if (!role) return false
+  if (role === 'super_admin') return isSuperAdminRole(operator)
+  return getRoleLevel(getUserRole(operator)) > getRoleLevel(role)
+}
+
+const ALL_ASSIGNABLE_ROLES = [
+  { key: 'volunteer', label: '志愿者' },
+  { key: 'manager', label: '管理者' },
+  { key: 'admin', label: '管理员' },
+  { key: 'super_admin', label: '超级管理员' }
+]
+
+function assignableRoles(operator = {}) {
+  return ALL_ASSIGNABLE_ROLES.filter((item) => canAssignRole(operator, item.key))
+}
+
 function collectExplicitPermissions(userInfo = {}) {
   const candidates = [
     userInfo.permissions,
@@ -151,6 +174,9 @@ module.exports = {
   getRoleLevel,
   isManagerRole,
   isAdminRole,
+  isSuperAdminRole,
+  canAssignRole,
+  assignableRoles,
   hasPermission,
   canAny,
   canAll,
