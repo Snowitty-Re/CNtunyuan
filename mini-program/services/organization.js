@@ -71,9 +71,9 @@ module.exports = {
   /**
    * 移动组织
    * @param {String} id 组织ID
-   * @param {Object} data 移动数据 { parent_id }
+   * @param {String} newParentId 新父组织 ID（后端字段 new_parent_id，必填；不支持空父级）
    */
-  move(id, data) {
-    return put(`/organizations/${id}/move`, data)
+  move(id, newParentId) {
+    return put(`/organizations/${id}/move`, { new_parent_id: newParentId })
   }
 }

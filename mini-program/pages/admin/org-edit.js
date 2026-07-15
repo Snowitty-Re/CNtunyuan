@@ -28,6 +28,7 @@ Page({
     statusIndex: 0,
     parentOptions: [{ id: '', name: '无（顶级组织）' }],
     parentIndex: 0,
+    originalParentId: '',
     form: {
       name: '',
       code: '',
@@ -101,6 +102,7 @@ Page({
         typeIndex: typeIndex >= 0 ? typeIndex : 6,
         statusIndex: statusIndex >= 0 ? statusIndex : 0,
         parentIndex: parentIndex >= 0 ? parentIndex : 0,
+        originalParentId: org.parent_id || '',
         form: {
           name: org.name || '',
           code: org.code || '',
@@ -232,6 +234,17 @@ Page({
     try {
       if (isEdit) {
         await organizationService.update(id, payload)
+        const nextParent = form.parent_id || ''
+        const prevParent = this.data.originalParentId || ''
+        if (nextParent !== prevParent) {
+          if (!nextParent) {
+            showToast('暂不支持移到顶级，请选择其他父组织')
+            hideLoading()
+            this.setData({ saving: false })
+            return
+          }
+          await organizationService.move(id, nextParent)
+        }
       } else {
         await organizationService.create(payload)
       }
@@ -244,7 +257,7 @@ Page({
       if (msg.includes('organization code already exists') || msg.includes('编码') || msg.toLowerCase().includes('exists')) {
         showToast('组织编码已存在，请更换编码')
       } else {
-        showToast(isEdit ? '保存失败' : '创建失败')
+        showToast((e && e.message) || (isEdit ? '保存失败' : '创建失败'))
       }
     } finally {
       this.setData({ saving: false })
