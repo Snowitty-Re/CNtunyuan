@@ -1,629 +1,438 @@
 'use client'
 
-import Link from 'next/link'
-import { FormEvent, useEffect, useState } from 'react'
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import {
+  App,
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from 'antd'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { ModuleHeader } from '@/components/shared/ModuleHeader'
-import { ConfirmButton } from '@/components/shared/ConfirmButton'
-import { PageState } from '@/components/shared/PageState'
-import { Pagination } from '@/components/shared/Pagination'
-import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
-import { StatusTag } from '@/components/shared/StatusTag'
-import { SafeImage } from '@/components/shared/SafeImage'
-import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-import { ACTIONS, hasPermission } from '@/lib/rbac'
-import { fmtTime, listFrom } from '@/lib/data'
+import { listFrom } from '@/lib/data'
+import { ACTIONS, hasPermission, isAdmin, roleLabel } from '@/lib/rbac'
 import { organizationService } from '@/services/organizations'
 import { userService } from '@/services/users'
 import type { Organization, User } from '@/types/api'
 
-const USER_FILTER_KEY = 'web_users_filters_v1'
-const USER_COL_KEY = 'web_users_columns_v1'
+const ROLE_OPTIONS = [
+  { value: 'volunteer', label: '志愿者' },
+  { value: 'manager', label: '管理者' },
+  { value: 'admin', label: '管理员' },
+  { value: 'super_admin', label: '超级管理员' },
+]
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: '正常' },
+  { value: 'inactive', label: '待审核' },
+  { value: 'banned', label: '禁用' },
+]
+
+function flattenOrgs(nodes: Organization[], acc: Organization[] = [], depth = 0): Organization[] {
+  nodes.forEach((n) => {
+    acc.push({ ...n, name: `${'　'.repeat(depth)}${n.name}` })
+    if (n.children?.length) flattenOrgs(n.children, acc, depth + 1)
+  })
+  return acc
+}
+
+function normalizeUser(row: User): User {
+  const anyRow = row as Record<string, unknown>
+  const orgId = (row.org_id || anyRow.orgId || row.organization?.id || '') as string
+  const orgName = (row.org_name || anyRow.orgName || row.organization?.name || '') as string
+  return {
+    ...row,
+    org_id: orgId || null,
+    org_name: orgName,
+    organization: row.organization || (orgId ? { id: orgId, name: orgName } : null),
+  }
+}
 
 export default function UsersPage() {
   const { ready, user } = useAuthGuard()
+  const { message } = App.useApp()
+  const canCreate = hasPermission(user, ACTIONS.USER_CREATE) || isAdmin(user)
+  const canModify = isAdmin(user)
+
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [items, setItems] = useState<User[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [orgs, setOrgs] = useState<Organization[]>([])
-  const [roleMap, setRoleMap] = useState<Record<string, string>>({})
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [batchRole, setBatchRole] = useState('volunteer')
+  const [pageSize, setPageSize] = useState(20)
   const [keyword, setKeyword] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [roleFilter, setRoleFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string | undefined>()
+  const [roleFilter, setRoleFilter] = useState<string | undefined>()
+  const [orgFilter, setOrgFilter] = useState<string | undefined>()
+  const [orgs, setOrgs] = useState<Organization[]>([])
+  const [orgOptions, setOrgOptions] = useState<{ value: string; label: string }[]>([])
 
-  const [nickname, setNickname] = useState('')
-  const [phone, setPhone] = useState('')
-  const [password, setPassword] = useState('')
-  const [role, setRole] = useState('volunteer')
-  const [orgId, setOrgId] = useState('')
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [detailOpen, setDetailOpen] = useState(false)
-  const [savingDetail, setSavingDetail] = useState(false)
-  const [editNickname, setEditNickname] = useState('')
-  const [editPhone, setEditPhone] = useState('')
-  const [editEmail, setEditEmail] = useState('')
-  const [editRole, setEditRole] = useState('volunteer')
-  const [editStatus, setEditStatus] = useState('active')
-  const [editOrgId, setEditOrgId] = useState('')
-  const [booted, setBooted] = useState(false)
-  const [columnVisible, setColumnVisible] = useState<Record<string, boolean>>({
-    avatar: true,
-    nickname: true,
-    phone: true,
-    role: true,
-    status: true,
-    wxBound: true,
-    organization: true,
-    actions: true,
-  })
-  const allSelected = items.length > 0 && selectedIds.length === items.length
-  const [notice, setNotice] = useState<Notice | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editing, setEditing] = useState<User | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [createForm] = Form.useForm()
+  const [editForm] = Form.useForm()
 
-  function normalizeUser(row: User): User {
-    const anyRow = row as any
-    const orgId = row.org_id || anyRow.orgId || row.organization?.id || ''
-    const orgName = row.org_name || anyRow.orgName || row.organization?.name || ''
-    const organization = row.organization || (orgId ? { id: orgId, name: orgName } : null)
-    return {
-      ...row,
-      org_id: orgId,
-      org_name: orgName,
-      organization,
-    }
-  }
-
-  function resolveOrgIdForEdit(row: User): string {
-    const orgId = row.org_id || row.organization?.id || ''
-    if (orgId) return orgId
-    const orgName = row.org_name || row.organization?.name || ''
-    if (!orgName) return ''
-    const found = orgs.find((o) => o.name === orgName)
-    return found?.id || ''
-  }
-
-  async function load(
-    nextPage = page,
-    filters?: {
-      keyword?: string
-      status?: string
-      role?: string
-    },
-  ) {
-    setLoading(true)
-    setError('')
+  const loadOrgs = useCallback(async () => {
     try {
-      const qKeyword = filters?.keyword ?? keyword
-      const qStatus = filters?.status ?? statusFilter
-      const qRole = filters?.role ?? roleFilter
+      const tree = await organizationService.tree()
+      const flat = flattenOrgs(tree)
+      setOrgs(flat)
+      setOrgOptions(flat.map((o) => ({ value: o.id, label: o.name })))
+    } catch {
+      try {
+        const data = await organizationService.list({ page: 1, page_size: 100 })
+        const list = listFrom<Organization>(data).list
+        setOrgs(list)
+        setOrgOptions(list.map((o) => ({ value: o.id, label: o.name })))
+      } catch {
+        setOrgs([])
+        setOrgOptions([])
+      }
+    }
+  }, [])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
       const data = await userService.list({
-        page: nextPage,
-        page_size: 20,
-        keyword: qKeyword || undefined,
-        status: qStatus || undefined,
-        role: qRole || undefined,
+        page,
+        page_size: pageSize,
+        keyword: keyword || undefined,
+        status: statusFilter || undefined,
+        role: roleFilter || undefined,
+        org_id: orgFilter || undefined,
       })
       const normalized = listFrom<User>(data)
       setItems(normalized.list.map(normalizeUser))
       setTotal(normalized.total)
-      setPage(nextPage)
-      setSelectedIds([])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败')
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '加载用户失败')
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, pageSize, keyword, statusFilter, roleFilter, orgFilter, message])
 
-  async function loadOrgs() {
-    try {
-      const pageSize = 100
-      let current = 1
-      let keepGoing = true
-      const merged: Organization[] = []
+  useEffect(() => {
+    if (!ready) return
+    loadOrgs()
+  }, [ready, loadOrgs])
 
-      while (keepGoing && current <= 20) {
-        const data = await organizationService.list({ page: current, page_size: pageSize })
-        const chunk = listFrom<Organization>(data).list
-        merged.push(...chunk)
-        keepGoing = chunk.length === pageSize
-        current += 1
-      }
+  useEffect(() => {
+    if (!ready || typeof window === 'undefined') return
+    const fromQuery = new URLSearchParams(window.location.search).get('org_id')
+    if (fromQuery) setOrgFilter(fromQuery)
+  }, [ready])
 
-      setOrgs(merged)
-    } catch {
-      setOrgs([])
+  useEffect(() => {
+    if (!ready) return
+    load()
+  }, [ready, load])
+
+  async function onCreate(values: Record<string, unknown>) {
+    const password = String(values.password || '')
+    if (password.length < 8) {
+      message.error('密码至少 8 位')
+      return
     }
-  }
-
-  async function quickCreate(e: FormEvent) {
-    e.preventDefault()
-    if (!nickname.trim() || !phone.trim() || !password.trim()) return
+    if (!values.org_id) {
+      message.error('必须绑定组织')
+      return
+    }
+    setSubmitting(true)
     try {
       await userService.create({
-        nickname: nickname.trim(),
-        phone: phone.trim(),
-        password: password.trim(),
-        role,
-        org_id: orgId || null,
+        nickname: String(values.nickname || '').trim(),
+        phone: String(values.phone || '').trim(),
+        password,
+        role: String(values.role || 'volunteer'),
+        org_id: String(values.org_id),
       })
-      setNickname('')
-      setPhone('')
-      setPassword('')
-      setRole('volunteer')
-      setOrgId('')
-      load(1)
-      setNotice({ type: 'success', text: '用户创建成功' })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
-    }
-  }
-
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-  }
-
-  function toggleSelectAll(checked: boolean) {
-    setSelectedIds(checked ? items.map((x) => x.id) : [])
-  }
-
-  function invertSelection() {
-    const visibleIds = items.map((x) => x.id)
-    setSelectedIds((prev) => visibleIds.filter((id) => !prev.includes(id)))
-  }
-
-  async function batchUpdateStatus(status: string) {
-    if (selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => userService.updateStatus(id, status)))
-      load(page)
-      setNotice({ type: 'success', text: `已更新 ${selectedIds.length} 位用户状态` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量操作失败' })
-    }
-  }
-
-  async function batchUpdateRole() {
-    if (selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => userService.updateRole(id, batchRole)))
-      load(page)
-      setNotice({ type: 'success', text: `已更新 ${selectedIds.length} 位用户角色` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量角色更新失败' })
-    }
-  }
-
-  async function runSingleUserAction(action: () => Promise<unknown>, successText: string) {
-    try {
-      await action()
-      await load(page)
-      setNotice({ type: 'success', text: successText })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '操作失败' })
-    }
-  }
-
-  function openDetail(user: User) {
-    setEditingUser(user)
-    setEditNickname(user.nickname || '')
-    setEditPhone(user.phone || '')
-    setEditEmail(user.email || '')
-    setEditRole(user.role || 'volunteer')
-    setEditStatus(user.status || 'active')
-    setEditOrgId(resolveOrgIdForEdit(user))
-    setDetailOpen(true)
-  }
-
-  async function saveDetail(e: FormEvent) {
-    e.preventDefault()
-    if (!editingUser) return
-    setSavingDetail(true)
-    try {
-      await userService.update(editingUser.id, {
-        nickname: editNickname.trim(),
-        phone: editPhone.trim(),
-        email: editEmail.trim(),
-        org_id: editOrgId || null,
-      })
-      if ((editingUser.role || '') !== editRole) {
-        await userService.updateRole(editingUser.id, editRole)
-      }
-      if ((editingUser.status || '') !== editStatus) {
-        await userService.updateStatus(editingUser.id, editStatus)
-      }
-      setDetailOpen(false)
-      setEditingUser(null)
-      load(page)
-      setNotice({ type: 'success', text: '用户信息已更新' })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '保存失败' })
+      message.success('用户创建成功')
+      setCreateOpen(false)
+      createForm.resetFields()
+      setPage(1)
+      await load()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '创建失败')
     } finally {
-      setSavingDetail(false)
+      setSubmitting(false)
     }
   }
 
-  function exportCsv() {
-    const rows = selectedIds.length > 0 ? items.filter((x) => selectedIds.includes(x.id)) : items
-    if (rows.length === 0) return
-    const headers = ['id', 'nickname', 'phone', 'email', 'role', 'status', 'organization', 'created_at']
-    const lines = rows.map((row) =>
-      [
-        row.id,
-        row.nickname || '',
-        row.phone || '',
-        row.email || '',
-        row.role || '',
-        row.status || '',
-        row.organization?.name || '',
-        row.created_at || '',
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(','),
-    )
-    const content = `\ufeff${[headers.join(','), ...lines].join('\n')}`
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `users-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-    setNotice({ type: 'success', text: `已导出 ${rows.length} 位用户` })
+  function openEdit(row: User) {
+    setEditing(row)
+    editForm.setFieldsValue({
+      nickname: row.nickname,
+      email: row.email,
+      role: row.role,
+      status: row.status || 'active',
+      org_id: row.org_id || row.organization?.id || undefined,
+    })
+    setEditOpen(true)
   }
 
-  function resetFilters() {
-    setKeyword('')
-    setStatusFilter('')
-    setRoleFilter('')
-    load(1, { keyword: '', status: '', role: '' })
-  }
-
-  useEffect(() => {
-    if (ready && !booted) {
-      if (typeof window !== 'undefined') {
-        try {
-          const savedFilter = JSON.parse(localStorage.getItem(USER_FILTER_KEY) || '{}')
-          const savedCols = JSON.parse(localStorage.getItem(USER_COL_KEY) || '{}')
-          if (savedFilter && typeof savedFilter === 'object') {
-            setKeyword(savedFilter.keyword || '')
-            setStatusFilter(savedFilter.statusFilter || '')
-            setRoleFilter(savedFilter.roleFilter || '')
-            load(1, { keyword: savedFilter.keyword || '', status: savedFilter.statusFilter || '', role: savedFilter.roleFilter || '' })
-          } else {
-            load(1)
-          }
-          if (savedCols && typeof savedCols === 'object') {
-            setColumnVisible((prev) => ({ ...prev, ...savedCols }))
-          }
-        } catch {
-          load(1)
-        }
-      } else {
-        load(1)
-      }
-      loadOrgs()
-      setBooted(true)
+  async function onEdit(values: Record<string, unknown>) {
+    if (!editing) return
+    if (!values.org_id) {
+      message.error('必须绑定组织')
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, booted])
+    setSubmitting(true)
+    try {
+      await userService.update(editing.id, {
+        nickname: String(values.nickname || '').trim(),
+        email: values.email ? String(values.email) : undefined,
+        role: String(values.role || editing.role),
+        status: String(values.status || 'active'),
+        org_id: String(values.org_id),
+      })
+      message.success('用户已更新')
+      setEditOpen(false)
+      setEditing(null)
+      await load()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '更新失败')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
-  useEffect(() => {
-    if (!ready || !booted || typeof window === 'undefined') return
-    localStorage.setItem(USER_FILTER_KEY, JSON.stringify({ keyword, statusFilter, roleFilter }))
-  }, [ready, booted, keyword, statusFilter, roleFilter])
+  async function setStatus(row: User, status: string) {
+    try {
+      await userService.updateStatus(row.id, status)
+      message.success('状态已更新')
+      await load()
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '状态更新失败')
+    }
+  }
 
-  useEffect(() => {
-    if (!ready || !booted || typeof window === 'undefined') return
-    localStorage.setItem(USER_COL_KEY, JSON.stringify(columnVisible))
-  }, [ready, booted, columnVisible])
+  const statusColor = useMemo(
+    () =>
+      ({
+        active: 'success',
+        inactive: 'warning',
+        banned: 'error',
+      }) as Record<string, string>,
+    [],
+  )
 
-  useEffect(() => {
-    if (!detailOpen || !editingUser || editOrgId || orgs.length === 0) return
-    const resolved = resolveOrgIdForEdit(editingUser)
-    if (resolved) setEditOrgId(resolved)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailOpen, editingUser, editOrgId, orgs])
-
-  if (!ready) return null
-  if (!hasPermission(user, ACTIONS.USER_VIEW)) {
+  if (!ready) {
     return (
       <AppShell>
-        <ModuleHeader title="人员管理" desc="用户账号、角色、组织归属与状态管理" />
-        <PageState error="当前账号无权限访问该页面（需要 user:view 权限）" />
+        <Card loading />
       </AppShell>
     )
   }
 
   return (
     <AppShell>
-      <ModuleHeader title="人员管理" desc="用户账号、角色、组织归属与状态管理" />
-      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
-      <form
-        className="panel row wrap"
-        onSubmit={(e) => {
-          e.preventDefault()
-          load(1)
-        }}
-      >
-        <input className="input" placeholder="关键词（昵称/手机号）" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-        <select className="select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-          <option value="">全部角色</option>
-          <option value="volunteer">volunteer</option>
-          <option value="manager">manager</option>
-          <option value="admin">admin</option>
-          <option value="super_admin">super_admin</option>
-        </select>
-        <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">全部状态</option>
-          <option value="active">正常 (active)</option>
-          <option value="inactive">待审批/禁用 (inactive)</option>
-          <option value="banned">封禁 (banned)</option>
-        </select>
-        <button className="btn" type="submit">
-          筛选
-        </button>
-        <button className="btn" type="button" onClick={() => { setStatusFilter('inactive'); load(1, { status: 'inactive' }) }}>
-          待审批
-        </button>
-        <button className="btn ghost" type="button" onClick={resetFilters}>
-          重置
-        </button>
-      </form>
-      <form className="panel grid cols-3" onSubmit={quickCreate}>
-        <input className="input" placeholder="昵称" value={nickname} onChange={(e) => setNickname(e.target.value)} />
-        <input className="input" placeholder="手机号" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <input className="input" placeholder="初始密码" value={password} onChange={(e) => setPassword(e.target.value)} />
-        <select className="select" value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value="volunteer">volunteer</option>
-          <option value="manager">manager</option>
-          <option value="admin">admin</option>
-          <option value="super_admin">super_admin</option>
-        </select>
-        <select className="select" value={orgId} onChange={(e) => setOrgId(e.target.value)}>
-          <option value="">不绑定组织</option>
-          {orgs.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.name}
-            </option>
-          ))}
-        </select>
-        <button className="btn primary" type="submit">
-          创建用户
-        </button>
-      </form>
-      <div className="panel row wrap">
-        <b>批量操作</b>
-        <span>已选 {selectedIds.length} 人</span>
-        <button className="btn ghost" type="button" onClick={() => toggleSelectAll(true)}>
-          全选本页
-        </button>
-        <button className="btn ghost" type="button" onClick={() => toggleSelectAll(false)}>
-          清空选择
-        </button>
-        <button className="btn ghost" type="button" onClick={invertSelection}>
-          反选
-        </button>
-        <button className="btn" type="button" onClick={() => batchUpdateStatus('active')}>
-          批量激活
-        </button>
-        <button className="btn danger" type="button" onClick={() => batchUpdateStatus('inactive')}>
-          批量禁用
-        </button>
-        <select className="select" value={batchRole} onChange={(e) => setBatchRole(e.target.value)}>
-          <option value="volunteer">volunteer</option>
-          <option value="manager">manager</option>
-          <option value="admin">admin</option>
-          <option value="super_admin">super_admin</option>
-        </select>
-        <button className="btn" type="button" onClick={batchUpdateRole}>
-          批量更新角色
-        </button>
-        <button className="btn" type="button" onClick={exportCsv}>
-          导出CSV
-        </button>
-      </div>
-      <div className="panel row wrap">
-        <b>列显示</b>
-        <label><input type="checkbox" checked={columnVisible.avatar} onChange={(e) => setColumnVisible((v) => ({ ...v, avatar: e.target.checked }))} /> 头像</label>
-        <label><input type="checkbox" checked={columnVisible.nickname} onChange={(e) => setColumnVisible((v) => ({ ...v, nickname: e.target.checked }))} /> 昵称</label>
-        <label><input type="checkbox" checked={columnVisible.phone} onChange={(e) => setColumnVisible((v) => ({ ...v, phone: e.target.checked }))} /> 手机号</label>
-        <label><input type="checkbox" checked={columnVisible.role} onChange={(e) => setColumnVisible((v) => ({ ...v, role: e.target.checked }))} /> 角色</label>
-        <label><input type="checkbox" checked={columnVisible.status} onChange={(e) => setColumnVisible((v) => ({ ...v, status: e.target.checked }))} /> 状态</label>
-        <label><input type="checkbox" checked={columnVisible.wxBound} onChange={(e) => setColumnVisible((v) => ({ ...v, wxBound: e.target.checked }))} /> 微信绑定</label>
-        <label><input type="checkbox" checked={columnVisible.organization} onChange={(e) => setColumnVisible((v) => ({ ...v, organization: e.target.checked }))} /> 组织</label>
-        <label><input type="checkbox" checked={columnVisible.actions} onChange={(e) => setColumnVisible((v) => ({ ...v, actions: e.target.checked }))} /> 操作</label>
-      </div>
-      <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
-      {!loading && !error && items.length > 0 ? (
-        <>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>
-                    <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
-                  </th>
-                  {columnVisible.avatar ? <th>头像</th> : null}
-                  {columnVisible.nickname ? <th>昵称</th> : null}
-                  {columnVisible.phone ? <th>手机号</th> : null}
-                  {columnVisible.role ? <th>角色</th> : null}
-                  {columnVisible.status ? <th>状态</th> : null}
-                  {columnVisible.wxBound ? <th>微信绑定</th> : null}
-                  {columnVisible.organization ? <th>组织</th> : null}
-                  {columnVisible.actions ? <th>操作</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} />
-                    </td>
-                    {columnVisible.avatar ? <td>
-                      <SafeImage
-                        className="cell-avatar"
-                        src={row.avatar || '/default-avatar.svg'}
-                        alt={row.nickname || row.phone || 'avatar'}
-                        width={34}
-                        height={34}
-                      />
-                    </td> : null}
-                    {columnVisible.nickname ? <td>{row.nickname || '-'}</td> : null}
-                    {columnVisible.phone ? <td>{row.phone || '-'}</td> : null}
-                    {columnVisible.role ? <td>
-                      <div className="row wrap">
-                        <select
-                          className="select"
-                          style={{ minWidth: 130 }}
-                          value={roleMap[row.id] || row.role}
-                          onChange={(e) =>
-                            setRoleMap((prev) => ({
-                              ...prev,
-                              [row.id]: e.target.value,
-                            }))
-                          }
-                        >
-                          <option value="volunteer">volunteer</option>
-                          <option value="manager">manager</option>
-                          <option value="admin">admin</option>
-                          <option value="super_admin">super_admin</option>
-                        </select>
-                        <button
-                          className="btn"
-                          type="button"
-                          onClick={() =>
-                            runSingleUserAction(
-                              () => userService.updateRole(row.id, roleMap[row.id] || row.role),
-                              '用户角色已更新',
-                            )
-                          }
-                        >
-                          保存角色
-                        </button>
-                      </div>
-                    </td> : null}
-                    {columnVisible.status ? <td>
-                      <StatusTag status={row.status || '-'} />
-                    </td> : null}
-                    {columnVisible.wxBound ? <td>{row.wx_bound ? '已绑定' : '未绑定'}</td> : null}
-                    {columnVisible.organization ? <td>{row.organization?.name || row.org_name || '-'}</td> : null}
-                    {columnVisible.actions ? <td>
-                      <div className="row wrap">
-                        <button
-                          className="btn"
-                          type="button"
-                          onClick={() =>
-                            runSingleUserAction(
-                              () => userService.updateStatus(row.id, 'active'),
-                              statusFilter === 'inactive' ? '审批已通过，用户已从当前待审批列表移除' : '用户状态已更新为激活',
-                            )
-                          }
-                        >
-                          {row.status === 'inactive' ? '审批通过' : '激活'}
-                        </button>
-                        <button
-                          className="btn danger"
-                          type="button"
-                          onClick={() =>
-                            runSingleUserAction(
-                              () => userService.updateStatus(row.id, 'inactive'),
-                              '用户已禁用',
-                            )
-                          }
-                        >
-                          禁用
-                        </button>
-                        <ConfirmButton
-                          text="删除"
-                          message={`确认删除用户「${row.nickname || row.phone}」？`}
-                          onConfirm={() =>
-                            runSingleUserAction(
-                              () => userService.remove(row.id),
-                              '用户已删除',
-                            )
-                          }
-                          className="btn danger"
-                        />
-                        <button className="btn ghost" type="button" onClick={() => openDetail(row)}>
-                          详情/编辑
-                        </button>
-                        <Link className="btn ghost" href={`/audit?user_id=${row.id}`}>
-                          审计记录
-                        </Link>
-                      </div>
-                    </td> : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+          <div>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              人员管理
+            </Typography.Title>
+            <Typography.Text type="secondary">账号、角色、组织归属与状态</Typography.Text>
           </div>
-          <Pagination page={page} pageSize={20} total={total} onChange={load} />
-        </>
-      ) : null}
-      <Dialog
-        open={detailOpen}
-        title={editingUser ? `用户详情：${editingUser.nickname || editingUser.phone || editingUser.id}` : '用户详情'}
-        onClose={() => {
-          if (!savingDetail) setDetailOpen(false)
-        }}
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={() => load()}>
+              刷新
+            </Button>
+            {canCreate ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  createForm.setFieldsValue({ role: 'volunteer', org_id: orgFilter })
+                  setCreateOpen(true)
+                }}
+              >
+                新建用户
+              </Button>
+            ) : null}
+          </Space>
+        </Space>
+
+        <Card size="small">
+          <Space wrap style={{ marginBottom: 12 }}>
+            <Input.Search
+              allowClear
+              placeholder="昵称/手机号"
+              style={{ width: 220 }}
+              onSearch={(v) => {
+                setPage(1)
+                setKeyword(v.trim())
+              }}
+            />
+            <Select
+              allowClear
+              placeholder="状态"
+              style={{ width: 120 }}
+              options={STATUS_OPTIONS}
+              value={statusFilter}
+              onChange={(v) => {
+                setPage(1)
+                setStatusFilter(v)
+              }}
+            />
+            <Select
+              allowClear
+              placeholder="角色"
+              style={{ width: 140 }}
+              options={ROLE_OPTIONS}
+              value={roleFilter}
+              onChange={(v) => {
+                setPage(1)
+                setRoleFilter(v)
+              }}
+            />
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="组织"
+              style={{ width: 220 }}
+              options={orgOptions}
+              value={orgFilter}
+              onChange={(v) => {
+                setPage(1)
+                setOrgFilter(v)
+              }}
+            />
+          </Space>
+
+          <Table
+            rowKey="id"
+            size="small"
+            loading={loading}
+            dataSource={items}
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              showSizeChanger: true,
+              onChange: (p, ps) => {
+                setPage(p)
+                setPageSize(ps)
+              },
+            }}
+            columns={[
+              { title: '昵称', dataIndex: 'nickname' },
+              { title: '手机号', dataIndex: 'phone', width: 130 },
+              {
+                title: '角色',
+                dataIndex: 'role',
+                width: 110,
+                render: (r: string) => roleLabel(r),
+              },
+              {
+                title: '状态',
+                dataIndex: 'status',
+                width: 100,
+                render: (s: string) => <Tag color={statusColor[s] || 'default'}>{s || '-'}</Tag>,
+              },
+              {
+                title: '组织',
+                render: (_, row) => row.organization?.name || row.org_name || '-',
+              },
+              {
+                title: '操作',
+                width: 220,
+                render: (_, row) =>
+                  canModify ? (
+                    <Space size="small">
+                      <Button type="link" size="small" onClick={() => openEdit(row)}>
+                        编辑
+                      </Button>
+                      {row.status !== 'active' ? (
+                        <Button type="link" size="small" onClick={() => setStatus(row, 'active')}>
+                          启用
+                        </Button>
+                      ) : (
+                        <Button type="link" size="small" onClick={() => setStatus(row, 'banned')}>
+                          禁用
+                        </Button>
+                      )}
+                    </Space>
+                  ) : (
+                    '-'
+                  ),
+              },
+            ]}
+          />
+        </Card>
+      </Space>
+
+      <Modal
+        title="新建用户"
+        open={createOpen}
+        onCancel={() => setCreateOpen(false)}
+        onOk={() => createForm.submit()}
+        confirmLoading={submitting}
+        destroyOnClose
       >
-        {editingUser ? (
-          <form className="grid cols-2" onSubmit={saveDetail}>
-            <div>用户ID：{editingUser.id}</div>
-            <div>创建时间：{fmtTime(editingUser.created_at)}</div>
-            <label>
-              <div>昵称</div>
-              <input className="input" value={editNickname} onChange={(e) => setEditNickname(e.target.value)} />
-            </label>
-            <label>
-              <div>手机号</div>
-              <input className="input" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
-            </label>
-            <label>
-              <div>邮箱</div>
-              <input className="input" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
-            </label>
-            <label>
-              <div>角色</div>
-              <select className="select" value={editRole} onChange={(e) => setEditRole(e.target.value)}>
-                <option value="volunteer">volunteer</option>
-                <option value="manager">manager</option>
-                <option value="admin">admin</option>
-                <option value="super_admin">super_admin</option>
-              </select>
-            </label>
-            <label>
-              <div>状态</div>
-              <select className="select" value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                <option value="active">正常 (active)</option>
-                <option value="inactive">待审批/禁用 (inactive)</option>
-                <option value="banned">封禁 (banned)</option>
-              </select>
-            </label>
-            <label>
-              <div>组织</div>
-              <select className="select" value={editOrgId} onChange={(e) => setEditOrgId(e.target.value)}>
-                <option value="">不绑定组织</option>
-                {orgs.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="row" style={{ gridColumn: '1 / -1' }}>
-              <button className="btn primary" type="submit" disabled={savingDetail}>
-                {savingDetail ? '保存中...' : '保存变更'}
-              </button>
-            </div>
-          </form>
-        ) : null}
-      </Dialog>
+        <Form form={createForm} layout="vertical" onFinish={onCreate}>
+          <Form.Item name="nickname" label="昵称" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="phone" label="手机号" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="password"
+            label="密码"
+            rules={[{ required: true }, { min: 8, message: '至少 8 位' }]}
+          >
+            <Input.Password />
+          </Form.Item>
+          <Form.Item name="role" label="角色" rules={[{ required: true }]}>
+            <Select options={ROLE_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="org_id" label="所属组织" rules={[{ required: true, message: '必须绑定组织' }]}>
+            <Select showSearch optionFilterProp="label" options={orgOptions} placeholder="请选择组织" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title={editing ? `编辑：${editing.nickname || editing.phone}` : '编辑用户'}
+        open={editOpen}
+        onCancel={() => {
+          setEditOpen(false)
+          setEditing(null)
+        }}
+        onOk={() => editForm.submit()}
+        confirmLoading={submitting}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical" onFinish={onEdit}>
+          <Form.Item name="nickname" label="昵称" rules={[{ required: true }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="email" label="邮箱">
+            <Input />
+          </Form.Item>
+          <Form.Item name="role" label="角色" rules={[{ required: true }]}>
+            <Select options={ROLE_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="status" label="状态" rules={[{ required: true }]}>
+            <Select options={STATUS_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="org_id" label="所属组织" rules={[{ required: true, message: '必须绑定组织' }]}>
+            <Select showSearch optionFilterProp="label" options={orgOptions} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </AppShell>
   )
 }
