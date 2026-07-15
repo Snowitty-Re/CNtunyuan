@@ -22,6 +22,7 @@ export const ACTIONS = {
   ORG_MANAGE: 'org:manage',
 } as const
 
+/** Fallback when /auth/me has no explicit permission list — aligned with backend route middleware */
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   super_admin: [
     ACTIONS.USER_CREATE,
@@ -62,11 +63,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     ACTIONS.MISSING_MANAGE,
     ACTIONS.DIALECT_MODIFY,
     ACTIONS.DIALECT_MANAGE,
-    ACTIONS.ORG_MANAGE,
   ],
   volunteer: [
     ACTIONS.USER_VIEW,
-    ACTIONS.USER_MODIFY,
     ACTIONS.TASK_VIEW,
     ACTIONS.TASK_EDIT,
     ACTIONS.TASK_EXECUTE,
@@ -125,7 +124,9 @@ export function resolvePermissionSet(user: User | null): Set<string> {
 export function hasPermission(user: User | null, action: string): boolean {
   const permission = String(action || '').trim()
   if (!permission) return false
-  if (permission === ACTIONS.ORG_MANAGE) return isManager(user)
+  // Backend org write routes require admin; keep UI gate consistent
+  if (permission === ACTIONS.ORG_MANAGE) return isAdmin(user)
+  if (permission === ACTIONS.USER_CREATE) return isAdmin(user)
   const set = resolvePermissionSet(user)
   return set.has(permission)
 }
@@ -138,4 +139,14 @@ export function canAny(user: User | null, actions: string[]): boolean {
 export function canAll(user: User | null, actions: string[]): boolean {
   if (!Array.isArray(actions) || actions.length === 0) return false
   return actions.every((action) => hasPermission(user, action))
+}
+
+export function roleLabel(role?: string): string {
+  const map: Record<string, string> = {
+    super_admin: '超级管理员',
+    admin: '管理员',
+    manager: '管理者',
+    volunteer: '志愿者',
+  }
+  return map[role || ''] || role || '-'
 }

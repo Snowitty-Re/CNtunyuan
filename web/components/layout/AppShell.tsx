@@ -1,103 +1,153 @@
 'use client'
 
+import {
+  AuditOutlined,
+  ClusterOutlined,
+  DashboardOutlined,
+  FileOutlined,
+  LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  SettingOutlined,
+  SoundOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
+import { Avatar, Button, Layout, Menu, Space, Tag, Typography, theme } from 'antd'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { PropsWithChildren, useEffect, useState } from 'react'
-import { clearAuth, getCurrentUser } from '@/lib/auth'
-import { ACTIONS, hasPermission } from '@/lib/rbac'
+import { PropsWithChildren, useEffect, useMemo, useState } from 'react'
+import { useAuth } from '@/components/providers/AuthProvider'
 import { SafeImage } from '@/components/shared/SafeImage'
 import { useSiteBrand } from '@/hooks/useSiteBrand'
+import { isNavActive, navItemsForUser, resolveWorkbench, workbenchLabel } from '@/lib/nav'
+import { roleLabel } from '@/lib/rbac'
 
-const items = [
-  { href: '/dashboard', label: '工作台' },
-  { href: '/cases', label: '案件中心', action: ACTIONS.MISSING_MODIFY },
-  { href: '/tasks', label: '任务中心', action: ACTIONS.TASK_VIEW },
-  { href: '/dialects', label: '方言中心', action: ACTIONS.DIALECT_MODIFY },
-  { href: '/dialects/cards', label: '方言卡片', action: ACTIONS.DIALECT_MANAGE },
-  { href: '/attachments', label: '附件管理', action: ACTIONS.USER_MODIFY },
-  { href: '/site-settings', label: '网站设置', action: ACTIONS.USER_MODIFY },
-  { href: '/feature-settings', label: '功能设置', action: ACTIONS.USER_MODIFY },
-  { href: '/monitor', label: '服务监控', action: ACTIONS.USER_MODIFY },
-  { href: '/organizations', label: '组织管理', action: ACTIONS.ORG_MANAGE },
-  { href: '/users', label: '人员管理', action: ACTIONS.USER_VIEW },
-  { href: '/audit', label: '审计中心', action: ACTIONS.USER_MODIFY },
-  { href: '/settings', label: '个人设置' },
-]
+const { Header, Sider, Content } = Layout
+
+const iconFor = (href: string) => {
+  if (href.startsWith('/dashboard')) return <DashboardOutlined />
+  if (href.startsWith('/organizations')) return <ClusterOutlined />
+  if (href.startsWith('/users')) return <TeamOutlined />
+  if (href.startsWith('/cases')) return <FileOutlined />
+  if (href.startsWith('/tasks')) return <FileOutlined />
+  if (href.startsWith('/dialects')) return <SoundOutlined />
+  if (href.startsWith('/attachments')) return <FileOutlined />
+  if (href.startsWith('/audit')) return <AuditOutlined />
+  if (href.startsWith('/settings') || href.startsWith('/site') || href.startsWith('/feature') || href.startsWith('/monitor')) {
+    return <SettingOutlined />
+  }
+  return <UserOutlined />
+}
 
 export function AppShell({ children }: PropsWithChildren) {
   const pathname = usePathname()
   const router = useRouter()
-  const user = getCurrentUser()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const { user, logout } = useAuth()
   const brand = useSiteBrand()
+  const [collapsed, setCollapsed] = useState(false)
+  const { token } = theme.useToken()
 
-  useEffect(() => {
-    setMenuOpen(false)
-  }, [pathname])
+  const nav = useMemo(() => navItemsForUser(user), [user])
+  const hrefs = useMemo(() => nav.map((n) => n.href), [nav])
+  const workbench = resolveWorkbench(user)
 
   useEffect(() => {
     document.title = brand.title
   }, [brand.title])
 
+  const selectedKeys = useMemo(() => {
+    const active = nav.find((item) => isNavActive(pathname, item.href, hrefs))
+    return active ? [active.href] : []
+  }, [nav, pathname, hrefs])
+
   return (
-    <div className="shell">
-      <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
-        <div className="brand">
-          <div className="brand-row">
-            {brand.logoUrl ? <SafeImage className="brand-logo" src={brand.logoUrl} alt={brand.orgName} width={44} height={44} /> : <span className="brand-mark">{brand.orgName.slice(0, 1)}</span>}
-            <div>
-              {brand.orgName}
-              <small>走失人员寻亲协作平台</small>
-            </div>
-          </div>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sider
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        trigger={null}
+        width={240}
+        style={{
+          background: 'linear-gradient(165deg, #8f4f1f 0%, #a95f24 42%, #c56a2c 100%)',
+        }}
+      >
+        <div style={{ padding: collapsed ? 12 : '16px 14px', color: '#fff9f2' }}>
+          <Space align="center" size={12}>
+            {brand.logoUrl ? (
+              <SafeImage src={brand.logoUrl} alt={brand.orgName} width={40} height={40} style={{ borderRadius: 12 }} />
+            ) : (
+              <Avatar shape="square" size={40} style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 12 }}>
+                {brand.orgName.slice(0, 1)}
+              </Avatar>
+            )}
+            {!collapsed ? (
+              <div>
+                <div style={{ fontWeight: 700, lineHeight: 1.2 }}>{brand.orgName}</div>
+                <Typography.Text style={{ color: 'rgba(255,249,242,0.78)', fontSize: 12 }}>
+                  {workbenchLabel(workbench)}
+                </Typography.Text>
+              </div>
+            ) : null}
+          </Space>
         </div>
-        <nav className="nav-list">
-          {items
-            .filter((item) => !item.action || hasPermission(user, item.action))
-            .map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
-            return (
-              <Link key={item.href} href={item.href} className={`nav-item ${active ? 'active' : ''}`}>
-                {item.label}
-              </Link>
-            )
-          })}
-        </nav>
-      </aside>
-      {menuOpen ? <div className="sidebar-mask" onClick={() => setMenuOpen(false)} /> : null}
-      <main className="main">
-        <header className="topbar">
-          <button className="btn ghost menu-btn" type="button" onClick={() => setMenuOpen((v) => !v)}>
-            菜单
-          </button>
-          <div>
-            <h1 className="top-title">{brand.title}</h1>
-            <p className="top-subtitle">{brand.subtitle}</p>
-          </div>
-          <div className="top-user">
-            <SafeImage
-              className="top-avatar"
-              src={user?.avatar || '/default-avatar.svg'}
-              alt={user?.nickname || 'avatar'}
-              width={34}
-              height={34}
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={selectedKeys}
+          style={{ background: 'transparent', border: 'none' }}
+          items={nav.map((item) => ({
+            key: item.href,
+            icon: iconFor(item.href),
+            label: <Link href={item.href}>{item.label}</Link>,
+          }))}
+        />
+      </Sider>
+      <Layout>
+        <Header
+          style={{
+            background: token.colorBgContainer,
+            padding: '0 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+          }}
+        >
+          <Space>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed((v) => !v)}
             />
+            <div>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                {brand.title}
+              </Typography.Title>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {brand.subtitle}
+              </Typography.Text>
+            </div>
+          </Space>
+          <Space size="middle">
+            <Avatar src={user?.avatar || '/default-avatar.svg'} icon={<UserOutlined />} />
             <span>{user?.nickname || user?.phone || '未登录'}</span>
-            <span className="role-badge">{user?.role || '-'}</span>
-            <button
-              className="btn ghost"
-              type="button"
+            <Tag color="orange">{roleLabel(user?.role)}</Tag>
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
               onClick={() => {
-                clearAuth()
+                logout()
                 router.replace('/login')
               }}
             >
               退出
-            </button>
-          </div>
-        </header>
-        <section className="content">{children}</section>
-      </main>
-    </div>
+            </Button>
+          </Space>
+        </Header>
+        <Content style={{ margin: 20 }}>{children}</Content>
+      </Layout>
+    </Layout>
   )
 }
