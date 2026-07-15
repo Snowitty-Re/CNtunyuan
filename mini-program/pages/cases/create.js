@@ -398,6 +398,11 @@ Page({
       return false
     }
     
+    if (!form.contactName || !form.contactName.trim()) {
+      showError('请输入联系人姓名')
+      return false
+    }
+
     if (!form.contactPhone.trim()) {
       showError('请输入联系电话')
       return false

@@ -117,7 +117,7 @@
         <text class="section-title-text">采集者</text>
       </view>
       <view class="collector-row">
-        <image class="collector-avatar" src="{{(dialect.uploader && dialect.uploader.avatar) || (dialect.collector && dialect.collector.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
+        <image class="collector-avatar" src="{{(dialect.uploader && dialect.uploader.avatar) || (dialect.collector && dialect.collector.avatar) || '/assets/images/default-avatar.png'}}" mode="aspectFill"/>
         <view class="collector-info">
           <text class="collector-name">{{(dialect.uploader && dialect.uploader.nickname) || (dialect.collector && dialect.collector.nickname) || '志愿者'}}</text>
           <text class="collector-time">{{dialect.formatted_date}}</text>
@@ -136,7 +136,7 @@
         <text class="section-link">查看详情</text>
       </view>
       <view class="missing-person-row">
-        <image class="mp-photo" src="{{missingPerson.avatar || missingPerson.photo || '/images/default-avatar.png'}}" mode="aspectFill"/>
+        <image class="mp-photo" src="{{missingPerson.avatar || missingPerson.photo || '/assets/images/default-avatar.png'}}" mode="aspectFill"/>
         <view class="mp-info">
           <view class="mp-name-row">
             <text class="mp-name">{{missingPerson.name || '未知'}}</text>
@@ -165,7 +165,7 @@
       <!-- Comment list -->
       <view class="comment-list" wx:if="{{comments.length > 0}}">
         <view class="comment-item" wx:for="{{comments}}" wx:key="id">
-          <image class="comment-avatar" src="{{(item.user && item.user.avatar) || '/images/default-avatar.png'}}" mode="aspectFill"/>
+          <image class="comment-avatar" src="{{(item.user && item.user.avatar) || '/assets/images/default-avatar.png'}}" mode="aspectFill"/>
           <view class="comment-body">
             <view class="comment-top">
               <text class="comment-author">{{(item.user && item.user.nickname) || '用户'}}</text>

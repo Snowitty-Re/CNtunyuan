@@ -205,7 +205,11 @@ Page({
       return false
     }
 
-    if (new Date(form.deadline) < new Date()) {
+    // YYYY-MM-DD is midnight; compare by local calendar day so "today" is valid
+    const deadlineDay = String(form.deadline).slice(0, 10)
+    const now = new Date()
+    const todayDay = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    if (deadlineDay < todayDay) {
       showToast('截止日期不能早于今天')
       return false
     }
