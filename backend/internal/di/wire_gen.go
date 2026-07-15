@@ -149,7 +149,7 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 
 	// 创建应用服务
 	userService := service.NewUserAppService(userRepo, taskRepo, mpRepo, orgRepo, authzService)
-	orgService := service.NewOrganizationAppService(orgRepo)
+	orgService := service.NewOrganizationAppService(orgRepo, authzService)
 	mpService := service.NewMissingPersonAppService(mpRepo, orgRepo, authzService)
 	dialectService := service.NewDialectAppService(dialectRepo, userRepo, orgRepo, fileRepo, storageService, authzService)
 	taskService := service.NewTaskAppService(taskRepo, userRepo, orgRepo, authzService)

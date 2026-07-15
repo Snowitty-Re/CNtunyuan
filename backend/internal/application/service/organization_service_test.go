@@ -20,6 +20,14 @@ func setupOrganizationTest(t *testing.T) (*OrganizationAppService, *testutil.Tes
 	return service, tdb
 }
 
+func testSuperAdmin() *entity.User {
+	return &entity.User{
+		BaseEntity: entity.BaseEntity{ID: "test-super-admin"},
+		Role:       entity.RoleSuperAdmin,
+		OrgID:      "test-org-root",
+	}
+}
+
 func TestOrganizationAppService_Create(t *testing.T) {
 	service, tdb := setupOrganizationTest(t)
 	defer tdb.Close()
@@ -78,7 +86,7 @@ func TestOrganizationAppService_Create(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.Create(testutil.Context(), tt.req)
+			resp, err := service.Create(testutil.Context(), tt.req, testSuperAdmin())
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -316,7 +324,7 @@ func TestOrganizationAppService_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp, err := service.Update(testutil.Context(), tt.orgID, tt.req)
+			resp, err := service.Update(testutil.Context(), tt.orgID, tt.req, testSuperAdmin())
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -372,7 +380,7 @@ func TestOrganizationAppService_Delete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.Delete(testutil.Context(), tt.orgID)
+			err := service.Delete(testutil.Context(), tt.orgID, testSuperAdmin())
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Equal(t, ErrCannotDeleteOrg, err)
@@ -564,7 +572,7 @@ func TestOrganizationAppService_Move(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := service.Move(testutil.Context(), tt.orgID, tt.newParentID)
+			err := service.Move(testutil.Context(), tt.orgID, tt.newParentID, testSuperAdmin())
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errMsg != "" {
@@ -721,7 +729,7 @@ func TestOrganizationAppService_CreateWithAllOrgTypes(t *testing.T) {
 				t.Skip("root organization already exists")
 			}
 
-			resp, err := service.Create(testutil.Context(), req)
+			resp, err := service.Create(testutil.Context(), req, testSuperAdmin())
 			require.NoError(t, err)
 			assert.Equal(t, string(orgType), resp.Type)
 			assert.Equal(t, req.Name, resp.Name)

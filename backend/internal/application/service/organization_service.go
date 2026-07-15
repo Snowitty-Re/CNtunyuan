@@ -17,20 +17,59 @@ var (
 	ErrInvalidOrgType          = errors.New("invalid organization type")
 	ErrCannotDeleteOrg         = errors.New("cannot delete organization with children")
 	ErrOrganizationInvalidMove = errors.New("cannot move organization to itself")
+	ErrOrganizationForbidden   = errors.New("no permission to manage this organization")
 )
 
 // OrganizationAppService 组织应用服务
 type OrganizationAppService struct {
 	orgRepo repository.OrganizationRepository
+	authz   *AuthorizationService
 }
 
 // NewOrganizationAppService 创建组织应用服务
-func NewOrganizationAppService(orgRepo repository.OrganizationRepository) *OrganizationAppService {
-	return &OrganizationAppService{orgRepo: orgRepo}
+func NewOrganizationAppService(orgRepo repository.OrganizationRepository, authz ...*AuthorizationService) *OrganizationAppService {
+	var authzSvc *AuthorizationService
+	if len(authz) > 0 && authz[0] != nil {
+		authzSvc = authz[0]
+	} else {
+		authzSvc = NewAuthorizationService(orgRepo)
+	}
+	return &OrganizationAppService{orgRepo: orgRepo, authz: authzSvc}
+}
+
+func (s *OrganizationAppService) ensureCanManageOrg(ctx context.Context, operator *entity.User, orgID string) error {
+	if operator == nil {
+		return ErrOrganizationForbidden
+	}
+	decision, err := s.authz.CanManageOrg(ctx, operator, orgID)
+	if err != nil {
+		return err
+	}
+	if !decision.Allowed {
+		return ErrOrganizationForbidden
+	}
+	return nil
 }
 
 // Create 创建组织
-func (s *OrganizationAppService) Create(ctx context.Context, req *dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (s *OrganizationAppService) Create(ctx context.Context, req *dto.CreateOrganizationRequest, operators ...*entity.User) (*dto.OrganizationResponse, error) {
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	if operator == nil {
+		return nil, ErrOrganizationForbidden
+	}
+
+	// 有父组织：必须可管理父组织；无父组织（建顶级）：仅 super_admin
+	if req.ParentID != "" {
+		if err := s.ensureCanManageOrg(ctx, operator, req.ParentID); err != nil {
+			return nil, err
+		}
+	} else if !operator.IsSuperAdmin() {
+		return nil, ErrOrganizationForbidden
+	}
+
 	// 历史兼容：清理同编码的软删除残留，避免唯一索引被“假删除”占用
 	if err := s.orgRepo.PurgeSoftDeletedByCode(ctx, req.Code); err != nil {
 		return nil, err
@@ -133,7 +172,15 @@ func (s *OrganizationAppService) List(ctx context.Context, req *dto.Organization
 }
 
 // Update 更新组织
-func (s *OrganizationAppService) Update(ctx context.Context, id string, req *dto.UpdateOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (s *OrganizationAppService) Update(ctx context.Context, id string, req *dto.UpdateOrganizationRequest, operators ...*entity.User) (*dto.OrganizationResponse, error) {
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	if err := s.ensureCanManageOrg(ctx, operator, id); err != nil {
+		return nil, err
+	}
+
 	org, err := s.orgRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrOrganizationNotFound
@@ -185,7 +232,15 @@ func (s *OrganizationAppService) Update(ctx context.Context, id string, req *dto
 }
 
 // Delete 删除组织
-func (s *OrganizationAppService) Delete(ctx context.Context, id string) error {
+func (s *OrganizationAppService) Delete(ctx context.Context, id string, operators ...*entity.User) error {
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	if err := s.ensureCanManageOrg(ctx, operator, id); err != nil {
+		return err
+	}
+
 	// 检查是否存在子组织
 	children, err := s.orgRepo.FindByParentID(ctx, id)
 	if err != nil {
@@ -244,7 +299,24 @@ func (s *OrganizationAppService) GetChildren(ctx context.Context, parentID strin
 }
 
 // Move 移动组织
-func (s *OrganizationAppService) Move(ctx context.Context, id string, newParentID string) error {
+func (s *OrganizationAppService) Move(ctx context.Context, id string, newParentID string, operators ...*entity.User) error {
+	var operator *entity.User
+	if len(operators) > 0 {
+		operator = operators[0]
+	}
+	// 必须可管理被移动组织
+	if err := s.ensureCanManageOrg(ctx, operator, id); err != nil {
+		return err
+	}
+	// 新父组织（非空）必须在可管理范围内；移到顶级仅 super_admin
+	if newParentID != "" {
+		if err := s.ensureCanManageOrg(ctx, operator, newParentID); err != nil {
+			return err
+		}
+	} else if operator == nil || !operator.IsSuperAdmin() {
+		return ErrOrganizationForbidden
+	}
+
 	// 禁止将组织移动到自身
 	if id == newParentID {
 		return ErrOrganizationInvalidMove
@@ -298,7 +370,8 @@ func (s *OrganizationAppService) GetPath(ctx context.Context, id string) ([]dto.
 // isValidOrgType 验证组织类型
 func isValidOrgType(t entity.OrgType) bool {
 	switch t {
-	case entity.OrgTypeRoot, entity.OrgTypeProvince, entity.OrgTypeCity, entity.OrgTypeDistrict, entity.OrgTypeStreet, entity.OrgTypeCommunity, entity.OrgTypeTeam:
+	case entity.OrgTypeRoot, entity.OrgTypeProvince, entity.OrgTypeCity,
+		entity.OrgTypeDistrict, entity.OrgTypeStreet, entity.OrgTypeCommunity, entity.OrgTypeTeam:
 		return true
 	default:
 		return false

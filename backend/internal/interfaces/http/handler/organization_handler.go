@@ -58,13 +58,15 @@ func (h *OrganizationHandler) Create(c *gin.Context) {
 		return
 	}
 
-	org, err := h.orgService.Create(c.Request.Context(), &req)
+	org, err := h.orgService.Create(c.Request.Context(), &req, userOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrOrganizationExists:
 			response.Conflict(c, "organization code already exists")
 		case service.ErrInvalidOrgType:
 			response.BadRequest(c, "invalid organization type")
+		case service.ErrOrganizationForbidden:
+			response.Forbidden(c, "no permission to manage this organization")
 		default:
 			logger.Error("Failed to create organization", logger.Err(err))
 			response.InternalServerError(c, "failed to create organization")
@@ -173,13 +175,15 @@ func (h *OrganizationHandler) Update(c *gin.Context) {
 		return
 	}
 
-	org, err := h.orgService.Update(c.Request.Context(), id, &req)
+	org, err := h.orgService.Update(c.Request.Context(), id, &req, userOperator(c))
 	if err != nil {
 		switch err {
 		case service.ErrOrganizationNotFound:
 			response.NotFound(c, "organization not found")
 		case service.ErrOrganizationExists:
 			response.Conflict(c, "organization code already exists")
+		case service.ErrOrganizationForbidden:
+			response.Forbidden(c, "no permission to manage this organization")
 		default:
 			logger.Error("Failed to update organization", logger.Err(err))
 			response.InternalServerError(c, "failed to update organization")
@@ -212,12 +216,14 @@ func (h *OrganizationHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.orgService.Delete(c.Request.Context(), id); err != nil {
+	if err := h.orgService.Delete(c.Request.Context(), id, userOperator(c)); err != nil {
 		switch err {
 		case service.ErrOrganizationNotFound:
 			response.NotFound(c, "organization not found")
 		case service.ErrCannotDeleteOrg:
 			response.BadRequest(c, "cannot delete organization with children")
+		case service.ErrOrganizationForbidden:
+			response.Forbidden(c, "no permission to manage this organization")
 		default:
 			logger.Error("Failed to delete organization", logger.Err(err))
 			response.InternalServerError(c, "failed to delete organization")
@@ -339,12 +345,14 @@ func (h *OrganizationHandler) Move(c *gin.Context) {
 		return
 	}
 
-	if err := h.orgService.Move(c.Request.Context(), id, req.NewParentID); err != nil {
+	if err := h.orgService.Move(c.Request.Context(), id, req.NewParentID, userOperator(c)); err != nil {
 		switch err {
 		case service.ErrOrganizationNotFound:
 			response.NotFound(c, "organization not found")
 		case service.ErrOrganizationInvalidMove:
 			response.BadRequest(c, "cannot move organization to itself")
+		case service.ErrOrganizationForbidden:
+			response.Forbidden(c, "no permission to manage this organization")
 		default:
 			response.InternalServerError(c, "failed to move organization")
 		}

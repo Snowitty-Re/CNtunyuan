@@ -1395,9 +1395,29 @@ func (s *AuthorizationService) CanCreateUserInOrg(ctx context.Context, operator 
 	return allow(), nil
 }
 
-// CanManageOrg 组织范围通用校验
-func (s *AuthorizationService) CanManageOrg(ctx context.Context, operator *entity.User, targetOrgID string) (AuthzDecision, error) {
-	return s.CanCreateUserInOrg(ctx, operator, targetOrgID)
+// CanManageOrg 组织范围通用校验（manager+ 且目标组织在可管理范围内）
+// 注意：不再复用 user:create，避免 manager 按 org 筛选用户时被误拒
+func (s *AuthorizationService) CanManageOrg(ctx context.Context, operator *entity.User, targetOrgID string) (decision AuthzDecision, err error) {
+	defer func() {
+		s.recordDecision(ctx, "org:manage", "organization", targetOrgID, operator, decision)
+	}()
+	if operator == nil {
+		return deny(AuthzDenyUnauthenticated), nil
+	}
+	if operator.IsSuperAdmin() {
+		return allow(), nil
+	}
+	if !entity.HasRole(operator.Role, entity.RoleManager) {
+		return deny(AuthzDenyRoleLevel), nil
+	}
+	ok, err := canManageTargetOrg(ctx, s.orgRepo, operator, targetOrgID)
+	if err != nil {
+		return AuthzDecision{}, err
+	}
+	if !ok {
+		return deny(AuthzDenyOrgScope), nil
+	}
+	return allow(), nil
 }
 
 // CanModifyUser 用户修改（角色+组织+对象）
