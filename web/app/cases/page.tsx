@@ -1,460 +1,172 @@
 'use client'
 
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { App, Button, Card, Input, Select, Space, Table, Tag, Typography } from 'antd'
 import Link from 'next/link'
-import { FormEvent, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
-import { ModuleHeader } from '@/components/shared/ModuleHeader'
-import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
-import { PageState } from '@/components/shared/PageState'
-import { Pagination } from '@/components/shared/Pagination'
-import { StatusTag } from '@/components/shared/StatusTag'
-import { ConfirmButton } from '@/components/shared/ConfirmButton'
-import { Dialog } from '@/components/ui/Dialog'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
-import { joinLocation, listFrom, fmtTime } from '@/lib/data'
+import { fmtTime, joinLocation, listFrom } from '@/lib/data'
 import { missingPersonService } from '@/services/missingPersons'
 import type { MissingPerson } from '@/types/api'
 
-const CASE_FILTER_KEY = 'web_cases_filters_v1'
-const CASE_COL_KEY = 'web_cases_columns_v1'
-const CASE_LIST_IDS_KEY = 'web_cases_list_ids_v1'
-const CASE_DENSITY_KEY = 'web_cases_density_v1'
+const STATUS_OPTIONS = [
+  { value: 'missing', label: '走失中' },
+  { value: 'searching', label: '寻访中' },
+  { value: 'found', label: '已找到' },
+  { value: 'reunited', label: '已团圆' },
+  { value: 'closed', label: '已关闭' },
+]
+
+const statusColor: Record<string, string> = {
+  missing: 'error',
+  searching: 'processing',
+  found: 'success',
+  reunited: 'success',
+  closed: 'default',
+}
 
 export default function CasesPage() {
   const { ready } = useAuthGuard()
+  const { message } = App.useApp()
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [items, setItems] = useState<MissingPerson[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [keyword, setKeyword] = useState('')
-  const [status, setStatus] = useState('')
-  const [caseType, setCaseType] = useState('')
-  const [city, setCity] = useState('')
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [name, setName] = useState('')
-  const [gender, setGender] = useState('male')
-  const [quickCaseType, setQuickCaseType] = useState('other')
-  const [quickMissingTime, setQuickMissingTime] = useState('')
-  const [contactName, setContactName] = useState('')
-  const [contactPhone, setContactPhone] = useState('')
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [createOpen, setCreateOpen] = useState(false)
-  const [batchDeleteOpen, setBatchDeleteOpen] = useState(false)
-  const [notice, setNotice] = useState<Notice | null>(null)
-  const [booted, setBooted] = useState(false)
-  const [columnVisible, setColumnVisible] = useState<Record<string, boolean>>({
-    name: true,
-    profile: true,
-    status: true,
-    missingTime: true,
-    location: true,
-    actions: true,
-  })
-  const [compactTable, setCompactTable] = useState(false)
-  const allSelected = items.length > 0 && selectedIds.length === items.length
+  const [status, setStatus] = useState<string | undefined>()
 
-  async function load(
-    nextPage = page,
-    filters?: {
-      keyword?: string
-      status?: string
-      caseType?: string
-      city?: string
-      startTime?: string
-      endTime?: string
-    },
-  ) {
+  const load = useCallback(async () => {
     setLoading(true)
-    setError('')
     try {
-      const qKeyword = filters?.keyword ?? keyword
-      const qStatus = filters?.status ?? status
-      const qCaseType = filters?.caseType ?? caseType
-      const qCity = filters?.city ?? city
-      const qStart = filters?.startTime ?? startTime
-      const qEnd = filters?.endTime ?? endTime
       const data = await missingPersonService.list({
-        page: nextPage,
-        page_size: 20,
-        keyword: qKeyword || undefined,
-        status: qStatus || undefined,
-        case_type: qCaseType || undefined,
-        city: qCity || undefined,
-        start_time: qStart ? new Date(qStart).toISOString() : undefined,
-        end_time: qEnd ? new Date(qEnd).toISOString() : undefined,
+        page,
+        page_size: pageSize,
+        keyword: keyword || undefined,
+        status: status || undefined,
       })
       const normalized = listFrom<MissingPerson>(data)
       setItems(normalized.list)
       setTotal(normalized.total)
-      setPage(nextPage)
-      setSelectedIds([])
     } catch (err) {
-      setError(err instanceof Error ? err.message : '加载失败')
+      message.error(err instanceof Error ? err.message : '加载失败')
     } finally {
       setLoading(false)
     }
-  }
+  }, [page, pageSize, keyword, status, message])
 
-  async function quickCreate(e: FormEvent) {
-    e.preventDefault()
-    if (!name.trim() || !contactName.trim() || !contactPhone.trim()) return
-    try {
-      await missingPersonService.create({
-        name: name.trim(),
-        gender,
-        case_type: quickCaseType,
-        missing_time: quickMissingTime ? new Date(quickMissingTime).toISOString() : new Date().toISOString(),
-        contact_name: contactName.trim(),
-        contact_phone: contactPhone.trim(),
-        status: 'missing',
-      })
-      setName('')
-      setGender('male')
-      setQuickCaseType('other')
-      setQuickMissingTime('')
-      setContactName('')
-      setContactPhone('')
-      load(1)
-      setCreateOpen(false)
-      setNotice({ type: 'success', text: '案件创建成功' })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '创建失败' })
-    }
-  }
+  useEffect(() => {
+    if (ready) load()
+  }, [ready, load])
 
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-  }
-
-  function toggleSelectAll(checked: boolean) {
-    setSelectedIds(checked ? items.map((x) => x.id) : [])
-  }
-
-  function invertSelection() {
-    const visibleIds = items.map((x) => x.id)
-    setSelectedIds((prev) => visibleIds.filter((id) => !prev.includes(id)))
-  }
-
-  async function batchUpdateStatus(nextStatus: string) {
-    if (selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => missingPersonService.updateStatus(id, nextStatus)))
-      load(page)
-      setNotice({ type: 'success', text: `已更新 ${selectedIds.length} 条案件状态` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量更新失败' })
-    }
-  }
-
-  async function batchDelete() {
-    if (selectedIds.length === 0) return
-    try {
-      await Promise.all(selectedIds.map((id) => missingPersonService.remove(id)))
-      load(page)
-      setNotice({ type: 'success', text: `已删除 ${selectedIds.length} 条案件` })
-    } catch (err) {
-      setNotice({ type: 'error', text: err instanceof Error ? err.message : '批量删除失败' })
-    }
-  }
-
-  function exportCsv() {
-    const rows = selectedIds.length > 0 ? items.filter((x) => selectedIds.includes(x.id)) : items
-    if (rows.length === 0) return
-    const headers = ['id', 'name', 'gender', 'age', 'status', 'case_type', 'missing_time', 'location', 'contact_name', 'contact_phone']
-    const lines = rows.map((row) =>
-      [
-        row.id,
-        row.name,
-        row.gender || '',
-        row.age || '',
-        row.status || '',
-        row.case_type || '',
-        row.missing_time || '',
-        joinLocation(row),
-        row.contact_name || '',
-        row.contact_phone || '',
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(','),
+  if (!ready) {
+    return (
+      <AppShell>
+        <Card loading />
+      </AppShell>
     )
-    const content = `\ufeff${[headers.join(','), ...lines].join('\n')}`
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `cases-${Date.now()}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
   }
-
-  function resetFilters() {
-    setKeyword('')
-    setStatus('')
-    setCaseType('')
-    setCity('')
-    setStartTime('')
-    setEndTime('')
-    load(1, { keyword: '', status: '', caseType: '', city: '', startTime: '', endTime: '' })
-  }
-
-  useEffect(() => {
-    if (ready && !booted) {
-      if (typeof window !== 'undefined') {
-        try {
-          const savedFilter = JSON.parse(localStorage.getItem(CASE_FILTER_KEY) || '{}')
-          const savedCols = JSON.parse(localStorage.getItem(CASE_COL_KEY) || '{}')
-          if (savedFilter && typeof savedFilter === 'object') {
-            setKeyword(savedFilter.keyword || '')
-            setStatus(savedFilter.status || '')
-            setCaseType(savedFilter.caseType || '')
-            setCity(savedFilter.city || '')
-            setStartTime(savedFilter.startTime || '')
-            setEndTime(savedFilter.endTime || '')
-            load(1, {
-              keyword: savedFilter.keyword || '',
-              status: savedFilter.status || '',
-              caseType: savedFilter.caseType || '',
-              city: savedFilter.city || '',
-              startTime: savedFilter.startTime || '',
-              endTime: savedFilter.endTime || '',
-            })
-          } else {
-            load(1)
-          }
-          if (savedCols && typeof savedCols === 'object') {
-            setColumnVisible((prev) => ({ ...prev, ...savedCols }))
-          }
-          setCompactTable(localStorage.getItem(CASE_DENSITY_KEY) === 'compact')
-        } catch {
-          load(1)
-        }
-      } else {
-        load(1)
-      }
-      setBooted(true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, booted])
-
-  useEffect(() => {
-    if (!ready || !booted || typeof window === 'undefined') return
-    localStorage.setItem(CASE_FILTER_KEY, JSON.stringify({ keyword, status, caseType, city, startTime, endTime }))
-  }, [ready, booted, keyword, status, caseType, city, startTime, endTime])
-
-  useEffect(() => {
-    if (!ready || !booted || typeof window === 'undefined') return
-    localStorage.setItem(CASE_COL_KEY, JSON.stringify(columnVisible))
-  }, [ready, booted, columnVisible])
-
-  useEffect(() => {
-    if (!ready || !booted || typeof window === 'undefined') return
-    localStorage.setItem(CASE_DENSITY_KEY, compactTable ? 'compact' : 'comfortable')
-  }, [ready, booted, compactTable])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    localStorage.setItem(CASE_LIST_IDS_KEY, JSON.stringify(items.map((x) => x.id)))
-  }, [items])
-
-  if (!ready) return null
 
   return (
     <AppShell>
-      <ModuleHeader
-        title="案件中心"
-        desc="管理走失人员案件，维护状态与线索轨迹"
-        right={
-          <div className="row wrap">
-            <button className="btn" type="button" onClick={() => setCreateOpen(true)}>
-              快速新建
-            </button>
-            <Link className="btn primary" href="/cases/create">
-              完整新建
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+          <div>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              案件中心
+            </Typography.Title>
+            <Typography.Text type="secondary">走失人员登记、状态与线索跟进</Typography.Text>
+          </div>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={() => load()}>
+              刷新
+            </Button>
+            <Link href="/cases/create">
+              <Button type="primary" icon={<PlusOutlined />}>
+                登记案件
+              </Button>
             </Link>
-          </div>
-        }
-      />
-      <NoticeBar notice={notice} onClose={() => setNotice(null)} />
-      <form
-        className="panel row wrap"
-        onSubmit={(e: FormEvent) => {
-          e.preventDefault()
-          load(1)
-        }}
-      >
-        <input className="input" style={{ maxWidth: 240 }} placeholder="姓名/关键词" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-        <select className="select" style={{ maxWidth: 180 }} value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">全部状态</option>
-          <option value="missing">失踪中</option>
-          <option value="searching">寻找中</option>
-          <option value="found">已找到</option>
-          <option value="reunited">已团圆</option>
-          <option value="closed">已结案</option>
-        </select>
-        <select className="select" style={{ maxWidth: 180 }} value={caseType} onChange={(e) => setCaseType(e.target.value)}>
-          <option value="">全部案件类型</option>
-          <option value="child">child</option>
-          <option value="adult">adult</option>
-          <option value="elderly">elderly</option>
-          <option value="other">other</option>
-        </select>
-        <input className="input" style={{ maxWidth: 180 }} placeholder="城市" value={city} onChange={(e) => setCity(e.target.value)} />
-        <input className="input" type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-        <input className="input" type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-        <button className="btn" type="submit">
-          查询
-        </button>
-        <button className="btn ghost" type="button" onClick={resetFilters}>
-          重置
-        </button>
-      </form>
-      <div className="panel row wrap">
-        <b>批量操作</b>
-        <span>已选 {selectedIds.length} 条</span>
-        <button className="btn ghost" type="button" onClick={() => toggleSelectAll(true)}>
-          全选本页
-        </button>
-        <button className="btn ghost" type="button" onClick={() => toggleSelectAll(false)}>
-          清空选择
-        </button>
-        <button className="btn ghost" type="button" onClick={invertSelection}>
-          反选
-        </button>
-        <button className="btn" type="button" onClick={() => batchUpdateStatus('searching')}>
-          批量设为寻找中
-        </button>
-        <button className="btn" type="button" onClick={() => batchUpdateStatus('found')}>
-          批量设为已找到
-        </button>
-        <button className="btn" type="button" onClick={() => batchUpdateStatus('reunited')}>
-          批量设为已团圆
-        </button>
-        <button className="btn danger" type="button" onClick={() => setBatchDeleteOpen(true)} disabled={selectedIds.length === 0}>
-          批量删除
-        </button>
-        <button className="btn" type="button" onClick={exportCsv}>
-          导出CSV
-        </button>
-      </div>
-      <div className="panel row wrap">
-        <b>列显示</b>
-        <label><input type="checkbox" checked={columnVisible.name} onChange={(e) => setColumnVisible((v) => ({ ...v, name: e.target.checked }))} /> 姓名</label>
-        <label><input type="checkbox" checked={columnVisible.profile} onChange={(e) => setColumnVisible((v) => ({ ...v, profile: e.target.checked }))} /> 性别/年龄</label>
-        <label><input type="checkbox" checked={columnVisible.status} onChange={(e) => setColumnVisible((v) => ({ ...v, status: e.target.checked }))} /> 状态</label>
-        <label><input type="checkbox" checked={columnVisible.missingTime} onChange={(e) => setColumnVisible((v) => ({ ...v, missingTime: e.target.checked }))} /> 走失时间</label>
-        <label><input type="checkbox" checked={columnVisible.location} onChange={(e) => setColumnVisible((v) => ({ ...v, location: e.target.checked }))} /> 走失地点</label>
-        <label><input type="checkbox" checked={columnVisible.actions} onChange={(e) => setColumnVisible((v) => ({ ...v, actions: e.target.checked }))} /> 操作</label>
-        <span style={{ marginLeft: 'auto' }} />
-        <button className={`btn ${compactTable ? '' : 'primary'}`} type="button" onClick={() => setCompactTable(false)}>
-          舒适
-        </button>
-        <button className={`btn ${compactTable ? 'primary' : ''}`} type="button" onClick={() => setCompactTable(true)}>
-          紧凑
-        </button>
-      </div>
-      <PageState loading={loading} error={error} empty={!loading && !error && items.length === 0} onRetry={() => load(page)} />
-      {!loading && !error && items.length > 0 ? (
-        <>
-          <div className="table-wrap">
-            <table className={`table ${compactTable ? 'compact' : ''}`}>
-              <thead>
-                <tr>
-                  <th>
-                    <input type="checkbox" checked={allSelected} onChange={(e) => toggleSelectAll(e.target.checked)} />
-                  </th>
-                  {columnVisible.name ? <th>姓名</th> : null}
-                  {columnVisible.profile ? <th>性别/年龄</th> : null}
-                  {columnVisible.status ? <th>状态</th> : null}
-                  {columnVisible.missingTime ? <th>走失时间</th> : null}
-                  {columnVisible.location ? <th>走失地点</th> : null}
-                  {columnVisible.actions ? <th>操作</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} />
-                    </td>
-                    {columnVisible.name ? <td>{row.name}</td> : null}
-                    {columnVisible.profile ? <td>
-                      {row.gender} {row.age ? `${row.age}岁` : '-'}
-                    </td> : null}
-                    {columnVisible.status ? <td>
-                      <StatusTag status={row.status || '-'} />
-                    </td> : null}
-                    {columnVisible.missingTime ? <td>{fmtTime(row.missing_time)}</td> : null}
-                    {columnVisible.location ? <td>{joinLocation(row)}</td> : null}
-                    {columnVisible.actions ? <td>
-                      <div className="row wrap">
-                        <Link className="btn ghost" href={`/cases/${row.id}`}>
-                          查看详情
-                        </Link>
-                        <ConfirmButton
-                          text="删除"
-                          message={`确认删除案件「${row.name}」？`}
-                          onConfirm={() => {
-                            missingPersonService.remove(row.id).then(() => load(page))
-                          }}
-                          className="btn danger"
-                        />
-                      </div>
-                    </td> : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <Pagination page={page} pageSize={20} total={total} onChange={load} />
-        </>
-      ) : null}
-      <Dialog open={createOpen} title="新建案件" onClose={() => setCreateOpen(false)}>
-        <form className="grid cols-2" onSubmit={quickCreate}>
-          <input className="input" placeholder="姓名（必填）" value={name} onChange={(e) => setName(e.target.value)} />
-          <select className="select" value={gender} onChange={(e) => setGender(e.target.value)}>
-            <option value="male">male</option>
-            <option value="female">female</option>
-            <option value="other">other</option>
-          </select>
-          <select className="select" value={quickCaseType} onChange={(e) => setQuickCaseType(e.target.value)}>
-            <option value="other">other</option>
-            <option value="child">child</option>
-            <option value="adult">adult</option>
-            <option value="elderly">elderly</option>
-            <option value="disability">disability</option>
-          </select>
-          <input className="input" type="datetime-local" value={quickMissingTime} onChange={(e) => setQuickMissingTime(e.target.value)} />
-          <input className="input" placeholder="联系人（必填）" value={contactName} onChange={(e) => setContactName(e.target.value)} />
-          <input className="input" placeholder="联系电话（必填）" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
-          <div className="row" style={{ gridColumn: '1 / -1' }}>
-            <button className="btn primary" type="submit">
-              创建案件
-            </button>
-          </div>
-        </form>
-      </Dialog>
-      <Dialog open={batchDeleteOpen} title="确认批量删除" onClose={() => setBatchDeleteOpen(false)}>
-        <div className="grid">
-          <div>确认删除选中的 {selectedIds.length} 条案件？该操作不可恢复。</div>
-          <div className="row">
-            <button className="btn ghost" type="button" onClick={() => setBatchDeleteOpen(false)}>
-              取消
-            </button>
-            <button
-              className="btn danger"
-              type="button"
-              onClick={() => {
-                setBatchDeleteOpen(false)
-                batchDelete()
+          </Space>
+        </Space>
+
+        <Card size="small">
+          <Space wrap style={{ marginBottom: 12 }}>
+            <Input.Search
+              allowClear
+              placeholder="姓名/联系人关键词"
+              style={{ width: 240 }}
+              onSearch={(v) => {
+                setPage(1)
+                setKeyword(v.trim())
               }}
-            >
-              确认删除
-            </button>
-          </div>
-        </div>
-      </Dialog>
+            />
+            <Select
+              allowClear
+              placeholder="状态"
+              style={{ width: 140 }}
+              options={STATUS_OPTIONS}
+              value={status}
+              onChange={(v) => {
+                setPage(1)
+                setStatus(v)
+              }}
+            />
+          </Space>
+
+          <Table
+            rowKey="id"
+            size="small"
+            loading={loading}
+            dataSource={items}
+            pagination={{
+              current: page,
+              pageSize,
+              total,
+              showSizeChanger: true,
+              onChange: (p, ps) => {
+                setPage(p)
+                setPageSize(ps)
+              },
+            }}
+            columns={[
+              {
+                title: '姓名',
+                dataIndex: 'name',
+                render: (name: string, row) => <Link href={`/cases/${row.id}`}>{name}</Link>,
+              },
+              { title: '性别', dataIndex: 'gender', width: 80 },
+              {
+                title: '状态',
+                dataIndex: 'status',
+                width: 110,
+                render: (s: string) => <Tag color={statusColor[s] || 'default'}>{s || '-'}</Tag>,
+              },
+              {
+                title: '走失时间',
+                dataIndex: 'missing_time',
+                width: 170,
+                render: (t: string) => fmtTime(t),
+              },
+              {
+                title: '地点',
+                render: (_, row) => joinLocation(row as unknown as Record<string, unknown>),
+              },
+              {
+                title: '操作',
+                width: 100,
+                render: (_, row) => (
+                  <Link href={`/cases/${row.id}`}>
+                    <Button type="link" size="small">
+                      详情
+                    </Button>
+                  </Link>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      </Space>
     </AppShell>
   )
 }
