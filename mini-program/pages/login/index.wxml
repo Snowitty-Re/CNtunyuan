@@ -40,12 +40,12 @@
 
       <view class="block wechat-block" wx:if="{{loginType === 'wechat' && !isBinding}}">
         <view class="block-head">
-          <text class="block-title">推荐方式</text>
-          <text class="block-tip">授权后自动关联账号</text>
+          <text class="block-title">志愿者登录</text>
+          <text class="block-tip">内部协作端 · 仅认证志愿者</text>
         </view>
         <view class="wechat-points">
-          <text class="point">免记密码，登录更快</text>
-          <text class="point">账号状态自动同步</text>
+          <text class="point">使用微信身份登录组织协作系统</text>
+          <text class="point">手机号仅在必要场景另行授权，可拒绝</text>
         </view>
         <button
           class="btn btn-wechat"
@@ -53,7 +53,7 @@
           loading="{{loading}}"
           disabled="{{loading}}"
         >
-          <text>手机号快捷登录</text>
+          <text>微信登录</text>
         </button>
       </view>
 
@@ -64,7 +64,7 @@
         </view>
 
         <view class="bind-banner" wx:if="{{isBinding}}">
-          <text class="bind-banner-text">当前账号未绑定手机号</text>
+          <text class="bind-banner-text">{{bindReason === 'task' ? '查看任务需绑定手机号，用于组织联络与任务通知' : '建议绑定手机号，便于组织联络；非必要可暂不绑定'}}</text>
         </view>
 
         <view class="wechat-bind-fast" wx:if="{{isBinding}}">
@@ -75,9 +75,15 @@
             loading="{{loading}}"
             disabled="{{loading}}"
           >
-            <text>手机号快捷绑定</text>
+            <text>授权手机号并绑定</text>
           </button>
-          <text class="wechat-bind-tip">需授权获取当前手机号</text>
+          <text class="wechat-bind-tip">将用于账号安全与组织联络；您可拒绝授权</text>
+          <button class="btn btn-skip" bindtap="skipPhoneBind" disabled="{{loading}}">
+            <text>暂不绑定，先进入系统</text>
+          </button>
+          <button class="btn btn-exit" bindtap="exitAsNonVolunteer" disabled="{{loading}}">
+            <text>我不是志愿者，退出</text>
+          </button>
         </view>
 
         <view class="wechat-bind-fast" wx:if="{{!isBinding && (isRegister || isResetPassword)}}">
@@ -139,8 +145,8 @@
           <text class="action-link" bindtap="goToForgot">{{isResetPassword ? '已在重置模式' : '忘记密码'}}</text>
         </view>
 
-        <view class="actions" wx:if="{{isBinding}}">
-          <text class="action-link" bindtap="backToWechatLogin">返回快捷登录</text>
+        <view class="actions" wx:if="{{isBinding && !bindReason}}">
+          <text class="action-link" bindtap="backToWechatLogin">返回微信登录</text>
         </view>
       </view>
     </view>

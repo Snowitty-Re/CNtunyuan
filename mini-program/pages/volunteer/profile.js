@@ -78,6 +78,25 @@ Page({
   // 加载用户信息
   async loadUserInfo() {
     try {
+      // 未绑手机时在菜单前插入绑定入口
+      const phoneBound = !!(app.hasPhoneBound && app.hasPhoneBound())
+      const baseMenu = [
+        { icon: 'edit', text: '编辑资料', url: '/pages/volunteer/edit-profile', type: 'navigate' },
+        { icon: 'user', text: '绑定第三方账号', type: 'action', action: 'bindWechat' },
+        { icon: 'task', text: '我的任务', url: '/pages/tasks/my', type: 'navigate' },
+        { icon: 'notification', text: '消息通知', url: '/pages/notification/list', type: 'navigate', badge: 0 },
+        { icon: 'certificate', text: '志愿者证书', url: '', type: 'toast' },
+        { icon: 'settings', text: '设置', url: '/pages/settings/index', type: 'navigate' }
+      ]
+      if (!phoneBound) {
+        baseMenu.unshift({
+          icon: 'user',
+          text: '绑定手机号（查看任务需要）',
+          url: '/pages/login/index?binding=1&reason=task',
+          type: 'navigate'
+        })
+      }
+      this.setData({ menuList: baseMenu })
       const userInfo = await app.getUserInfo() || wx.getStorageSync('userInfo') || {}
       const profile = await userService.getProfile().catch(() => ({}))
 
@@ -106,10 +125,32 @@ Page({
         nickname: userInfo.nickname || profile.nickname || '志愿者',
         realName: userInfo.real_name || profile.real_name || '',
         role: userInfo.role || profile.role || 'volunteer',
+        phone: profile.phone || userInfo.phone || '',
         // 兼容 org_name / organization_name / org.name，最后兜底按 org_id 回查
         orgName: orgName || '未知组织',
         wxBound: !!(userInfo.wx_bound || profile.wx_bound)
       }
+      wx.setStorageSync('userInfo', { ...userInfo, ...mergedUserInfo })
+      app.globalData.userInfo = mergedUserInfo
+      // 刷新菜单（绑定状态可能变化）
+      const bound = !!(app.hasPhoneBound && app.hasPhoneBound(mergedUserInfo))
+      const menus = [
+        { icon: 'edit', text: '编辑资料', url: '/pages/volunteer/edit-profile', type: 'navigate' },
+        { icon: 'user', text: '绑定第三方账号', type: 'action', action: 'bindWechat' },
+        { icon: 'task', text: '我的任务', url: '/pages/tasks/my', type: 'navigate' },
+        { icon: 'notification', text: '消息通知', url: '/pages/notification/list', type: 'navigate', badge: 0 },
+        { icon: 'certificate', text: '志愿者证书', url: '', type: 'toast' },
+        { icon: 'settings', text: '设置', url: '/pages/settings/index', type: 'navigate' }
+      ]
+      if (!bound) {
+        menus.unshift({
+          icon: 'user',
+          text: '绑定手机号（查看任务需要）',
+          url: '/pages/login/index?binding=1&reason=task',
+          type: 'navigate'
+        })
+      }
+      this.setData({ menuList: menus })
 
       const menuList = (this.data.menuList || []).map((item) => {
         if (item.action === 'bindWechat') {
@@ -151,6 +192,7 @@ Page({
     const { type } = e.currentTarget.dataset
     switch (type) {
       case 'task':
+        if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
         wx.navigateTo({ url: '/pages/tasks/my' })
         break
       case 'case':
@@ -173,6 +215,10 @@ Page({
     const menu = this.data.menuList[index]
     
     if (!menu) return
+
+    if (menu.url && menu.url.indexOf('/pages/tasks/') === 0) {
+      if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
+    }
     
     switch (menu.type) {
       case 'navigate':

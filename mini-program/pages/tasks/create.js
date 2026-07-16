@@ -43,7 +43,7 @@ Page({
   },
 
   onLoad(options = {}) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '创建任务需绑定手机号' })) return
     if (!app.hasPermission(ACTIONS.TASK_MANAGE)) {
       showToast('无权限创建任务')
       wx.navigateBack()

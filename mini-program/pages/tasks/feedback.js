@@ -13,7 +13,7 @@ Page({
   },
 
   onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '任务反馈需绑定手机号' })) return
     if (options.id) {
       this.setData({ taskId: options.id })
       this.loadTaskDetail(options.id)

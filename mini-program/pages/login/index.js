@@ -18,24 +18,29 @@ Page({
     canSendCode: false,
     isBinding: false, // 是否处于绑定手机号流程
     isResetPassword: false, // 是否处于重置密码流程
-    tempUserInfo: null // 临时用户信息（快捷登录后未绑定手机号）
+    tempUserInfo: null, // 临时用户信息（快捷登录后未绑定手机号）
+    bindReason: 'default' // default | task
   },
 
   onLoad(options) {
     this.restorePolicyAgreement()
 
-    // 检查是否已登录
     const token = wx.getStorageSync('token')
-    if (token) {
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    const app = getApp()
+    const hasPhone = app.hasPhoneBound ? app.hasPhoneBound(userInfo) : /^1[3-9]\d{9}$/.test(String(userInfo.phone || ''))
+
+    // 已登录且已绑手机：回首页；已登录未绑手机且来自绑定引导：停留绑定页
+    if (token && hasPhone && options.binding !== '1') {
       wx.switchTab({ url: '/pages/index/index' })
       return
     }
 
-    // 从跳转参数获取信息
-    if (options.binding === '1') {
-      this.setData({ 
+    if (options.binding === '1' && token) {
+      this.setData({
         isBinding: true,
-        loginType: 'phone'
+        loginType: 'phone',
+        bindReason: options.reason === 'task' ? 'task' : 'default'
       })
     }
   },
@@ -97,26 +102,6 @@ Page({
       
       hideLoading()
 
-      // 判断是否需要绑定手机号
-      if (result.need_bind_phone) {
-        // 保存临时 token，用于后续绑定请求
-        if (result.access_token) {
-          wx.setStorageSync('token', result.access_token)
-          if (result.refresh_token) {
-            wx.setStorageSync('refresh_token', result.refresh_token)
-          }
-        }
-
-        this.setData({
-          isBinding: true,
-          loginType: 'phone',
-          tempUserInfo: result.user
-        })
-
-        wx.showToast({ title: '请输入手机号和验证码完成绑定', icon: 'none', duration: 2500 })
-        return
-      }
-
       if (result.need_approval) {
         wx.removeStorageSync('token')
         wx.removeStorageSync('refresh_token')
@@ -124,14 +109,24 @@ Page({
         return
       }
 
-      // 保存登录信息
+      // 保存登录（含 need_bind_phone 场景：允许先进入，手机号可稍后绑定）
       this.setLoginData(result)
+
+      if (result.need_bind_phone) {
+        this.setData({
+          isBinding: true,
+          loginType: 'phone',
+          tempUserInfo: result.user,
+          bindReason: 'default'
+        })
+        showSuccess('登录成功，建议绑定手机号')
+        return
+      }
+
       showSuccess('登录成功')
-      
-      // 延迟跳转
       setTimeout(() => {
         wx.switchTab({ url: '/pages/index/index' })
-      }, 1500)
+      }, 1200)
 
     } catch (error) {
       hideLoading()
@@ -151,7 +146,21 @@ Page({
 
     const code = e && e.detail ? e.detail.code : ''
     if (!code || code === 'getPhoneNumber:fail user deny') {
-      showError('未授权手机号')
+      // 显著拒绝：不反复追问，允许先浏览（任务仍不可见）
+      wx.setStorageSync('phone_bind_declined_at', Date.now())
+      wx.showModal({
+        title: '已取消授权',
+        content: '未绑定手机号不影响进入系统浏览说明与部分功能；查看任务需绑定手机号用于组织联络。',
+        confirmText: '进入系统',
+        cancelText: '返回说明页',
+        success: (res) => {
+          if (res.confirm) {
+            wx.switchTab({ url: '/pages/index/index' })
+          } else {
+            wx.reLaunch({ url: '/pages/welcome/index' })
+          }
+        }
+      })
       return
     }
 
@@ -168,6 +177,7 @@ Page({
         return
       }
       this.setLoginData(result)
+      wx.removeStorageSync('phone_bind_declined_at')
       showSuccess('绑定成功')
 
       setTimeout(() => {
@@ -180,6 +190,39 @@ Page({
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  // 暂不绑定手机号（显著拒绝）
+  skipPhoneBind() {
+    wx.setStorageSync('phone_bind_declined_at', Date.now())
+    const token = wx.getStorageSync('token')
+    if (!token) {
+      wx.reLaunch({ url: '/pages/welcome/index' })
+      return
+    }
+    wx.showToast({ title: '可稍后在「我的」中绑定', icon: 'none' })
+    setTimeout(() => {
+      wx.switchTab({ url: '/pages/index/index' })
+    }, 400)
+  },
+
+  // 非目标用户退出
+  exitAsNonVolunteer() {
+    wx.showModal({
+      title: '退出流程',
+      content: '本小程序仅供认证志愿者使用。非目标用户可关闭小程序。',
+      confirmText: '返回说明页',
+      cancelText: '关闭小程序',
+      success: (res) => {
+        if (res.confirm) {
+          wx.reLaunch({ url: '/pages/welcome/index' })
+        } else if (wx.exitMiniProgram) {
+          wx.exitMiniProgram({ fail: () => wx.reLaunch({ url: '/pages/welcome/index' }) })
+        } else {
+          wx.reLaunch({ url: '/pages/welcome/index' })
+        }
+      }
+    })
   },
 
   // 注册/重置密码：手机号快捷验证

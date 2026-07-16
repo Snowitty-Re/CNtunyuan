@@ -1,0 +1,44 @@
+<view class="welcome-page">
+  <view class="bg">
+    <view class="orb a"></view>
+    <view class="orb b"></view>
+  </view>
+
+  <view class="content">
+    <view class="badge">内部协作端 · 非公开业务</view>
+    <image class="logo" src="/assets/icons/logo.png" mode="aspectFit" />
+    <text class="title">助力团圆</text>
+    <text class="subtitle">志愿者组织内部协作系统</text>
+
+    <view class="card">
+      <text class="card-title">使用说明</text>
+      <view class="row">
+        <text class="dot">·</text>
+        <text class="row-text">本小程序面向已认证志愿者与组织管理人员，用于寻亲案件协作、任务跟进与方言采集等内部工作。</text>
+      </view>
+      <view class="row">
+        <text class="dot">·</text>
+        <text class="row-text">非本组织志愿者请勿注册。如需加入，请联系本组织管理员开通账号。</text>
+      </view>
+      <view class="row">
+        <text class="dot">·</text>
+        <text class="row-text">业务数据仅对登录用户可见，未登录不展示案件、任务等内部信息。</text>
+      </view>
+      <view class="row">
+        <text class="dot">·</text>
+        <text class="row-text">手机号仅在账号安全与组织联络等必要场景收集，您可拒绝授权并退出流程。</text>
+      </view>
+    </view>
+
+    <view class="actions">
+      <button class="btn primary" bindtap="goLogin">志愿者登录</button>
+      <button class="btn ghost" bindtap="exitApp">我不是志愿者，退出</button>
+    </view>
+
+    <view class="links">
+      <text class="link" bindtap="goAgreement">用户协议</text>
+      <text class="sep">|</text>
+      <text class="link" bindtap="goPrivacy">隐私政策</text>
+    </view>
+  </view>
+</view>

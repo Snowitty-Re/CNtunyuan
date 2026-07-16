@@ -485,10 +485,12 @@ Page({
    * 我的任务
    */
   onMyTasks() {
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
     wx.navigateTo({ url: '/pages/tasks/my' })
   },
 
   onCreateTask() {
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
     if (!app.hasPermission(ACTIONS.TASK_MANAGE)) {
       wx.showToast({
         title: '仅管理员可创建任务',
@@ -559,6 +561,7 @@ Page({
         this.onMyTasks()
         break
       case 'pending_tasks':
+        if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
         wx.navigateTo({ url: '/pages/tasks/my?status=pending' })
         break
     }

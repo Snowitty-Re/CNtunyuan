@@ -34,7 +34,7 @@ Page({
   },
 
   onLoad(options = {}) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '查看任务列表需绑定手机号，用于组织联络与任务通知' })) return
     const allowedStatus = ['', 'draft', 'pending', 'assigned', 'processing', 'completed', 'cancelled']
     const incomingStatus = (options.status || '').trim()
     if (allowedStatus.includes(incomingStatus)) {
@@ -46,7 +46,7 @@ Page({
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '查看任务列表需绑定手机号，用于组织联络与任务通知' })) return
     const listDirty = wx.getStorageSync(TASK_LIST_DIRTY_KEY)
     if (listDirty) {
       wx.removeStorageSync(TASK_LIST_DIRTY_KEY)

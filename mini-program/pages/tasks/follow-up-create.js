@@ -14,7 +14,7 @@ Page({
   },
 
   onLoad(options = {}) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '任务跟进需绑定手机号' })) return
     if (!options.id) {
       showToast('任务ID无效')
       wx.navigateBack()

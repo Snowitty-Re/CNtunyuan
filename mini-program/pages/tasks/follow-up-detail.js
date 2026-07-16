@@ -16,7 +16,7 @@ Page({
   },
 
   onLoad(options = {}) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '查看任务跟进需绑定手机号' })) return
     const { taskId, followUpId } = options
     if (!taskId || !followUpId) {
       showToast('记录参数错误')
@@ -32,7 +32,7 @@ Page({
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '查看任务跟进需绑定手机号' })) return
     if (this.data.taskId && this.data.followUpId) {
       this.loadData()
     }

@@ -25,7 +25,7 @@ Page({
   },
 
   onLoad() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '查看我的任务需绑定手机号' })) return
     const userInfo = wx.getStorageSync('userInfo') || {}
     this.setData({ userRole: userInfo.role || '' })
     this.loadStats()
@@ -33,7 +33,7 @@ Page({
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '查看我的任务需绑定手机号' })) return
     this.loadStats()
     this.loadTasks()
   },

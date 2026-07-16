@@ -271,6 +271,33 @@ page {
   margin-bottom: 16rpx;
 }
 
+.btn-skip {
+  margin-top: 16rpx;
+  height: 84rpx;
+  line-height: 84rpx;
+  border-radius: 14rpx;
+  background: #fff;
+  color: #6b5a4a;
+  border: 1rpx solid #e8d5c0;
+  font-size: 28rpx;
+}
+
+.btn-skip::after,
+.btn-exit::after {
+  border: none;
+}
+
+.btn-exit {
+  margin-top: 12rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  border-radius: 14rpx;
+  background: transparent;
+  color: #999;
+  font-size: 26rpx;
+  font-weight: 400;
+}
+
 .wechat-bind-tip {
   display: block;
   margin-top: 8rpx;

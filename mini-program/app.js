@@ -275,10 +275,23 @@ App({
 
   // ==================== 权限检查 ====================
 
-  // 检查是否已登录
+  // 是否已登录（不跳转）
+  isLoggedIn() {
+    const token = this.globalData.token || wx.getStorageSync('token')
+    return !!token
+  },
+
+  // 是否已绑定真实手机号（临时 wx 占位号不算）
+  hasPhoneBound(userInfo) {
+    const user = userInfo || this.getUserInfoSafe() || {}
+    const phone = String(user.phone || '').trim()
+    return /^1[3-9]\d{9}$/.test(phone)
+  },
+
+  // 检查是否已登录（未登录 → 说明页，不强制手机号）
   checkAuth() {
-    if (!this.globalData.isLogin) {
-      wx.navigateTo({ url: '/pages/login/index' })
+    if (!this.isLoggedIn()) {
+      wx.reLaunch({ url: '/pages/welcome/index' })
       return false
     }
     return true
@@ -290,7 +303,7 @@ App({
     const refreshToken = this.globalData.refreshToken || wx.getStorageSync('refresh_token')
 
     if (!token) {
-      wx.reLaunch({ url: '/pages/login/index' })
+      wx.reLaunch({ url: '/pages/welcome/index' })
       return false
     }
 
@@ -302,6 +315,31 @@ App({
     }
 
     return true
+  },
+
+  /**
+   * 任务相关能力要求已绑定手机号
+   * @param {{ redirect?: boolean, message?: string }} options
+   */
+  ensurePhoneBound(options = {}) {
+    const { redirect = true, message = '查看任务需先绑定手机号，用于组织联络' } = options
+    if (!this.ensureAuth()) return false
+    if (this.hasPhoneBound()) return true
+
+    if (redirect) {
+      wx.showModal({
+        title: '需要绑定手机号',
+        content: message,
+        confirmText: '去绑定',
+        cancelText: '暂不绑定',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateTo({ url: '/pages/login/index?binding=1&reason=task' })
+          }
+        }
+      })
+    }
+    return false
   },
 
   // 检查角色权限

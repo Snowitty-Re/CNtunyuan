@@ -104,7 +104,7 @@ function handleAuthFail() {
   })
   
   setTimeout(() => {
-    wx.reLaunch({ url: '/pages/login/index' })
+    wx.reLaunch({ url: '/pages/welcome/index' })
   }, 1500)
 }
 

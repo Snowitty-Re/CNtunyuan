@@ -9,6 +9,7 @@ Page({
     // 用户信息
     userInfo: {},
     currentDate: '',
+    phoneBound: false,
     
     // 今日统计（使用后端实际返回的字段）
     todayStats: {
@@ -45,10 +46,14 @@ Page({
   onLoad() {
     if (!app.ensureAuth || !app.ensureAuth()) return
     this.setCurrentDate()
+    this.setData({ phoneBound: !!(app.hasPhoneBound && app.hasPhoneBound()) })
   },
 
   onShow() {
     if (!app.ensureAuth || !app.ensureAuth()) return
+    const phoneBound = !!(app.hasPhoneBound && app.hasPhoneBound())
+    this.setData({ phoneBound })
+    if (!phoneBound) return
     const now = Date.now()
     if (this._lastLoadTime && now - this._lastLoadTime < 15000) return
     this._lastLoadTime = now
@@ -158,9 +163,11 @@ Page({
     }
     switch (key) {
       case 'myTasks':
+        if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
         wx.navigateTo({ url: '/pages/tasks/my' })
         break
       case 'createTask':
+        if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
         wx.navigateTo({ url: '/pages/tasks/create' })
         break
       case 'createCase':
@@ -170,6 +177,7 @@ Page({
         wx.navigateTo({ url: '/pages/dialect/create' })
         break
       case 'pendingAssign':
+        if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
         wx.navigateTo({ url: '/pages/tasks/list?status=pending' })
         break
       case 'dialectReview':
@@ -187,19 +195,26 @@ Page({
     }
   },
 
+  goBindPhone() {
+    wx.navigateTo({ url: '/pages/login/index?binding=1&reason=task' })
+  },
+
   // 查看全部任务
   goToMyTasks() {
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
     wx.navigateTo({ url: '/pages/tasks/my' })
   },
 
   // 任务详情
   goToTaskDetail(e) {
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
     const { id } = e.currentTarget.dataset
     wx.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
   },
 
   // 开始任务
   async startTask(e) {
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
     const { id } = e.currentTarget.dataset
     try {
       showLoading('处理中...')
@@ -216,6 +231,7 @@ Page({
 
   // 跳转到任务列表
   goToTaskList() {
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
     wx.navigateTo({ url: '/pages/tasks/list' })
   },
 

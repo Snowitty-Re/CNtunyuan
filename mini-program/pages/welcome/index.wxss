@@ -1,0 +1,158 @@
+.welcome-page {
+  min-height: 100vh;
+  position: relative;
+  box-sizing: border-box;
+  padding: calc(120rpx + env(safe-area-inset-top)) 40rpx 60rpx;
+  background: linear-gradient(165deg, #fff7ea 0%, #f8e2cc 55%, #fffaf2 100%);
+  overflow: hidden;
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2rpx);
+}
+
+.orb.a {
+  width: 320rpx;
+  height: 320rpx;
+  top: -60rpx;
+  right: -40rpx;
+  background: rgba(255, 140, 66, 0.22);
+}
+
+.orb.b {
+  width: 260rpx;
+  height: 260rpx;
+  bottom: 80rpx;
+  left: -80rpx;
+  background: rgba(230, 126, 34, 0.14);
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.badge {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 140, 66, 0.12);
+  color: #b45309;
+  font-size: 22rpx;
+  margin-bottom: 28rpx;
+}
+
+.logo {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 28rpx;
+  background: #fff;
+  box-shadow: 0 8rpx 24rpx rgba(120, 70, 20, 0.08);
+}
+
+.title {
+  margin-top: 24rpx;
+  font-size: 48rpx;
+  font-weight: 700;
+  color: #2d241b;
+}
+
+.subtitle {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #806f60;
+}
+
+.card {
+  width: 100%;
+  margin-top: 40rpx;
+  padding: 28rpx 24rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 250, 242, 0.96);
+  border: 1rpx solid #ead8c1;
+  box-sizing: border-box;
+}
+
+.card-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2d241b;
+  margin-bottom: 16rpx;
+}
+
+.row {
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 14rpx;
+}
+
+.dot {
+  color: #d9652b;
+  line-height: 1.6;
+}
+
+.row-text {
+  flex: 1;
+  font-size: 24rpx;
+  color: #5c4f42;
+  line-height: 1.65;
+}
+
+.actions {
+  width: 100%;
+  margin-top: 40rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.btn {
+  height: 92rpx;
+  line-height: 92rpx;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.btn::after {
+  border: none;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
+  color: #fff;
+}
+
+.btn.ghost {
+  background: #fff;
+  color: #6b5a4a;
+  border: 1rpx solid #e8d5c0;
+}
+
+.links {
+  margin-top: 36rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  color: #8c7b6b;
+  font-size: 24rpx;
+}
+
+.link {
+  color: #d9652b;
+}
+
+.sep {
+  color: #d0bfad;
+}

@@ -29,7 +29,7 @@ Page({
   },
 
   onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '查看任务详情需绑定手机号' })) return
     const userInfo = wx.getStorageSync('userInfo') || {}
     this.setData({ 
       taskId: options.id,
@@ -47,7 +47,7 @@ Page({
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensurePhoneBound || !app.ensurePhoneBound({ message: '查看任务详情需绑定手机号' })) return
     if (this.data.taskId) {
       this.loadTaskDetail()
       this.loadTaskLogs()
