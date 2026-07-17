@@ -64,7 +64,7 @@ Page({
   },
 
   onLoad() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     this.mapCtx = wx.createMapContext('map', this)
     this.debouncedSyncVisibleCases = debounce(() => {
       this.syncVisibleCasesByRegion()

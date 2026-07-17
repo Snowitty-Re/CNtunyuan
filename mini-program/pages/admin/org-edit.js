@@ -45,7 +45,7 @@ Page({
   },
 
   async onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     if (!app.hasPermission(ACTIONS.ORG_MANAGE)) {
       showToast('无权限操作')
       wx.navigateBack()
@@ -250,13 +250,14 @@ Page({
         const nextParent = form.parent_id || ''
         const prevParent = this.data.originalParentId || ''
         if (nextParent !== prevParent) {
-          if (!nextParent) {
-            showToast('暂不支持移到顶级，请选择其他父组织')
+          if (!nextParent && !this.data.allowRootOrg) {
+            showToast('请选择父组织')
             hideLoading()
             this.setData({ saving: false })
             return
           }
-          await organizationService.move(id, nextParent)
+          // 超管允许空 parent 移到顶级
+          await organizationService.move(id, nextParent || '')
         }
       } else {
         await organizationService.create(payload)

@@ -59,13 +59,13 @@ Page({
   },
 
   onLoad() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     this.updateGreeting()
     this.loadData()
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     this.updateGreeting()
     const listDirty = wx.getStorageSync(CASES_LIST_DIRTY_KEY)
     const dialectDirty = wx.getStorageSync(DIALECT_LIST_DIRTY_KEY)
@@ -162,96 +162,31 @@ Page({
       }
 
       if (isManagerRole) {
-        // 管理角色：全局统计
+        // 管理角色：优先单次 dashboard，避免多接口扇出
         try {
           const dashboardStats = await dashboardService.getStats()
-
           if (dashboardStats) {
-            // 处理嵌套结构：missing_persons.total, users.total, dialects.total
             if (dashboardStats.missing_persons) {
               stats.totalCases = dashboardStats.missing_persons.total || 0
-              stats.resolvedCases = (dashboardStats.missing_persons.found || 0) + (dashboardStats.missing_persons.reunited || 0)
+              stats.resolvedCases =
+                (dashboardStats.missing_persons.found || 0) + (dashboardStats.missing_persons.reunited || 0)
             }
-
             if (dashboardStats.users) {
               stats.volunteers = dashboardStats.users.total || 0
             }
-
             if (dashboardStats.dialects) {
               stats.dialects = dashboardStats.dialects.total || 0
             }
-
-            // 也尝试平铺结构的兼容
             stats.totalCases = stats.totalCases || dashboardStats.total_cases || 0
             stats.resolvedCases = stats.resolvedCases || dashboardStats.resolved_cases || 0
             stats.volunteers = stats.volunteers || dashboardStats.total_users || 0
             stats.dialects = stats.dialects || dashboardStats.total_dialects || 0
           }
         } catch (e) {
-          if (this.isPermissionDenied(e)) {
-            console.log('仪表盘统计无权限，跳过管理端统计接口')
-          } else {
+          if (!this.isPermissionDenied(e)) {
             console.log('仪表盘统计获取失败:', e)
           }
         }
-        // 如果仪表盘数据不完整，尝试单独获取
-        const promises = []
-
-        if (stats.totalCases === 0) {
-          promises.push(
-            missingPersonService.getStats().then(res => {
-              if (res) {
-                // 处理嵌套或平铺结构
-                if (res.missing_persons) {
-                  stats.totalCases = res.missing_persons.total || 0
-                  stats.resolvedCases = (res.missing_persons.found || 0) + (res.missing_persons.reunited || 0)
-                } else {
-                  stats.totalCases = res.total || res.total_cases || 0
-                  stats.resolvedCases = res.found || res.resolved || 0
-                }
-              }
-            }).catch((err) => {
-              console.warn('missingPerson stats fallback failed', err)
-            })
-          )
-        }
-
-        if (stats.dialects === 0) {
-          promises.push(
-            dialectService.getStats().then(res => {
-              if (res) {
-                if (res.dialects) {
-                  stats.dialects = res.dialects.total || 0
-                } else {
-                  stats.dialects = res.total || res.total_dialects || 0
-                }
-              }
-            }).catch((err) => {
-              if (!this.isPermissionDenied(err)) {
-                console.warn('dialect stats fallback failed', err)
-              }
-            })
-          )
-        }
-
-        // 尝试获取概览数据
-        if (stats.volunteers === 0 || stats.totalCases === 0) {
-          promises.push(
-            dashboardService.getOverview().then(res => {
-              if (res) {
-                stats.volunteers = stats.volunteers || res.total_users || 0
-                stats.totalCases = stats.totalCases || res.total_cases || 0
-                stats.resolvedCases = stats.resolvedCases || res.resolved_cases || 0
-              }
-            }).catch((err) => {
-              if (!this.isPermissionDenied(err)) {
-                console.warn('dashboard overview fallback failed', err)
-              }
-            })
-          )
-        }
-
-        await Promise.all(promises)
       } else {
         // 志愿者：个人维度统计
         const [profileStats, taskStats] = await Promise.all([

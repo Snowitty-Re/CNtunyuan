@@ -42,7 +42,7 @@ Page({
   },
 
   onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     const { id } = options
     if (!id) {
       showError('参数错误')

@@ -109,17 +109,17 @@ Page({
         return
       }
 
-      // 保存登录（含 need_bind_phone 场景：允许先进入，手机号可稍后绑定）
+      // 保存登录；未绑手机号须完成绑定后才能进入业务
       this.setLoginData(result)
 
-      if (result.need_bind_phone) {
+      if (result.need_bind_phone || !(getApp().hasPhoneBound && getApp().hasPhoneBound(result.user))) {
         this.setData({
           isBinding: true,
           loginType: 'phone',
           tempUserInfo: result.user,
           bindReason: 'default'
         })
-        showSuccess('登录成功，建议绑定手机号')
+        showSuccess('请绑定手机号后使用')
         return
       }
 
@@ -146,17 +146,15 @@ Page({
 
     const code = e && e.detail ? e.detail.code : ''
     if (!code || code === 'getPhoneNumber:fail user deny') {
-      // 显著拒绝：不反复追问，允许先浏览（任务仍不可见）
+      // 显著拒绝：可继续绑定或退出，不得进入业务页
       wx.setStorageSync('phone_bind_declined_at', Date.now())
       wx.showModal({
         title: '已取消授权',
-        content: '未绑定手机号不影响进入系统浏览说明与部分功能；查看任务需绑定手机号用于组织联络。',
-        confirmText: '进入系统',
+        content: '业务功能须绑定真实手机号。您可重新授权，或返回说明页退出流程。',
+        confirmText: '继续绑定',
         cancelText: '返回说明页',
         success: (res) => {
-          if (res.confirm) {
-            wx.switchTab({ url: '/pages/index/index' })
-          } else {
+          if (!res.confirm) {
             wx.reLaunch({ url: '/pages/welcome/index' })
           }
         }
@@ -192,18 +190,18 @@ Page({
     }
   },
 
-  // 暂不绑定手机号（显著拒绝）
+  // 暂不绑定：退出业务流程（与后端硬门禁一致，不可进 Tab）
   skipPhoneBind() {
     wx.setStorageSync('phone_bind_declined_at', Date.now())
-    const token = wx.getStorageSync('token')
-    if (!token) {
-      wx.reLaunch({ url: '/pages/welcome/index' })
-      return
-    }
-    wx.showToast({ title: '可稍后在「我的」中绑定', icon: 'none' })
-    setTimeout(() => {
-      wx.switchTab({ url: '/pages/index/index' })
-    }, 400)
+    wx.showModal({
+      title: '暂不绑定',
+      content: '未绑定手机号无法使用业务功能。可返回说明页，需要时再登录绑定。',
+      confirmText: '返回说明页',
+      showCancel: false,
+      success: () => {
+        wx.reLaunch({ url: '/pages/welcome/index' })
+      }
+    })
   },
 
   // 非目标用户退出
@@ -422,9 +420,15 @@ Page({
       this.setLoginData(result)
       showSuccess(isBinding ? '绑定成功' : (isRegister ? '注册成功' : '登录成功'))
 
+      const appInst = getApp()
+      const bound = appInst.hasPhoneBound && appInst.hasPhoneBound(result.user || result)
       setTimeout(() => {
-        wx.switchTab({ url: '/pages/index/index' })
-      }, 1500)
+        if (bound) {
+          wx.switchTab({ url: '/pages/index/index' })
+        } else {
+          this.setData({ isBinding: true, loginType: 'phone' })
+        }
+      }, 800)
 
     } catch (error) {
       hideLoading()

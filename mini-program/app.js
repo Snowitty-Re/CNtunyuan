@@ -318,28 +318,56 @@ App({
   },
 
   /**
-   * 任务相关能力要求已绑定手机号
+   * 业务鉴权：登录 + 真实手机号（与后端 Required 门禁一致）
    * @param {{ redirect?: boolean, message?: string }} options
    */
-  ensurePhoneBound(options = {}) {
-    const { redirect = true, message = '查看任务需先绑定手机号，用于组织联络' } = options
+  ensureBusinessAuth(options = {}) {
+    const {
+      redirect = true,
+      message = '使用业务功能须绑定真实手机号，用于组织联络与账号安全'
+    } = options
     if (!this.ensureAuth()) return false
-    if (this.hasPhoneBound()) return true
+
+    const user = this.getUserInfoSafe() || {}
+    const status = String(user.status || 'active').toLowerCase()
+    if (status && status !== 'active') {
+      if (redirect) {
+        wx.showModal({
+          title: '账号待审批',
+          content: '账号未激活，请等待管理员审批后再使用',
+          showCancel: false,
+          success: () => {
+            this.clearLoginData()
+            wx.reLaunch({ url: '/pages/welcome/index' })
+          }
+        })
+      }
+      return false
+    }
+
+    if (this.hasPhoneBound(user)) return true
 
     if (redirect) {
       wx.showModal({
         title: '需要绑定手机号',
         content: message,
         confirmText: '去绑定',
-        cancelText: '暂不绑定',
+        cancelText: '返回说明',
         success: (res) => {
           if (res.confirm) {
-            wx.navigateTo({ url: '/pages/login/index?binding=1&reason=task' })
+            wx.navigateTo({ url: '/pages/login/index?binding=1' })
+          } else {
+            wx.reLaunch({ url: '/pages/welcome/index' })
           }
         }
       })
     }
     return false
+  },
+
+  /** @deprecated 请使用 ensureBusinessAuth；保留兼容任务页调用 */
+  ensurePhoneBound(options = {}) {
+    return this.ensureBusinessAuth(options)
   },
 
   // 检查角色权限

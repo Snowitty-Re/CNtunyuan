@@ -8,6 +8,8 @@ const { API_BASE: API_BASE_URL } = require('../config/index')
 // 请求队列（用于 token 刷新时暂存请求）
 let requestQueue = []
 let isRefreshing = false
+let lastForbiddenAt = 0
+let lastForbiddenMsg = ''
 
 // 基础配置
 const BASE_CONFIG = {
@@ -52,7 +54,61 @@ function normalizeErrorMessage(message, statusCode) {
     return raw || '请求参数不合法'
   }
 
+  if (statusCode === 403) {
+    return raw || '权限不足'
+  }
+
   return raw || '请求失败'
+}
+
+/**
+ * 统一处理 403：绑定手机号 / 账号未激活（节流，避免刷屏）
+ */
+function handleForbidden(message, options = {}) {
+  const msg = String(message || '')
+  const now = Date.now()
+  if (now - lastForbiddenAt < 2500 && lastForbiddenMsg === msg) {
+    return
+  }
+  lastForbiddenAt = now
+  lastForbiddenMsg = msg
+
+  if (options.silent === true) return
+
+  const needPhone = msg.includes('手机号') || msg.includes('绑定')
+  const inactive = msg.includes('激活') || msg.includes('审批') || msg.includes('禁用')
+
+  if (needPhone) {
+    wx.showModal({
+      title: '需要绑定手机号',
+      content: msg || '使用业务功能须绑定真实手机号',
+      confirmText: '去绑定',
+      cancelText: '返回说明',
+      success: (res) => {
+        if (res.confirm) {
+          wx.navigateTo({ url: '/pages/login/index?binding=1' })
+        } else {
+          wx.reLaunch({ url: '/pages/welcome/index' })
+        }
+      }
+    })
+    return
+  }
+
+  if (inactive) {
+    wx.showModal({
+      title: '账号不可用',
+      content: msg || '账号未激活或已禁用，请等待管理员审批',
+      showCancel: false,
+      confirmText: '知道了',
+      success: () => {
+        handleAuthFail()
+      }
+    })
+    return
+  }
+
+  wx.showToast({ title: msg || '权限不足', icon: 'none', duration: 2500 })
 }
 
 /**
@@ -201,6 +257,10 @@ const request = (options) => {
           } else if (data.code === 401) {
             // Token 过期，尝试刷新
             handleTokenExpired(options, resolve, reject)
+          } else if (data.code === 403 || res.statusCode === 403) {
+            const errorMsg = normalizeErrorMessage(data.message, 403)
+            handleForbidden(errorMsg, options)
+            reject(new Error(errorMsg))
           } else {
             // 业务错误
             const errorMsg = normalizeErrorMessage(data.message, res.statusCode)
@@ -218,6 +278,13 @@ const request = (options) => {
         } else if (res.statusCode === 401) {
           // HTTP 401，尝试刷新 token
           handleTokenExpired(options, resolve, reject)
+        } else if (res.statusCode === 403) {
+          const backendMsg = res.data && typeof res.data === 'object'
+            ? (res.data.message || res.data.error || '')
+            : ''
+          const errorMsg = normalizeErrorMessage(backendMsg, 403)
+          handleForbidden(errorMsg, options)
+          reject(new Error(errorMsg))
         } else {
           // HTTP 错误
           const backendMsg = res.data && typeof res.data === 'object'
@@ -430,5 +497,6 @@ module.exports = {
   del,
   uploadFile,
   uploadFiles,
+  refreshToken,
   API_BASE_URL
 }

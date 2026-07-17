@@ -26,7 +26,7 @@
       </view>
       <view class="row">
         <text class="dot">·</text>
-        <text class="row-text">手机号仅在账号安全与组织联络等必要场景收集，您可拒绝授权并退出流程。</text>
+        <text class="row-text">使用业务功能须绑定真实手机号并完成账号激活；您可拒绝授权并退出登录流程。</text>
       </view>
     </view>
 

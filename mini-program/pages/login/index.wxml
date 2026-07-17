@@ -64,7 +64,7 @@
         </view>
 
         <view class="bind-banner" wx:if="{{isBinding}}">
-          <text class="bind-banner-text">{{bindReason === 'task' ? '查看任务需绑定手机号，用于组织联络与任务通知' : '建议绑定手机号，便于组织联络；非必要可暂不绑定'}}</text>
+          <text class="bind-banner-text">业务功能须绑定真实手机号（组织联络与账号安全）。您可拒绝授权并退出流程。</text>
         </view>
 
         <view class="wechat-bind-fast" wx:if="{{isBinding}}">
@@ -77,9 +77,9 @@
           >
             <text>授权手机号并绑定</text>
           </button>
-          <text class="wechat-bind-tip">将用于账号安全与组织联络；您可拒绝授权</text>
+          <text class="wechat-bind-tip">将用于账号安全与组织联络；拒绝后不可使用业务功能</text>
           <button class="btn btn-skip" bindtap="skipPhoneBind" disabled="{{loading}}">
-            <text>暂不绑定，先进入系统</text>
+            <text>暂不绑定，返回说明页</text>
           </button>
           <button class="btn btn-exit" bindtap="exitAsNonVolunteer" disabled="{{loading}}">
             <text>我不是志愿者，退出</text>

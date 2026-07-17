@@ -24,7 +24,7 @@ Page({
   },
 
   onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     const id = options && options.id
     if (!id) {
       showToast('参数错误')

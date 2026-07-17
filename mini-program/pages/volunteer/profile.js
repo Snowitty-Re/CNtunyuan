@@ -48,16 +48,20 @@ Page({
   },
 
   onLoad() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     this.loadData()
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
+    const now = Date.now()
+    if (this._lastLoadTime && now - this._lastLoadTime < 20000) return
+    this._lastLoadTime = now
     this.loadData()
   },
 
   onPullDownRefresh() {
+    this._lastLoadTime = 0
     this.loadData().finally(() => {
       wx.stopPullDownRefresh()
     })
@@ -91,7 +95,7 @@ Page({
       if (!phoneBound) {
         baseMenu.unshift({
           icon: 'user',
-          text: '绑定手机号（查看任务需要）',
+          text: '绑定手机号（业务功能需要）',
           url: '/pages/login/index?binding=1&reason=task',
           type: 'navigate'
         })
@@ -145,7 +149,7 @@ Page({
       if (!bound) {
         menus.unshift({
           icon: 'user',
-          text: '绑定手机号（查看任务需要）',
+          text: '绑定手机号（业务功能需要）',
           url: '/pages/login/index?binding=1&reason=task',
           type: 'navigate'
         })

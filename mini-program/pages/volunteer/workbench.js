@@ -3,22 +3,17 @@ const { formatTimeAgo, showSuccess, showToast, showLoading, hideLoading } = requ
 const { TASK_STATUS_MAP, TASK_PRIORITY_MAP, TASK_TYPE_MAP, ROLE_MAP } = require('../../utils/constants')
 const { ACTIONS } = require('../../utils/permission')
 const app = getApp()
+const TASK_LIST_DIRTY_KEY = 'tasks_list_dirty'
 
 Page({
   data: {
-    // 用户信息
     userInfo: {},
     currentDate: '',
-    phoneBound: false,
-    
-    // 今日统计（使用后端实际返回的字段）
     todayStats: {
-      myPending: 0,      // 我的待处理任务 (my_pending)
-      myProcessing: 0,   // 我的进行中任务 (my_processing)
-      myCompleted: 0     // 我的已完成任务 (my_completed)
+      myPending: 0,
+      myProcessing: 0,
+      myCompleted: 0
     },
-    
-    // 快捷入口
     quickActions: [
       { key: 'myTasks', icon: 'task', label: '我的任务', color: '#FF8C42' },
       { key: 'createTask', icon: 'add', label: '创建任务', color: '#E67E22', requiredPermission: ACTIONS.TASK_MANAGE },
@@ -30,30 +25,24 @@ Page({
       { key: 'userManage', icon: 'notification', label: '人员管理', color: '#16A085', requiredPermission: ACTIONS.USER_VIEW },
       { key: 'orgManage', icon: 'settings', label: '组织管理', color: '#2C7BE5', requiredPermission: ACTIONS.ORG_MANAGE }
     ],
-    
-    // 最近任务列表
     recentTasks: [],
     statsLoading: false,
     tasksLoading: false,
     tasksError: false,
-    
-    roleMap:     ROLE_MAP,
+    isManager: false,
+    roleMap: ROLE_MAP,
     priorityMap: TASK_PRIORITY_MAP,
-    statusMap:   TASK_STATUS_MAP,
+    statusMap: TASK_STATUS_MAP,
     taskTypeMap: TASK_TYPE_MAP
   },
 
   onLoad() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     this.setCurrentDate()
-    this.setData({ phoneBound: !!(app.hasPhoneBound && app.hasPhoneBound()) })
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
-    const phoneBound = !!(app.hasPhoneBound && app.hasPhoneBound())
-    this.setData({ phoneBound })
-    if (!phoneBound) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     const now = Date.now()
     if (this._lastLoadTime && now - this._lastLoadTime < 15000) return
     this._lastLoadTime = now
@@ -61,9 +50,8 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.refreshPageData().finally(() => {
-      wx.stopPullDownRefresh()
-    })
+    this._lastLoadTime = 0
+    this.refreshPageData().finally(() => wx.stopPullDownRefresh())
   },
 
   async refreshPageData() {
@@ -74,29 +62,25 @@ Page({
     ])
   },
 
-  // 设置当前日期
   setCurrentDate() {
     const date = new Date()
     const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-    const month = date.getMonth() + 1
-    const day = date.getDate()
-    const weekDay = weekDays[date.getDay()]
     this.setData({
-      currentDate: `${month}月${day}日 ${weekDay}`
+      currentDate: `${date.getMonth() + 1}月${date.getDate()}日 ${weekDays[date.getDay()]}`
     })
   },
 
-  // 加载用户信息
   async loadUserInfo() {
     try {
-      const userInfo = await app.getUserInfo() || wx.getStorageSync('userInfo') || {}
-      this.setData({ 
+      const userInfo = (await app.getUserInfo()) || wx.getStorageSync('userInfo') || {}
+      this.setData({
         userInfo: {
           ...userInfo,
           avatar: userInfo.avatar || '/assets/images/avatar-default.png',
           nickname: userInfo.nickname || '志愿者',
           role: userInfo.role || 'volunteer'
-        }
+        },
+        isManager: !!(app.isManager && app.isManager())
       })
       this.syncQuickActionsPermission(userInfo)
     } catch (error) {
@@ -105,42 +89,36 @@ Page({
   },
 
   syncQuickActionsPermission(userInfo = {}) {
-    const quickActions = (this.data.quickActions || []).map(item => {
+    const quickActions = (this.data.quickActions || []).map((item) => {
       if (!item.requiredPermission) return { ...item, visible: true }
       return { ...item, visible: app.hasPermission(item.requiredPermission, userInfo) }
     })
     this.setData({ quickActions })
   },
 
-  // 加载今日统计
   async loadTodayStats() {
     this.setData({ statsLoading: true })
     try {
       const stats = await taskService.getStats()
       this.setData({
         todayStats: {
-          myPending:    stats.my_pending    ?? stats.myPending    ?? 0,
+          myPending: stats.my_pending ?? stats.myPending ?? 0,
           myProcessing: stats.my_processing ?? stats.myProcessing ?? 0,
-          myCompleted:  stats.my_completed  ?? stats.myCompleted  ?? 0
+          myCompleted: stats.my_completed ?? stats.myCompleted ?? 0
         }
       })
     } catch (error) {
       console.error('加载统计失败:', error)
-      showToast('统计加载失败')
     } finally {
       this.setData({ statsLoading: false })
     }
   },
 
-  // 加载最近任务
   async loadRecentTasks() {
     this.setData({ tasksLoading: true, tasksError: false })
     try {
-      const result = await taskService.getMyTasks({ 
-        page: 1, 
-        page_size: 5 
-      })
-      const tasks = (result.list || []).map(item => ({
+      const result = await taskService.getMyTasks({ page: 1, page_size: 5 })
+      const tasks = (result.list || []).map((item) => ({
         ...item,
         timeAgo: formatTimeAgo(item.created_at || item.updated_at)
       }))
@@ -153,21 +131,20 @@ Page({
     }
   },
 
-  // 快捷入口点击
   onQuickActionTap(e) {
     const { key } = e.currentTarget.dataset
-    const actionItem = (this.data.quickActions || []).find(item => item.key === key)
+    const actionItem = (this.data.quickActions || []).find((item) => item.key === key)
     if (actionItem && actionItem.visible === false) {
       showToast('无权限操作')
       return
     }
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
+
     switch (key) {
       case 'myTasks':
-        if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
         wx.navigateTo({ url: '/pages/tasks/my' })
         break
       case 'createTask':
-        if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
         wx.navigateTo({ url: '/pages/tasks/create' })
         break
       case 'createCase':
@@ -177,7 +154,6 @@ Page({
         wx.navigateTo({ url: '/pages/dialect/create' })
         break
       case 'pendingAssign':
-        if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
         wx.navigateTo({ url: '/pages/tasks/list?status=pending' })
         break
       case 'dialectReview':
@@ -195,31 +171,25 @@ Page({
     }
   },
 
-  goBindPhone() {
-    wx.navigateTo({ url: '/pages/login/index?binding=1&reason=task' })
-  },
-
-  // 查看全部任务
   goToMyTasks() {
-    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     wx.navigateTo({ url: '/pages/tasks/my' })
   },
 
-  // 任务详情
   goToTaskDetail(e) {
-    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     const { id } = e.currentTarget.dataset
     wx.navigateTo({ url: `/pages/tasks/detail?id=${id}` })
   },
 
-  // 开始任务
   async startTask(e) {
-    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     const { id } = e.currentTarget.dataset
     try {
       showLoading('处理中...')
       await taskService.start(id)
       showSuccess('任务已开始')
+      wx.setStorageSync(TASK_LIST_DIRTY_KEY, 1)
       this.loadRecentTasks()
       this.loadTodayStats()
     } catch (error) {
@@ -229,10 +199,14 @@ Page({
     }
   },
 
-  // 跳转到任务列表
   goToTaskList() {
-    if (!app.ensurePhoneBound || !app.ensurePhoneBound()) return
-    wx.navigateTo({ url: '/pages/tasks/list' })
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
+    // 志愿者优先「我的任务」；管理者进全站任务列表
+    if (this.data.isManager) {
+      wx.navigateTo({ url: '/pages/tasks/list' })
+    } else {
+      wx.navigateTo({ url: '/pages/tasks/my' })
+    }
   },
 
   retryRecentTasks() {

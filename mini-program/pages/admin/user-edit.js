@@ -34,7 +34,7 @@ Page({
   },
 
   async onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     const id = options && options.id ? options.id : ''
     // Backend: create/update user require admin (USER_CREATE / USER_MODIFY)
     const canModify = app.hasPermission(ACTIONS.USER_MODIFY)

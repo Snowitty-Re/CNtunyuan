@@ -13,7 +13,7 @@ Page({
   },
 
   onLoad() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     if (!app.hasPermission(ACTIONS.DIALECT_MANAGE)) {
       showToast('无权限访问')
       wx.navigateBack()

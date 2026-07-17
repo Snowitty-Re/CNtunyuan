@@ -67,7 +67,7 @@ Page({
     try {
       const result = await missingPersonService.getList({ 
         page: 1, 
-        page_size: 100
+        page_size: 30
       })
       const cases = result.list || result || []
       this.setData({ 
@@ -119,7 +119,7 @@ Page({
     try {
       const result = await userService.getList({ 
         page: 1, 
-        page_size: 100,
+        page_size: 30,
         status: 'active'
       })
       const users = result.list || result || []

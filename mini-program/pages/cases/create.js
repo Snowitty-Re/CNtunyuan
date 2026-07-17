@@ -71,7 +71,7 @@ Page({
   },
 
   onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     if (options.id) {
       // 编辑模式
       this.setData({ isEdit: true, editId: options.id })

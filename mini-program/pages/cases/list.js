@@ -54,13 +54,18 @@ Page({
   },
 
   onLoad(options = {}) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     this.applyInitialStatus(options.status)
     this.loadCases()
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
+    const now = Date.now()
+    if (this._lastShowLoad && now - this._lastShowLoad < 15000 && !wx.getStorageSync(CASES_LIST_DIRTY_KEY)) {
+      return
+    }
+    this._lastShowLoad = now
     const pendingStatus = wx.getStorageSync(CASES_STATUS_FILTER_KEY)
     const listDirty = wx.getStorageSync(CASES_LIST_DIRTY_KEY)
     if (pendingStatus) {

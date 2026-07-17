@@ -37,7 +37,7 @@ Page({
   },
 
   onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     if (!app.hasPermission(ACTIONS.USER_VIEW)) {
       showToast('无权限访问')
       wx.navigateBack()
@@ -60,7 +60,7 @@ Page({
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     if (!app.hasPermission(ACTIONS.USER_VIEW)) return
     this.loadList(true)
   },

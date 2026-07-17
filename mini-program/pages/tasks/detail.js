@@ -125,7 +125,7 @@ Page({
       showLoading('加载人员...')
       let users = this.data.assignUsers
       if (!users.length) {
-        const res = await userService.getList({ page: 1, page_size: 100, status: 'active' })
+        const res = await userService.getList({ page: 1, page_size: 50, status: 'active' })
         users = (res.list || []).filter((u) => u && u.id)
         this.setData({ assignUsers: users })
       }

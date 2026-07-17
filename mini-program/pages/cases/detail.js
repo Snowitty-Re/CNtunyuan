@@ -49,7 +49,7 @@ Page({
   },
 
   onLoad(options) {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     const { id } = options
     if (!id) {
       wx.showToast({ title: '参数错误', icon: 'error' })
@@ -68,12 +68,16 @@ Page({
   },
 
   onShow() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     this.checkUserRole()
-    // 返回时刷新数据
-    if (this.data.id) {
-      Promise.all([this.loadCaseDetail(), this.loadTracks(), this.loadRelatedTasks()]).catch(err => console.error('刷新详情失败:', err))
-    }
+    // 节流：首次 onLoad 已加载，15s 内不重复全量刷新
+    if (!this.data.id) return
+    const now = Date.now()
+    if (this._lastShowLoad && now - this._lastShowLoad < 15000) return
+    this._lastShowLoad = now
+    Promise.all([this.loadCaseDetail(), this.loadTracks(), this.loadRelatedTasks()]).catch((err) =>
+      console.error('刷新详情失败:', err)
+    )
   },
 
   /**

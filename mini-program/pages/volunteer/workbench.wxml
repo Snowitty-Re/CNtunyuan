@@ -20,15 +20,8 @@
     </view>
   </view>
 
-  <!-- 未绑定手机：不展示任务数据 -->
-  <view class="phone-gate" wx:if="{{!phoneBound}}">
-    <text class="phone-gate-title">查看任务需绑定手机号</text>
-    <text class="phone-gate-desc">用于组织联络与任务通知。您可拒绝授权；拒绝后无法查看任务，其他功能可继续使用。</text>
-    <button class="phone-gate-btn" bindtap="goBindPhone">去绑定手机号</button>
-  </view>
-
   <!-- 今日统计 -->
-  <view class="stats-section" wx:if="{{phoneBound}}">
+  <view class="stats-section">
     <view class="stats-card" wx:if="{{!statsLoading}}">
       <view class="stat-item">
         <view class="stat-value-wrapper">
@@ -76,7 +69,7 @@
   </view>
 
   <!-- 最近任务 -->
-  <view class="recent-tasks-section" wx:if="{{phoneBound}}">
+  <view class="recent-tasks-section">
     <view class="section-header">
       <view class="section-title-row">
         <view class="title-dot"></view>
@@ -129,9 +122,9 @@
         <text class="iconfont icon-empty"></text>
       </view>
       <text class="empty-title">暂无任务</text>
-      <text class="empty-desc">去任务列表领取新任务吧</text>
+      <text class="empty-desc">{{isManager ? '去任务中心分配或领取任务' : '去「我的任务」查看待办'}}</text>
       <view class="empty-action" bindtap="goToTaskList" hover-class="empty-action-hover">
-        <text>去领取</text>
+        <text>{{isManager ? '任务中心' : '我的任务'}}</text>
         <text class="iconfont icon-arrow-right"></text>
       </view>
     </view>

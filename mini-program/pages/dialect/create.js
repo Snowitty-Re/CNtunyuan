@@ -58,7 +58,7 @@ Page({
   },
 
   async onLoad() {
-    if (!app.ensureAuth || !app.ensureAuth()) return
+    if (!app.ensureBusinessAuth || !app.ensureBusinessAuth()) return
     this.initRecorder()
     await Promise.all([this.loadCardTemplate(), this.loadMissingPersons()])
   },
