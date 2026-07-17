@@ -135,8 +135,8 @@ func (s *MissingPersonAppService) Create(ctx context.Context, req *dto.CreateMis
 	return &resp, nil
 }
 
-// GetByID 根据ID获取
-func (s *MissingPersonAppService) GetByID(ctx context.Context, id string) (*dto.MissingPersonResponse, error) {
+// GetByID 根据ID获取；publicView=true 时脱敏联系人信息
+func (s *MissingPersonAppService) GetByID(ctx context.Context, id string, publicView ...bool) (*dto.MissingPersonResponse, error) {
 	mp, err := s.mpRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, ErrMissingPersonNotFound
@@ -147,12 +147,13 @@ func (s *MissingPersonAppService) GetByID(ctx context.Context, id string) (*dto.
 		logger.Warn("Failed to increment views", logger.Err(err), logger.String("mp_id", id))
 	}
 
-	resp := dto.ToMissingPersonResponse(mp)
+	redact := len(publicView) > 0 && publicView[0]
+	resp := dto.ToMissingPersonResponseWithOptions(mp, redact)
 	return &resp, nil
 }
 
-// List 列表查询
-func (s *MissingPersonAppService) List(ctx context.Context, req *dto.MissingPersonListRequest) (*dto.MissingPersonListResponse, error) {
+// List 列表查询；publicView=true 时脱敏联系人信息
+func (s *MissingPersonAppService) List(ctx context.Context, req *dto.MissingPersonListRequest, publicView ...bool) (*dto.MissingPersonListResponse, error) {
 	req.Page, req.PageSize = validator.SanitizePagination(req.Page, req.PageSize)
 
 	if req.AgeMin > 0 && req.AgeMax > 0 && req.AgeMin > req.AgeMax {
@@ -178,9 +179,10 @@ func (s *MissingPersonAppService) List(ctx context.Context, req *dto.MissingPers
 		return nil, err
 	}
 
+	redact := len(publicView) > 0 && publicView[0]
 	list := make([]dto.MissingPersonResponse, len(result.List))
 	for i, mp := range result.List {
-		list[i] = dto.ToMissingPersonResponse(&mp)
+		list[i] = dto.ToMissingPersonResponseWithOptions(&mp, redact)
 	}
 
 	resp := dto.NewMissingPersonListResponse(list, result.Total, result.Page, result.PageSize)
@@ -495,17 +497,18 @@ func (s *MissingPersonAppService) GetStats(ctx context.Context) (*dto.MissingPer
 	}, nil
 }
 
-// Search 搜索
-func (s *MissingPersonAppService) Search(ctx context.Context, keyword string, page, pageSize int) (*dto.MissingPersonListResponse, error) {
+// Search 搜索；publicView=true 时脱敏联系人信息
+func (s *MissingPersonAppService) Search(ctx context.Context, keyword string, page, pageSize int, publicView ...bool) (*dto.MissingPersonListResponse, error) {
 	pagination := repository.Pagination{Page: page, PageSize: pageSize}
 	result, err := s.mpRepo.Search(ctx, keyword, pagination)
 	if err != nil {
 		return nil, err
 	}
 
+	redact := len(publicView) > 0 && publicView[0]
 	list := make([]dto.MissingPersonResponse, len(result.List))
 	for i, mp := range result.List {
-		list[i] = dto.ToMissingPersonResponse(&mp)
+		list[i] = dto.ToMissingPersonResponseWithOptions(&mp, redact)
 	}
 
 	resp := dto.NewMissingPersonListResponse(list, result.Total, result.Page, result.PageSize)

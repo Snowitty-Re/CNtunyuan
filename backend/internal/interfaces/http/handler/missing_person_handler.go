@@ -28,12 +28,16 @@ func NewMissingPersonHandler(mpService *service.MissingPersonAppService) *Missin
 func (h *MissingPersonHandler) RegisterRoutes(router *gin.RouterGroup, authMiddleware *middleware.AuthMiddleware) {
 	mps := router.Group("/missing-persons")
 	{
-		// 公开查询
-		mps.GET("", h.List)
-		mps.GET("/search", h.Search)
-		mps.GET("/stats", h.GetStats)
-		mps.GET("/:id", h.GetByID)
-		mps.GET("/:id/tracks", h.GetTracks)
+		// 公开查询（可选登录：未登录脱敏联系人）
+		public := mps.Group("")
+		public.Use(authMiddleware.Optional())
+		{
+			public.GET("", h.List)
+			public.GET("/search", h.Search)
+			public.GET("/stats", h.GetStats)
+			public.GET("/:id", h.GetByID)
+			public.GET("/:id/tracks", h.GetTracks)
+		}
 
 		// 需要登录
 		mps.Use(authMiddleware.Required())
@@ -101,7 +105,9 @@ func (h *MissingPersonHandler) GetByID(c *gin.Context) {
 		return
 	}
 
-	mp, err := h.mpService.GetByID(c.Request.Context(), id)
+	// 未登录或未完成账号要求：公开脱敏视图
+	publicView := !middleware.IsAuthenticated(c)
+	mp, err := h.mpService.GetByID(c.Request.Context(), id, publicView)
 	if err != nil {
 		if err == service.ErrMissingPersonNotFound {
 			response.NotFound(c, "missing person not found")
@@ -145,7 +151,8 @@ func (h *MissingPersonHandler) List(c *gin.Context) {
 		return
 	}
 
-	mps, err := h.mpService.List(c.Request.Context(), &req)
+	publicView := !middleware.IsAuthenticated(c)
+	mps, err := h.mpService.List(c.Request.Context(), &req, publicView)
 	if err != nil {
 		response.InternalServerError(c, "failed to get list")
 		return
@@ -523,7 +530,8 @@ func (h *MissingPersonHandler) Search(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
 
-	result, err := h.mpService.Search(c.Request.Context(), keyword, page, pageSize)
+	publicView := !middleware.IsAuthenticated(c)
+	result, err := h.mpService.Search(c.Request.Context(), keyword, page, pageSize, publicView)
 	if err != nil {
 		response.InternalServerError(c, "search failed")
 		return

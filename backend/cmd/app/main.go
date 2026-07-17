@@ -97,6 +97,9 @@ func main() {
 		container, containerErr := di.NewContainer(cfg)
 		if containerErr == nil {
 			startServer(cfg, container.Router.GetEngine(), func(context.Context) {
+				if container.Scheduler != nil {
+					container.Scheduler.Stop()
+				}
 				if container.Cache != nil {
 					if err := container.Cache.Close(); err != nil {
 						logger.Error("Failed to close cache", logger.Err(err))

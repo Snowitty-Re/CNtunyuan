@@ -1,27 +1,50 @@
 package middleware
 
 import (
+	"context"
+	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
+	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/service"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 
+var mainlandPhoneRegex = regexp.MustCompile(`^1[3-9]\d{9}$`)
+
 // AuthMiddleware auth middleware
 type AuthMiddleware struct {
 	authService *service.AuthService
+	userRepo    repository.UserRepository
+	statusTTL   time.Duration
+	statusMu    sync.Mutex
+	statusCache map[string]cachedUserStatus
+}
+
+type cachedUserStatus struct {
+	user      *entity.User
+	expiresAt time.Time
 }
 
 // NewAuthMiddleware create auth middleware
-func NewAuthMiddleware(authService *service.AuthService) *AuthMiddleware {
-	return &AuthMiddleware{authService: authService}
+func NewAuthMiddleware(authService *service.AuthService, userRepo ...repository.UserRepository) *AuthMiddleware {
+	m := &AuthMiddleware{
+		authService: authService,
+		statusTTL:   30 * time.Second,
+		statusCache: make(map[string]cachedUserStatus),
+	}
+	if len(userRepo) > 0 {
+		m.userRepo = userRepo[0]
+	}
+	return m
 }
 
-// Required require auth
+// Required require auth; enforces active status + real phone except whitelist routes
 func (m *AuthMiddleware) Required() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := m.extractToken(c)
@@ -39,30 +62,126 @@ func (m *AuthMiddleware) Required() gin.HandlerFunc {
 			return
 		}
 
+		// Reject refresh tokens on normal API routes
+		if claims != nil && strings.EqualFold(claims.TokenType, "refresh") {
+			response.Unauthorized(c, "invalid access token")
+			c.Abort()
+			return
+		}
+
+		role := entity.Role(claims.Role)
+		orgID := claims.OrgID
+
+		if m.userRepo != nil {
+			user, loadErr := m.loadUser(c.Request.Context(), claims.UserID)
+			if loadErr != nil || user == nil {
+				response.Unauthorized(c, "user not found, please login again")
+				c.Abort()
+				return
+			}
+			// Prefer live DB role/org over stale JWT claims
+			role = user.Role
+			orgID = user.OrgID
+
+			path := c.Request.URL.Path
+			whitelist := isAccountBootstrapPath(path)
+			if !user.IsActive() && !whitelist {
+				response.Forbidden(c, "账号未激活或已禁用，请等待审批或联系管理员")
+				c.Abort()
+				return
+			}
+			if !mainlandPhoneRegex.MatchString(strings.TrimSpace(user.Phone)) && !whitelist {
+				response.Forbidden(c, "请先绑定真实手机号")
+				c.Abort()
+				return
+			}
+			c.Set("userPhone", user.Phone)
+			c.Set("userStatus", string(user.Status))
+		}
+
 		c.Set("userID", claims.UserID)
-		c.Set("userRole", entity.Role(claims.Role))
-		c.Set("orgID", claims.OrgID)
+		c.Set("userRole", role)
+		c.Set("orgID", orgID)
 		c.Set("claims", claims)
 
 		c.Next()
 	}
 }
 
-// Optional optional auth
+// Optional optional auth (no status/phone enforcement — used for public views)
 func (m *AuthMiddleware) Optional() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := m.extractToken(c)
 		if token != "" {
 			claims, err := m.authService.ValidateToken(c.Request.Context(), token)
-			if err == nil {
-				c.Set("userID", claims.UserID)
-				c.Set("userRole", entity.Role(claims.Role))
-				c.Set("orgID", claims.OrgID)
-				c.Set("claims", claims)
+			if err == nil && claims != nil && !strings.EqualFold(claims.TokenType, "refresh") {
+				// Only mark authenticated when user is active with real phone
+				if m.userRepo != nil {
+					user, loadErr := m.loadUser(c.Request.Context(), claims.UserID)
+					if loadErr == nil && user != nil && user.IsActive() && mainlandPhoneRegex.MatchString(strings.TrimSpace(user.Phone)) {
+						c.Set("userID", user.ID)
+						c.Set("userRole", user.Role)
+						c.Set("orgID", user.OrgID)
+						c.Set("claims", claims)
+					}
+				} else {
+					c.Set("userID", claims.UserID)
+					c.Set("userRole", entity.Role(claims.Role))
+					c.Set("orgID", claims.OrgID)
+					c.Set("claims", claims)
+				}
 			}
 		}
 		c.Next()
 	}
+}
+
+func isAccountBootstrapPath(path string) bool {
+	// Allow incomplete accounts to finish onboarding
+	whitelistSuffixes := []string{
+		"/auth/bind-phone",
+		"/auth/logout",
+		"/auth/me",
+		"/auth/refresh",
+	}
+	for _, s := range whitelistSuffixes {
+		if strings.HasSuffix(path, s) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *AuthMiddleware) loadUser(ctx context.Context, userID string) (*entity.User, error) {
+	if m.userRepo == nil {
+		return nil, nil
+	}
+	now := time.Now()
+	m.statusMu.Lock()
+	if cached, ok := m.statusCache[userID]; ok && cached.expiresAt.After(now) {
+		u := cached.user
+		m.statusMu.Unlock()
+		return u, nil
+	}
+	m.statusMu.Unlock()
+
+	user, err := m.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	m.statusMu.Lock()
+	m.statusCache[userID] = cachedUserStatus{user: user, expiresAt: now.Add(m.statusTTL)}
+	// opportunistic prune
+	if len(m.statusCache) > 5000 {
+		for k, v := range m.statusCache {
+			if v.expiresAt.Before(now) {
+				delete(m.statusCache, k)
+			}
+		}
+	}
+	m.statusMu.Unlock()
+	return user, nil
 }
 
 // extractToken extract token from request (header only, no query param for security)

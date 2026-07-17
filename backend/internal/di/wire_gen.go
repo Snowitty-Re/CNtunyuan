@@ -56,6 +56,7 @@ type Container struct {
 	AuthMiddleware       *middleware.AuthMiddleware
 	AuditMiddleware      *middleware.AuditMiddleware
 	Router               *router.Router
+	Scheduler            *task.Scheduler
 }
 
 // NewContainer 手动创建依赖容器
@@ -171,8 +172,8 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	healthService := service.NewHealthService(db, redisCache)
 	auditLogService := service.NewAuditLogService(auditRepo)
 
-	// 创建 Middleware
-	authMiddleware := middleware.NewAuthMiddleware(authService)
+	// 创建 Middleware（注入 userRepo 以校验 active + 真实手机号）
+	authMiddleware := middleware.NewAuthMiddleware(authService, userRepo)
 
 	// 创建审计日志中间件（自动记录所有API请求）
 	auditMiddleware := middleware.NewAuditMiddleware(auditRepo)
@@ -245,5 +246,6 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 		AuthMiddleware:       authMiddleware,
 		AuditMiddleware:      auditMiddleware,
 		Router:               r,
+		Scheduler:            scheduler,
 	}, nil
 }

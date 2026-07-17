@@ -31,10 +31,11 @@ type JWTService struct {
 
 // JWTClaims JWT claims
 type JWTClaims struct {
-	UserID   string `json:"user_id"`
-	Nickname string `json:"nickname"`
-	Role     string `json:"role"`
-	OrgID    string `json:"org_id"`
+	UserID    string `json:"user_id"`
+	Nickname  string `json:"nickname"`
+	Role      string `json:"role"`
+	OrgID     string `json:"org_id"`
+	TokenType string `json:"token_type"` // access | refresh
 	jwt.RegisteredClaims
 }
 
@@ -57,12 +58,12 @@ func NewJWTService(cfg *config.JWTConfig, cache cache.Cache) (service.TokenServi
 
 // GenerateTokenPair generate token pair
 func (s *JWTService) GenerateTokenPair(ctx context.Context, user *entity.User) (*service.TokenPair, error) {
-	accessToken, err := s.generateToken(user, s.accessExpiry)
+	accessToken, err := s.generateToken(user, s.accessExpiry, "access")
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := s.generateToken(user, s.refreshExpiry)
+	refreshToken, err := s.generateToken(user, s.refreshExpiry, "refresh")
 	if err != nil {
 		return nil, err
 	}
@@ -75,13 +76,14 @@ func (s *JWTService) GenerateTokenPair(ctx context.Context, user *entity.User) (
 }
 
 // generateToken generate token
-func (s *JWTService) generateToken(user *entity.User, expiry time.Duration) (string, error) {
+func (s *JWTService) generateToken(user *entity.User, expiry time.Duration, tokenType string) (string, error) {
 	now := time.Now()
 	claims := JWTClaims{
-		UserID:   user.ID,
-		Nickname: user.Nickname,
-		Role:     string(user.Role),
-		OrgID:    user.OrgID,
+		UserID:    user.ID,
+		Nickname:  user.Nickname,
+		Role:      string(user.Role),
+		OrgID:     user.OrgID,
+		TokenType: tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -130,11 +132,18 @@ func (s *JWTService) ValidateToken(ctx context.Context, tokenString string) (*se
 		}
 	}
 
+	tokenType := claims.TokenType
+	// 兼容历史 token：无 token_type 视为 access
+	if tokenType == "" {
+		tokenType = "access"
+	}
+
 	return &service.TokenClaims{
-		UserID:   claims.UserID,
-		Nickname: claims.Nickname,
-		Role:     claims.Role,
-		OrgID:    claims.OrgID,
+		UserID:    claims.UserID,
+		Nickname:  claims.Nickname,
+		Role:      claims.Role,
+		OrgID:     claims.OrgID,
+		TokenType: tokenType,
 	}, nil
 }
 

@@ -533,8 +533,16 @@ func (r *TaskRepositoryImpl) CountCompletedByDateRange(ctx context.Context, star
 	return count, err
 }
 
-// FindOverdueTasks 查找所有活跃且已逾期的任务（用于自动标记）
+// FindOverdueTasks 查找活跃且已逾期的任务（分批，默认最多 500 条）
 func (r *TaskRepositoryImpl) FindOverdueTasks(ctx context.Context) ([]entity.Task, error) {
+	return r.FindOverdueTasksLimited(ctx, 500)
+}
+
+// FindOverdueTasksLimited 分批查找逾期任务
+func (r *TaskRepositoryImpl) FindOverdueTasksLimited(ctx context.Context, limit int) ([]entity.Task, error) {
+	if limit <= 0 {
+		limit = 500
+	}
 	var tasks []entity.Task
 	err := r.db.WithContext(ctx).
 		Where("deadline < ? AND status NOT IN (?, ?, ?) AND deleted_at IS NULL",
@@ -542,8 +550,37 @@ func (r *TaskRepositoryImpl) FindOverdueTasks(ctx context.Context) ([]entity.Tas
 			entity.TaskStatusCompleted,
 			entity.TaskStatusCancelled,
 			entity.TaskStatusOverdue).
+		Order("deadline ASC").
+		Limit(limit).
 		Find(&tasks).Error
 	return tasks, err
+}
+
+// MarkOverdueTasksBatch 批量将逾期任务标记为 overdue，返回影响行数
+func (r *TaskRepositoryImpl) MarkOverdueTasksBatch(ctx context.Context, limit int) (int64, error) {
+	if limit <= 0 {
+		limit = 500
+	}
+	// 先取一批 ID 再批量更新，兼容 MySQL/Postgres（避免 LIMIT 子查询差异）
+	var ids []string
+	if err := r.db.WithContext(ctx).Model(&entity.Task{}).
+		Where("deadline < ? AND status NOT IN (?, ?, ?) AND deleted_at IS NULL",
+			time.Now(),
+			entity.TaskStatusCompleted,
+			entity.TaskStatusCancelled,
+			entity.TaskStatusOverdue).
+		Order("deadline ASC").
+		Limit(limit).
+		Pluck("id", &ids).Error; err != nil {
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	res := r.db.WithContext(ctx).Model(&entity.Task{}).
+		Where("id IN ?", ids).
+		Update("status", entity.TaskStatusOverdue)
+	return res.RowsAffected, res.Error
 }
 
 // FindByID 根据ID查找

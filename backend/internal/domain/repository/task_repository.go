@@ -82,8 +82,10 @@ type TaskRepository interface {
 	// CountOverdue 统计逾期任务
 	CountOverdue(ctx context.Context) (int64, error)
 
-	// FindOverdueTasks 查找所有活跃且已逾期的任务（用于自动标记）
+	// FindOverdueTasks 查找活跃且已逾期的任务（分批）
 	FindOverdueTasks(ctx context.Context) ([]entity.Task, error)
+	// MarkOverdueTasksBatch 批量标记逾期任务
+	MarkOverdueTasksBatch(ctx context.Context, limit int) (int64, error)
 
 	// CountByDateRange 按日期范围统计
 	CountByDateRange(ctx context.Context, start, end string) (int64, error)

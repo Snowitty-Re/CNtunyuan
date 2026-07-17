@@ -206,8 +206,15 @@ func (s *AuthorizationService) SetNotificationRepository(repo repository.SystemN
 }
 
 func (s *AuthorizationService) RefreshPolicies() {
-	s.roleActions = sync.Map{}
-	s.policyRules = sync.Map{}
+	// 清空而非整体替换 sync.Map，避免并发 Load 数据竞争
+	s.roleActions.Range(func(key, _ any) bool {
+		s.roleActions.Delete(key)
+		return true
+	})
+	s.policyRules.Range(func(key, _ any) bool {
+		s.policyRules.Delete(key)
+		return true
+	})
 }
 
 func (s *AuthorizationService) ListRolePermissions(ctx context.Context) ([]repository.RolePermission, error) {
@@ -1205,7 +1212,8 @@ func (s *AuthorizationService) recordDecision(ctx context.Context, action, resou
 	}
 
 	s.logDecision(action, operator, resourceID, decision)
-	if s.policyRepo == nil {
+	// 性能：允许的决策只打日志，不写库；拒绝决策异步落库
+	if decision.Allowed || s.policyRepo == nil {
 		return
 	}
 
@@ -1224,9 +1232,13 @@ func (s *AuthorizationService) recordDecision(ctx context.Context, action, resou
 		log.TraceID = strings.TrimSpace(traceID)
 	}
 
-	if err := s.policyRepo.CreateDecision(ctx, log); err != nil {
-		logger.Warn("persist authz decision failed", logger.String("action", action), logger.Err(err))
-	}
+	// 异步写入，避免热路径同步 DB 写
+	go func() {
+		bg := context.Background()
+		if err := s.policyRepo.CreateDecision(bg, log); err != nil {
+			logger.Warn("persist authz decision failed", logger.String("action", action), logger.Err(err))
+		}
+	}()
 }
 
 func (s *AuthorizationService) logDecision(action string, operator *entity.User, resourceID string, decision AuthzDecision) {

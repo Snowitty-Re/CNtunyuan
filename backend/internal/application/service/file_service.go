@@ -248,9 +248,13 @@ func (s *FileAppService) GetFilesByEntity(ctx context.Context, entityType string
 		return nil, err
 	}
 
-	list := make([]dto.FileResponse, len(files))
-	for i, file := range files {
-		list[i] = dto.ToFileResponse(&file)
+	// 非管理者仅能看到自己上传的文件，防止实体 IDOR
+	list := make([]dto.FileResponse, 0, len(files))
+	for i := range files {
+		if !s.canReadFile(&files[i], userID, isManager) {
+			continue
+		}
+		list = append(list, dto.ToFileResponse(&files[i]))
 	}
 
 	return list, nil

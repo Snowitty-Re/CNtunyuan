@@ -73,36 +73,33 @@ func (r *OrganizationRepositoryImpl) FindTree(ctx context.Context, rootID string
 		return nil, err
 	}
 
-	node := &entity.OrgTreeNode{
-		Organization: root,
-	}
-
-	// 递归获取子节点
-	if err := r.buildTree(ctx, node); err != nil {
+	// 一次查出全部组织，内存建树，避免 N+1
+	var all []entity.Organization
+	if err := r.db.WithContext(ctx).Order("sort_order ASC, created_at ASC").Find(&all).Error; err != nil {
 		return nil, err
 	}
 
+	childrenMap := make(map[string][]entity.Organization)
+	for _, org := range all {
+		if org.ParentID == nil || *org.ParentID == "" {
+			continue
+		}
+		pid := *org.ParentID
+		childrenMap[pid] = append(childrenMap[pid], org)
+	}
+
+	node := &entity.OrgTreeNode{Organization: root}
+	r.buildTreeFromMap(node, childrenMap)
 	return node, nil
 }
 
-// buildTree 递归构建树
-func (r *OrganizationRepositoryImpl) buildTree(ctx context.Context, node *entity.OrgTreeNode) error {
-	children, err := r.FindByParentID(ctx, node.ID)
-	if err != nil {
-		return err
-	}
-
-	for _, child := range children {
-		childNode := &entity.OrgTreeNode{
-			Organization: child,
-		}
-		if err := r.buildTree(ctx, childNode); err != nil {
-			return err
-		}
+// buildTreeFromMap 基于预加载 map 构建树
+func (r *OrganizationRepositoryImpl) buildTreeFromMap(node *entity.OrgTreeNode, childrenMap map[string][]entity.Organization) {
+	for _, child := range childrenMap[node.ID] {
+		childNode := &entity.OrgTreeNode{Organization: child}
+		r.buildTreeFromMap(childNode, childrenMap)
 		node.Children = append(node.Children, childNode)
 	}
-
-	return nil
 }
 
 // FindPath 查找组织路径
@@ -174,26 +171,32 @@ func (r *OrganizationRepositoryImpl) List(ctx context.Context, query *repository
 	return repository.NewPageResult(orgs, total, query.Page, query.PageSize), nil
 }
 
-// FindChildren 获取所有子组织（递归）
+// FindChildren 获取所有子组织（递归，单次查询后内存 BFS）
 func (r *OrganizationRepositoryImpl) FindChildren(ctx context.Context, parentID string) ([]entity.Organization, error) {
+	var all []entity.Organization
+	if err := r.db.WithContext(ctx).Find(&all).Error; err != nil {
+		return nil, err
+	}
+
+	childrenMap := make(map[string][]entity.Organization)
+	for _, org := range all {
+		if org.ParentID == nil || *org.ParentID == "" {
+			continue
+		}
+		pid := *org.ParentID
+		childrenMap[pid] = append(childrenMap[pid], org)
+	}
+
 	var allChildren []entity.Organization
 	queue := []string{parentID}
-
 	for len(queue) > 0 {
 		currentID := queue[0]
 		queue = queue[1:]
-
-		children, err := r.FindByParentID(ctx, currentID)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, child := range children {
+		for _, child := range childrenMap[currentID] {
 			allChildren = append(allChildren, child)
 			queue = append(queue, child.ID)
 		}
 	}
-
 	return allChildren, nil
 }
 

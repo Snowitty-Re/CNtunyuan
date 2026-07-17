@@ -16,7 +16,6 @@ import (
 
 	appservice "github.com/Snowitty-Re/CNtunyuan/internal/application/service"
 	"github.com/Snowitty-Re/CNtunyuan/internal/config"
-	"github.com/Snowitty-Re/CNtunyuan/internal/domain/entity"
 	"github.com/Snowitty-Re/CNtunyuan/internal/domain/repository"
 	"github.com/Snowitty-Re/CNtunyuan/pkg/logger"
 )
@@ -176,45 +175,18 @@ func (s *Scheduler) runDailyTasks() {
 	}
 }
 
-// checkOverdueTasks 检查逾期任务
+// checkOverdueTasks 检查逾期任务（批量更新，避免全表加载）
 func (s *Scheduler) checkOverdueTasks() {
 	ctx := context.Background()
 
-	// 获取所有活跃且逾期的任务
-	overdueTasks, err := s.taskRepo.FindOverdueTasks(ctx)
+	count, err := s.taskRepo.MarkOverdueTasksBatch(ctx, 500)
 	if err != nil {
-		logger.Error("Failed to find overdue tasks", logger.Err(err))
+		logger.Error("Failed to mark overdue tasks", logger.Err(err))
 		return
 	}
 
-	count := 0
-	for _, task := range overdueTasks {
-		if task.CheckAndUpdateOverdue() {
-			if err := s.taskRepo.Update(ctx, &task); err != nil {
-				logger.Error("Failed to update overdue task",
-					logger.String("task_id", task.ID),
-					logger.Err(err),
-				)
-				continue
-			}
-			count++
-
-			// 记录任务日志
-			log := &entity.TaskLog{
-				TaskID:    task.ID,
-				UserID:    task.CreatorID,
-				Action:    "auto_overdue",
-				Content:   "任务自动标记为逾期",
-				NewStatus: "overdue",
-			}
-			if err := s.taskRepo.AddLog(ctx, log); err != nil {
-				logger.Error("Failed to add overdue log", logger.Err(err))
-			}
-		}
-	}
-
 	if count > 0 {
-		logger.Info("Overdue tasks check completed", logger.Int("count", count))
+		logger.Info("Overdue tasks check completed", logger.Int64("count", count))
 	}
 }
 

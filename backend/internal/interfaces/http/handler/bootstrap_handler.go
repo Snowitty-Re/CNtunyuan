@@ -340,12 +340,14 @@ func (h *BootstrapHandler) Initialize(c *gin.Context) {
 }
 
 func (h *BootstrapHandler) initializeData(ctx context.Context, db *gorm.DB, working *config.Config, req BootstrapInitializeRequest) error {
+	// Fail closed: any existing super_admin means system is already initialized
 	superAdminCount := h.countSuperAdmins(ctx, db)
 	if superAdminCount > 0 {
-		managed, _ := config.LoadManagedStartupConfig(h.getManagedConfigPath())
-		if managed != nil && managed.Initialized {
-			return fmt.Errorf("system already initialized")
-		}
+		return fmt.Errorf("system already initialized")
+	}
+	managed, _ := config.LoadManagedStartupConfig(h.getManagedConfigPath())
+	if managed != nil && managed.Initialized {
+		return fmt.Errorf("system already initialized")
 	}
 
 	orgRepo := infraRepo.NewOrganizationRepository(db)

@@ -189,6 +189,11 @@ type MissingPersonStatsResponse struct {
 
 // ToMissingPersonResponse 转换为走失人员响应
 func ToMissingPersonResponse(mp *entity.MissingPerson) MissingPersonResponse {
+	return ToMissingPersonResponseWithOptions(mp, false)
+}
+
+// ToMissingPersonResponseWithOptions 转换走失人员响应；publicView=true 时脱敏联系人信息
+func ToMissingPersonResponseWithOptions(mp *entity.MissingPerson, publicView bool) MissingPersonResponse {
 	resp := MissingPersonResponse{
 		ID:               mp.ID,
 		CaseNo:           mp.CaseNo,
@@ -227,13 +232,26 @@ func ToMissingPersonResponse(mp *entity.MissingPerson) MissingPersonResponse {
 		CreatedAt:        mp.CreatedAt,
 	}
 
-	if mp.Reporter != nil {
-		reporter := ToUserResponse(mp.Reporter)
-		resp.Reporter = &reporter
-	}
-	if mp.Assignee != nil {
-		assignee := ToUserResponse(mp.Assignee)
-		resp.Assignee = &assignee
+	if publicView {
+		// 匿名公开视图：隐藏联系人隐私字段
+		resp.ContactName = ""
+		resp.ContactPhone = ""
+		resp.ContactRel = ""
+		resp.AltContact = ""
+		resp.ReporterID = ""
+		resp.Reporter = nil
+		resp.Assignee = nil
+		resp.AssignedTo = nil
+		resp.FoundNote = ""
+	} else {
+		if mp.Reporter != nil {
+			reporter := ToUserResponse(mp.Reporter)
+			resp.Reporter = &reporter
+		}
+		if mp.Assignee != nil {
+			assignee := ToUserResponse(mp.Assignee)
+			resp.Assignee = &assignee
+		}
 	}
 
 	// 转换照片列表

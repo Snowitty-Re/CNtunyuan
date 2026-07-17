@@ -32,10 +32,11 @@ type TokenPair struct {
 
 // TokenClaims token claims
 type TokenClaims struct {
-	UserID   string
-	Nickname string
-	Role     string
-	OrgID    string
+	UserID    string
+	Nickname  string
+	Role      string
+	OrgID     string
+	TokenType string // access | refresh
 }
 
 // WechatSession 微信会话信息
@@ -191,6 +192,10 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*v
 		}
 		return nil, nil, errors.ErrInvalidToken
 	}
+	// 仅接受 refresh 类型（历史无类型 token 放行以兼容）
+	if claims.TokenType != "" && !strings.EqualFold(claims.TokenType, "refresh") {
+		return nil, nil, errors.ErrInvalidToken
+	}
 
 	user, err := s.userRepo.FindByID(ctx, claims.UserID)
 	if err != nil {
@@ -199,6 +204,9 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*v
 
 	if !user.IsActive() {
 		return nil, nil, errors.ErrAccountDisabled
+	}
+	if !mainlandPhoneRegex.MatchString(strings.TrimSpace(user.Phone)) {
+		return nil, nil, errors.New(errors.CodeForbidden, "请先绑定真实手机号")
 	}
 
 	tokens, err := s.tokenService.GenerateTokenPair(ctx, user)
