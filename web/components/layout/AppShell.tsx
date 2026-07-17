@@ -13,7 +13,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Avatar, Button, Layout, Menu, Space, Tag, Typography, theme } from 'antd'
+import { Alert, Avatar, Button, Card, Layout, Menu, Space, Tag, Typography, theme } from 'antd'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { PropsWithChildren, useEffect, useMemo, useState } from 'react'
@@ -43,7 +43,7 @@ const iconFor = (href: string) => {
 export function AppShell({ children }: PropsWithChildren) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user, logout, blockReason, blockMessage } = useAuth()
   const brand = useSiteBrand()
   const [collapsed, setCollapsed] = useState(false)
   const { token } = theme.useToken()
@@ -60,6 +60,32 @@ export function AppShell({ children }: PropsWithChildren) {
     const active = nav.find((item) => isNavActive(pathname, item.href, hrefs))
     return active ? [active.href] : []
   }, [nav, pathname, hrefs])
+
+  if (blockReason) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Card style={{ maxWidth: 480, width: '100%' }}>
+          <Typography.Title level={4}>无法进入管理端</Typography.Title>
+          <Alert type="warning" showIcon message={blockMessage} style={{ marginBottom: 16 }} />
+          <Typography.Paragraph type="secondary">
+            {blockReason === 'no_phone'
+              ? '请使用已绑定真实手机号的账号登录，或联系管理员完善资料。'
+              : '请联系管理员审批通过后再登录。'}
+          </Typography.Paragraph>
+          <Button
+            type="primary"
+            danger
+            onClick={async () => {
+              await logout()
+              router.replace('/login')
+            }}
+          >
+            退出登录
+          </Button>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -137,8 +163,8 @@ export function AppShell({ children }: PropsWithChildren) {
             <Button
               type="text"
               icon={<LogoutOutlined />}
-              onClick={() => {
-                logout()
+              onClick={async () => {
+                await logout()
                 router.replace('/login')
               }}
             >

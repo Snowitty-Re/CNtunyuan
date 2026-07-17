@@ -70,6 +70,8 @@ export type MissingPerson = {
   description?: string
   contact_name?: string
   contact_phone?: string
+  contact_rel?: string
+  alt_contact?: string
   photo_url?: string
   photos?: Array<{ id?: string; url?: string } | string>
   created_at?: string

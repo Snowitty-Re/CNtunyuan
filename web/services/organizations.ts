@@ -59,11 +59,11 @@ export const organizationService = {
   remove(id: string) {
     return http<null>(`/organizations/${id}`, { method: 'DELETE' })
   },
-  /** Backend expects new_parent_id; empty parent (root) is not supported by binding without backend change */
+  /** Backend expects new_parent_id; empty string for super_admin root move */
   move(id: string, newParentId: string) {
     return http<Organization>(`/organizations/${id}/move`, {
       method: 'PUT',
-      body: { new_parent_id: newParentId },
+      body: { new_parent_id: newParentId || '' },
     })
   },
 }

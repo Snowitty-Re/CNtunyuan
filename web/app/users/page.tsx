@@ -18,7 +18,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { listFrom } from '@/lib/data'
-import { ACTIONS, assignableRoleOptions, hasPermission, isAdmin, roleLabel } from '@/lib/rbac'
+import { ACTIONS, assignableRoleOptions, canAssignRole, hasPermission, isAdmin, roleLabel } from '@/lib/rbac'
+import { userStatusLabel } from '@/lib/status'
+import { isMainlandPhone, phoneRuleMessage } from '@/lib/validators'
 import { organizationService } from '@/services/organizations'
 import { userService } from '@/services/users'
 import type { Organization, User } from '@/types/api'
@@ -140,21 +142,32 @@ export default function UsersPage() {
 
   async function onCreate(values: Record<string, unknown>) {
     const password = String(values.password || '')
+    const phone = String(values.phone || '').trim()
     if (password.length < 8) {
       message.error('密码至少 8 位')
+      return
+    }
+    const phoneErr = phoneRuleMessage(phone)
+    if (phoneErr) {
+      message.error(phoneErr)
       return
     }
     if (!values.org_id) {
       message.error('必须绑定组织')
       return
     }
+    const role = String(values.role || 'volunteer')
+    if (!canAssignRole(user, role)) {
+      message.error('无权分配该角色')
+      return
+    }
     setSubmitting(true)
     try {
       await userService.create({
         nickname: String(values.nickname || '').trim(),
-        phone: String(values.phone || '').trim(),
+        phone,
         password,
-        role: String(values.role || 'volunteer'),
+        role,
         org_id: String(values.org_id),
       })
       message.success('用户创建成功')
@@ -172,14 +185,19 @@ export default function UsersPage() {
   function openEdit(row: User) {
     setEditing(row)
     const roles = assignableRoleOptions(user)
-    const role =
-      roles.some((r) => r.value === row.role) ? row.role : roles[0]?.value || 'volunteer'
+    const canChangeRole = canAssignRole(user, row.role || '')
+    const role = canChangeRole
+      ? row.role
+      : roles.some((r) => r.value === row.role)
+        ? row.role
+        : roles[0]?.value || 'volunteer'
     editForm.setFieldsValue({
       nickname: row.nickname,
       email: row.email,
       role,
       status: row.status || 'active',
       org_id: row.org_id || row.organization?.id || undefined,
+      _roleLocked: !canChangeRole && !roles.some((r) => r.value === row.role),
     })
     setEditOpen(true)
   }
@@ -190,12 +208,19 @@ export default function UsersPage() {
       message.error('必须绑定组织')
       return
     }
+    const nextRole = String(values.role || editing.role)
+    // 不可分配同级/更高角色时，不提交 role 字段，避免误降级
+    const rolePayload = canAssignRole(user, nextRole) ? { role: nextRole } : {}
+    if (values.role && !canAssignRole(user, nextRole) && nextRole !== editing.role) {
+      message.error('无权将该用户调整为所选角色')
+      return
+    }
     setSubmitting(true)
     try {
       await userService.update(editing.id, {
         nickname: String(values.nickname || '').trim(),
         email: values.email ? String(values.email) : undefined,
-        role: String(values.role || editing.role),
+        ...rolePayload,
         status: String(values.status || 'active'),
         org_id: String(values.org_id),
       })
@@ -343,7 +368,7 @@ export default function UsersPage() {
                 title: '状态',
                 dataIndex: 'status',
                 width: 100,
-                render: (s: string) => <Tag color={statusColor[s] || 'default'}>{s || '-'}</Tag>,
+                render: (s: string) => <Tag color={statusColor[s] || 'default'}>{userStatusLabel(s)}</Tag>,
               },
               {
                 title: '组织',
@@ -389,8 +414,19 @@ export default function UsersPage() {
           <Form.Item name="nickname" label="昵称" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="phone" label="手机号" rules={[{ required: true }]}>
-            <Input />
+          <Form.Item
+            name="phone"
+            label="手机号"
+            rules={[
+              { required: true, message: '请输入手机号' },
+              {
+                validator: async (_, v) => {
+                  if (!isMainlandPhone(String(v || ''))) throw new Error('请输入正确的大陆手机号')
+                },
+              },
+            ]}
+          >
+            <Input maxLength={11} />
           </Form.Item>
           <Form.Item
             name="password"
@@ -426,8 +462,24 @@ export default function UsersPage() {
           <Form.Item name="email" label="邮箱">
             <Input />
           </Form.Item>
-          <Form.Item name="role" label="角色" rules={[{ required: true }]} extra="仅可分配低于当前账号的角色">
-            <Select options={roleOptions} />
+          <Form.Item
+            name="role"
+            label="角色"
+            rules={[{ required: true }]}
+            extra={
+              editing && !canAssignRole(user, editing.role || '')
+                ? '当前账号无权调整该用户角色，保存时将保持原角色'
+                : '仅可分配低于当前账号的角色'
+            }
+          >
+            <Select
+              options={
+                editing && editing.role && !roleOptions.some((r) => r.value === editing.role)
+                  ? [{ value: editing.role, label: roleLabel(editing.role) }, ...roleOptions]
+                  : roleOptions
+              }
+              disabled={!!(editing && !canAssignRole(user, editing.role || '') && !roleOptions.some((r) => r.value === editing.role))}
+            />
           </Form.Item>
           <Form.Item name="status" label="状态" rules={[{ required: true }]}>
             <Select options={STATUS_OPTIONS} />

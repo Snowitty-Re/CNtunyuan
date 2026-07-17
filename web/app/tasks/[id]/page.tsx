@@ -130,7 +130,13 @@ export default function TaskDetailPage() {
     }
   }, [id])
 
-  if (!ready) return null
+  if (!ready) {
+    return (
+      <AppShell>
+        <PageState loading />
+      </AppShell>
+    )
+  }
 
   return (
     <AppShell>
@@ -151,18 +157,57 @@ export default function TaskDetailPage() {
             <div className="row wrap" style={{ justifyContent: 'space-between' }}>
               <h3 className="card-title">{item.title}</h3>
               <div className="row wrap">
-                {item.status === 'pending' || item.status === 'assigned' ? (
-                  <button className="btn" type="button" onClick={() => taskService.start(id).then(load)}>
+                {item.status === 'assigned' ? (
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() =>
+                      taskService
+                        .start(id)
+                        .then(() => {
+                          setNotice({ type: 'success', text: '任务已开始' })
+                          return load()
+                        })
+                        .catch((err) => setNotice({ type: 'error', text: err instanceof Error ? err.message : '开始失败' }))
+                    }
+                  >
                     开始任务
                   </button>
                 ) : null}
-                {item.status === 'processing' ? (
-                  <button className="btn" type="button" onClick={() => taskService.complete(id, { result: 'web详情页完成' }).then(load)}>
+                {item.status === 'pending' ? (
+                  <span className="hint">待分配后执行人可开始任务</span>
+                ) : null}
+                {item.status === 'processing' || item.status === 'assigned' ? (
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() =>
+                      taskService
+                        .complete(id, { result: 'web详情页完成' })
+                        .then(() => {
+                          setNotice({ type: 'success', text: '任务已完成' })
+                          return load()
+                        })
+                        .catch((err) => setNotice({ type: 'error', text: err instanceof Error ? err.message : '完成失败' }))
+                    }
+                  >
                     完成任务
                   </button>
                 ) : null}
                 {item.status !== 'cancelled' && item.status !== 'completed' ? (
-                  <button className="btn danger" type="button" onClick={() => taskService.cancel(id, 'web端取消').then(load)}>
+                  <button
+                    className="btn danger"
+                    type="button"
+                    onClick={() =>
+                      taskService
+                        .cancel(id, 'web端取消')
+                        .then(() => {
+                          setNotice({ type: 'success', text: '任务已取消' })
+                          return load()
+                        })
+                        .catch((err) => setNotice({ type: 'error', text: err instanceof Error ? err.message : '取消失败' }))
+                    }
+                  >
                     取消任务
                   </button>
                 ) : null}

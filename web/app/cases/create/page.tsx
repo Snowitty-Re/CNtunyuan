@@ -6,12 +6,9 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ModuleHeader } from '@/components/shared/ModuleHeader'
 import { NoticeBar, type Notice } from '@/components/shared/NoticeBar'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
+import { isMainlandPhone } from '@/lib/validators'
 import { missingPersonService } from '@/services/missingPersons'
 import { uploadService } from '@/services/upload'
-
-function isPhone(input: string): boolean {
-  return /^1\d{10}$/.test(input)
-}
 
 export default function CaseCreatePage() {
   const { ready } = useAuthGuard()
@@ -79,7 +76,7 @@ export default function CaseCreatePage() {
       setNotice({ type: 'error', text: '请填写联系人' })
       return
     }
-    if (!isPhone(contactPhone.trim())) {
+    if (!isMainlandPhone(contactPhone.trim())) {
       setNotice({ type: 'error', text: '联系人手机号格式不正确' })
       return
     }

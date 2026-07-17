@@ -68,9 +68,9 @@ type OrganizationListRequest struct {
 // OrganizationListResponse 组织列表响应
 type OrganizationListResponse = PageResult[OrganizationResponse]
 
-// MoveOrganizationRequest 移动组织请求
+// MoveOrganizationRequest 移动组织请求（空 new_parent_id 表示移到顶级，仅 super_admin 可在服务层通过）
 type MoveOrganizationRequest struct {
-	NewParentID string `json:"new_parent_id" binding:"required"`
+	NewParentID string `json:"new_parent_id"`
 }
 
 // OrganizationStatsResponse 组织统计响应

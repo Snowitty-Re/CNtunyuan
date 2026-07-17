@@ -146,6 +146,12 @@ export default function BootstrapInitPage() {
     setError('')
     setSuccess('')
     try {
+      const phone = String(admin.phone || '').trim()
+      if (!/^1[3-9]\d{9}$/.test(phone)) {
+        setError('超级管理员手机号须为大陆 11 位有效号码')
+        setSubmitting(false)
+        return
+      }
       await systemService.bootstrapInitialize({
         database: db,
         site,

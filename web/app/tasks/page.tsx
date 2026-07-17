@@ -7,28 +7,21 @@ import { useCallback, useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { fmtTime, listFrom } from '@/lib/data'
+import { taskStatusColor, taskStatusLabel } from '@/lib/status'
 import { taskService } from '@/services/tasks'
 import type { Task } from '@/types/api'
+
+const TASK_LIST_IDS_KEY = 'web_tasks_list_ids_v1'
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: '草稿' },
   { value: 'pending', label: '待处理' },
   { value: 'assigned', label: '已分配' },
-  { value: 'in_progress', label: '进行中' },
+  { value: 'processing', label: '进行中' },
   { value: 'completed', label: '已完成' },
   { value: 'cancelled', label: '已取消' },
   { value: 'overdue', label: '已逾期' },
 ]
-
-const statusColor: Record<string, string> = {
-  draft: 'default',
-  pending: 'warning',
-  assigned: 'processing',
-  in_progress: 'processing',
-  completed: 'success',
-  cancelled: 'default',
-  overdue: 'error',
-}
 
 const priorityColor: Record<string, string> = {
   low: 'default',
@@ -61,6 +54,9 @@ export default function TasksPage() {
       const normalized = listFrom<Task>(data)
       setItems(normalized.list)
       setTotal(normalized.total)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(TASK_LIST_IDS_KEY, JSON.stringify(normalized.list.map((t) => t.id)))
+      }
     } catch (err) {
       message.error(err instanceof Error ? err.message : '加载失败')
     } finally {
@@ -151,7 +147,7 @@ export default function TasksPage() {
                 title: '状态',
                 dataIndex: 'status',
                 width: 110,
-                render: (s: string) => <Tag color={statusColor[s] || 'default'}>{s || '-'}</Tag>,
+                render: (s: string) => <Tag color={taskStatusColor(s)}>{taskStatusLabel(s)}</Tag>,
               },
               {
                 title: '优先级',

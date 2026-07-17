@@ -1,5 +1,4 @@
-import { API_BASE, http } from '@/lib/request'
-import { getAccessToken } from '@/lib/auth'
+import { API_BASE, authedFetch, http, ApiError } from '@/lib/request'
 
 export type UploadResult = {
   id?: string
@@ -10,24 +9,21 @@ export type UploadResult = {
 
 export const uploadService = {
   async uploadSingle(file: File, formData: Record<string, string> = {}): Promise<UploadResult> {
-    const token = getAccessToken()
-    const url = `${API_BASE}/upload`
     const body = new FormData()
     body.append('file', file)
     Object.entries(formData).forEach(([k, v]) => {
       body.append(k, v)
     })
 
-    const res = await fetch(url, {
+    const res = await authedFetch('/upload', {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       body,
     })
 
     if (res.status === 204) return {}
     const payload = await res.json()
     if (!res.ok || (payload.code !== 0 && payload.code !== 200)) {
-      throw new Error(payload.message || `上传失败: ${res.status}`)
+      throw new ApiError(payload.message || `上传失败: ${res.status}`, res.status, payload.code)
     }
     return payload.data || {}
   },
@@ -40,5 +36,13 @@ export const uploadService = {
       },
     })
   },
+  async downloadBlob(fileId: string): Promise<Blob> {
+    const res = await authedFetch(`/upload/${fileId}/download`)
+    if (!res.ok) {
+      throw new ApiError(`下载失败 HTTP ${res.status}`, res.status)
+    }
+    return res.blob()
+  },
 }
 
+export { API_BASE }

@@ -7,8 +7,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { AppShell } from '@/components/layout/AppShell'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { fmtTime, joinLocation, listFrom } from '@/lib/data'
+import { caseStatusLabel } from '@/lib/status'
 import { missingPersonService } from '@/services/missingPersons'
 import type { MissingPerson } from '@/types/api'
+
+const CASE_LIST_IDS_KEY = 'web_cases_list_ids_v1'
 
 const STATUS_OPTIONS = [
   { value: 'missing', label: '走失中' },
@@ -49,6 +52,9 @@ export default function CasesPage() {
       const normalized = listFrom<MissingPerson>(data)
       setItems(normalized.list)
       setTotal(normalized.total)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(CASE_LIST_IDS_KEY, JSON.stringify(normalized.list.map((c) => c.id)))
+      }
     } catch (err) {
       message.error(err instanceof Error ? err.message : '加载失败')
     } finally {
@@ -140,7 +146,7 @@ export default function CasesPage() {
                 title: '状态',
                 dataIndex: 'status',
                 width: 110,
-                render: (s: string) => <Tag color={statusColor[s] || 'default'}>{s || '-'}</Tag>,
+                render: (s: string) => <Tag color={statusColor[s] || 'default'}>{caseStatusLabel(s)}</Tag>,
               },
               {
                 title: '走失时间',

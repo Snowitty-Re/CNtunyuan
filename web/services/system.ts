@@ -1,5 +1,4 @@
-import { API_BASE, http } from '@/lib/request'
-import { getAccessToken } from '@/lib/auth'
+import { API_BASE, authedFetch, http } from '@/lib/request'
 
 export const systemService = {
   bootstrapStatus() {
@@ -50,11 +49,7 @@ export const systemService = {
     })
   },
   async metricsRaw(): Promise<string> {
-    const token = getAccessToken()
-    const res = await fetch(`${API_BASE}/metrics`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      cache: 'no-store',
-    })
+    const res = await authedFetch('/metrics')
     if (!res.ok) throw new Error(`获取 metrics 失败: HTTP ${res.status}`)
     return res.text()
   },

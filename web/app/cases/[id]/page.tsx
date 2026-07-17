@@ -210,7 +210,23 @@ export default function CaseDetailPage() {
     }
   }, [id])
 
-  if (!ready) return null
+  if (!ready) {
+    return (
+      <AppShell>
+        <PageState loading />
+      </AppShell>
+    )
+  }
+
+  async function runAction(action: () => Promise<unknown>, okText: string) {
+    try {
+      await action()
+      await load()
+      setNotice({ type: 'success', text: okText })
+    } catch (err) {
+      setNotice({ type: 'error', text: err instanceof Error ? err.message : '操作失败' })
+    }
+  }
 
   return (
     <AppShell>
@@ -234,32 +250,45 @@ export default function CaseDetailPage() {
                 <button className="btn" type="button" onClick={() => setEditing((v) => !v)}>
                   {editing ? '取消编辑' : '编辑案件'}
                 </button>
-                <button className="btn" type="button" onClick={() => missingPersonService.updateStatus(id, 'searching').then(load)}>
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => runAction(() => missingPersonService.updateStatus(id, 'searching'), '已设为寻找中')}
+                >
                   设为寻找中
                 </button>
                 <button
                   className="btn"
                   type="button"
                   onClick={() =>
-                    missingPersonService
-                      .markFound(id, {
-                        found_location: foundLocation.trim(),
-                        found_time: new Date().toISOString(),
-                        description: foundDesc.trim(),
-                      })
-                      .then(load)
+                    runAction(
+                      () =>
+                        missingPersonService.markFound(id, {
+                          found_location: foundLocation.trim(),
+                          found_time: new Date().toISOString(),
+                          description: foundDesc.trim(),
+                        }),
+                      '已标记找到',
+                    )
                   }
                 >
                   标记已找到
                 </button>
-                <button className="btn" type="button" onClick={() => missingPersonService.markReunited(id).then(load)}>
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={() => runAction(() => missingPersonService.markReunited(id), '已标记团圆')}
+                >
                   标记已团圆
                 </button>
                 <ConfirmButton
                   text="删除案件"
                   message="确认删除当前案件？"
                   onConfirm={() => {
-                    missingPersonService.remove(id).then(() => router.push('/cases'))
+                    missingPersonService
+                      .remove(id)
+                      .then(() => router.push('/cases'))
+                      .catch((err) => setNotice({ type: 'error', text: err instanceof Error ? err.message : '删除失败' }))
                   }}
                 />
               </div>
@@ -278,6 +307,18 @@ export default function CaseDetailPage() {
               <div className="meta-item">
                 <div className="k">走失地点</div>
                 <div className="v">{joinLocation(item)}</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">联系人</div>
+                <div className="v">{item.contact_name || '-'}</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">联系电话</div>
+                <div className="v">{item.contact_phone || '—'}</div>
+              </div>
+              <div className="meta-item">
+                <div className="k">关系</div>
+                <div className="v">{item.contact_rel || '-'}</div>
               </div>
             </div>
             <div className="panel" style={{ marginTop: 10 }}>

@@ -2,14 +2,17 @@
 
 import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { clearAuth, getAccessToken, getCurrentUser, saveCurrentUser } from '@/lib/auth'
+import { getSessionBlockReason, sessionBlockMessage, type SessionBlockReason } from '@/lib/session'
 import { authService } from '@/services/auth'
 import type { User } from '@/types/api'
 
 type AuthContextValue = {
   ready: boolean
   user: User | null
+  blockReason: SessionBlockReason
+  blockMessage: string
   refreshUser: () => Promise<User | null>
-  logout: () => void
+  logout: () => Promise<void>
   setUser: (user: User | null) => void
 }
 
@@ -31,13 +34,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
       saveCurrentUser(me)
       return me
     } catch {
+      // me 失败时不信任陈旧 localStorage 作为有效会话
       const local = getCurrentUser()
-      setUser(local)
-      return local
+      if (local && getAccessToken()) {
+        setUser(local)
+        return local
+      }
+      setUser(null)
+      return null
     }
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      if (getAccessToken()) await authService.logout()
+    } catch {
+      // ignore
+    }
     clearAuth()
     setUser(null)
   }, [])
@@ -53,9 +66,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     refreshUser().finally(() => setReady(true))
   }, [refreshUser])
 
+  const blockReason = getSessionBlockReason(user)
+  const blockMessage = sessionBlockMessage(blockReason)
+
   const value = useMemo(
-    () => ({ ready, user, refreshUser, logout, setUser }),
-    [ready, user, refreshUser, logout],
+    () => ({ ready, user, blockReason, blockMessage, refreshUser, logout, setUser }),
+    [ready, user, blockReason, blockMessage, refreshUser, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

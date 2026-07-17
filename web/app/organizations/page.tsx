@@ -240,13 +240,14 @@ export default function OrganizationsPage() {
   async function onMove(values: Record<string, unknown>) {
     if (!editing) return
     const parentId = String(values.new_parent_id || '').trim()
-    if (!parentId) {
-      message.warning('请选择目标父组织（暂不支持移到顶级，需后端放开空 parent）')
+    if (!parentId && !allowRootOrg) {
+      message.warning('请选择目标父组织')
       return
     }
     setSubmitting(true)
     try {
-      await organizationService.move(editing.id, parentId)
+      // 超管允许空 parent 表示移到顶级（后端支持）
+      await organizationService.move(editing.id, parentId || '')
       message.success('组织已移动')
       setMoveOpen(false)
       setEditing(null)
@@ -591,10 +592,10 @@ export default function OrganizationsPage() {
           <Form.Item
             name="new_parent_id"
             label="新父组织"
-            rules={[{ required: true, message: '请选择父组织' }]}
-            extra={allowRootOrg ? '超级管理员可将组织移到其他父节点' : '仅可移到可管理范围内的父组织'}
+            rules={allowRootOrg ? [] : [{ required: true, message: '请选择父组织' }]}
+            extra={allowRootOrg ? '不选表示移到顶级（仅超级管理员）' : '仅可移到可管理范围内的父组织'}
           >
-            <Select showSearch optionFilterProp="label" options={parentOptions} />
+            <Select allowClear={allowRootOrg} showSearch optionFilterProp="label" options={parentOptions} placeholder={allowRootOrg ? '顶级组织' : '选择父组织'} />
           </Form.Item>
         </Form>
       </Modal>
